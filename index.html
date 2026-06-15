@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GPS Logger" />
+  <link rel="manifest" href="manifest.json" />
+  <title>GPS Logger GPX</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    header {
+      padding: 18px 16px;
+      background: #111827;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid #374151;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    main { padding: 16px; max-width: 920px; margin: 0 auto; }
+    .card {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .item {
+      background: #020617;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 70px;
+    }
+    .label { color: #9ca3af; font-size: 12px; }
+    .value { font-size: 18px; font-weight: 700; margin-top: 5px; word-break: break-all; }
+    .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 14px 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .start { background: #16a34a; }
+    .stop { background: #dc2626; }
+    .download { background: #2563eb; }
+    .clear { background: #6b7280; }
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: #374151;
+    }
+    .status.running { background: #15803d; }
+    .status.error { background: #b91c1c; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border-bottom: 1px solid #374151; padding: 7px 4px; text-align: right; }
+    th:first-child, td:first-child { text-align: left; }
+    .table-wrap { overflow-x: auto; }
+    #debugLog {
+      height: 180px;
+      overflow-y: auto;
+      background: #020617;
+      color: #86efac;
+      border-radius: 10px;
+      padding: 10px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    .note { color: #fbbf24; font-size: 13px; line-height: 1.6; }
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GPS Logger GPX</h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <p>状態: <span id="status" class="status">停止中</span></p>
+      <p class="note">iPhone / Android対応。GPS取得にはHTTPS公開またはlocalhostが必要です。画面オフ・バックグラウンド記録は端末側で止まる場合があります。</p>
+    </section>
+
+    <section class="card">
+      <label class="label" for="trackName">トラック名</label>
+      <input id="trackName" type="text" placeholder="例：2026-06-15 ヨット練習" />
+    </section>
+
+    <section class="card grid">
+      <div class="item"><div class="label">記録点数</div><div id="count" class="value">0</div></div>
+      <div class="item"><div class="label">経過時間</div><div id="elapsed" class="value">00:00:00</div></div>
+      <div class="item"><div class="label">緯度</div><div id="lat" class="value">-</div></div>
+      <div class="item"><div class="label">経度</div><div id="lon" class="value">-</div></div>
+      <div class="item"><div class="label">標高 m</div><div id="ele" class="value">-</div></div>
+      <div class="item"><div class="label">速度 m/s</div><div id="speed" class="value">-</div></div>
+      <div class="item"><div class="label">精度 m</div><div id="accuracy" class="value">-</div></div>
+      <div class="item"><div class="label">最終取得</div><div id="lastTime" class="value">-</div></div>
+    </section>
+
+    <section class="card buttons">
+      <button id="startBtn" class="start">記録開始</button>
+      <button id="stopBtn" class="stop" disabled>停止</button>
+      <button id="downloadBtn" class="download">GPX保存</button>
+      <button id="clearBtn" class="clear">削除</button>
+    </section>
+
+    <section class="card">
+      <h2>最新20件</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>時刻</th><th>緯度</th><th>経度</th><th>標高</th><th>速度</th><th>精度</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>デバッグログ</h2>
+      <div id="debugLog"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "gps_logger_gpx_points_v1";
+    const TRACK_NAME_KEY = "gps_logger_gpx_track_name_v1";
+
+    let watchId = null;
+    let points = [];
+    let startedAt = null;
+    let elapsedTimer = null;
+
+    const els = {
+      status: document.getElementById("status"),
+      count: document.getElementById("count"),
+      elapsed: document.getElementById("elapsed"),
+      lat: document.getElementById("lat"),
+      lon: document.getElementById("lon"),
+      ele: document.getElementById("ele"),
+      speed: document.getElementById("speed"),
+      accuracy: document.getElementById("accuracy"),
+      lastTime: document.getElementById("lastTime"),
+      tbody: document.getElementById("tbody"),
+      debugLog: document.getElementById("debugLog"),
+      startBtn: document.getElementById("startBtn"),
+      stopBtn: document.getElementById("stopBtn"),
+      downloadBtn: document.getElementById("downloadBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      trackName: document.getElementById("trackName")
+    };
+
+    window.addEventListener("load", init);
+
+    function init() {
+      debug("アプリ起動");
+      loadPoints();
+      els.trackName.value = localStorage.getItem(TRACK_NAME_KEY) || defaultTrackName();
+      els.trackName.addEventListener("input", () => {
+        localStorage.setItem(TRACK_NAME_KEY, els.trackName.value);
+      });
+      els.startBtn.addEventListener("click", startTracking);
+      els.stopBtn.addEventListener("click", stopTracking);
+      els.downloadBtn.addEventListener("click", downloadGPX);
+      els.clearBtn.addEventListener("click", clearPoints);
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js")
+          .then(() => debug("Service Worker登録成功"))
+          .catch(err => debug("Service Worker登録失敗: " + err.message));
+      }
+
+      render();
+    }
+
+    function startTracking() {
+      debug("記録開始要求");
+
+      if (!navigator.geolocation) {
+        setStatus("エラー", "error");
+        debug("この端末/ブラウザはGeolocation非対応");
+        alert("この端末またはブラウザはGPS取得に対応していません。");
+        return;
+      }
+
+      if (watchId !== null) {
+        debug("すでに記録中のため開始しない");
+        return;
+      }
+
+      startedAt = Date.now();
+      elapsedTimer = setInterval(updateElapsed, 1000);
+      updateElapsed();
+      setStatus("記録中", "running");
+      els.startBtn.disabled = true;
+      els.stopBtn.disabled = false;
+
+      watchId = navigator.geolocation.watchPosition(
+        onPosition,
+        onPositionError,
+        {
+          enableHighAccuracy: true,
+          maximumAge: 0,
+          timeout: 15000
+        }
+      );
+
+      debug("watchPosition開始 watchId=" + watchId);
+    }
+
+    function stopTracking() {
+      debug("停止要求");
+
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        debug("watchPosition停止 watchId=" + watchId);
+        watchId = null;
+      }
+
+      if (elapsedTimer !== null) {
+        clearInterval(elapsedTimer);
+        elapsedTimer = null;
+      }
+
+      setStatus("停止中", "");
+      els.startBtn.disabled = false;
+      els.stopBtn.disabled = true;
+    }
+
+    function onPosition(position) {
+      const c = position.coords;
+      const rawSpeed = c.speed;
+      const calculatedSpeed = calcSpeedFromPrevious(c.latitude, c.longitude, position.timestamp);
+      const speed = isValidNumber(rawSpeed) ? rawSpeed : calculatedSpeed;
+
+      const point = {
+        lat: c.latitude,
+        lon: c.longitude,
+        ele: isValidNumber(c.altitude) ? c.altitude : null,
+        speed: isValidNumber(speed) ? speed : 0,
+        time: new Date(position.timestamp).toISOString(),
+        accuracy: isValidNumber(c.accuracy) ? c.accuracy : null,
+        heading: isValidNumber(c.heading) ? c.heading : null
+      };
+
+      points.push(point);
+      savePoints();
+      render();
+
+      debug(`GPS取得成功 lat=${point.lat}, lon=${point.lon}, ele=${point.ele}, speed=${point.speed}, accuracy=${point.accuracy}`);
+    }
+
+    function onPositionError(error) {
+      let msg = "不明なエラー";
+      if (error.code === error.PERMISSION_DENIED) msg = "位置情報の許可が拒否されました";
+      if (error.code === error.POSITION_UNAVAILABLE) msg = "位置情報を取得できません";
+      if (error.code === error.TIMEOUT) msg = "位置情報取得がタイムアウトしました";
+
+      setStatus("エラー", "error");
+      debug("GPS取得エラー: " + msg);
+      alert(msg);
+      stopTracking();
+    }
+
+    function calcSpeedFromPrevious(lat, lon, timestamp) {
+      if (points.length === 0) return null;
+
+      const prev = points[points.length - 1];
+      const distance = haversineMeters(prev.lat, prev.lon, lat, lon);
+      const seconds = (timestamp - Date.parse(prev.time)) / 1000;
+
+      if (seconds <= 0) return null;
+      return distance / seconds;
+    }
+
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = deg => deg * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function downloadGPX() {
+      debug("GPX保存要求");
+
+      if (points.length === 0) {
+        alert("保存するGPSデータがありません。");
+        debug("GPX保存中止: データなし");
+        return;
+      }
+
+      const gpx = buildGPX(points, els.trackName.value.trim() || defaultTrackName());
+      const blob = new Blob([gpx], { type: "application/gpx+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `track-export-${fileDate()}.gpx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      debug("GPX保存完了");
+    }
+
+    function buildGPX(data, trackName) {
+      const metadataTime = new Date().toISOString();
+      const trkpts = data.map(p => {
+        const ele = isValidNumber(p.ele) ? numberFixed(p.ele, 2) : "0";
+        const speed = isValidNumber(p.speed) ? numberFixed(p.speed, 2) : "0.00";
+        return `      <trkpt lat="${numberFixed(p.lat, 6)}" lon="${numberFixed(p.lon, 6)}">\n` +
+          `        <ele>${ele}</ele>\n` +
+          `        <speed>${speed}</speed>\n` +
+          `        <time>${escapeXml(p.time)}</time>\n` +
+          `        <extensions>\n` +
+          `          <gpxtpx:TrackPointExtension>\n` +
+          `            <gpxtpx:speed>${speed}</gpxtpx:speed>\n` +
+          `          </gpxtpx:TrackPointExtension>\n` +
+          `        </extensions>\n` +
+          `      </trkpt>`;
+      }).join("\n");
+
+      return `<?xml version="1.0" encoding="UTF-8"?>\n` +
+`<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v/3" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" creator="GPS Logger PWA" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">\n` +
+`  <metadata>\n` +
+`    <link href="https://example.com"><text>GPS Logger PWA</text></link>\n` +
+`    <time>${metadataTime}</time>\n` +
+`  </metadata>\n` +
+`  <trk>\n` +
+`    <name>${escapeXml(trackName)}</name>\n` +
+`    <trkseg>\n` +
+`${trkpts}\n` +
+`    </trkseg>\n` +
+`  </trk>\n` +
+`</gpx>\n`;
+    }
+
+    function clearPoints() {
+      if (!confirm("保存済みGPSデータをすべて削除しますか？")) {
+        debug("削除キャンセル");
+        return;
+      }
+      points = [];
+      savePoints();
+      render();
+      debug("保存データ削除完了");
+    }
+
+    function loadPoints() {
+      try {
+        points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        debug("保存済みGPSデータ読込: " + points.length + "件");
+      } catch (e) {
+        points = [];
+        debug("保存済みGPSデータ読込失敗: " + e.message);
+      }
+    }
+
+    function savePoints() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
+    }
+
+    function render() {
+      els.count.textContent = points.length;
+      const last = points[points.length - 1];
+
+      if (last) {
+        els.lat.textContent = numberFixed(last.lat, 6);
+        els.lon.textContent = numberFixed(last.lon, 6);
+        els.ele.textContent = isValidNumber(last.ele) ? numberFixed(last.ele, 2) : "0";
+        els.speed.textContent = isValidNumber(last.speed) ? numberFixed(last.speed, 2) : "0.00";
+        els.accuracy.textContent = isValidNumber(last.accuracy) ? numberFixed(last.accuracy, 1) : "-";
+        els.lastTime.textContent = localTime(last.time);
+      } else {
+        els.lat.textContent = "-";
+        els.lon.textContent = "-";
+        els.ele.textContent = "-";
+        els.speed.textContent = "-";
+        els.accuracy.textContent = "-";
+        els.lastTime.textContent = "-";
+      }
+
+      els.tbody.innerHTML = points.slice(-20).reverse().map(p => `
+        <tr>
+          <td>${localTime(p.time)}</td>
+          <td>${numberFixed(p.lat, 6)}</td>
+          <td>${numberFixed(p.lon, 6)}</td>
+          <td>${isValidNumber(p.ele) ? numberFixed(p.ele, 2) : "0"}</td>
+          <td>${isValidNumber(p.speed) ? numberFixed(p.speed, 2) : "0.00"}</td>
+          <td>${isValidNumber(p.accuracy) ? numberFixed(p.accuracy, 1) : "-"}</td>
+        </tr>
+      `).join("");
+    }
+
+    function setStatus(text, className) {
+      els.status.textContent = text;
+      els.status.className = "status" + (className ? " " + className : "");
+    }
+
+    function updateElapsed() {
+      if (!startedAt) return;
+      const sec = Math.floor((Date.now() - startedAt) / 1000);
+      const h = String(Math.floor(sec / 3600)).padStart(2, "0");
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+      const s = String(sec % 60).padStart(2, "0");
+      els.elapsed.textContent = `${h}:${m}:${s}`;
+    }
+
+    function debug(message) {
+      const text = `[${new Date().toLocaleString("ja-JP")}] ${message}`;
+      console.log(text);
+      els.debugLog.textContent += text + "\n";
+      els.debugLog.scrollTop = els.debugLog.scrollHeight;
+    }
+
+    function isValidNumber(v) {
+      return typeof v === "number" && Number.isFinite(v);
+    }
+
+    function numberFixed(v, digit) {
+      return Number(v).toFixed(digit);
+    }
+
+    function localTime(iso) {
+      return new Date(iso).toLocaleTimeString("ja-JP", { hour12: false });
+    }
+
+    function fileDate() {
+      const d = new Date();
+      return d.getFullYear() +
+        String(d.getMonth() + 1).padStart(2, "0") +
+        String(d.getDate()).padStart(2, "0") + "_" +
+        String(d.getHours()).padStart(2, "0") +
+        String(d.getMinutes()).padStart(2, "0") +
+        String(d.getSeconds()).padStart(2, "0");
+    }
+
+    function defaultTrackName() {
+      return new Date().toLocaleString("ja-JP");
+    }
+
+    function escapeXml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&apos;");
+    }
+  </script>
+</body>
+</html>
