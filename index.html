@@ -110,23 +110,18 @@
     .arrow{
       position:absolute;
       left:50%;
-      top:12%;
+      top:6%;
       transform:translateX(-50%);
-      width:0;height:0;
-      border-left:30px solid transparent;
-      border-right:30px solid transparent;
-      border-bottom:84px solid var(--right);
+      width:0;
+      height:0;
+      border-left:28px solid transparent;
+      border-right:28px solid transparent;
+      border-top:62px solid var(--right);
       filter:drop-shadow(0 0 4px rgba(255,255,255,.35));
-      transition:border-bottom-color .2s;
+      transition:border-top-color .2s;
     }
     .arrow::after{
-      content:"";
-      position:absolute;
-      left:-10px;
-      top:60px;
-      width:20px;
-      height:44px;
-      background:currentColor;
+      display:none;
     }
     .dial-center{
       position:absolute;
@@ -277,6 +272,43 @@
       font-size:16px;
       font-weight:500;
     }
+
+    .wp-list{
+      display:grid;
+      gap:8px;
+      margin-top:12px;
+    }
+    .wp-item{
+      display:grid;
+      grid-template-columns:1fr auto auto;
+      gap:8px;
+      align-items:center;
+      border:1px solid #555;
+      border-radius:10px;
+      padding:10px;
+      background:#090909;
+    }
+    .wp-item.active{
+      border:2px solid var(--orange);
+      background:#171000;
+    }
+    .wp-item-name{
+      font-size:clamp(20px,2.4vw,30px);
+      overflow-wrap:anywhere;
+    }
+    .wp-item-coords{
+      color:var(--muted);
+      font-size:clamp(14px,1.7vw,21px);
+      margin-top:4px;
+      font-weight:500;
+    }
+    .wp-item button{
+      width:auto;
+      min-width:84px;
+      padding:10px 12px;
+      font-size:clamp(15px,1.7vw,21px);
+    }
+
     @media(max-width:760px){
       main{padding:5px 5px 30px}
       .instrument{
@@ -286,11 +318,11 @@
       .pane{padding:7px}
       .dial{width:min(40vw,290px)}
       .arrow{
+        top:5%;
         border-left-width:20px;
         border-right-width:20px;
-        border-bottom-width:58px;
+        border-top-width:44px;
       }
-      .arrow::after{top:42px;height:31px;width:14px;left:-7px}
       .target-badge{padding:4px 10px}
     }
     @media(max-width:520px){
@@ -360,8 +392,9 @@
       <div class="metric-value"><span id="sog">--</span><span class="metric-unit">kt</span></div>
     </div>
     <div class="metric">
-      <div class="metric-label">COG</div>
+      <div class="metric-label">COG / 船首方位</div>
       <div class="metric-value"><span id="cog">--</span><span class="metric-unit">°</span></div>
+      <div id="headingSource" class="info" style="margin-top:0;text-align:center">方位ソース：--</div>
     </div>
   </div>
 
@@ -371,6 +404,15 @@
   </div>
 
   <section>
+    <h2>磁気コンパス</h2>
+    <div class="buttons">
+      <button id="enableCompass" class="primary full">磁気コンパスを有効化</button>
+    </div>
+    <div id="compassStatus" class="info">未許可・未取得</div>
+    <div class="info notice">0.0 ktでは磁気コンパス、0.1 kt以上ではGPSのCOGを使用します。スマホを船首方向へ真っすぐ向けて固定してください。</div>
+  </section>
+
+  <section>
     <h2>ウェイポイント設定</h2>
     <div class="formgrid">
       <input id="wpName" class="full" type="text" placeholder="名称">
@@ -378,11 +420,12 @@
       <input id="wpLon" inputmode="decimal" type="number" step="any" placeholder="経度">
     </div>
     <div class="buttons" style="margin-top:10px">
-      <button id="saveWp">入力値を保存</button>
-      <button id="currentWp">現在地をWPにする</button>
-      <button id="clearWp" class="danger full">ウェイポイント削除</button>
+      <button id="saveWp">新規保存</button>
+      <button id="currentWp">現在地を新規保存</button>
+      <button id="clearForm" class="full">入力欄をクリア</button>
     </div>
-    <div id="wpInfo" class="info">未設定</div>
+    <div id="wpInfo" class="info">選択中：未設定</div>
+    <div id="waypointList" class="wp-list"></div>
   </section>
 
   <section>
@@ -429,6 +472,8 @@
 
 const STORAGE_POINTS = "sailingGps.points.v1";
 const STORAGE_WP = "sailingGps.waypoint.v1";
+const STORAGE_WAYPOINTS = "sailingGps.waypoints.v1";
+const STORAGE_ACTIVE_WP_ID = "sailingGps.activeWaypointId.v1";
 const STORAGE_SETTINGS = "sailingGps.settings.v2";
 const STORAGE_DIAL_MODE = "sailingGps.dialMode.v1";
 const MPS_TO_KT = 1.9438444924406;
@@ -436,13 +481,39 @@ const M_TO_NM = 1 / 1852;
 const EARTH_RADIUS_M = 6371000;
 
 let points = loadJson(STORAGE_POINTS, []);
-let waypoint = loadJson(STORAGE_WP, null);
+let waypoints = loadJson(STORAGE_WAYPOINTS, []);
+let activeWaypointId = localStorage.getItem(STORAGE_ACTIVE_WP_ID);
+let legacyWaypoint = loadJson(STORAGE_WP, null);
+
+if (waypoints.length === 0 && legacyWaypoint) {
+  const migrated = {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    name: legacyWaypoint.name || "Waypoint",
+    lat: legacyWaypoint.lat,
+    lon: legacyWaypoint.lon
+  };
+  waypoints = [migrated];
+  activeWaypointId = migrated.id;
+  saveJson(STORAGE_WAYPOINTS, waypoints);
+  localStorage.setItem(STORAGE_ACTIVE_WP_ID, activeWaypointId);
+}
+
+let waypoint = waypoints.find(w => w.id === activeWaypointId) || waypoints[0] || null;
+if (waypoint && !activeWaypointId) {
+  activeWaypointId = waypoint.id;
+  localStorage.setItem(STORAGE_ACTIVE_WP_ID, activeWaypointId);
+}
+
 let dialMode = localStorage.getItem(STORAGE_DIAL_MODE) || "relative";
 let watchId = null;
 let latest = null;
 let previousAccepted = points.length ? points[points.length - 1] : null;
 let lastCourse = null;
 let lastSpeed = null;
+let magneticHeading = null;
+let compassEnabled = false;
+let compassEventReceived = false;
+const GPS_COURSE_THRESHOLD_KT = 0.05;
 
 const $ = id => document.getElementById(id);
 
@@ -504,11 +575,85 @@ function dms(value,isLat){
   const dir=isLat?(value>=0?"N":"S"):(value>=0?"E":"W");
   return `${d}°${m.toFixed(3)}′${dir}`;
 }
+
+function getScreenAngle(){
+  if(screen.orientation && Number.isFinite(screen.orientation.angle)){
+    return screen.orientation.angle;
+  }
+  if(Number.isFinite(window.orientation)){
+    return window.orientation;
+  }
+  return 0;
+}
+
+function smoothHeading(previous,next,factor=0.2){
+  if(!Number.isFinite(previous))return normalize360(next);
+  const delta=normalize180(next-previous);
+  return normalize360(previous+delta*factor);
+}
+
+function orientationToHeading(event){
+  // iPhone Safariは磁北基準の値を直接返す
+  if(Number.isFinite(event.webkitCompassHeading)){
+    return normalize360(event.webkitCompassHeading);
+  }
+
+  // Androidなど。absolute=true または deviceorientationabsolute で利用
+  if(Number.isFinite(event.alpha) && (event.absolute===true || event.type==="deviceorientationabsolute")){
+    return normalize360(360-event.alpha+getScreenAngle());
+  }
+
+  return null;
+}
+
+function onOrientation(event){
+  const heading=orientationToHeading(event);
+  if(!Number.isFinite(heading))return;
+
+  magneticHeading=smoothHeading(magneticHeading,heading);
+  compassEventReceived=true;
+  $("compassStatus").textContent=`磁気方位：${magneticHeading.toFixed(0)}° / センサー取得中`;
+  updateUi();
+}
+
+async function enableCompass(){
+  try{
+    if(typeof DeviceOrientationEvent==="undefined"){
+      $("compassStatus").textContent="この端末・ブラウザは方位センサーに対応していません";
+      log("磁気コンパス非対応");
+      return;
+    }
+
+    if(typeof DeviceOrientationEvent.requestPermission==="function"){
+      const result=await DeviceOrientationEvent.requestPermission();
+      if(result!=="granted"){
+        $("compassStatus").textContent="磁気コンパスの使用が許可されませんでした";
+        log(`磁気コンパス許可結果: ${result}`);
+        return;
+      }
+    }
+
+    if(!compassEnabled){
+      window.addEventListener("deviceorientationabsolute",onOrientation,true);
+      window.addEventListener("deviceorientation",onOrientation,true);
+      compassEnabled=true;
+    }
+
+    $("enableCompass").textContent="磁気コンパス有効";
+    $("enableCompass").disabled=true;
+    $("compassStatus").textContent="センサー方位を待っています。端末を少し回してください";
+    log("磁気コンパスを有効化");
+  }catch(error){
+    $("compassStatus").textContent=`磁気コンパス開始エラー: ${error.message}`;
+    log(`磁気コンパス開始エラー: ${error.message}`);
+  }
+}
+
 function setSideColor(relative){
   const color=Math.abs(relative)<0.5?"#f7f7f7":relative>0?"#00ff38":"#ff2020";
   $("dialAngle").style.color=color;
   $("dialSide").style.color=color;
-  $("arrow").style.borderBottomColor=color;
+  $("arrow").style.borderTopColor=color;
   $("arrow").style.color=color;
   return color;
 }
@@ -556,8 +701,22 @@ function updateUi(){
     ?normalize360(latest.heading):calculatedCourse(previousAccepted,latest);
   if(Number.isFinite(rawCourse))lastCourse=rawCourse;
 
-  $("sog").textContent=fmt(lastSpeed*MPS_TO_KT,1);
-  $("cog").textContent=fmt(lastCourse,0);
+  const speedKt=Number.isFinite(lastSpeed)?lastSpeed*MPS_TO_KT:null;
+  const gpsMoving=Number.isFinite(speedKt) && speedKt>=GPS_COURSE_THRESHOLD_KT;
+  const useGps=gpsMoving && Number.isFinite(lastCourse);
+  const useMagnetic=!useGps && Number.isFinite(magneticHeading);
+  const navigationHeading=useGps?lastCourse:(useMagnetic?magneticHeading:lastCourse);
+
+  $("sog").textContent=fmt(speedKt,1);
+  $("cog").textContent=fmt(navigationHeading,0);
+
+  if(useGps){
+    $("headingSource").textContent="方位ソース：GPS対地針路（COG）";
+  }else if(useMagnetic){
+    $("headingSource").textContent="方位ソース：磁気コンパス（MAG）";
+  }else{
+    $("headingSource").textContent="方位ソース：未取得";
+  }
 
   if(!waypoint){
     $("distanceNm").textContent="--";
@@ -575,8 +734,8 @@ function updateUi(){
   $("distanceNm").textContent=fmt(distance*M_TO_NM,2);
   $("distanceSub").textContent=distance<1000?`${fmt(distance,0)} m`:`${fmt(distance/1000,2)} km`;
 
-  if(Number.isFinite(lastCourse)){
-    const relative=normalize180(bearing-lastCourse);
+  if(Number.isFinite(navigationHeading)){
+    const relative=normalize180(bearing-navigationHeading);
     $("relativeClock").textContent=relativeClock(relative);
     setSideColor(relative);
 
@@ -590,31 +749,122 @@ function updateUi(){
       $("arrowWrap").style.transform=`rotate(${bearing}deg)`;
     }
   }else{
-    $("relativeClock").textContent="COG待ち";
+    $("relativeClock").textContent="方位待ち";
     $("dialAngle").textContent=dialMode==="absolute"?bearing.toFixed(0)+"°":"--";
-    $("dialSide").textContent="移動すると表示";
+    $("dialSide").textContent="方位センサー待ち";
     $("arrowWrap").style.transform=`rotate(${dialMode==="absolute"?bearing:0}deg)`;
     setSideColor(0);
   }
 }
+function persistWaypoints(){
+  saveJson(STORAGE_WAYPOINTS, waypoints);
+
+  if (waypoint) {
+    activeWaypointId = waypoint.id;
+    localStorage.setItem(STORAGE_ACTIVE_WP_ID, activeWaypointId);
+  } else {
+    activeWaypointId = null;
+    localStorage.removeItem(STORAGE_ACTIVE_WP_ID);
+  }
+}
+
+function clearWaypointForm(){
+  $("wpName").value="";
+  $("wpLat").value="";
+  $("wpLon").value="";
+}
+
+function selectWaypoint(id){
+  const selected=waypoints.find(w=>w.id===id);
+  if(!selected)return;
+
+  waypoint=selected;
+  activeWaypointId=id;
+  localStorage.setItem(STORAGE_ACTIVE_WP_ID,id);
+
+  log(`WP選択: ${selected.name||"名称なし"}`);
+  updateWpUi();
+}
+
+function deleteWaypoint(id){
+  const target=waypoints.find(w=>w.id===id);
+  if(!target)return;
+
+  if(!confirm(`ウェイポイント「${target.name||"名称なし"}」を削除しますか？`))return;
+
+  waypoints=waypoints.filter(w=>w.id!==id);
+
+  if(activeWaypointId===id){
+    waypoint=waypoints[0]||null;
+    activeWaypointId=waypoint?waypoint.id:null;
+  }
+
+  persistWaypoints();
+  log(`WP削除: ${target.name||"名称なし"}`);
+  updateWpUi();
+}
+
+function renderWaypointList(){
+  const container=$("waypointList");
+  container.innerHTML="";
+
+  if(!waypoints.length){
+    const empty=document.createElement("div");
+    empty.className="info";
+    empty.textContent="保存済みウェイポイントはありません。";
+    container.appendChild(empty);
+    return;
+  }
+
+  waypoints.forEach(w=>{
+    const item=document.createElement("div");
+    item.className="wp-item"+(w.id===activeWaypointId?" active":"");
+
+    const text=document.createElement("div");
+
+    const name=document.createElement("div");
+    name.className="wp-item-name";
+    name.textContent=w.name||"名称なし";
+
+    const coords=document.createElement("div");
+    coords.className="wp-item-coords";
+    coords.textContent=`${w.lat.toFixed(7)}, ${w.lon.toFixed(7)}`;
+
+    text.appendChild(name);
+    text.appendChild(coords);
+
+    const selectButton=document.createElement("button");
+    selectButton.textContent=w.id===activeWaypointId?"選択中":"選択";
+    selectButton.disabled=w.id===activeWaypointId;
+    selectButton.addEventListener("click",()=>selectWaypoint(w.id));
+
+    const deleteButton=document.createElement("button");
+    deleteButton.textContent="削除";
+    deleteButton.className="danger";
+    deleteButton.addEventListener("click",()=>deleteWaypoint(w.id));
+
+    item.appendChild(text);
+    item.appendChild(selectButton);
+    item.appendChild(deleteButton);
+    container.appendChild(item);
+  });
+}
+
 function updateWpUi(){
   if(!waypoint){
-    $("wpInfo").textContent="未設定";
-    $("wpName").value="";
-    $("wpLat").value="";
-    $("wpLon").value="";
+    $("wpInfo").textContent="選択中：未設定";
     $("wpNameDisplay").textContent="未設定";
     $("wpCoordsDisplay").innerHTML="緯度・経度を<br>設定してください";
   }else{
-    $("wpName").value=waypoint.name||"";
-    $("wpLat").value=waypoint.lat;
-    $("wpLon").value=waypoint.lon;
-    $("wpInfo").textContent=`${waypoint.name||"名称なし"} / ${waypoint.lat.toFixed(7)}, ${waypoint.lon.toFixed(7)}`;
+    $("wpInfo").textContent=`選択中：${waypoint.name||"名称なし"} / ${waypoint.lat.toFixed(7)}, ${waypoint.lon.toFixed(7)}`;
     $("wpNameDisplay").textContent=waypoint.name||"名称なし";
     $("wpCoordsDisplay").innerHTML=`${dms(waypoint.lat,true)}<br>${dms(waypoint.lon,false)}`;
   }
+
+  renderWaypointList();
   updateUi();
 }
+
 function makePoint(position){
   const c=position.coords;
   return{
@@ -660,23 +910,57 @@ function stopTracking(){
   if(watchId!==null){navigator.geolocation.clearWatch(watchId);log("記録停止")}
   watchId=null;updateUi();
 }
+function createWaypoint(name,lat,lon){
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+    name: name || `Waypoint ${waypoints.length+1}`,
+    lat,
+    lon
+  };
+}
+
 function saveWaypoint(){
   const lat=Number($("wpLat").value),lon=Number($("wpLon").value);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180){
-    alert("正しい緯度・経度を入力してください。");return
+    alert("正しい緯度・経度を入力してください。");
+    return;
   }
-  waypoint={name:$("wpName").value.trim(),lat,lon};
-  saveJson(STORAGE_WP,waypoint);log(`WP保存: ${waypoint.name||"名称なし"} / ${lat}, ${lon}`);updateWpUi();
+
+  const newWaypoint=createWaypoint($("wpName").value.trim(),lat,lon);
+  waypoints.push(newWaypoint);
+  waypoint=newWaypoint;
+  activeWaypointId=newWaypoint.id;
+
+  persistWaypoints();
+  clearWaypointForm();
+
+  log(`WP新規保存: ${newWaypoint.name} / ${lat}, ${lon}`);
+  updateWpUi();
 }
+
 function currentAsWaypoint(){
-  if(!latest){alert("現在地がまだ取得できていません。先に記録を開始してください。");return}
-  waypoint={name:$("wpName").value.trim()||"現在地WP",lat:latest.latitude,lon:latest.longitude};
-  saveJson(STORAGE_WP,waypoint);log(`現在地をWPに設定: ${waypoint.lat}, ${waypoint.lon}`);updateWpUi();
+  if(!latest){
+    alert("現在地がまだ取得できていません。先に記録を開始してください。");
+    return;
+  }
+
+  const newWaypoint=createWaypoint(
+    $("wpName").value.trim(),
+    latest.latitude,
+    latest.longitude
+  );
+
+  waypoints.push(newWaypoint);
+  waypoint=newWaypoint;
+  activeWaypointId=newWaypoint.id;
+
+  persistWaypoints();
+  clearWaypointForm();
+
+  log(`現在地をWP新規保存: ${newWaypoint.name}`);
+  updateWpUi();
 }
-function clearWaypoint(){
-  if(!confirm("ウェイポイントを削除しますか？"))return;
-  waypoint=null;localStorage.removeItem(STORAGE_WP);log("WP削除");updateWpUi();
-}
+
 function xmlEscape(value){
   return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;");
 }
@@ -698,9 +982,11 @@ function exportGpx(){
     const ext=speed!==""?`    <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>${speed}</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>\n`:"";
     return `  <trkpt lat="${p.latitude}" lon="${p.longitude}">\n${ele}${speedElement}    <time>${new Date(p.timestamp).toISOString()}</time>\n${ext}  </trkpt>`;
   }).join("\n");
-  const wp=waypoint?`\n  <wpt lat="${waypoint.lat}" lon="${waypoint.lon}"><name>${xmlEscape(waypoint.name||"Waypoint")}</name></wpt>`:"";
+  const wp=waypoints.map(w=>
+    `\n  <wpt lat="${w.lat}" lon="${w.lon}"><name>${xmlEscape(w.name||"Waypoint")}</name></wpt>`
+  ).join("");
   const gpx=`<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Sailing GPS Logger Web V2"
+<gpx version="1.1" creator="Sailing GPS Logger Web V4"
  xmlns="http://www.topografix.com/GPX/1/1"
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">${wp}
@@ -728,13 +1014,14 @@ function clearData(){
   points=[];previousAccepted=null;localStorage.removeItem(STORAGE_POINTS);log("記録データ削除");updateUi();
 }
 
+$("enableCompass").addEventListener("click",enableCompass);
 $("relativeMode").addEventListener("click",()=>setDialMode("relative"));
 $("absoluteMode").addEventListener("click",()=>setDialMode("absolute"));
 $("start").addEventListener("click",startTracking);
 $("stop").addEventListener("click",stopTracking);
 $("saveWp").addEventListener("click",saveWaypoint);
 $("currentWp").addEventListener("click",currentAsWaypoint);
-$("clearWp").addEventListener("click",clearWaypoint);
+$("clearForm").addEventListener("click",clearWaypointForm);
 $("exportGpx").addEventListener("click",exportGpx);
 $("exportCsv").addEventListener("click",exportCsv);
 $("clearData").addEventListener("click",clearData);
@@ -747,6 +1034,7 @@ setDialMode(dialMode);
 updateWpUi();
 updateUi();
 log(`アプリ起動 / 保存済み ${points.length}点`);
+log("磁気コンパスはボタン操作後に有効になります");
 
 if("serviceWorker"in navigator){
   window.addEventListener("load",()=>{

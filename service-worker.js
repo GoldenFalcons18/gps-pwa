@@ -1,4 +1,4 @@
-const CACHE_NAME = "sailing-gps-web-v2-20260713";
+const CACHE_NAME = "sailing-gps-web-v5-20260713";
 const FILES = ["./","./index.html","./manifest.json","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES)));
