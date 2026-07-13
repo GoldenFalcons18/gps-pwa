@@ -110,15 +110,15 @@
     .arrow{
       position:absolute;
       left:50%;
-      top:6%;
+      top:2%;
       transform:translateX(-50%);
       width:0;
       height:0;
       border-left:28px solid transparent;
       border-right:28px solid transparent;
-      border-top:62px solid var(--right);
+      border-bottom:62px solid var(--right);
       filter:drop-shadow(0 0 4px rgba(255,255,255,.35));
-      transition:border-top-color .2s;
+      transition:border-bottom-color .2s;
     }
     .arrow::after{
       display:none;
@@ -318,10 +318,10 @@
       .pane{padding:7px}
       .dial{width:min(40vw,290px)}
       .arrow{
-        top:5%;
+        top:1%;
         border-left-width:20px;
         border-right-width:20px;
-        border-top-width:44px;
+        border-bottom-width:44px;
       }
       .target-badge{padding:4px 10px}
     }
@@ -653,7 +653,7 @@ function setSideColor(relative){
   const color=Math.abs(relative)<0.5?"#f7f7f7":relative>0?"#00ff38":"#ff2020";
   $("dialAngle").style.color=color;
   $("dialSide").style.color=color;
-  $("arrow").style.borderTopColor=color;
+  $("arrow").style.borderBottomColor=color;
   $("arrow").style.color=color;
   return color;
 }
