@@ -104,7 +104,7 @@
       inset:0;
       z-index:4;
       transform:rotate(0deg);
-      transition:transform .25s linear;
+      will-change:transform;
       pointer-events:none;
     }
     .arrow{
@@ -515,6 +515,11 @@ let compassEnabled = false;
 let compassEventReceived = false;
 const GPS_COURSE_THRESHOLD_KT = 0.05;
 
+let triangleCurrentAngle = 0;
+let triangleTargetAngle = 0;
+let triangleAnimationStarted = false;
+const TRIANGLE_FOLLOW_SPEED = 14;
+
 const $ = id => document.getElementById(id);
 
 function log(message){
@@ -586,7 +591,7 @@ function getScreenAngle(){
   return 0;
 }
 
-function smoothHeading(previous,next,factor=0.2){
+function smoothHeading(previous,next,factor=0.45){
   if(!Number.isFinite(previous))return normalize360(next);
   const delta=normalize180(next-previous);
   return normalize360(previous+delta*factor);
@@ -647,6 +652,41 @@ async function enableCompass(){
     $("compassStatus").textContent=`磁気コンパス開始エラー: ${error.message}`;
     log(`磁気コンパス開始エラー: ${error.message}`);
   }
+}
+
+
+function setTriangleTarget(angle){
+  if(!Number.isFinite(angle))return;
+  triangleTargetAngle=normalize360(angle);
+
+  if(!triangleAnimationStarted){
+    triangleCurrentAngle=triangleTargetAngle;
+    triangleAnimationStarted=true;
+    $("arrowWrap").style.transform=`rotate(${triangleCurrentAngle}deg)`;
+  }
+}
+
+function animateTriangle(timestamp){
+  if(!animateTriangle.lastTime){
+    animateTriangle.lastTime=timestamp;
+  }
+
+  const dt=Math.min((timestamp-animateTriangle.lastTime)/1000,0.05);
+  animateTriangle.lastTime=timestamp;
+
+  const difference=normalize180(triangleTargetAngle-triangleCurrentAngle);
+  const follow=1-Math.exp(-TRIANGLE_FOLLOW_SPEED*dt);
+
+  triangleCurrentAngle=normalize360(
+    triangleCurrentAngle+difference*follow
+  );
+
+  if(Math.abs(difference)<0.05){
+    triangleCurrentAngle=triangleTargetAngle;
+  }
+
+  $("arrowWrap").style.transform=`rotate(${triangleCurrentAngle}deg)`;
+  requestAnimationFrame(animateTriangle);
 }
 
 function setSideColor(relative){
@@ -724,7 +764,7 @@ function updateUi(){
     $("relativeClock").textContent="--時方向";
     $("dialAngle").textContent="--";
     $("dialSide").textContent="WP未設定";
-    $("arrowWrap").style.transform="rotate(0deg)";
+    setTriangleTarget(0);
     setSideColor(0);
     return;
   }
@@ -742,17 +782,17 @@ function updateUi(){
     if(dialMode==="relative"){
       $("dialAngle").textContent=Math.abs(relative).toFixed(0)+"°";
       $("dialSide").textContent=relativeText(relative);
-      $("arrowWrap").style.transform=`rotate(${relative}deg)`;
+      setTriangleTarget(relative);
     }else{
       $("dialAngle").textContent=bearing.toFixed(0)+"°";
       $("dialSide").textContent=relativeText(relative);
-      $("arrowWrap").style.transform=`rotate(${bearing}deg)`;
+      setTriangleTarget(bearing);
     }
   }else{
     $("relativeClock").textContent="方位待ち";
     $("dialAngle").textContent=dialMode==="absolute"?bearing.toFixed(0)+"°":"--";
     $("dialSide").textContent="方位センサー待ち";
-    $("arrowWrap").style.transform=`rotate(${dialMode==="absolute"?bearing:0}deg)`;
+    setTriangleTarget(dialMode==="absolute"?bearing:0);
     setSideColor(0);
   }
 }
@@ -1033,6 +1073,7 @@ $("minDistance").value=String(savedSettings.minDistance??0);
 setDialMode(dialMode);
 updateWpUi();
 updateUi();
+requestAnimationFrame(animateTriangle);
 log(`アプリ起動 / 保存済み ${points.length}点`);
 log("磁気コンパスはボタン操作後に有効になります");
 
