@@ -1,12 +1,11 @@
 {
-  "name": "GPS Logger GPX",
-  "short_name": "GPS Logger",
-  "description": "GPSを記録してGPX形式で保存するPWA",
-  "start_url": "./index.html",
+  "name": "Sailing GPS Logger",
+  "short_name": "Sailing GPS",
+  "description": "ヨット用GPS計器・GPXロガー",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#111827",
-  "orientation": "portrait",
+  "background_color": "#06121d",
+  "theme_color": "#071827",
   "icons": [
     {
       "src": "icon-192.png",

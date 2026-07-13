@@ -1,487 +1,595 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="GPS Logger" />
-  <link rel="manifest" href="manifest.json" />
-  <title>GPS Logger GPX</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071827">
+  <title>Sailing GPS Logger</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
+    :root {
+      color-scheme: dark;
+      --bg:#06121d;
+      --panel:#0d2233;
+      --panel2:#102c42;
+      --text:#f2f7fb;
+      --muted:#9fb4c5;
+      --accent:#46c8ff;
+      --ok:#4de2a0;
+      --warn:#ffd166;
+      --danger:#ff6b6b;
+      --border:#24465f;
     }
-    header {
-      padding: 18px 16px;
-      background: #111827;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid #374151;
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:linear-gradient(180deg,#06121d,#091b29);
+      color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+      min-height:100vh;
     }
-    h1 { margin: 0; font-size: 22px; }
-    main { padding: 16px; max-width: 920px; margin: 0 auto; }
-    .card {
-      background: #111827;
-      border: 1px solid #374151;
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 14px;
+    main{max-width:820px;margin:auto;padding:16px 14px 40px}
+    h1{margin:0 0 4px;font-size:1.5rem}
+    .subtitle{color:var(--muted);margin:0 0 14px;font-size:.92rem}
+    .statusbar{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;
+      background:var(--panel);border:1px solid var(--border);border-radius:14px;
+      padding:12px;margin-bottom:12px
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+    .badge{font-weight:700;color:var(--warn)}
+    .badge.running{color:var(--ok)}
+    .grid{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
     }
-    .item {
-      background: #020617;
-      border: 1px solid #1f2937;
-      border-radius: 10px;
-      padding: 10px;
-      min-height: 70px;
+    .card{
+      background:var(--panel);border:1px solid var(--border);
+      border-radius:15px;padding:14px;min-height:112px;
     }
-    .label { color: #9ca3af; font-size: 12px; }
-    .value { font-size: 18px; font-weight: 700; margin-top: 5px; word-break: break-all; }
-    .buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    button {
-      border: none;
-      border-radius: 12px;
-      padding: 14px 10px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      color: white;
+    .card.large{min-height:130px}
+    .label{font-size:.82rem;color:var(--muted);letter-spacing:.05em}
+    .value{font-size:2rem;font-weight:800;margin-top:6px;line-height:1.05}
+    .unit{font-size:1rem;color:var(--muted);font-weight:600}
+    .small{font-size:1rem;color:var(--muted);margin-top:8px;word-break:break-all}
+    section{
+      background:var(--panel);border:1px solid var(--border);
+      border-radius:15px;padding:14px;margin-top:12px;
     }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    .start { background: #16a34a; }
-    .stop { background: #dc2626; }
-    .download { background: #2563eb; }
-    .clear { background: #6b7280; }
-    .status {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      background: #374151;
+    h2{font-size:1.05rem;margin:0 0 10px}
+    .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    input,button,select{
+      width:100%;border-radius:10px;border:1px solid var(--border);
+      padding:12px;font-size:1rem;
     }
-    .status.running { background: #15803d; }
-    .status.error { background: #b91c1c; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border-bottom: 1px solid #374151; padding: 7px 4px; text-align: right; }
-    th:first-child, td:first-child { text-align: left; }
-    .table-wrap { overflow-x: auto; }
-    #debugLog {
-      height: 180px;
-      overflow-y: auto;
-      background: #020617;
-      color: #86efac;
-      border-radius: 10px;
-      padding: 10px;
-      white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
+    input,select{background:#071827;color:var(--text)}
+    button{background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer}
+    button.primary{background:#0b78a8;border-color:#199bd1}
+    button.danger{background:#6a252b;border-color:#98404a}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+    .full{grid-column:1/-1}
+    pre{
+      margin:0;background:#04101a;border-radius:10px;padding:10px;
+      min-height:130px;max-height:230px;overflow:auto;color:#b9e5ff;
+      white-space:pre-wrap;font-size:.78rem
     }
-    .note { color: #fbbf24; font-size: 13px; line-height: 1.6; }
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
-      font-size: 16px;
+    .notice{
+      color:var(--warn);font-size:.88rem;line-height:1.5;margin-top:8px
+    }
+    @media(max-width:560px){
+      .value{font-size:1.65rem}
+      .grid,.formgrid,.buttons{grid-template-columns:1fr 1fr}
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>GPS Logger GPX</h1>
-  </header>
+<main>
+  <h1>Sailing GPS Logger</h1>
+  <p class="subtitle">地図なし・ヨット用GPS計器／GPXロガー</p>
 
-  <main>
-    <section class="card">
-      <p>状態: <span id="status" class="status">停止中</span></p>
-      <p class="note">iPhone / Android対応。GPS取得にはHTTPS公開またはlocalhostが必要です。画面オフ・バックグラウンド記録は端末側で止まる場合があります。</p>
-    </section>
+  <div class="statusbar">
+    <div><span class="label">状態</span><br><span id="status" class="badge">停止中</span></div>
+    <div style="text-align:right"><span class="label">保存点数</span><br><strong id="count">0</strong></div>
+  </div>
 
-    <section class="card">
-      <label class="label" for="trackName">トラック名</label>
-      <input id="trackName" type="text" placeholder="例：2026-06-15 ヨット練習" />
-    </section>
+  <div class="grid">
+    <div class="card large">
+      <div class="label">SOG</div>
+      <div class="value"><span id="sog">--</span> <span class="unit">kt</span></div>
+      <div id="sogMps" class="small">-- m/s</div>
+    </div>
+    <div class="card large">
+      <div class="label">COG</div>
+      <div class="value"><span id="cog">--</span><span class="unit">°</span></div>
+      <div id="cardinal" class="small">--</div>
+    </div>
+    <div class="card">
+      <div class="label">WP 絶対方位</div>
+      <div class="value"><span id="bearing">--</span><span class="unit">°</span></div>
+    </div>
+    <div class="card">
+      <div class="label">WP 距離</div>
+      <div class="value"><span id="distanceNm">--</span> <span class="unit">NM</span></div>
+      <div id="distanceM" class="small">-- m</div>
+    </div>
+    <div class="card">
+      <div class="label">相対方位（12時方式）</div>
+      <div id="relativeClock" class="value" style="font-size:1.6rem">--</div>
+    </div>
+    <div class="card">
+      <div class="label">相対方位（左右度方式）</div>
+      <div id="relativeLR" class="value" style="font-size:1.6rem">--</div>
+    </div>
+  </div>
 
-    <section class="card grid">
-      <div class="item"><div class="label">記録点数</div><div id="count" class="value">0</div></div>
-      <div class="item"><div class="label">経過時間</div><div id="elapsed" class="value">00:00:00</div></div>
-      <div class="item"><div class="label">緯度</div><div id="lat" class="value">-</div></div>
-      <div class="item"><div class="label">経度</div><div id="lon" class="value">-</div></div>
-      <div class="item"><div class="label">標高 m</div><div id="ele" class="value">-</div></div>
-      <div class="item"><div class="label">速度 m/s</div><div id="speed" class="value">-</div></div>
-      <div class="item"><div class="label">精度 m</div><div id="accuracy" class="value">-</div></div>
-      <div class="item"><div class="label">最終取得</div><div id="lastTime" class="value">-</div></div>
-    </section>
+  <section>
+    <h2>現在地</h2>
+    <div id="position" class="small">まだ取得していません</div>
+    <div id="accuracy" class="small">精度: --</div>
+  </section>
 
-    <section class="card buttons">
-      <button id="startBtn" class="start">記録開始</button>
-      <button id="stopBtn" class="stop" disabled>停止</button>
-      <button id="downloadBtn" class="download">GPX保存</button>
-      <button id="clearBtn" class="clear">削除</button>
-    </section>
+  <section>
+    <h2>ウェイポイント</h2>
+    <div class="formgrid">
+      <input id="wpName" class="full" type="text" placeholder="名称（例：江の島沖ブイ）">
+      <input id="wpLat" inputmode="decimal" type="number" step="any" placeholder="緯度 例: 35.300367">
+      <input id="wpLon" inputmode="decimal" type="number" step="any" placeholder="経度 例: 139.488318">
+    </div>
+    <div class="buttons">
+      <button id="saveWp">入力値を保存</button>
+      <button id="currentWp">現在地をWPにする</button>
+      <button id="clearWp" class="danger full">ウェイポイント削除</button>
+    </div>
+    <div id="wpInfo" class="small">未設定</div>
+  </section>
 
-    <section class="card">
-      <h2>最新20件</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>時刻</th><th>緯度</th><th>経度</th><th>標高</th><th>速度</th><th>精度</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
+  <section>
+    <h2>GPS記録</h2>
+    <div class="formgrid">
+      <label>
+        <span class="label">最低保存間隔</span>
+        <select id="interval">
+          <option value="1000">1秒</option>
+          <option value="2000">2秒</option>
+          <option value="5000">5秒</option>
+          <option value="10000">10秒</option>
+        </select>
+      </label>
+      <label>
+        <span class="label">最低移動距離</span>
+        <select id="minDistance">
+          <option value="0">指定なし</option>
+          <option value="1">1 m</option>
+          <option value="3">3 m</option>
+          <option value="5">5 m</option>
+          <option value="10">10 m</option>
+        </select>
+      </label>
+    </div>
+    <div class="buttons">
+      <button id="start" class="primary">記録開始</button>
+      <button id="stop" disabled>記録停止</button>
+      <button id="exportGpx">GPX保存</button>
+      <button id="exportCsv">CSV保存</button>
+      <button id="clearData" class="danger full">記録データ削除</button>
+    </div>
+    <p class="notice">Web版は画面消灯・バックグラウンド移行時に、iPhone/Android側の判断でGPS更新が停止する場合があります。確実な画面OFF記録にはネイティブアプリが必要です。</p>
+  </section>
 
-    <section class="card">
-      <h2>デバッグログ</h2>
-      <div id="debugLog"></div>
-    </section>
-  </main>
+  <section>
+    <h2>デバッグログ</h2>
+    <pre id="log"></pre>
+  </section>
+</main>
 
-  <script>
-    const STORAGE_KEY = "gps_logger_gpx_points_v1";
-    const TRACK_NAME_KEY = "gps_logger_gpx_track_name_v1";
+<script>
+"use strict";
 
-    let watchId = null;
-    let points = [];
-    let startedAt = null;
-    let elapsedTimer = null;
+const STORAGE_POINTS = "sailingGps.points.v1";
+const STORAGE_WP = "sailingGps.waypoint.v1";
+const STORAGE_SETTINGS = "sailingGps.settings.v1";
+const MPS_TO_KT = 1.9438444924406;
+const M_TO_NM = 1 / 1852;
+const EARTH_RADIUS_M = 6371000;
 
-    const els = {
-      status: document.getElementById("status"),
-      count: document.getElementById("count"),
-      elapsed: document.getElementById("elapsed"),
-      lat: document.getElementById("lat"),
-      lon: document.getElementById("lon"),
-      ele: document.getElementById("ele"),
-      speed: document.getElementById("speed"),
-      accuracy: document.getElementById("accuracy"),
-      lastTime: document.getElementById("lastTime"),
-      tbody: document.getElementById("tbody"),
-      debugLog: document.getElementById("debugLog"),
-      startBtn: document.getElementById("startBtn"),
-      stopBtn: document.getElementById("stopBtn"),
-      downloadBtn: document.getElementById("downloadBtn"),
-      clearBtn: document.getElementById("clearBtn"),
-      trackName: document.getElementById("trackName")
-    };
+let points = loadJson(STORAGE_POINTS, []);
+let waypoint = loadJson(STORAGE_WP, null);
+let watchId = null;
+let latest = null;
+let previousAccepted = points.length ? points[points.length - 1] : null;
 
-    window.addEventListener("load", init);
+const $ = id => document.getElementById(id);
 
-    function init() {
-      debug("アプリ起動");
-      loadPoints();
-      els.trackName.value = localStorage.getItem(TRACK_NAME_KEY) || defaultTrackName();
-      els.trackName.addEventListener("input", () => {
-        localStorage.setItem(TRACK_NAME_KEY, els.trackName.value);
-      });
-      els.startBtn.addEventListener("click", startTracking);
-      els.stopBtn.addEventListener("click", stopTracking);
-      els.downloadBtn.addEventListener("click", downloadGPX);
-      els.clearBtn.addEventListener("click", clearPoints);
+function log(message) {
+  const line = `[${new Date().toLocaleString("ja-JP")}] ${message}`;
+  $("log").textContent += line + "\n";
+  $("log").scrollTop = $("log").scrollHeight;
+  console.log(line);
+}
 
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("service-worker.js")
-          .then(() => debug("Service Worker登録成功"))
-          .catch(err => debug("Service Worker登録失敗: " + err.message));
-      }
+function loadJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error(e);
+    return fallback;
+  }
+}
 
-      render();
-    }
+function saveJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
 
-    function startTracking() {
-      debug("記録開始要求");
+function normalize360(deg) {
+  const r = deg % 360;
+  return r < 0 ? r + 360 : r;
+}
 
-      if (!navigator.geolocation) {
-        setStatus("エラー", "error");
-        debug("この端末/ブラウザはGeolocation非対応");
-        alert("この端末またはブラウザはGPS取得に対応していません。");
-        return;
-      }
+function normalize180(deg) {
+  let r = normalize360(deg);
+  if (r > 180) r -= 360;
+  return r;
+}
 
-      if (watchId !== null) {
-        debug("すでに記録中のため開始しない");
-        return;
-      }
+function toRad(v) { return v * Math.PI / 180; }
+function toDeg(v) { return v * 180 / Math.PI; }
 
-      startedAt = Date.now();
-      elapsedTimer = setInterval(updateElapsed, 1000);
-      updateElapsed();
-      setStatus("記録中", "running");
-      els.startBtn.disabled = true;
-      els.stopBtn.disabled = false;
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const p1 = toRad(lat1);
+  const p2 = toRad(lat2);
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(p1) * Math.cos(p2) * Math.sin(dLon/2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-      watchId = navigator.geolocation.watchPosition(
-        onPosition,
-        onPositionError,
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 15000
-        }
-      );
+function bearingDegrees(lat1, lon1, lat2, lon2) {
+  const p1 = toRad(lat1);
+  const p2 = toRad(lat2);
+  const dl = toRad(lon2-lon1);
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1)*Math.sin(p2) -
+            Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+  return normalize360(toDeg(Math.atan2(y,x)));
+}
 
-      debug("watchPosition開始 watchId=" + watchId);
-    }
+function calculatedCourse(a, b) {
+  if (!a || !b) return null;
+  if (distanceMeters(a.latitude, a.longitude, b.latitude, b.longitude) < 0.5) return null;
+  return bearingDegrees(a.latitude, a.longitude, b.latitude, b.longitude);
+}
 
-    function stopTracking() {
-      debug("停止要求");
+function calculatedSpeed(a, b) {
+  if (!a || !b) return null;
+  const dt = (b.timestamp - a.timestamp) / 1000;
+  if (dt <= 0) return null;
+  return distanceMeters(a.latitude, a.longitude, b.latitude, b.longitude) / dt;
+}
 
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        debug("watchPosition停止 watchId=" + watchId);
-        watchId = null;
-      }
+function relativeClock(relativeDeg) {
+  const index = Math.floor((relativeDeg + 15) / 30);
+  const normalized = ((index % 12) + 12) % 12;
+  const hour = normalized === 0 ? 12 : normalized;
+  return `${hour}時方向`;
+}
 
-      if (elapsedTimer !== null) {
-        clearInterval(elapsedTimer);
-        elapsedTimer = null;
-      }
+function relativeLeftRight(relativeDeg) {
+  const value = Math.abs(relativeDeg);
+  if (value < 0.5) return "正面 0°";
+  return relativeDeg > 0 ? `右 ${value.toFixed(0)}°` : `左 ${value.toFixed(0)}°`;
+}
 
-      setStatus("停止中", "");
-      els.startBtn.disabled = false;
-      els.stopBtn.disabled = true;
-    }
+function cardinal(deg) {
+  if (!Number.isFinite(deg)) return "--";
+  const names = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return names[Math.round(normalize360(deg)/22.5)%16];
+}
 
-    function onPosition(position) {
-      const c = position.coords;
-      const rawSpeed = c.speed;
-      const calculatedSpeed = calcSpeedFromPrevious(c.latitude, c.longitude, position.timestamp);
-      const speed = isValidNumber(rawSpeed) ? rawSpeed : calculatedSpeed;
+function xmlEscape(value) {
+  return String(value ?? "")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+    .replaceAll("'","&apos;");
+}
 
-      const point = {
-        lat: c.latitude,
-        lon: c.longitude,
-        ele: isValidNumber(c.altitude) ? c.altitude : null,
-        speed: isValidNumber(speed) ? speed : 0,
-        time: new Date(position.timestamp).toISOString(),
-        accuracy: isValidNumber(c.accuracy) ? c.accuracy : null,
-        heading: isValidNumber(c.heading) ? c.heading : null
-      };
+function fmt(value, digits=1) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "--";
+}
 
-      points.push(point);
-      savePoints();
-      render();
+function updateUi() {
+  $("count").textContent = points.length;
+  $("status").textContent = watchId === null ? "停止中" : "記録中";
+  $("status").classList.toggle("running", watchId !== null);
+  $("start").disabled = watchId !== null;
+  $("stop").disabled = watchId === null;
 
-      debug(`GPS取得成功 lat=${point.lat}, lon=${point.lon}, ele=${point.ele}, speed=${point.speed}, accuracy=${point.accuracy}`);
-    }
+  if (!latest) {
+    $("position").textContent = "まだ取得していません";
+    return;
+  }
 
-    function onPositionError(error) {
-      let msg = "不明なエラー";
-      if (error.code === error.PERMISSION_DENIED) msg = "位置情報の許可が拒否されました";
-      if (error.code === error.POSITION_UNAVAILABLE) msg = "位置情報を取得できません";
-      if (error.code === error.TIMEOUT) msg = "位置情報取得がタイムアウトしました";
+  $("position").textContent =
+    `緯度 ${latest.latitude.toFixed(7)} / 経度 ${latest.longitude.toFixed(7)} / 高度 ${fmt(latest.altitude,1)} m`;
+  $("accuracy").textContent = `精度: ±${fmt(latest.accuracy,1)} m / 時刻: ${new Date(latest.timestamp).toLocaleString("ja-JP")}`;
 
-      setStatus("エラー", "error");
-      debug("GPS取得エラー: " + msg);
-      alert(msg);
-      stopTracking();
-    }
+  const speed = Number.isFinite(latest.speed) ? latest.speed : calculatedSpeed(previousAccepted, latest);
+  const course = Number.isFinite(latest.heading) && speed > 0.3
+    ? normalize360(latest.heading)
+    : calculatedCourse(previousAccepted, latest);
 
-    function calcSpeedFromPrevious(lat, lon, timestamp) {
-      if (points.length === 0) return null;
+  $("sog").textContent = fmt(speed * MPS_TO_KT, 1);
+  $("sogMps").textContent = `${fmt(speed,2)} m/s`;
+  $("cog").textContent = fmt(course,0);
+  $("cardinal").textContent = cardinal(course);
 
-      const prev = points[points.length - 1];
-      const distance = haversineMeters(prev.lat, prev.lon, lat, lon);
-      const seconds = (timestamp - Date.parse(prev.time)) / 1000;
+  if (!waypoint) {
+    $("bearing").textContent = "--";
+    $("distanceNm").textContent = "--";
+    $("distanceM").textContent = "-- m";
+    $("relativeClock").textContent = "--";
+    $("relativeLR").textContent = "--";
+    return;
+  }
 
-      if (seconds <= 0) return null;
-      return distance / seconds;
-    }
+  const bearing = bearingDegrees(latest.latitude, latest.longitude, waypoint.lat, waypoint.lon);
+  const distance = distanceMeters(latest.latitude, latest.longitude, waypoint.lat, waypoint.lon);
+  $("bearing").textContent = fmt(bearing,0);
+  $("distanceNm").textContent = fmt(distance * M_TO_NM,2);
+  $("distanceM").textContent = `${distance < 1000 ? fmt(distance,0)+" m" : fmt(distance/1000,2)+" km"}`;
 
-    function haversineMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const toRad = deg => deg * Math.PI / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
+  if (Number.isFinite(course)) {
+    const relative = normalize180(bearing - course);
+    $("relativeClock").textContent = relativeClock(relative);
+    $("relativeLR").textContent = relativeLeftRight(relative);
+  } else {
+    $("relativeClock").textContent = "COG待ち";
+    $("relativeLR").textContent = "COG待ち";
+  }
+}
 
-    function downloadGPX() {
-      debug("GPX保存要求");
+function updateWpUi() {
+  if (!waypoint) {
+    $("wpInfo").textContent = "未設定";
+    $("wpName").value = "";
+    $("wpLat").value = "";
+    $("wpLon").value = "";
+  } else {
+    $("wpName").value = waypoint.name || "";
+    $("wpLat").value = waypoint.lat;
+    $("wpLon").value = waypoint.lon;
+    $("wpInfo").textContent =
+      `${waypoint.name || "名称なし"} / ${waypoint.lat.toFixed(7)}, ${waypoint.lon.toFixed(7)}`;
+  }
+  updateUi();
+}
 
-      if (points.length === 0) {
-        alert("保存するGPSデータがありません。");
-        debug("GPX保存中止: データなし");
-        return;
-      }
+function makePoint(position) {
+  const c = position.coords;
+  return {
+    timestamp: position.timestamp || Date.now(),
+    latitude: c.latitude,
+    longitude: c.longitude,
+    accuracy: c.accuracy,
+    altitude: c.altitude,
+    altitudeAccuracy: c.altitudeAccuracy,
+    speed: c.speed,
+    heading: c.heading
+  };
+}
 
-      const gpx = buildGPX(points, els.trackName.value.trim() || defaultTrackName());
-      const blob = new Blob([gpx], { type: "application/gpx+xml;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `track-export-${fileDate()}.gpx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      debug("GPX保存完了");
-    }
+function shouldSave(point) {
+  if (!previousAccepted) return true;
+  const settings = loadJson(STORAGE_SETTINGS, {interval:1000, minDistance:0});
+  const dt = point.timestamp - previousAccepted.timestamp;
+  const distance = distanceMeters(
+    previousAccepted.latitude, previousAccepted.longitude,
+    point.latitude, point.longitude
+  );
+  return dt >= Number(settings.interval) && distance >= Number(settings.minDistance);
+}
 
-    function buildGPX(data, trackName) {
-      const metadataTime = new Date().toISOString();
-      const trkpts = data.map(p => {
-        const ele = isValidNumber(p.ele) ? numberFixed(p.ele, 2) : "0";
-        const speed = isValidNumber(p.speed) ? numberFixed(p.speed, 2) : "0.00";
-        return `      <trkpt lat="${numberFixed(p.lat, 6)}" lon="${numberFixed(p.lon, 6)}">\n` +
-          `        <ele>${ele}</ele>\n` +
-          `        <speed>${speed}</speed>\n` +
-          `        <time>${escapeXml(p.time)}</time>\n` +
-          `        <extensions>\n` +
-          `          <gpxtpx:TrackPointExtension>\n` +
-          `            <gpxtpx:speed>${speed}</gpxtpx:speed>\n` +
-          `          </gpxtpx:TrackPointExtension>\n` +
-          `        </extensions>\n` +
-          `      </trkpt>`;
-      }).join("\n");
+function onPosition(position) {
+  const point = makePoint(position);
+  latest = point;
 
-      return `<?xml version="1.0" encoding="UTF-8"?>\n` +
-`<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v/3" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" creator="GPS Logger PWA" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">\n` +
-`  <metadata>\n` +
-`    <link href="https://example.com"><text>GPS Logger PWA</text></link>\n` +
-`    <time>${metadataTime}</time>\n` +
-`  </metadata>\n` +
-`  <trk>\n` +
-`    <name>${escapeXml(trackName)}</name>\n` +
-`    <trkseg>\n` +
-`${trkpts}\n` +
-`    </trkseg>\n` +
-`  </trk>\n` +
-`</gpx>\n`;
-    }
+  if (watchId !== null && shouldSave(point)) {
+    points.push(point);
+    previousAccepted = point;
+    saveJson(STORAGE_POINTS, points);
+    log(`保存: ${point.latitude.toFixed(7)}, ${point.longitude.toFixed(7)} / 精度 ${fmt(point.accuracy,1)}m`);
+  }
+  updateUi();
+}
 
-    function clearPoints() {
-      if (!confirm("保存済みGPSデータをすべて削除しますか？")) {
-        debug("削除キャンセル");
-        return;
-      }
-      points = [];
-      savePoints();
-      render();
-      debug("保存データ削除完了");
-    }
+function onGeoError(error) {
+  const messages = {
+    1:"位置情報の利用が拒否されました",
+    2:"位置情報を取得できません",
+    3:"位置情報取得がタイムアウトしました"
+  };
+  log(`GPSエラー: ${messages[error.code] || error.message}`);
+  $("status").textContent = "GPSエラー";
+}
 
-    function loadPoints() {
-      try {
-        points = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        debug("保存済みGPSデータ読込: " + points.length + "件");
-      } catch (e) {
-        points = [];
-        debug("保存済みGPSデータ読込失敗: " + e.message);
-      }
-    }
+function startTracking() {
+  if (!navigator.geolocation) {
+    alert("このブラウザは位置情報に対応していません。");
+    return;
+  }
 
-    function savePoints() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(points));
-    }
+  const settings = {
+    interval: Number($("interval").value),
+    minDistance: Number($("minDistance").value)
+  };
+  saveJson(STORAGE_SETTINGS, settings);
 
-    function render() {
-      els.count.textContent = points.length;
-      const last = points[points.length - 1];
+  if (watchId !== null) return;
 
-      if (last) {
-        els.lat.textContent = numberFixed(last.lat, 6);
-        els.lon.textContent = numberFixed(last.lon, 6);
-        els.ele.textContent = isValidNumber(last.ele) ? numberFixed(last.ele, 2) : "0";
-        els.speed.textContent = isValidNumber(last.speed) ? numberFixed(last.speed, 2) : "0.00";
-        els.accuracy.textContent = isValidNumber(last.accuracy) ? numberFixed(last.accuracy, 1) : "-";
-        els.lastTime.textContent = localTime(last.time);
-      } else {
-        els.lat.textContent = "-";
-        els.lon.textContent = "-";
-        els.ele.textContent = "-";
-        els.speed.textContent = "-";
-        els.accuracy.textContent = "-";
-        els.lastTime.textContent = "-";
-      }
+  watchId = navigator.geolocation.watchPosition(
+    onPosition,
+    onGeoError,
+    {enableHighAccuracy:true, maximumAge:0, timeout:15000}
+  );
+  log(`記録開始: 最低間隔 ${settings.interval/1000}秒 / 最低距離 ${settings.minDistance}m`);
+  updateUi();
+}
 
-      els.tbody.innerHTML = points.slice(-20).reverse().map(p => `
-        <tr>
-          <td>${localTime(p.time)}</td>
-          <td>${numberFixed(p.lat, 6)}</td>
-          <td>${numberFixed(p.lon, 6)}</td>
-          <td>${isValidNumber(p.ele) ? numberFixed(p.ele, 2) : "0"}</td>
-          <td>${isValidNumber(p.speed) ? numberFixed(p.speed, 2) : "0.00"}</td>
-          <td>${isValidNumber(p.accuracy) ? numberFixed(p.accuracy, 1) : "-"}</td>
-        </tr>
-      `).join("");
-    }
+function stopTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    log("記録停止");
+  }
+  watchId = null;
+  updateUi();
+}
 
-    function setStatus(text, className) {
-      els.status.textContent = text;
-      els.status.className = "status" + (className ? " " + className : "");
-    }
+function saveWaypoint() {
+  const lat = Number($("wpLat").value);
+  const lon = Number($("wpLon").value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
+      lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    alert("正しい緯度・経度を入力してください。");
+    return;
+  }
+  waypoint = {name:$("wpName").value.trim(), lat, lon};
+  saveJson(STORAGE_WP, waypoint);
+  log(`WP保存: ${waypoint.name || "名称なし"} / ${lat}, ${lon}`);
+  updateWpUi();
+}
 
-    function updateElapsed() {
-      if (!startedAt) return;
-      const sec = Math.floor((Date.now() - startedAt) / 1000);
-      const h = String(Math.floor(sec / 3600)).padStart(2, "0");
-      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
-      const s = String(sec % 60).padStart(2, "0");
-      els.elapsed.textContent = `${h}:${m}:${s}`;
-    }
+function currentAsWaypoint() {
+  if (!latest) {
+    alert("現在地がまだ取得できていません。先に記録を開始してください。");
+    return;
+  }
+  waypoint = {
+    name:$("wpName").value.trim() || "現在地WP",
+    lat:latest.latitude,
+    lon:latest.longitude
+  };
+  saveJson(STORAGE_WP, waypoint);
+  log(`現在地をWPに設定: ${waypoint.lat}, ${waypoint.lon}`);
+  updateWpUi();
+}
 
-    function debug(message) {
-      const text = `[${new Date().toLocaleString("ja-JP")}] ${message}`;
-      console.log(text);
-      els.debugLog.textContent += text + "\n";
-      els.debugLog.scrollTop = els.debugLog.scrollHeight;
-    }
+function clearWaypoint() {
+  if (!confirm("ウェイポイントを削除しますか？")) return;
+  waypoint = null;
+  localStorage.removeItem(STORAGE_WP);
+  log("WP削除");
+  updateWpUi();
+}
 
-    function isValidNumber(v) {
-      return typeof v === "number" && Number.isFinite(v);
-    }
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 
-    function numberFixed(v, digit) {
-      return Number(v).toFixed(digit);
-    }
+function filenameDate() {
+  const d = new Date();
+  const p = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
 
-    function localTime(iso) {
-      return new Date(iso).toLocaleTimeString("ja-JP", { hour12: false });
-    }
+function exportGpx() {
+  if (!points.length) {
+    alert("記録データがありません。");
+    return;
+  }
+  const trkpts = points.map(p => {
+    const ele = Number.isFinite(p.altitude) ? `    <ele>${p.altitude}</ele>\n` : "";
+    const speed = Number.isFinite(p.speed) ? p.speed : "";
+    const speedElement = speed !== "" ? `    <speed>${speed}</speed>\n` : "";
+    const ext = speed !== "" ? `    <extensions><gpxtpx:TrackPointExtension><gpxtpx:speed>${speed}</gpxtpx:speed></gpxtpx:TrackPointExtension></extensions>\n` : "";
+    return `  <trkpt lat="${p.latitude}" lon="${p.longitude}">
+${ele}${speedElement}    <time>${new Date(p.timestamp).toISOString()}</time>
+${ext}  </trkpt>`;
+  }).join("\n");
 
-    function fileDate() {
-      const d = new Date();
-      return d.getFullYear() +
-        String(d.getMonth() + 1).padStart(2, "0") +
-        String(d.getDate()).padStart(2, "0") + "_" +
-        String(d.getHours()).padStart(2, "0") +
-        String(d.getMinutes()).padStart(2, "0") +
-        String(d.getSeconds()).padStart(2, "0");
-    }
+  const wp = waypoint ? `
+  <wpt lat="${waypoint.lat}" lon="${waypoint.lon}">
+    <name>${xmlEscape(waypoint.name || "Waypoint")}</name>
+  </wpt>` : "";
 
-    function defaultTrackName() {
-      return new Date().toLocaleString("ja-JP");
-    }
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Sailing GPS Logger Web"
+ xmlns="http://www.topografix.com/GPX/1/1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+${wp}
+ <trk>
+  <name>Sailing Track ${new Date().toISOString()}</name>
+  <trkseg>
+${trkpts}
+  </trkseg>
+ </trk>
+</gpx>
+`;
+  downloadBlob(new Blob([gpx], {type:"application/gpx+xml;charset=utf-8"}), `sailing-track-${filenameDate()}.gpx`);
+  log(`GPX保存: ${points.length}点`);
+}
 
-    function escapeXml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&apos;");
-    }
-  </script>
+function csvCell(value) {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+}
+
+function exportCsv() {
+  if (!points.length) {
+    alert("記録データがありません。");
+    return;
+  }
+  const header = ["timestamp","latitude","longitude","accuracy","altitude","altitudeAccuracy","speed_mps","heading_deg"];
+  const rows = points.map(p => [
+    new Date(p.timestamp).toISOString(),p.latitude,p.longitude,p.accuracy,
+    p.altitude,p.altitudeAccuracy,p.speed,p.heading
+  ]);
+  const csv = "\uFEFF" + [header,...rows].map(r=>r.map(csvCell).join(",")).join("\n");
+  downloadBlob(new Blob([csv], {type:"text/csv;charset=utf-8"}), `sailing-track-${filenameDate()}.csv`);
+  log(`CSV保存: ${points.length}点`);
+}
+
+function clearData() {
+  if (!confirm(`記録済みの ${points.length} 点をすべて削除しますか？`)) return;
+  points = [];
+  previousAccepted = null;
+  localStorage.removeItem(STORAGE_POINTS);
+  log("記録データ削除");
+  updateUi();
+}
+
+$("start").addEventListener("click", startTracking);
+$("stop").addEventListener("click", stopTracking);
+$("saveWp").addEventListener("click", saveWaypoint);
+$("currentWp").addEventListener("click", currentAsWaypoint);
+$("clearWp").addEventListener("click", clearWaypoint);
+$("exportGpx").addEventListener("click", exportGpx);
+$("exportCsv").addEventListener("click", exportCsv);
+$("clearData").addEventListener("click", clearData);
+
+const savedSettings = loadJson(STORAGE_SETTINGS, {interval:1000,minDistance:0});
+$("interval").value = String(savedSettings.interval ?? 1000);
+$("minDistance").value = String(savedSettings.minDistance ?? 0);
+
+updateWpUi();
+updateUi();
+log(`アプリ起動 / 保存済み ${points.length}点`);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .then(()=>log("Service Worker登録完了"))
+      .catch(e=>log(`Service Worker登録失敗: ${e.message}`));
+  });
+}
+</script>
 </body>
 </html>
