@@ -1,11 +1,11 @@
 {
-  "name": "Sailing GPS Logger",
+  "name": "Sailing GPS Logger V2",
   "short_name": "Sailing GPS",
   "description": "ヨット用GPS計器・GPXロガー",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#06121d",
-  "theme_color": "#071827",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "icon-192.png",
