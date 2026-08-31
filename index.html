@@ -273,6 +273,24 @@
       font-weight:500;
     }
 
+    .dm-row{
+      display:grid;
+      grid-template-columns:1.05fr 1.45fr .8fr;
+      gap:8px;
+      align-items:end;
+    }
+    .dm-field label{
+      display:block;
+      color:var(--muted);
+      font-size:clamp(15px,1.7vw,21px);
+      margin-bottom:5px;
+    }
+    .dm-title{
+      font-size:clamp(18px,2vw,25px);
+      margin:10px 0 5px;
+      color:#eee;
+    }
+
     .wp-list{
       display:grid;
       gap:8px;
@@ -414,10 +432,46 @@
 
   <section>
     <h2>ウェイポイント設定</h2>
-    <div class="formgrid">
-      <input id="wpName" class="full" type="text" placeholder="名称">
-      <input id="wpLat" inputmode="decimal" type="number" step="any" placeholder="緯度">
-      <input id="wpLon" inputmode="decimal" type="number" step="any" placeholder="経度">
+    <div>
+      <input id="wpName" type="text" placeholder="名称（例：江の島沖ブイ）">
+
+      <div class="dm-title">緯度</div>
+      <div class="dm-row">
+        <div class="dm-field">
+          <label>度</label>
+          <input id="wpLatDeg" inputmode="numeric" type="number" min="0" max="90" step="1" placeholder="35">
+        </div>
+        <div class="dm-field">
+          <label>分</label>
+          <input id="wpLatMin" inputmode="decimal" type="number" min="0" max="59.999999" step="0.000001" placeholder="18.0220">
+        </div>
+        <div class="dm-field">
+          <label>N / S</label>
+          <select id="wpLatDir">
+            <option value="N">N</option>
+            <option value="S">S</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="dm-title">経度</div>
+      <div class="dm-row">
+        <div class="dm-field">
+          <label>度</label>
+          <input id="wpLonDeg" inputmode="numeric" type="number" min="0" max="180" step="1" placeholder="139">
+        </div>
+        <div class="dm-field">
+          <label>分</label>
+          <input id="wpLonMin" inputmode="decimal" type="number" min="0" max="59.999999" step="0.000001" placeholder="29.2990">
+        </div>
+        <div class="dm-field">
+          <label>E / W</label>
+          <select id="wpLonDir">
+            <option value="E">E</option>
+            <option value="W">W</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div class="buttons" style="margin-top:10px">
       <button id="saveWp">新規保存</button>
@@ -572,6 +626,45 @@ function relativeText(relativeDeg){
   if(value<0.5)return "前方 0°";
   return relativeDeg>0?`右 ${value.toFixed(0)}°`:`左 ${value.toFixed(0)}°`;
 }
+function dmToDecimal(degrees,minutes,direction,isLat){
+  const deg=Number(degrees);
+  const min=Number(minutes);
+  const maxDeg=isLat?90:180;
+
+  if(!Number.isInteger(deg) || deg<0 || deg>maxDeg)return null;
+  if(!Number.isFinite(min) || min<0 || min>=60)return null;
+  if(deg===maxDeg && min!==0)return null;
+
+  let value=deg+(min/60);
+  if(direction==="S" || direction==="W")value=-value;
+  return value;
+}
+
+function decimalToDm(value,isLat){
+  if(!Number.isFinite(value))return null;
+
+  const abs=Math.abs(value);
+  let degrees=Math.floor(abs);
+  let minutes=(abs-degrees)*60;
+
+  if(minutes>=59.9999995){
+    degrees+=1;
+    minutes=0;
+  }
+
+  return {
+    degrees,
+    minutes,
+    direction:isLat ? (value>=0?"N":"S") : (value>=0?"E":"W")
+  };
+}
+
+function formatDm(value,isLat){
+  const dm=decimalToDm(value,isLat);
+  if(!dm)return "--";
+  return `${dm.degrees}°${dm.minutes.toFixed(4)}′${dm.direction}`;
+}
+
 function dms(value,isLat){
   if(!Number.isFinite(value))return "--";
   const abs=Math.abs(value);
@@ -810,8 +903,12 @@ function persistWaypoints(){
 
 function clearWaypointForm(){
   $("wpName").value="";
-  $("wpLat").value="";
-  $("wpLon").value="";
+  $("wpLatDeg").value="";
+  $("wpLatMin").value="";
+  $("wpLatDir").value="N";
+  $("wpLonDeg").value="";
+  $("wpLonMin").value="";
+  $("wpLonDir").value="E";
 }
 
 function selectWaypoint(id){
@@ -868,7 +965,7 @@ function renderWaypointList(){
 
     const coords=document.createElement("div");
     coords.className="wp-item-coords";
-    coords.textContent=`${w.lat.toFixed(7)}, ${w.lon.toFixed(7)}`;
+    coords.textContent=`${formatDm(w.lat,true)} / ${formatDm(w.lon,false)}`;
 
     text.appendChild(name);
     text.appendChild(coords);
@@ -896,9 +993,9 @@ function updateWpUi(){
     $("wpNameDisplay").textContent="未設定";
     $("wpCoordsDisplay").innerHTML="緯度・経度を<br>設定してください";
   }else{
-    $("wpInfo").textContent=`選択中：${waypoint.name||"名称なし"} / ${waypoint.lat.toFixed(7)}, ${waypoint.lon.toFixed(7)}`;
+    $("wpInfo").textContent=`選択中：${waypoint.name||"名称なし"} / ${formatDm(waypoint.lat,true)} / ${formatDm(waypoint.lon,false)}`;
     $("wpNameDisplay").textContent=waypoint.name||"名称なし";
-    $("wpCoordsDisplay").innerHTML=`${dms(waypoint.lat,true)}<br>${dms(waypoint.lon,false)}`;
+    $("wpCoordsDisplay").innerHTML=`${formatDm(waypoint.lat,true)}<br>${formatDm(waypoint.lon,false)}`;
   }
 
   renderWaypointList();
@@ -960,9 +1057,25 @@ function createWaypoint(name,lat,lon){
 }
 
 function saveWaypoint(){
-  const lat=Number($("wpLat").value),lon=Number($("wpLon").value);
-  if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180){
-    alert("正しい緯度・経度を入力してください。");
+  const lat=dmToDecimal(
+    $("wpLatDeg").value,
+    $("wpLatMin").value,
+    $("wpLatDir").value,
+    true
+  );
+  const lon=dmToDecimal(
+    $("wpLonDeg").value,
+    $("wpLonMin").value,
+    $("wpLonDir").value,
+    false
+  );
+
+  if(!Number.isFinite(lat) || !Number.isFinite(lon)){
+    alert(
+      "正しい度分式座標を入力してください。\n\n" +
+      "緯度：0～90度、0～59.9999分\n" +
+      "経度：0～180度、0～59.9999分"
+    );
     return;
   }
 
@@ -974,7 +1087,7 @@ function saveWaypoint(){
   persistWaypoints();
   clearWaypointForm();
 
-  log(`WP新規保存: ${newWaypoint.name} / ${lat}, ${lon}`);
+  log(`WP新規保存: ${newWaypoint.name} / ${formatDm(lat,true)} / ${formatDm(lon,false)}`);
   updateWpUi();
 }
 
@@ -997,7 +1110,7 @@ function currentAsWaypoint(){
   persistWaypoints();
   clearWaypointForm();
 
-  log(`現在地をWP新規保存: ${newWaypoint.name}`);
+  log(`現在地をWP新規保存: ${newWaypoint.name} / ${formatDm(newWaypoint.lat,true)} / ${formatDm(newWaypoint.lon,false)}`);
   updateWpUi();
 }
 
