@@ -266,6 +266,13 @@ struct ContentView: View {
         guard let target, let point = gps.location else { return nil }
         return bearing(to: target, from: point)
     }
+    private var compassReferenceHeading: Double? { magnetic ? gps.magneticHeading : (mapHeading ?? gps.trueHeading) }
+    private var targetDisplayBearing: Double? {
+        guard let bearing = targetBearing else { return nil }
+        if !magnetic { return bearing }
+        guard let trueHeading = gps.trueHeading, let magneticHeading = gps.magneticHeading else { return nil }
+        return (bearing - (trueHeading - magneticHeading) + 720).truncatingRemainder(dividingBy: 360)
+    }
     private var compass: some View {
         ZStack {
             Circle().stroke(.gray, lineWidth: 2)
@@ -275,13 +282,13 @@ struct ContentView: View {
                 }
                 VStack { Text("北"); Spacer(); Text("南") }.padding(12)
                 HStack { Text("西"); Spacer(); Text("東") }.padding(12)
-            }.rotationEffect(.degrees(-(mapHeading ?? heading ?? 0)))
-            if let targetBearing, let ownHeading = mapHeading ?? heading {
-                Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetBearing - ownHeading))
+            }.rotationEffect(.degrees(-(compassReferenceHeading ?? 0)))
+            if let targetAngle = targetDisplayBearing, let ownHeading = compassReferenceHeading {
+                Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - ownHeading))
             }
             VStack(spacing: 4) {
-                Text("目標方位（真北）").font(.caption2)
-                Text(targetBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
+                Text(magnetic ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
+                Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
             }
         }.frame(width: 154, height: 154)
     }
