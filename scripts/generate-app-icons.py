@@ -19,7 +19,7 @@ def artwork(size, transparent=False):
     draw.line(box((524,270,524,632)), fill="#FFAA00", width=18*scale)
     polygon([(303,632),(721,632),(666,707),(366,707)], "#FFFFFF")
     wave=[(x,754+12*math.sin((x-302)*math.pi/104)) for x in range(302,723)]
-    draw.line([(int(x*scale),int(y*scale)) for x,y in wave], fill="#3CC7F5", width=17*scale)
+    draw.polygon([(int(x*scale),int((y-8)*scale)) for x,y in wave] + [(int(x*scale),int((y+8)*scale)) for x,y in reversed(wave)], fill="#3CC7F5")
     return image.resize((size,size),Image.Resampling.LANCZOS)
 
 def save(image,path):
