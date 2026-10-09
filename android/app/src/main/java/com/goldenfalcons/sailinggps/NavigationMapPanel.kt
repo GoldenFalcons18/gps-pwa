@@ -118,6 +118,7 @@ class NavigationMapPanel(
         paint.color = if (active) Color.rgb(255, 170, 0) else Color.WHITE
         paint.textAlign = Paint.Align.CENTER
         canvas.drawText(label, width / 2f, 18f * density, paint)
+        paint.color = if (active) Color.rgb(255, 170, 0) else Color.rgb(30, 140, 255)
         canvas.drawCircle(width / 2f, 36f * density, 7f * density, paint)
         return BitmapDrawable(map.resources, bitmap)
     }
