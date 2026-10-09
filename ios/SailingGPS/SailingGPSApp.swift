@@ -143,7 +143,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
 
 struct ContentView: View {
     @StateObject private var gps = GPSRecorder()
-    @State private var mode = 0
+    @AppStorage("displayMode") private var mode = 0
     @State private var magnetic = false
     @State private var selected: UUID?
     @State private var name = ""

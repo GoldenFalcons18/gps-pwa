@@ -33,3 +33,28 @@ jobs:
         with:
           name: iPhone-unsigned-IPA-requires-AltStore-Classic-signing
           path: ios/package/SailingGPS-unsigned.ipa
+
+      - name: Capture simulator dashboard screenshots
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for a in d["devices"].values() for x in a if x["name"].startswith("iPhone")))')
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl status_bar "$DEVICE" override --time 17:59 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$DEVICE" build/Build/Products/Debug-iphonesimulator/SailingGPS.app
+          mkdir -p screenshots
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 0
+          sleep 5
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-speed.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 1
+          sleep 8
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-map.png
+        working-directory: ios
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iPhone-dashboard-screenshots
+          path: ios/screenshots/*.png
+          if-no-files-found: ignore
