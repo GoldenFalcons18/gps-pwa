@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 APP=com.goldenfalcons.sailinggps
+# The emulator launcher can show a background ANR after cold boot. It is not the app under test.
+adb shell am force-stop com.android.launcher3
 adb install -g apk/*.apk
 adb shell run-as "$APP" mkdir -p shared_prefs
 python3 - <<'PY'
@@ -24,8 +26,10 @@ adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
 
 # Exercise the current-location action with recording stopped; verify persisted data.
+adb shell am force-stop com.android.launcher3
 adb shell uiautomator dump /sdcard/quick-wp-ui.xml
 adb pull /sdcard/quick-wp-ui.xml quick-wp-ui.xml
+cp quick-wp-ui.xml screenshots/quick-wp-ui.xml
 COORDS=$(python3 - <<'PY'
 import xml.etree.ElementTree as E,re
 node=next(n for n in E.parse('quick-wp-ui.xml').iter('node') if n.get('resource-id')=='com.goldenfalcons.sailinggps:id/btnCurrentWp')
