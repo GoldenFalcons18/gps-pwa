@@ -9,6 +9,8 @@ Android Studioで `android/` を開いてください。SDK 36、AGP 8.13.2、�
 
 起動時に最大1日1回、または「更新を確認」ボタンで `GoldenFalcons18/gps-pwa` の公開リリースを調べます。`android-v1.1.0` のようなタグと `android-update.json`、対応APKが必要です。草稿・プレリリース・別パッケージ・古い版は通知しません。自動インストールは行いません。ダウンロード後、Androidのインストール画面で操作します。
 
+旧V3にはこの機能がないため、今回の更新通知対応版だけは手動でインストールしてください。その後の新しい公開版から通知できます。
+
 新しい版では `android/gradle.properties` の appVersionCode を必ず増やし、appVersionName も変更します。過去にインストールした版と同じ署名キーを使います。デバッグ署名APKは既存の正式署名アプリに上書きできません。削除すると記録が消えるため、先にGPXを保存してください。
 
 ### GitHubで署名済みAPKの配布準備
@@ -22,6 +24,8 @@ Actions の Android build and signed release draft は通常はデバッグビ�
 
 手動実行で signed_release を有効にすると、署名APKと更新メタデータを添付した**草稿**リリースができます。実機で記録・画面OFF・GPX・旧版からの上書きを確認してから公開してください。Secretsが未設定なら署名リリースは作成できません。
 ローカルで署名したAPKからメタデータを作る場合、ルートで `python scripts/release-metadata.py <APKのパス>` を実行してください。メタデータのSHA256は配布ファイル確認用で、アプリ内でダウンロードAPKのハッシュ検証をする機能ではありません。Androidが署名と更新の整合性を確認します。
+
+Windowsでローカル署名する補助ツールは `scripts/build-signed-android.ps1` です。JavaとPython 3.11以降を準備して実行すると、既存キーのパスとエイリアス、非表示のパスワード入力を求めます。秘密はファイルに保存せず、終了時に環境変数を消去します。Android Studioの「Generate Signed App Bundle / APK」からAPKを作成し、上記メタデータ作成手順を使うこともできます。
 
 ## iPhone（開発版）
 
