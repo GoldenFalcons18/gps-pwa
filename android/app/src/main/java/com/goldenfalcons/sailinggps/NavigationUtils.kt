@@ -36,6 +36,19 @@ object NavigationUtils {
         return normalize360(Math.toDegrees(atan2(y, x)))
     }
 
+    /** Straight-line distance at current SOG; hide unreliable estimates below ~0.5 kt. */
+    fun ete(distanceMeters: Double?, speedMps: Double?): String {
+        val distance = distanceMeters ?: return "--:--:--"
+        if (!distance.isFinite() || distance < 0) return "--:--:--"
+        if (distance == 0.0) return "00:00:00"
+        val speed = speedMps ?: return "--:--:--"
+        if (!speed.isFinite() || speed < 0.25) return "--:--:--"
+        val seconds = ceil(distance / speed)
+        if (!seconds.isFinite() || seconds > Int.MAX_VALUE) return "--:--:--"
+        val total = seconds.toLong()
+        return "%02d:%02d:%02d".format(java.util.Locale.ROOT, total / 3600, total / 60 % 60, total % 60)
+    }
+
     fun relativeClock(relativeDeg: Double): String {
         val idx = floor((relativeDeg + 15.0) / 30.0).toInt()
         val n = ((idx % 12) + 12) % 12

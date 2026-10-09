@@ -17,6 +17,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var track: [CLLocationCoordinate2D] = []
     @Published var message = "記録を開始してください"
     @Published var waypoints: [Waypoint] = []
+    @Published var quickWaypointID: UUID?
+    @Published var savingCurrentWaypoint = false
+    private var waypointTimeout: Timer?
     private let manager = CLLocationManager()
     private var pendingStart = false
     private var handle: FileHandle?
@@ -60,6 +63,36 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         } catch { fail(error) }
     }
 
+    func saveCurrentWaypoint() {
+        guard !savingCurrentWaypoint else { return }
+        if let point = location, point.horizontalAccuracy >= 0, abs(point.timestamp.timeIntervalSinceNow) < 30 {
+            finishCurrentWaypoint(point)
+            return
+        }
+        guard ![.denied, .restricted].contains(manager.authorizationStatus) else {
+            message = "設定で位置情報の使用を許可してください"; return
+        }
+        savingCurrentWaypoint = true
+        message = "現在地を取得しています"
+        waypointTimeout = Timer.scheduledTimer(withTimeInterval: 20, repeats: false) { [weak self] _ in
+            guard let self, self.savingCurrentWaypoint else { return }
+            self.savingCurrentWaypoint = false
+            self.message = "現在地を取得できません。屋外で再試行してください"
+            self.log("Quick waypoint location timeout")
+        }
+        if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
+        else { manager.requestLocation() }
+    }
+
+    private func finishCurrentWaypoint(_ point: CLLocation) {
+        waypointTimeout?.invalidate(); waypointTimeout = nil
+        savingCurrentWaypoint = false
+        let waypoint = Waypoint(name: "現在地 \(waypoints.count + 1)", latitude: point.coordinate.latitude, longitude: point.coordinate.longitude)
+        add(waypoint)
+        quickWaypointID = waypoint.id
+        message = "\(waypoint.name) を保存しました"
+    }
+
     func stop() {
         pendingStart = false
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
@@ -69,6 +102,13 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        if savingCurrentWaypoint && manager.authorizationStatus != .notDetermined {
+            if [.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { manager.requestLocation() }
+            else {
+                savingCurrentWaypoint = false; waypointTimeout?.invalidate()
+                message = "位置情報の使用を許可してください"
+            }
+        }
         if pendingStart && manager.authorizationStatus != .notDetermined { pendingStart = false; start() }
         if recording && ![.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { stop(); message = "位置情報の許可が解除されました" }
     }
@@ -78,6 +118,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
             location = point
+            if savingCurrentWaypoint { finishCurrentWaypoint(point) }
             guard recording else { continue }
             let row = "\(point.timestamp.timeIntervalSince1970),\(point.coordinate.latitude),\(point.coordinate.longitude),\(point.altitude),\(point.speed),\(point.course)\n"
             do { try handle?.write(contentsOf: Data(row.utf8)) } catch { stop(); fail(error); return }
@@ -85,7 +126,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             if track.count > 10000 { track.removeFirst(track.count - 10000) }
         }
     }
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { fail(error) }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        savingCurrentWaypoint = false; waypointTimeout?.invalidate(); fail(error)
+    }
     func add(_ waypoint: Waypoint) {
         waypoints.append(waypoint); saveWaypoints()
         log("Waypoint added: \(CoordinateInput.format(waypoint.latitude, isLatitude: true)) \(CoordinateInput.format(waypoint.longitude, isLatitude: false))")
@@ -161,6 +204,17 @@ struct ContentView: View {
     @State private var settings = false
     private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
+    private static let clockFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
+    private var ete: String {
+        guard let target, let point = gps.location else { return "--:--:--" }
+        return CoordinateInput.ete(distanceMeters: point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)), speedMps: point.speed)
+    }
     private func bearing(to waypoint: Waypoint, from point: CLLocation) -> Double {
         let a = point.coordinate.latitude * .pi / 180
         let b = waypoint.latitude * .pi / 180
@@ -238,6 +292,8 @@ struct ContentView: View {
                 HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
                 Toggle("磁気コンパス（OFF: GPS進行方位）", isOn: $magnetic)
                 Text(gps.message).font(.caption)
+                reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
+                Text("ETEは目標までの直線距離と現在速度から計算します。約0.5 kt未満では表示しません。").font(.caption)
                 Text("ウェイポイント").font(.headline)
                 ForEach(gps.waypoints) { wp in
                     HStack {
@@ -285,18 +341,23 @@ struct ContentView: View {
                 HStack {
                     Text(mode == 0 ? "スピードメーター" : "ナビゲーター").font(.title2).foregroundStyle(.orange)
                     Spacer()
+                    Button { gps.saveCurrentWaypoint() } label: {
+                        Image(systemName: "mappin.and.ellipse").font(.title2).foregroundStyle(.orange)
+                    }.accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
                     Button { gps.recording ? gps.stop() : gps.start() } label: {
                         Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
                     }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
                 }
                 HStack {
                     reading("SOG / kts", gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
-                    reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
+                    reading("ETE", ete)
                     Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
                 }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
                 HStack {
                     reading("高度", gps.location.map { String(format: "%.0f m", $0.altitude) } ?? "—")
-                    TimelineView(.periodic(from: .now, by: 1)) { context in reading("時間", context.date.formatted(date: .omitted, time: .shortened)) }
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        reading("時間", Self.clockFormatter.string(from: context.date))
+                    }
                     Button("GPX共有") { exported = gps.export(); sharing = exported != nil }.tint(.orange)
                 }
                 Divider()
@@ -316,6 +377,9 @@ struct ContentView: View {
         .sheet(isPresented: $settings) { waypointEditor }
         .onAppear {
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
+        }
+        .onChange(of: gps.quickWaypointID) { _, value in
+            if let value { selected = value; camera = .automatic }
         }
         .onChange(of: mapSelection) { _, value in
             if let value { selected = value }

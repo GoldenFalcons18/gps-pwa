@@ -22,3 +22,33 @@ sleep 12
 adb exec-out screencap -p > screenshots/Android-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# Exercise the current-location action with recording stopped; verify persisted data.
+adb shell uiautomator dump /sdcard/quick-wp-ui.xml
+adb pull /sdcard/quick-wp-ui.xml quick-wp-ui.xml
+COORDS=$(python3 - <<'PY'
+import xml.etree.ElementTree as E,re
+node=next(n for n in E.parse('quick-wp-ui.xml').iter('node') if n.get('resource-id')=='com.goldenfalcons.sailinggps:id/btnCurrentWp')
+x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
+print((x1+x2)//2,(y1+y2)//2)
+PY
+)
+adb shell input tap $COORDS
+for counter in 1 2 3 4 5; do
+  adb emu geo fix 139.467 35.318
+  sleep 1
+done
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > quick-waypoints.xml
+python3 - <<'PY'
+import xml.etree.ElementTree as E,json
+root=E.parse('quick-waypoints.xml').getroot()
+items=json.loads(next(n.text for n in root if n.get('name')=='items'))
+assert len(items)==3,items
+point=items[-1]
+assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,point
+assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
+print('One-tap current waypoint saved and selected with recording stopped')
+PY
+adb exec-out screencap -p > screenshots/Android-current-waypoint.png
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

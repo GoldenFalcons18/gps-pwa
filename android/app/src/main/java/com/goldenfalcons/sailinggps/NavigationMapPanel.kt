@@ -69,13 +69,13 @@ class NavigationMapPanel(
         log("Map initialized / OpenStreetMap")
     }
 
-    fun updateLocation(lat: Double, lon: Double, bearing: Double?) {
+    fun updateLocation(lat: Double, lon: Double, bearing: Double?, recordTrack: Boolean = true) {
         val point = GeoPoint(lat, lon)
         current = point
         boat.position = point
         boat.isEnabled = true
         boat.snippet = bearing?.let { "COG %.0f°".format(it) } ?: "COG 未取得"
-        if (points.lastOrNull()?.let { it.latitude != lat || it.longitude != lon } != false) {
+        if (recordTrack && points.lastOrNull()?.let { it.latitude != lat || it.longitude != lon } != false) {
             points.add(point)
             if (points.size > 10000) points.removeAt(0)
             trail.setPoints(points)

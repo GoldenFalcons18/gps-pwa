@@ -37,6 +37,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var haveMagnetic = false
     private var magneticHeading: Double? = null
 
+    private var latestFixAt = 0L
+    private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var quickLocationListener: android.location.LocationListener? = null
+    private val clockTick = object : Runnable {
+        override fun run() {
+            b.tvTime.text = "時間\n" + java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            uiHandler.postDelayed(this, 1000)
+        }
+    }
     private var latestLat: Double? = null
     private var latestLon: Double? = null
     private var latestSpeedMps: Double? = null
@@ -62,6 +71,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 GpsLoggingService.ACTION_LOCATION -> {
+                    latestFixAt = android.os.SystemClock.elapsedRealtime()
                     latestLat = intent.getDoubleExtra(GpsLoggingService.EXTRA_LAT, Double.NaN).takeIf { it.isFinite() }
                     latestLon = intent.getDoubleExtra(GpsLoggingService.EXTRA_LON, Double.NaN).takeIf { it.isFinite() }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
@@ -135,6 +145,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        uiHandler.removeCallbacks(clockTick)
+        uiHandler.post(clockTick)
         mapPanel?.resume()
         sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
@@ -147,6 +159,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onPause() {
+        uiHandler.removeCallbacks(clockTick)
+        cancelQuickLocation()
         mapPanel?.pause()
         sensorManager.unregisterListener(this)
         debug("Compass sensors unregistered")
@@ -298,6 +312,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvHeadingSource.text = "方位ソース：$source"
 
         val wp = activeWaypoint
+        b.tvEte.text = "ETE\n--:--:--"
         val lat = latestLat
         val lon = latestLon
         if (wp == null || lat == null || lon == null) {
@@ -312,6 +327,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
         val distanceM = NavigationUtils.distanceMeters(lat, lon, wp.lat, wp.lon)
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
+        b.tvEte.text = "ETE\n" + NavigationUtils.ete(distanceM, latestSpeedMps)
         b.tvDistance.text = "%.2f NM".format(distanceM * NavigationUtils.M_TO_NM)
         b.tvDistanceSub.text = if (distanceM < 1000) "${distanceM.roundToInt()} m" else "%.2f km".format(distanceM / 1000.0)
         b.tvWpName.text = wp.name
@@ -354,13 +370,67 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         debug("WP added $name ${NavigationUtils.formatDm(lat, true)} ${NavigationUtils.formatDm(lon, false)}")
     }
 
+    private fun cancelQuickLocation() {
+        quickLocationListener?.let { listener ->
+            (getSystemService(LOCATION_SERVICE) as android.location.LocationManager).removeUpdates(listener)
+        }
+        quickLocationListener = null
+        b.btnCurrentWp.isEnabled = true
+    }
+
     private fun addCurrentLocationWaypoint() {
+        if (quickLocationListener != null) return
         val lat = latestLat
         val lon = latestLon
-        if (lat == null || lon == null) {
-            Toast.makeText(this, "GPS現在地を取得してから実行してください", Toast.LENGTH_LONG).show()
+        if (lat != null && lon != null && android.os.SystemClock.elapsedRealtime() - latestFixAt < 30000) {
+            saveCurrentLocationWaypoint(lat, lon)
             return
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestNeededPermissions()
+            Toast.makeText(this, "位置情報を許可してから現在地WPを押してください", Toast.LENGTH_LONG).show()
+            return
+        }
+        val manager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        if (!manager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
+            Toast.makeText(this, "端末の位置情報をONにしてください", Toast.LENGTH_LONG).show()
+            return
+        }
+        val listener = object : android.location.LocationListener {
+            override fun onLocationChanged(point: Location) {
+                if (quickLocationListener !== this || point.accuracy < 0 ||
+                    (android.os.SystemClock.elapsedRealtimeNanos() - point.elapsedRealtimeNanos) > 30_000_000_000L) return
+                cancelQuickLocation()
+                latestLat = point.latitude; latestLon = point.longitude
+                latestFixAt = android.os.SystemClock.elapsedRealtime()
+                latestSpeedMps = if (point.hasSpeed()) point.speed.toDouble() else null
+                latestGpsBearing = if (point.hasBearing()) point.bearing.toDouble() else null
+                b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(point.accuracy, point.altitude)
+                mapPanel?.updateLocation(point.latitude, point.longitude, latestGpsBearing, recordTrack = false)
+                saveCurrentLocationWaypoint(point.latitude, point.longitude)
+            }
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) { cancelQuickLocation() }
+            @Deprecated("Deprecated in Android")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+        }
+        quickLocationListener = listener
+        b.btnCurrentWp.isEnabled = false
+        Toast.makeText(this, "現在地を取得しています", Toast.LENGTH_SHORT).show()
+        try {
+            manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 0L, 0f, listener, android.os.Looper.getMainLooper())
+            uiHandler.postDelayed({
+                if (quickLocationListener === listener) {
+                    cancelQuickLocation()
+                    Toast.makeText(this, "現在地を取得できません。屋外で再試行してください", Toast.LENGTH_LONG).show()
+                }
+            }, 20000)
+        } catch (error: Exception) {
+            cancelQuickLocation(); debug("Quick waypoint location error: ${error.message}")
+        }
+    }
+
+    private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {
         val name = b.etWpName.text.toString().trim().ifEmpty { "現在地 ${waypoints.size + 1}" }
         val wp = Waypoint(name = name, lat = lat, lon = lon)
         waypoints += wp
@@ -370,6 +440,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         clearWaypointInputs()
         renderWaypointList()
         updateNavigationUi()
+        mapPanel?.showWaypoints()
+        Toast.makeText(this, "$name を保存しました", Toast.LENGTH_SHORT).show()
         debug("Current location saved as WP $name")
     }
 

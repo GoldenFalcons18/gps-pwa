@@ -15,6 +15,17 @@ enum CoordinateInput {
         return direction == "S" || direction == "W" ? -value : value
     }
 
+    // Straight-line distance at current SOG; below ~0.5 kt the estimate is hidden.
+    static func ete(distanceMeters: Double?, speedMps: Double?) -> String {
+        guard let distance = distanceMeters, distance.isFinite, distance >= 0 else { return "--:--:--" }
+        if distance == 0 { return "00:00:00" }
+        guard let speed = speedMps, speed.isFinite, speed >= 0.25 else { return "--:--:--" }
+        let seconds = ceil(distance / speed)
+        guard seconds.isFinite, seconds <= 2_147_483_647 else { return "--:--:--" }
+        let total = Int(seconds)
+        return String(format: "%02d:%02d:%02d", total / 3600, total / 60 % 60, total % 60)
+    }
+
     static func format(_ value: Double, isLatitude: Bool) -> String {
         guard value.isFinite else { return "—" }
         var degrees = Int(abs(value).rounded(.down))
