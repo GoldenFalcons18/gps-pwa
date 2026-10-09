@@ -7,6 +7,7 @@ import android.widget.FrameLayout
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
@@ -16,7 +17,8 @@ import java.io.File
 class NavigationMapPanel(
     context: Context,
     container: FrameLayout,
-    private val log: (String) -> Unit
+    private val log: (String) -> Unit,
+    private val selectWaypoint: (Waypoint) -> Unit
 ) {
     private val map: MapView
     private val boat: Marker
@@ -87,11 +89,33 @@ class NavigationMapPanel(
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
                 snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                setOnMarkerClickListener { _, _ ->
+                    selectWaypoint(wp)
+                    waypointMarkers.firstOrNull { it.position == GeoPoint(wp.lat, wp.lon) }?.showInfoWindow()
+                    true
+                }
                 alpha = if (wp.id == active?.id) 1f else 0.6f
             })
         }
         map.overlays.addAll(waypointMarkers)
         map.invalidate()
+    }
+
+    fun showWaypoints() {
+        val positions = waypointMarkers.map { it.position }
+        if (positions.isEmpty()) return
+        following = false
+        val visible = positions + listOfNotNull(current)
+        map.post {
+            if (destroyed) return@post
+            if (visible.distinct().size == 1) {
+                map.controller.setZoom(15.0)
+                map.controller.animateTo(visible.first())
+            } else {
+                map.zoomToBoundingBox(BoundingBox.fromGeoPoints(visible), false, (32 * map.resources.displayMetrics.density).toInt(), 17.0, null)
+            }
+        }
+        log("Map show waypoints / ${positions.size}")
     }
 
     fun followLocation() {

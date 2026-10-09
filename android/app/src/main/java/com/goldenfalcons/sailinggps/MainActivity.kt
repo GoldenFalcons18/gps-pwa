@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
+                    b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, 0f), intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, 0.0))
                     updateMap()
                     updateNavigationUi()
                     debug("GPS update lat=${latestLat} lon=${latestLon} speed=${latestSpeedMps} bearing=${latestGpsBearing}")
@@ -149,6 +150,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setupDisplayModes() {
         b.btnSpeedMode.setOnClickListener { setDisplayMode(false) }
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
+        b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
+        b.btnMenu.setOnClickListener { b.settingsPanel.visibility = if (b.settingsPanel.visibility == android.view.View.VISIBLE) android.view.View.GONE else android.view.View.VISIBLE }
+        b.btnSetTarget.setOnClickListener { b.settingsPanel.visibility = android.view.View.VISIBLE; b.etWpName.requestFocus(); b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) } }
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(displayPrefs.getBoolean("navigator", false))
     }
@@ -156,10 +160,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setDisplayMode(navigator: Boolean) {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
-            mapPanel = NavigationMapPanel(this, b.mapContainer) { debug(it) }
+            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }) { waypoint ->
+                activeWaypoint = waypoint
+                waypointStore.setActiveId(waypoint.id)
+                renderWaypointList()
+                updateNavigationUi()
+                debug("Map target selected ${waypoint.id}")
+            }
             mapPanel?.setWaypoints(waypoints, activeWaypoint)
             updateMap()
             mapPanel?.resume()
+            mapPanel?.showWaypoints()
         }
         b.speedPanel.visibility = if (navigator) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE

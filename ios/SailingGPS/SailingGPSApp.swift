@@ -156,6 +156,7 @@ struct ContentView: View {
     @State private var camera: MapCameraPosition = .automatic
     @State private var exported: URL?
     @State private var sharing = false
+    @State private var settings = false
     private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
     private func bearing(to waypoint: Waypoint, from point: CLLocation) -> Double {
@@ -178,49 +179,67 @@ struct ContentView: View {
             }.pickerStyle(.segmented)
         }
     }
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                Picker("表示", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
-                if mode == 0 {
-                    Text(gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
-                        .font(.system(size: 100, weight: .bold, design: .monospaced)).minimumScaleFactor(0.4).foregroundStyle(.green)
-                    Text("SOG / kts")
-                } else {
-                    Map(position: $camera) {
-                        if let p = gps.location { Annotation("現在地", coordinate: p.coordinate) { Image(systemName: "location.north.fill").foregroundStyle(.red) } }
-                        ForEach(gps.waypoints) { wp in Marker(wp.name, coordinate: wp.coordinate) }
-                        if gps.track.count > 1 { MapPolyline(coordinates: gps.track).stroke(.orange, lineWidth: 3) }
-                    }.frame(height: 320)
-                    Button("現在地へ") { if let p = gps.location { camera = .region(.init(center: p.coordinate, latitudinalMeters: 1500, longitudinalMeters: 1500)) } }
-                }
-                ZStack {
+    private var compass: some View {
+        ZStack {
                     Circle().stroke(.gray, lineWidth: 2)
                     ForEach(0..<12) { index in
-                        Rectangle().fill(.orange).frame(width: 2, height: 12).offset(y: -99).rotationEffect(.degrees(Double(index) * 30))
+                        Rectangle().fill(.orange).frame(width: 2, height: 12).offset(y: -67).rotationEffect(.degrees(Double(index) * 30))
                     }
-                    VStack { Text("北 N"); Spacer(); Text("南 S") }.padding(12)
-                    HStack { Text("西 W"); Spacer(); Text("東 E") }.padding(12)
-                    Image(systemName: "location.north.fill").font(.system(size: 50)).foregroundStyle(.orange).rotationEffect(.degrees(heading ?? 0))
-                    Text(heading.map { String(format: "%.0f°", $0) } ?? "—").offset(y: 50)
-                }.frame(width: 220, height: 220)
+                    VStack { Text("北 N"); Spacer(); Text("南 S") }.padding(8)
+                    HStack { Text("西 W"); Spacer(); Text("東 E") }.padding(8)
+                    Image(systemName: "location.north.fill").font(.system(size: 34)).foregroundStyle(.orange).rotationEffect(.degrees(heading ?? 0))
+                    Text(heading.map { String(format: "%.0f°", $0) } ?? "—").offset(y: 38)
+                }.frame(width: 154, height: 154)
+    }
+    private func reading(_ label: String, _ value: String) -> some View {
+        VStack(spacing: 6) {
+            Text(label).font(.caption).foregroundStyle(.gray)
+            Text(value).font(.title2.bold().monospacedDigit()).minimumScaleFactor(0.5).lineLimit(2)
+        }.frame(maxWidth: .infinity)
+    }
+    private var targetPanel: some View {
+        HStack(spacing: 4) {
+            VStack(spacing: 12) {
+                Text("目標まで").font(.caption).foregroundStyle(.gray)
+                if let target, let point = gps.location {
+                    Text(String(format: "%.2f", point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)) / 1852)).font(.title2.bold())
+                    Text("nm").font(.caption)
+                    Text(String(format: "目標 %.0f°", bearing(to: target, from: point))).font(.caption)
+                } else { Text("—").font(.title); Text("nm").font(.caption) }
+            }.frame(maxWidth: .infinity)
+            compass
+            VStack(spacing: 8) {
+                Button("設定目標") { settings = true }.font(.headline).tint(.orange)
+                Text(target?.name ?? "未設定").font(.caption).lineLimit(2)
+            }.frame(maxWidth: .infinity)
+        }.padding(.vertical, 8).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+    }
+    private var mapPanel: some View {
+        VStack(spacing: 4) {
+            Map(position: $camera, selection: $selected) {
+                if let p = gps.location { Annotation("現在地", coordinate: p.coordinate) { Image(systemName: "location.north.fill").foregroundStyle(.red) } }
+                ForEach(gps.waypoints) { wp in
+                    Marker(wp.name, coordinate: wp.coordinate).tint(wp.id == selected ? .orange : .blue).tag(wp.id)
+                }
+                if gps.track.count > 1 { MapPolyline(coordinates: gps.track).stroke(.orange, lineWidth: 3) }
+            }.frame(height: 270)
+            HStack {
+                Button("現在地") { if let p = gps.location { camera = .region(.init(center: p.coordinate, latitudinalMeters: 1500, longitudinalMeters: 1500)) } }
+                Spacer()
+                Button("全ウェイポイント") { camera = .automatic }
+            }.font(.caption).tint(.orange)
+        }
+    }
+    private var waypointEditor: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
                 Toggle("磁気コンパス（OFF: GPS進行方位）", isOn: $magnetic)
                 Text(gps.message).font(.caption)
-                HStack {
-                    Button(gps.recording ? "記録停止" : "記録開始") { gps.recording ? gps.stop() : gps.start() }.buttonStyle(.borderedProminent)
-                    Button("GPX保存") { exported = gps.export(); sharing = exported != nil }.buttonStyle(.bordered)
-                }
-                if let point = gps.location {
-                    Text(String(format: "緯度 %.6f / 経度 %.6f\n精度 ±%.0f m / 高度 %.0f m", point.coordinate.latitude, point.coordinate.longitude, point.horizontalAccuracy, point.altitude)).font(.caption.monospacedDigit())
-                }
-                if let target, let point = gps.location {
-                    Text("目標: \(target.name) / \(String(format: "%.2f", point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)) / 1852)) nm")
-                    Text(String(format: "目標方位（真北） %.0f°", bearing(to: target, from: point)))
-                }
                 Text("ウェイポイント").font(.headline)
                 ForEach(gps.waypoints) { wp in
                     HStack {
-                        Button { selected = wp.id } label: {
+                        Button { selected = wp.id; settings = false } label: {
                             VStack(alignment: .leading) {
                                 Text(wp.name)
                                 Text("\(CoordinateInput.format(wp.latitude, isLatitude: true)) / \(CoordinateInput.format(wp.longitude, isLatitude: false))").font(.caption.monospacedDigit())
@@ -242,13 +261,57 @@ struct ContentView: View {
                     }
                     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     let waypoint = Waypoint(name: trimmedName.isEmpty ? "Waypoint \(gps.waypoints.count + 1)" : trimmedName, latitude: lat, longitude: lon)
-                    gps.add(waypoint); selected = waypoint.id
+                    gps.add(waypoint); selected = waypoint.id; camera = .automatic
                     name = ""; latitudeDegrees = ""; latitudeMinutes = ""; longitudeDegrees = ""; longitudeMinutes = ""
                     latitudeDirection = "N"; longitudeDirection = "E"
                 }
             }.padding()
         }.preferredColorScheme(.dark)
+    }
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 10) {
+                Picker("表示", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
+                if mode == 0 {
+                    VStack(spacing: 0) {
+                        Text("kts").font(.title.bold()).foregroundStyle(.orange)
+                        Text(gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
+                            .font(.system(size: 130, weight: .bold, design: .monospaced)).minimumScaleFactor(0.4).foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }.frame(height: 270)
+                } else { mapPanel }
+                targetPanel
+                HStack {
+                    Text(mode == 0 ? "スピードメーター" : "ナビゲーター").font(.title2).foregroundStyle(.orange)
+                    Spacer()
+                    Button { gps.recording ? gps.stop() : gps.start() } label: {
+                        Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
+                    }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
+                }
+                HStack {
+                    reading("SOG / kts", gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
+                    reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
+                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
+                }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+                HStack {
+                    reading("高度", gps.location.map { String(format: "%.0f m", $0.altitude) } ?? "—")
+                    TimelineView(.periodic(from: .now, by: 1)) { context in reading("時間", context.date.formatted(date: .omitted, time: .shortened)) }
+                    Button("GPX共有") { exported = gps.export(); sharing = exported != nil }.tint(.orange)
+                }
+                Divider()
+                HStack {
+                    reading(magnetic ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
+                    Rectangle().fill(.orange).frame(width: 1)
+                    VStack(alignment: .trailing, spacing: 5) {
+                        Text("緯度・経度").font(.caption).foregroundStyle(.gray)
+                        Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "—")
+                        Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "—")
+                    }.font(.headline.monospacedDigit()).frame(maxWidth: .infinity)
+                }.frame(height: 92)
+                Text(gps.message).font(.caption).foregroundStyle(.gray)
+            }.padding(8)
+        }.background(.black).preferredColorScheme(.dark)
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+        .sheet(isPresented: $settings) { waypointEditor }
     }
 }
 struct ShareView: UIViewControllerRepresentable {
