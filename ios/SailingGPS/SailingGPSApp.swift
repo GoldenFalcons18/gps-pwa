@@ -345,6 +345,45 @@ struct ContentView: View {
             }.padding()
         }.preferredColorScheme(.dark)
     }
+    private var recordControls: some View {
+                HStack {
+                    Text(mode == 0 ? "スピードメーター" : "ナビゲーター").font(.title2).foregroundStyle(.orange)
+                    Spacer()
+                    Button { gps.saveCurrentWaypoint() } label: {
+                        Image(systemName: "mappin.and.ellipse").font(.title2).foregroundStyle(.orange)
+                    }.accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
+                    Button { gps.recording ? gps.stop() : gps.start() } label: {
+                        Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
+                    }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
+                }
+    }
+    private var navigationReadings: some View {
+                HStack {
+                    reading("SOG / \(speedUnit)", speedText)
+                    reading("ETE", ete)
+                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
+                }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+    }
+    private var timeReadings: some View {
+                HStack {
+                    reading("高度", gps.location.map { String(format: "%.0f m", $0.altitude) } ?? "—")
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        reading("時間", Self.clockFormatter.string(from: context.date))
+                    }
+                    Button("GPX共有") { exported = gps.export(); sharing = exported != nil }.tint(.orange)
+                }
+    }
+    private var positionReadings: some View {
+                HStack {
+                    reading(magnetic || !hasCourse ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
+                    Rectangle().fill(.orange).frame(width: 1)
+                    VStack(alignment: .trailing, spacing: 5) {
+                        Text("緯度・経度").font(.caption).foregroundStyle(.gray)
+                        Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "—")
+                        Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "—")
+                    }.font(.headline.monospacedDigit()).frame(maxWidth: .infinity)
+                }.frame(height: 92)
+    }
     var body: some View {
         ScrollView {
             VStack(spacing: 10) {
@@ -357,38 +396,10 @@ struct ContentView: View {
                     }.frame(height: 270)
                 } else { mapPanel }
                 targetPanel
-                HStack {
-                    Text(mode == 0 ? "スピードメーター" : "ナビゲーター").font(.title2).foregroundStyle(.orange)
-                    Spacer()
-                    Button { gps.saveCurrentWaypoint() } label: {
-                        Image(systemName: "mappin.and.ellipse").font(.title2).foregroundStyle(.orange)
-                    }.accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-                    Button { gps.recording ? gps.stop() : gps.start() } label: {
-                        Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
-                    }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
-                }
-                HStack {
-                    reading("SOG / \(speedUnit)", speedText)
-                    reading("ETE", ete)
-                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
-                }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
-                HStack {
-                    reading("高度", gps.location.map { String(format: "%.0f m", $0.altitude) } ?? "—")
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        reading("時間", Self.clockFormatter.string(from: context.date))
-                    }
-                    Button("GPX共有") { exported = gps.export(); sharing = exported != nil }.tint(.orange)
-                }
-                Divider()
-                HStack {
-                    reading(magnetic || !hasCourse ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
-                    Rectangle().fill(.orange).frame(width: 1)
-                    VStack(alignment: .trailing, spacing: 5) {
-                        Text("緯度・経度").font(.caption).foregroundStyle(.gray)
-                        Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "—")
-                        Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "—")
-                    }.font(.headline.monospacedDigit()).frame(maxWidth: .infinity)
-                }.frame(height: 92)
+                recordControls
+                navigationReadings
+                timeReadings
+                positionReadings
                 Text(gps.message).font(.caption).foregroundStyle(.gray)
             }.padding(8)
         }.background(.black).preferredColorScheme(.dark)

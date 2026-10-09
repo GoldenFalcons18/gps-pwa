@@ -99,7 +99,12 @@ struct NavigationMapView: UIViewRepresentable {
             }
         }
         func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
-            let interacting = mapView.subviews.flatMap { $0.gestureRecognizers ?? [] }.contains { $0.state == .began || $0.state == .changed }
+            var interacting = false
+            for child in mapView.subviews {
+                for gesture in child.gestureRecognizers ?? [] {
+                    if gesture.state == UIGestureRecognizer.State.began || gesture.state == UIGestureRecognizer.State.changed { interacting = true }
+                }
+            }
             if interacting && parent.following { DispatchQueue.main.async { self.parent.following = false } }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
