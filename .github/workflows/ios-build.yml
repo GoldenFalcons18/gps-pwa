@@ -43,6 +43,9 @@ jobs:
           xcrun simctl bootstatus "$DEVICE" -b
           xcrun simctl status_bar "$DEVICE" override --time 17:59 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
           xcrun simctl install "$DEVICE" build/Build/Products/Debug-iphonesimulator/SailingGPS.app
+          CONTAINER=$(xcrun simctl get_app_container "$DEVICE" com.goldenfalcons.sailinggps data)
+          mkdir -p "$CONTAINER/Documents"
+          printf '%s' '[{"id":"00000000-0000-0000-0000-000000000001","name":"TEST A","latitude":35.317433,"longitude":139.4661},{"id":"00000000-0000-0000-0000-000000000002","name":"TEST B","latitude":35.320,"longitude":139.470}]' > "$CONTAINER/Documents/waypoints.json"
           mkdir -p screenshots
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 0
           sleep 5
