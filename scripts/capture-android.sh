@@ -63,3 +63,18 @@ adb exec-out screencap -p > screenshots/Android-current-waypoint.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
 
+
+adb shell am force-stop "$APP"
+printf '%s' '<map><boolean name="navigator" value="false"/><boolean name="metricUnits" value="true"/></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
+adb shell am start -n "$APP/.MainActivity"
+sleep 3
+adb shell uiautomator dump /sdcard/metric-ui.xml
+adb pull /sdcard/metric-ui.xml screenshots/metric-ui.xml
+python3 - <<'PYTEST'
+import xml.etree.ElementTree as E
+nodes=list(E.parse('screenshots/metric-ui.xml').iter('node'))
+assert any(n.get('text')=='SOG · km/h' for n in nodes), 'Metric speed unit not displayed'
+assert any(n.get('resource-id','').endswith('/tvDistance') and (n.get('text','').endswith(' m') or n.get('text','').endswith(' km')) for n in nodes), 'Metric target distance not displayed'
+print('Persisted metric units displayed after relaunch')
+PYTEST
+adb exec-out screencap -p > screenshots/Android-metric.png

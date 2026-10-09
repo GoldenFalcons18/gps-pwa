@@ -217,8 +217,7 @@ struct ContentView: View {
     @State private var longitudeDegrees = ""
     @State private var longitudeMinutes = ""
     @State private var longitudeDirection = "E"
-    @State private var camera: MapCameraPosition = .automatic
-    @State private var exported: URL?
+        @State private var exported: URL?
     @State private var sharing = false
     @State private var settings = false
     private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
@@ -338,7 +337,7 @@ struct ContentView: View {
                     }
                     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     let waypoint = Waypoint(name: trimmedName.isEmpty ? "Waypoint \(gps.waypoints.count + 1)" : trimmedName, latitude: lat, longitude: lon)
-                    gps.add(waypoint); selected = waypoint.id; camera = .automatic
+                    gps.add(waypoint); selected = waypoint.id; following = false; showAllRequest += 1
                     name = ""; latitudeDegrees = ""; latitudeMinutes = ""; longitudeDegrees = ""; longitudeMinutes = ""
                     latitudeDirection = "N"; longitudeDirection = "E"
                 }
@@ -400,7 +399,7 @@ struct ContentView: View {
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
         }
         .onChange(of: gps.quickWaypointID) { _, value in
-            if let value { selected = value; camera = .automatic }
+            if let value { selected = value; following = true }
         }
         .onChange(of: mapSelection) { _, value in
             if let value { selected = value }
