@@ -366,7 +366,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val unit = if (metricUnits) "km/h" else "knot"
         b.tvSpeedUnit.text = "SOG · $unit"
         b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
-        b.tvLargeSpeed.speedKnots = speed
+        b.tvLargeSpeed.speedValue = speed
+        b.tvLargeSpeed.contentDescription = "対地速度 ${b.tvSog.text}"
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${NavigationUtils.formatDm(latestLat!!, true)}   ${NavigationUtils.formatDm(latestLon!!, false)}"
             else "現在地：GPS受信待ち"

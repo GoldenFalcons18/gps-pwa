@@ -10,14 +10,14 @@ import java.util.Locale
 
 /** Seven segment SOG display, scaled to the available width. */
 class SpeedDisplayView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
-    var speedKnots: Double? = null
-        set(value) { field = value; invalidate(); contentDescription = value?.let { "対地速度 %.1f ノット".format(it) } ?: "対地速度 未取得" }
+    var speedValue: Double? = null
+        set(value) { field = value; invalidate(); contentDescription = value?.let { "対地速度 %.1f".format(it) } ?: "対地速度 未取得" }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val masks = intArrayOf(0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val value = speedKnots?.takeIf { it.isFinite() && it >= 0 }?.let { String.format(Locale.US, "%.1f", it) } ?: "--.-"
+        val value = speedValue?.takeIf { it.isFinite() && it >= 0 }?.let { String.format(Locale.US, "%.1f", it) } ?: "--.-"
         val slots = value.fold(0f) { total, char -> total + if (char == '.') 22f else 100f }
         val scale = minOf(width / slots, height / 180f)
         canvas.save()

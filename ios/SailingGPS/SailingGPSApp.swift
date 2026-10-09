@@ -220,7 +220,8 @@ struct ContentView: View {
         @State private var exported: URL?
     @State private var sharing = false
     @State private var settings = false
-    private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
+    private var hasCourse: Bool { gps.location.map { $0.speed >= 0.25 && $0.course >= 0 } ?? false }
+    private var heading: Double? { !magnetic && hasCourse ? gps.location?.course : gps.magneticHeading }
     private var mapHeading: Double? {
         if let p = gps.location, p.speed >= 0.25, p.course >= 0 { return p.course }
         return gps.trueHeading
@@ -380,7 +381,7 @@ struct ContentView: View {
                 }
                 Divider()
                 HStack {
-                    reading(magnetic ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
+                    reading(magnetic || !hasCourse ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
                     Rectangle().fill(.orange).frame(width: 1)
                     VStack(alignment: .trailing, spacing: 5) {
                         Text("緯度・経度").font(.caption).foregroundStyle(.gray)
