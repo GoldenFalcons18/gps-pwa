@@ -23,6 +23,7 @@ class GpsLoggingService : Service(), LocationListener {
         const val ACTION_LOCATION = "com.goldenfalcons.sailinggps.LOCATION_UPDATE"
         const val ACTION_STATUS = "com.goldenfalcons.sailinggps.STATUS_UPDATE"
         const val CHANNEL_ID = "gps_logging"
+        const val EXTRA_FIX_ELAPSED = "fixElapsed"
         const val EXTRA_LAT = "lat"
         const val EXTRA_LON = "lon"
         const val EXTRA_ALT = "alt"
@@ -108,6 +109,7 @@ class GpsLoggingService : Service(), LocationListener {
         count++
 
         val intent = Intent(ACTION_LOCATION).setPackage(packageName).apply {
+            putExtra(EXTRA_FIX_ELAPSED, location.elapsedRealtimeNanos / 1_000_000L)
             putExtra(EXTRA_LAT, location.latitude)
             putExtra(EXTRA_LON, location.longitude)
             putExtra(EXTRA_ALT, if (location.hasAltitude()) location.altitude else Double.NaN)

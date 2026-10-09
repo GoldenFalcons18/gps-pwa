@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 GpsLoggingService.ACTION_LOCATION -> {
-                    latestFixAt = android.os.SystemClock.elapsedRealtime()
+                    latestFixAt = intent.getLongExtra(GpsLoggingService.EXTRA_FIX_ELAPSED, 0L)
                     latestLat = intent.getDoubleExtra(GpsLoggingService.EXTRA_LAT, Double.NaN).takeIf { it.isFinite() }
                     latestLon = intent.getDoubleExtra(GpsLoggingService.EXTRA_LON, Double.NaN).takeIf { it.isFinite() }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
