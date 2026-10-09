@@ -208,7 +208,6 @@ struct ContentView: View {
     @AppStorage("displayMode") private var mode = 0
     @State private var magnetic = false
     @State private var selected: UUID?
-    @State private var mapSelection: UUID?
     @AppStorage("activeWaypointID") private var savedTarget = ""
     @State private var name = ""
     @State private var latitudeDegrees = ""
@@ -217,7 +216,7 @@ struct ContentView: View {
     @State private var longitudeDegrees = ""
     @State private var longitudeMinutes = ""
     @State private var longitudeDirection = "E"
-        @State private var exported: URL?
+    @State private var exported: URL?
     @State private var sharing = false
     @State private var settings = false
     private var hasCourse: Bool { gps.location.map { $0.speed >= 0.25 && $0.course >= 0 } ?? false }
@@ -384,7 +383,7 @@ struct ContentView: View {
                     }.font(.headline.monospacedDigit()).frame(maxWidth: .infinity)
                 }.frame(height: 92)
     }
-    var body: some View {
+    private var dashboard: some View {
         ScrollView {
             VStack(spacing: 10) {
                 Picker("表示", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
@@ -403,18 +402,21 @@ struct ContentView: View {
                 Text(gps.message).font(.caption).foregroundStyle(.gray)
             }.padding(8)
         }.background(.black).preferredColorScheme(.dark)
-        .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+    }
+    private var presentedDashboard: some View {
+        dashboard.sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
-        .onChange(of: scenePhase) { _, phase in gps.preview(phase == .active) }
+    }
+    private var previewDashboard: some View {
+        presentedDashboard.onChange(of: scenePhase) { _, phase in gps.preview(phase == ScenePhase.active) }
         .onAppear {
             gps.preview(true)
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
         }
-        .onChange(of: gps.quickWaypointID) { _, value in
+    }
+    var body: some View {
+        previewDashboard.onChange(of: gps.quickWaypointID) { _, value in
             if let value { selected = value; following = true }
-        }
-        .onChange(of: mapSelection) { _, value in
-            if let value { selected = value }
         }
         .onChange(of: selected) { _, value in
             savedTarget = value?.uuidString ?? ""
