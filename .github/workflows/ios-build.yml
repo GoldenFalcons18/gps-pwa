@@ -1,0 +1,21 @@
+name: iPhone compile check
+on:
+  workflow_dispatch:
+  push:
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+        working-directory: ios
+      - run: xcodebuild -project SailingGPS.xcodeproj -scheme SailingGPS -sdk iphonesimulator -configuration Debug -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+        working-directory: ios
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iPhone-simulator-build-not-installable-on-device
+          path: ios/build/Build/Products/Debug-iphonesimulator/*.app

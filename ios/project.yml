@@ -1,0 +1,25 @@
+name: SailingGPS
+options:
+  bundleIdPrefix: com.goldenfalcons
+  deploymentTarget:
+    iOS: '17.0'
+targets:
+  SailingGPS:
+    type: application
+    platform: iOS
+    sources: [SailingGPS]
+    info:
+      path: SailingGPS/Info.plist
+      properties:
+        UIBackgroundModes: [location]
+        NSLocationWhenInUseUsageDescription: 航行位置と航跡を表示・記録します。
+        NSLocationAlwaysAndWhenInUseUsageDescription: 画面を消した状態でも、開始した航跡記録を続けます。
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps
+        SWIFT_VERSION: '5.0'
+        MARKETING_VERSION: '1.1.0'
+        CURRENT_PROJECT_VERSION: 4
+        TARGETED_DEVICE_FAMILY: '1,2'
+    scheme: {}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="green_right">#00FF38</color>
+    <color name="red_left">#FF2020</color>
+    <color name="orange_target">#FF9D00</color>
+    <color name="gray_text">#B8B8B8</color>
+    <color name="panel">#080808</color>
+    <color name="border">#666666</color>
+</resources>

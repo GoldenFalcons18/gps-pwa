@@ -1,0 +1,56 @@
+name: Android build and signed release draft
+on:
+  workflow_dispatch:
+    inputs:
+      signed_release:
+        description: Build signed APK and create a draft release
+        type: boolean
+        default: false
+  push:
+    paths: ['android/**', 'scripts/**', '.github/workflows/android-build.yml']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.0'
+      - run: gradle -p android :app:testDebugUnitTest :app:assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-debug-test-only
+          path: android/app/build/outputs/apk/debug/*.apk
+      - name: Sign release APK
+        if: ${{ inputs.signed_release }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SAILING_KEYSTORE_BASE64 }}
+          SAILING_KEYSTORE_FILE: ${{ runner.temp }}/sailing-release.jks
+          SAILING_KEYSTORE_PASSWORD: ${{ secrets.SAILING_KEYSTORE_PASSWORD }}
+          SAILING_KEY_ALIAS: ${{ secrets.SAILING_KEY_ALIAS }}
+          SAILING_KEY_PASSWORD: ${{ secrets.SAILING_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          trap 'rm -f "$SAILING_KEYSTORE_FILE"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$SAILING_KEYSTORE_FILE"
+          gradle -p android :app:assembleRelease --no-daemon
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/app-release.apk dist/SailingGpsLogger.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify dist/SailingGpsLogger.apk
+          python3 scripts/release-metadata.py dist/SailingGpsLogger.apk
+      - name: Create draft (publish after device verification)
+        if: ${{ inputs.signed_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
+          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes '2つの表示モード、地図、GPX、バックグラウンドGPS記録、GitHub更新通知。実機検証後に公開してください。'

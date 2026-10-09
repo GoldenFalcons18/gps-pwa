@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#000000">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="6dp">
+
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="速度" />
+            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="地図" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="280dp" android:orientation="vertical" android:gravity="center">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOG · kts" android:textColor="#FFAA00" android:textSize="24sp" />
+            <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="200dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="280dp" />
+            <Button android:id="@+id/btnFollow" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地を追従" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="© OpenStreetMap contributors · 地図の読み込みには通信が必要です" android:textColor="#BBBBBB" android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:orientation="horizontal"
+            android:background="@drawable/panel_bg">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.29"
+                android:orientation="vertical"
+                android:gravity="center_vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="目標まで"
+                    android:textColor="@color/gray_text"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-- NM"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDistanceSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-- m"
+                    android:textColor="@color/gray_text"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/tvClock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="--時方向"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.42"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <com.goldenfalcons.sailinggps.InstrumentView
+                    android:id="@+id/instrumentView"
+                    android:layout_width="match_parent"
+                    android:layout_height="145dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnRelativeMode"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="前方0°"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnAbsoluteMode"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="絶対方位"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.29"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="目標"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:padding="6dp" />
+
+                <TextView
+                    android:id="@+id/tvWpName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="未設定"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:gravity="center" />
+
+                <TextView
+                    android:id="@+id/tvWpCoords"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="--"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:gravity="center" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/panel_bg"
+                android:padding="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOG" android:textColor="@color/gray_text" android:textSize="28sp" android:textStyle="bold" />
+                <TextView android:id="@+id/tvSog" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kt" android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@drawable/panel_bg"
+                android:padding="8dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="COG / 船首方位" android:textColor="@color/gray_text" android:textSize="22sp" android:textStyle="bold" />
+                <TextView android:id="@+id/tvCog" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--°" android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" />
+                <TextView android:id="@+id/tvHeadingSource" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="方位ソース：--" android:textColor="@color/gray_text" android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView android:id="@+id/tvModeTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" />
+        <TextView android:id="@+id/tvPosition" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="現在地：GPS受信待ち" android:textColor="#FFFFFF" android:textSize="16sp" />
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/panel_bg"
+            android:padding="10dp"
+            android:text="状態：停止中"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button android:id="@+id/btnStart" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GPS記録開始" android:textSize="20sp" />
+        <Button android:id="@+id/btnStop" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GPS記録停止" android:textSize="20sp" />
+        <Button android:id="@+id/btnExport" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GPX保存・共有" android:textSize="20sp" />
+        <Button android:id="@+id/btnClearTrack" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="記録データ削除" android:textSize="18sp" />
+        <Button android:id="@+id/btnCheckUpdate" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="更新を確認" android:textSize="18sp" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="ウェイポイント追加（度分式）" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" />
+
+        <EditText android:id="@+id/etWpName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="名称" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="緯度" android:textColor="@color/white" android:textSize="18sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <EditText android:id="@+id/etLatDeg" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="度" android:inputType="number" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <EditText android:id="@+id/etLatMin" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.4" android:hint="分" android:inputType="numberDecimal" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <Spinner android:id="@+id/spLatDir" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="0.7" />
+        </LinearLayout>
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="経度" android:textColor="@color/white" android:textSize="18sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <EditText android:id="@+id/etLonDeg" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="度" android:inputType="number" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <EditText android:id="@+id/etLonMin" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1.4" android:hint="分" android:inputType="numberDecimal" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <Spinner android:id="@+id/spLonDir" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="0.7" />
+        </LinearLayout>
+
+        <Button android:id="@+id/btnAddWp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ウェイポイント新規保存" />
+        <Button android:id="@+id/btnCurrentWp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地をウェイポイント保存" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="保存済みウェイポイント" android:textColor="@color/white" android:textSize="22sp" android:textStyle="bold" />
+        <LinearLayout android:id="@+id/waypointContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="デバッグログ" android:textColor="@color/white" android:textSize="20sp" android:textStyle="bold" />
+        <TextView android:id="@+id/tvLog" android:layout_width="match_parent" android:layout_height="180dp" android:background="#050505" android:textColor="#B9E5FF" android:textSize="12sp" android:padding="8dp" android:gravity="bottom" />
+
+    </LinearLayout>
+</ScrollView>
