@@ -77,7 +77,10 @@ struct NavigationMapView: UIViewRepresentable {
                 if !pins.isEmpty { map.showAnnotations(pins, animated: false) }
             } else if p.following, let point = p.location, map.bounds.width > 0, map.bounds.height > 0 {
                 let camera = map.camera.copy() as! MKMapCamera
-                camera.centerCoordinate = point.coordinate
+                if let heading = p.heading {
+                    let center = CoordinateInput.destination(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, bearing: heading, meters: 250)
+                    camera.centerCoordinate = CLLocationCoordinate2D(latitude: center.latitude, longitude: center.longitude)
+                } else { camera.centerCoordinate = point.coordinate }
                 camera.heading = p.heading ?? 0
                 camera.pitch = 0
                 map.setCamera(camera, animated: false)

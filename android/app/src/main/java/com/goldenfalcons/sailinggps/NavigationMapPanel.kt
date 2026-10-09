@@ -173,7 +173,10 @@ class NavigationMapPanel(
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
         map.controller.setZoom(DisplayNavigation.zoom(point.latitude, dpi / 2.54).coerceIn(map.minZoomLevel, map.maxZoomLevel))
         map.mapOrientation = -(lastHeading ?: 0.0).toFloat()
-        map.controller.setCenter(point)
+        val center = lastHeading?.let { heading ->
+            DisplayNavigation.destination(point.latitude, point.longitude, heading, 250.0).let { GeoPoint(it.first, it.second) }
+        } ?: point
+        map.controller.setCenter(center)
     }
 
     fun followLocation() {
