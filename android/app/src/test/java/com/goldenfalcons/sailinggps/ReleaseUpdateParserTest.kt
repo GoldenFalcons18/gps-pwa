@@ -50,4 +50,19 @@ class ReleaseUpdateParserTest {
     @Test fun incompleteMetadataDoesNotPrompt() {
         assertNull(ReleaseUpdateParser.parse(release(), metadata().put("sha256", ""), repo, 4, 34))
     }
+    @Test fun fixedSignatureReleaseIsOfferedToPreviousVersion() {
+        val release = release().put("tag_name", "android-v1.5.1")
+        val assets = release.getJSONArray("assets")
+        for (index in 0 until assets.length()) {
+            val asset = assets.getJSONObject(index)
+            asset.put("browser_download_url", asset.getString("browser_download_url").replace("1.2.0", "1.5.1"))
+            if (asset.getString("name").endsWith(".apk")) asset.put("name", "SailingGpsLogger-1.5.1.apk")
+        }
+        val metadata = metadata().put("versionCode", 10).put("versionName", "1.5.1")
+            .put("apkFile", "SailingGpsLogger-1.5.1.apk")
+        val offered = ReleaseUpdateParser.parse(release, metadata, repo, 9, 34)
+        assertEquals(10, offered?.versionCode)
+        assertEquals("https://github.com/$repo/releases/download/android-v1.5.1/SailingGpsLogger-1.5.1.apk", offered?.downloadUrl)
+        assertNull(ReleaseUpdateParser.parse(release, metadata, repo, 10, 34))
+    }
 }

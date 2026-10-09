@@ -1,0 +1,82 @@
+name: Android fixed-signature release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: android-signed-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.0'
+      - name: Install Android SDK
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"'
+      - name: Build and verify fixed-signature APKs
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SAILING_KEYSTORE_BASE64 }}
+          SAILING_KEYSTORE_FILE: ${{ runner.temp }}/sailing-release.jks
+          SAILING_KEYSTORE_PASSWORD: ${{ secrets.SAILING_KEYSTORE_PASSWORD }}
+          SAILING_KEY_ALIAS: ${{ secrets.SAILING_KEY_ALIAS }}
+          SAILING_KEY_PASSWORD: ${{ secrets.SAILING_KEY_PASSWORD }}
+        run: bash scripts/build-verified-release.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Android-fixed-signature
+          path: |
+            dist/
+            upgrade-fixture.apk
+          retention-days: 30
+  verify-upgrade:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Android-fixed-signature
+          path: signed
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/verify-signed-upgrade.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-signed-upgrade-verification
+          path: upgrade-results/
+  draft:
+    needs: verify-upgrade
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Android-fixed-signature
+          path: signed
+      - name: Create verified release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
+          gh release create "android-v$VERSION" signed/dist/* --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
