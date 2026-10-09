@@ -15,3 +15,7 @@ ci-logs/
 *-ci-logs.zip
 
 **/.build/
+
+/upgrade-fixture.apk
+/upgrade-results/
+/signed/
