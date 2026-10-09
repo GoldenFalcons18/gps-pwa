@@ -71,7 +71,14 @@ sleep 3
 adb emu geo fix 139.467 35.318
 sleep 2
 adb logcat -d -s SailingGpsLogger > screenshots/metric-units.log
-if ! grep -q 'Units metric=true' screenshots/metric-units.log; then exit 1; fi
+# The unit spinner is inside the collapsed menu; its selection callback only fires
+# after layout. The dashboard reads the persisted value directly on startup.
+adb shell run-as "$APP" cat shared_prefs/display.xml > screenshots/metric-preferences.xml
+python3 - <<'PYPREF'
+import xml.etree.ElementTree as E
+root=E.parse('screenshots/metric-preferences.xml').getroot()
+assert any(n.get('name')=='metricUnits' and n.get('value')=='true' for n in root)
+PYPREF
 # The live seconds clock and compass prevent UIAutomator's idle detection.
 # Preserve the actual screen for visual checking instead of waiting for an idle UI.
 adb exec-out screencap -p > screenshots/Android-metric.png
