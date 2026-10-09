@@ -2,6 +2,10 @@ package com.goldenfalcons.sailinggps
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
 import android.widget.FrameLayout
 import org.osmdroid.config.Configuration
@@ -85,6 +89,7 @@ class NavigationMapPanel(
         waypointMarkers.clear()
         waypoints.forEach { wp ->
             waypointMarkers.add(Marker(map).apply {
+                icon = waypointIcon(wp.name, wp.id == active?.id)
                 position = GeoPoint(wp.lat, wp.lon)
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
                 snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
@@ -99,6 +104,22 @@ class NavigationMapPanel(
         }
         map.overlays.addAll(waypointMarkers)
         map.invalidate()
+    }
+
+    private fun waypointIcon(name: String, active: Boolean): BitmapDrawable {
+        val density = map.resources.displayMetrics.density
+        val label = name.take(24)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12f * density }
+        val width = (paint.measureText(label) + 16f * density).toInt().coerceAtLeast((60 * density).toInt())
+        val bitmap = Bitmap.createBitmap(width, (44 * density).toInt(), Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        paint.color = Color.rgb(15, 15, 15)
+        canvas.drawRoundRect(0f, 0f, width.toFloat(), 26f * density, 4f * density, 4f * density, paint)
+        paint.color = if (active) Color.rgb(255, 170, 0) else Color.WHITE
+        paint.textAlign = Paint.Align.CENTER
+        canvas.drawText(label, width / 2f, 18f * density, paint)
+        canvas.drawCircle(width / 2f, 36f * density, 7f * density, paint)
+        return BitmapDrawable(map.resources, bitmap)
     }
 
     fun showWaypoints() {

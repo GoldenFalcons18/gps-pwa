@@ -86,6 +86,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(b.root) { view, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(b.root)
 
         waypointStore = WaypointStore(this)
         waypoints += waypointStore.loadAll()
@@ -262,6 +268,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun updateStatusUi() {
         b.tvStatus.text = "状態：${if (running) "記録中" else "停止中"} / 保存点数：$pointCount"
         b.tvStatus.setTextColor(if (running) Color.rgb(0, 255, 56) else Color.WHITE)
+        b.btnStart.visibility = if (running) android.view.View.GONE else android.view.View.VISIBLE
+        b.btnStop.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
         b.btnStart.isEnabled = !running
         b.btnStop.isEnabled = running
     }
