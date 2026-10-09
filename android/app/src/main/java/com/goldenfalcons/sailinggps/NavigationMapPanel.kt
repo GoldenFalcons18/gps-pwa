@@ -65,7 +65,23 @@ class NavigationMapPanel(
         }
         boat = Marker(map).apply {
             title = "現在地"
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            val density = map.resources.displayMetrics.density
+            val size = (28 * density).toInt()
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val arrow = android.graphics.Path().apply {
+                moveTo(size / 2f, 2f * density)
+                lineTo(size - 3f * density, size - 3f * density)
+                lineTo(size / 2f, size * 0.7f)
+                lineTo(3f * density, size - 3f * density)
+                close()
+            }
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = 3f * density }
+            canvas.drawPath(arrow, paint)
+            paint.style = Paint.Style.FILL; paint.color = Color.rgb(10, 25, 45)
+            canvas.drawPath(arrow, paint)
+            icon = BitmapDrawable(map.resources, bitmap)
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             isEnabled = false
         }
         map.overlays.add(trail)

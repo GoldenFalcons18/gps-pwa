@@ -121,6 +121,12 @@ struct NavigationMapView: UIViewRepresentable {
         }
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             guard let pin = annotation as? Pin else { return nil }
+            if pin.kind == "boat" {
+                let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
+                view.image = UIImage(systemName: "location.north.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .bold))?.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+                view.displayPriority = .required; view.canShowCallout = true
+                return view
+            }
             if pin.kind == "course" {
                 let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 8, height: 8)
