@@ -82,3 +82,54 @@ PYPREF
 # The live seconds clock and compass prevent UIAutomator's idle detection.
 # Preserve the actual screen for visual checking instead of waiting for an idle UI.
 adb exec-out screencap -p > screenshots/Android-metric.png
+
+# Create a waypoint at a map coordinate (not the current GPS coordinate).
+adb shell am force-stop "$APP"
+printf '%s' '<map><boolean name="navigator" value="true"/></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
+adb shell am start -n "$APP/.MainActivity"
+sleep 4
+adb emu geo fix 139.467 35.318
+sleep 2
+MAP_POINT=$(python3 - <<'PYMAP'
+import xml.etree.ElementTree as E,re
+node=next(n for n in E.parse('quick-wp-ui.xml').iter('node') if n.get('resource-id')=='com.goldenfalcons.sailinggps:id/mapContainer')
+x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
+print(int(x1+(x2-x1)*.75),int(y1+(y2-y1)*.25))
+PYMAP
+)
+read -r MAP_X MAP_Y <<< "$MAP_POINT"
+adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1200
+sleep 1
+adb exec-out screencap -p > screenshots/Android-map-create-dialog.png
+adb shell input text MAP_TEST
+adb shell input keyevent 4
+sleep 1
+for attempt in 1 2 3; do
+  adb shell uiautomator dump /sdcard/map-dialog.xml
+  if adb pull /sdcard/map-dialog.xml screenshots/map-dialog.xml; then break; fi
+done
+SAVE_POINT=$(python3 - <<'PYSAVE'
+import xml.etree.ElementTree as E,re
+node=next(n for n in E.parse('screenshots/map-dialog.xml').iter('node') if n.get('resource-id')=='android:id/button1')
+x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
+print((x1+x2)//2,(y1+y2)//2)
+PYSAVE
+)
+adb shell input tap $SAVE_POINT
+sleep 2
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/map-waypoints.xml
+python3 - <<'PYVERIFY'
+import xml.etree.ElementTree as E,json
+root=E.parse('screenshots/map-waypoints.xml').getroot()
+items=json.loads(next(n.text for n in root if n.get('name')=='items'))
+assert len(items)==4,items
+point=items[-1]
+assert point['name']=='MAP_TEST',point
+assert -90<=point['lat']<=90 and -180<=point['lon']<=180
+assert abs(point['lat']-35.318)+abs(point['lon']-139.467)>0.0001,point
+assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
+print('Map long press saved a separate coordinate and selected the new target')
+PYVERIFY
+adb exec-out screencap -p > screenshots/Android-map-created.png
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
