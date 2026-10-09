@@ -4,7 +4,7 @@
 
 ## Android
 
-Android Studioで `android/` を開いてください。SDK 36、AGP 8.13.2、アプリID `com.goldenfalcons.sailinggps`。バージョン1.1.0（4）。
+Android Studioで `android/` を開いてください。SDK 36、AGP 8.13.2、アプリID `com.goldenfalcons.sailinggps`。バージョン1.2.0（5）。
 スピードメーター／地図モード、磁気コンパス／GPS方位、ウェイポイント、GPX、Foreground ServiceによるGPS記録、デバッグログを備えます。
 
 起動時に最大1日1回、または「更新を確認」ボタンで `GoldenFalcons18/gps-pwa` の公開リリースを調べます。`android-v1.1.0` のようなタグと `android-update.json`、対応APKが必要です。草稿・プレリリース・別パッケージ・古い版は通知しません。自動インストールは行いません。ダウンロード後、Androidのインストール画面で操作します。
@@ -31,7 +31,7 @@ Windowsでローカル署名する補助ツールは `scripts/build-signed-andro
 
 SwiftUI / CoreLocation / MapKitを使用し、iOS 17以降を対象にしています。2表示モード、SOG、GPS／磁気方位、円形方位計、地図と航跡、複数ウェイポイント、GPX共有、バックグラウンド位置記録を実装しています。Androidと同じ機能・表示がすべて移植済みという意味ではありません。旧版1.1.0はiPhoneで起動確認済みです。画面OFF記録の実機確認は未完了です。
 
-iPhone版1.1.1（5）ではウェイポイントをAndroidと同じ度・分とN/S・E/Wで入力します。既存のウェイポイント保存形式は維持しています。座標変換・範囲チェックは `swift test --package-path ios` で検証します。
+iPhone版1.2.0（6）ではウェイポイントをAndroidと同じ度・分とN/S・E/Wで入力します。既存のウェイポイント保存形式は維持しています。座標変換・範囲チェックは `swift test --package-path ios` で検証します。
 
 MacではXcodeとXcodeGenを準備し、`ios/` で `xcodegen generate` を実行して生成されたプロジェクトを開きます。署名チームは自分のApple Developerアカウントに設定します。GitHub Actions の iPhone compile check でMac上のコンパイル確認を行えます。シミュレーター用アプリに加え、個人署名用の未署名IPAを生成します。
 

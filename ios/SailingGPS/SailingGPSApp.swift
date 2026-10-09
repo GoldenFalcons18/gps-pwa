@@ -146,6 +146,8 @@ struct ContentView: View {
     @AppStorage("displayMode") private var mode = 0
     @State private var magnetic = false
     @State private var selected: UUID?
+    @State private var mapSelection: UUID?
+    @AppStorage("activeWaypointID") private var savedTarget = ""
     @State private var name = ""
     @State private var latitudeDegrees = ""
     @State private var latitudeMinutes = ""
@@ -216,7 +218,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         VStack(spacing: 4) {
-            Map(position: $camera, selection: $selected) {
+            Map(position: $camera, selection: $mapSelection) {
                 if let p = gps.location { Annotation("現在地", coordinate: p.coordinate) { Image(systemName: "location.north.fill").foregroundStyle(.red) } }
                 ForEach(gps.waypoints) { wp in
                     Marker(wp.name, coordinate: wp.coordinate).tint(wp.id == selected ? .orange : .blue).tag(wp.id)
@@ -312,6 +314,18 @@ struct ContentView: View {
         }.background(.black).preferredColorScheme(.dark)
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
+        .onAppear {
+            selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
+        }
+        .onChange(of: mapSelection) { _, value in
+            if let value { selected = value }
+        }
+        .onChange(of: selected) { _, value in
+            savedTarget = value?.uuidString ?? ""
+        }
+        .onChange(of: gps.waypoints.count) { _, _ in
+            if !gps.waypoints.contains(where: { $0.id == selected }) { selected = gps.waypoints.first?.id }
+        }
     }
 }
 struct ShareView: UIViewControllerRepresentable {
