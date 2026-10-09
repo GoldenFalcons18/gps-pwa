@@ -13,3 +13,5 @@ ios/*.xcodeproj/
 dist/
 ci-logs/
 *-ci-logs.zip
+
+**/.build/

@@ -3,12 +3,13 @@ import XCTest
 
 final class CoordinateInputTests: XCTestCase {
     func testHemisphereConversion() throws {
-        for (direction, latitude, degree, minute, expected) in [
+        let cases: [(String, Bool, String, String, Double)] = [
             ("N", true, "35", "19.046", 35 + 19.046 / 60),
             ("S", true, "35", "19.046", -(35 + 19.046 / 60)),
             ("E", false, "139", "27.966", 139 + 27.966 / 60),
             ("W", false, "139", "27.966", -(139 + 27.966 / 60))
-        ] {
+        ]
+        for (direction, latitude, degree, minute, expected) in cases {
             XCTAssertEqual(try XCTUnwrap(CoordinateInput.decimal(degrees: degree, minutes: minute, direction: direction, isLatitude: latitude)), expected, accuracy: 1e-10)
         }
     }
