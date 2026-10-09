@@ -12,7 +12,9 @@ struct Waypoint: Identifiable, Codable {
 
 final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var location: CLLocation?
-    @Published var magneticHeading: Double = 0
+    @Published var magneticHeading: Double?
+    @Published var trueHeading: Double?
+    private var foregroundActive = false
     @Published var recording = false
     @Published var track: [CLLocationCoordinate2D] = []
     @Published var message = "記録を開始してください"
@@ -34,6 +36,17 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.activityType = .otherNavigation
         manager.pausesLocationUpdatesAutomatically = false
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
+    }
+
+    func preview(_ active: Bool) {
+        foregroundActive = active
+        guard !recording else { return }
+        if !active { manager.stopUpdatingLocation(); manager.stopUpdatingHeading(); return }
+        if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization(); return }
+        guard [.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) else { return }
+        manager.startUpdatingLocation()
+        if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
+        log("Foreground GPS/compass preview (no recording)")
     }
 
     func start() {
@@ -99,9 +112,11 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.allowsBackgroundLocationUpdates = false
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
         handle = nil; recording = false; message = "記録停止"; log("Recording stopped")
+        preview(foregroundActive)
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        preview(foregroundActive)
         if savingCurrentWaypoint && manager.authorizationStatus != .notDetermined {
             if [.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { manager.requestLocation() }
             else {
@@ -113,7 +128,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if recording && ![.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { stop(); message = "位置情報の許可が解除されました" }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        if newHeading.headingAccuracy >= 0 { magneticHeading = newHeading.magneticHeading }
+        if newHeading.headingAccuracy >= 0 { magneticHeading = newHeading.magneticHeading; trueHeading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : nil }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
@@ -185,6 +200,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
 }
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("metricUnits") private var metricUnits = false
+    @State private var following = true
+    @State private var showAllRequest = 0
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
     @State private var magnetic = false
@@ -203,6 +222,12 @@ struct ContentView: View {
     @State private var sharing = false
     @State private var settings = false
     private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
+    private var mapHeading: Double? {
+        if let p = gps.location, p.speed >= 0.25, p.course >= 0 { return p.course }
+        return gps.trueHeading
+    }
+    private var speedUnit: String { metricUnits ? "km/h" : "knot" }
+    private var speedText: String { gps.location.flatMap { $0.speed >= 0 ? String(format: "%.1f", $0.speed * (metricUnits ? 3.6 : 1.943844)) : nil } ?? "—" }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
     private static let clockFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -258,10 +283,9 @@ struct ContentView: View {
             VStack(spacing: 12) {
                 Text("目標まで").font(.caption).foregroundStyle(.gray)
                 if let target, let point = gps.location {
-                    Text(String(format: "%.2f", point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)) / 1852)).font(.title2.bold())
-                    Text("nm").font(.caption)
+                    Text(CoordinateInput.distance(point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)), metric: metricUnits)).font(.title2.bold()).minimumScaleFactor(0.5)
                     Text(String(format: "目標 %.0f°", bearing(to: target, from: point))).font(.caption)
-                } else { Text("—").font(.title); Text("nm").font(.caption) }
+                } else { Text("—").font(.title); Text(metricUnits ? "m/km" : "nm").font(.caption) }
             }.frame(maxWidth: .infinity)
             compass
             VStack(spacing: 8) {
@@ -272,17 +296,11 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         VStack(spacing: 4) {
-            Map(position: $camera, selection: $mapSelection) {
-                if let p = gps.location { Annotation("現在地", coordinate: p.coordinate) { Image(systemName: "location.north.fill").foregroundStyle(.red) } }
-                ForEach(gps.waypoints) { wp in
-                    Marker(wp.name, coordinate: wp.coordinate).tint(wp.id == selected ? .orange : .blue).tag(wp.id)
-                }
-                if gps.track.count > 1 { MapPolyline(coordinates: gps.track).stroke(.orange, lineWidth: 3) }
-            }.frame(height: 270)
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest).frame(height: 270)
             HStack {
-                Button("現在地") { if let p = gps.location { camera = .region(.init(center: p.coordinate, latitudinalMeters: 1500, longitudinalMeters: 1500)) } }
+                Button("追従 1cm≒200m") { following = true }
                 Spacer()
-                Button("全ウェイポイント") { camera = .automatic }
+                Button("全ウェイポイント") { following = false; showAllRequest += 1 }
             }.font(.caption).tint(.orange)
         }
     }
@@ -290,6 +308,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
+                Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }.pickerStyle(.segmented)
                 Toggle("磁気コンパス（OFF: GPS進行方位）", isOn: $magnetic)
                 Text(gps.message).font(.caption)
                 reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
@@ -332,8 +351,8 @@ struct ContentView: View {
                 Picker("表示", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
                 if mode == 0 {
                     VStack(spacing: 0) {
-                        Text("kts").font(.title.bold()).foregroundStyle(.orange)
-                        Text(gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
+                        Text(speedUnit).font(.title.bold()).foregroundStyle(.orange)
+                        Text(speedText)
                             .font(.system(size: 130, weight: .bold, design: .monospaced)).minimumScaleFactor(0.4).foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity)
                     }.frame(height: 270)
                 } else { mapPanel }
@@ -349,7 +368,7 @@ struct ContentView: View {
                     }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
                 }
                 HStack {
-                    reading("SOG / kts", gps.location.map { String(format: "%.1f", max(0, $0.speed) * 1.943844) } ?? "—")
+                    reading("SOG / \(speedUnit)", speedText)
                     reading("ETE", ete)
                     Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
                 }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
@@ -375,7 +394,9 @@ struct ContentView: View {
         }.background(.black).preferredColorScheme(.dark)
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
+        .onChange(of: scenePhase) { _, phase in gps.preview(phase == .active) }
         .onAppear {
+            gps.preview(true)
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
         }
         .onChange(of: gps.quickWaypointID) { _, value in

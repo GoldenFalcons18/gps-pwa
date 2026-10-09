@@ -14,6 +14,7 @@ E.ElementTree(root).write('waypoints.xml',encoding='utf-8',xml_declaration=True)
 PY
 adb shell run-as "$APP" sh -c "'cat > shared_prefs/waypoints.xml'" < waypoints.xml
 mkdir -p screenshots
+adb emu geo fix 139.467 35.318
 adb shell am start -n "$APP/.MainActivity"
 sleep 5
 adb exec-out screencap -p > screenshots/Android-speed.png
@@ -37,6 +38,8 @@ x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
 print((x1+x2)//2,(y1+y2)//2)
 PY
 )
+adb emu geo fix 139.467 35.318
+sleep 3
 adb shell input tap $COORDS
 for counter in 1 2 3 4 5; do
   adb emu geo fix 139.467 35.318
@@ -53,6 +56,10 @@ assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,poin
 assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
 print('One-tap current waypoint saved and selected with recording stopped')
 PY
+adb shell run-as "$APP" sh -c "'test ! -s files/track_points.csv'"
+adb logcat -d -s SailingGpsLogger > screenshots/gps-preview.log
+if ! grep -q 'GPS preview started' screenshots/gps-preview.log; then exit 1; fi
 adb exec-out screencap -p > screenshots/Android-current-waypoint.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+

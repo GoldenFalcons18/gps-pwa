@@ -29,6 +29,10 @@ class NavigationMapPanel(
     private val trail: Polyline
     private val points = mutableListOf<GeoPoint>()
     private val waypointMarkers = mutableListOf<Marker>()
+    private val course = Polyline()
+    private val courseDots = mutableListOf<Marker>()
+    private var lastHeading: Double? = null
+    private var lastRecorded: GeoPoint? = null
     private var current: GeoPoint? = null
     private var following = true
     private var destroyed = false
@@ -65,6 +69,20 @@ class NavigationMapPanel(
             isEnabled = false
         }
         map.overlays.add(trail)
+        course.outlinePaint.color = Color.CYAN
+        course.outlinePaint.strokeWidth = 4f * map.resources.displayMetrics.density
+        map.overlays.add(course)
+        for (distance in 100..500 step 100) {
+            val bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+            Canvas(bitmap).drawCircle(8f, 8f, 6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.CYAN })
+            courseDots.add(Marker(map).apply {
+                icon = BitmapDrawable(map.resources, bitmap)
+                title = "${distance} m"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                isEnabled = false
+            })
+        }
+        map.overlays.addAll(courseDots)
         map.overlays.add(boat)
         log("Map initialized / OpenStreetMap")
     }
@@ -72,15 +90,24 @@ class NavigationMapPanel(
     fun updateLocation(lat: Double, lon: Double, bearing: Double?, recordTrack: Boolean = true) {
         val point = GeoPoint(lat, lon)
         current = point
+        lastHeading = bearing
         boat.position = point
         boat.isEnabled = true
         boat.snippet = bearing?.let { "COG %.0f°".format(it) } ?: "COG 未取得"
         if (recordTrack && points.lastOrNull()?.let { it.latitude != lat || it.longitude != lon } != false) {
+            lastRecorded = point
             points.add(point)
             if (points.size > 10000) points.removeAt(0)
             trail.setPoints(points)
         }
-        if (following) map.controller.setCenter(point)
+        if (bearing != null) {
+            val projected = (100..500 step 100).map { distance ->
+                DisplayNavigation.destination(lat, lon, bearing, distance.toDouble()).let { GeoPoint(it.first, it.second) }
+            }
+            course.setPoints(listOf(point) + projected)
+            courseDots.forEachIndexed { index, marker -> marker.position = projected[index]; marker.isEnabled = true }
+        } else { course.setPoints(emptyList()); courseDots.forEach { it.isEnabled = false } }
+        if (following) applyFollow()
         map.invalidate()
     }
 
@@ -140,15 +167,25 @@ class NavigationMapPanel(
         log("Map show waypoints / ${positions.size}")
     }
 
+    private fun applyFollow() {
+        val point = current ?: return
+        val metrics = map.resources.displayMetrics
+        val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
+        map.controller.setZoom(DisplayNavigation.zoom(point.latitude, dpi / 2.54).coerceIn(map.minZoomLevel, map.maxZoomLevel))
+        map.mapOrientation = -(lastHeading ?: 0.0).toFloat()
+        map.controller.setCenter(point)
+    }
+
     fun followLocation() {
         following = true
-        current?.let { map.controller.animateTo(it) }
+        applyFollow()
         log("Map follow enabled")
     }
 
     fun clearTrack() {
         loadGeneration++
         points.clear()
+        lastRecorded = null
         trail.setPoints(points)
         map.invalidate()
     }
@@ -175,7 +212,7 @@ class NavigationMapPanel(
             }.onFailure { error -> map.post { if (!destroyed) log("Map track read error: ${error.message}") } }
             map.post {
                 if (!destroyed && generation == loadGeneration) {
-                    val liveTail = current
+                    val liveTail = lastRecorded
                     points.clear()
                     points.addAll(restored)
                     if (liveTail != null && points.lastOrNull() != liveTail) points.add(liveTail)

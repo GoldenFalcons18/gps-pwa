@@ -6,13 +6,13 @@
             <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="地図" />
         </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOG · kts" android:textColor="#FFAA00" android:textSize="24sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/tvSpeedUnit" android:text="SOG · knot" android:textColor="#FFAA00" android:textSize="24sp" />
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
             <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="220dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="現在地" android:layout_weight="1" />
+                <Button android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="追従 1cm≒200m" android:layout_weight="1" />
                 <Button android:id="@+id/btnShowWaypoints" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="全ウェイポイント" />
             </LinearLayout>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="© OpenStreetMap contributors · 地図の読み込みには通信が必要です" android:textColor="#BBBBBB" android:textSize="12sp" />
@@ -60,6 +60,8 @@
             <TextView android:id="@+id/tvPosition" android:layout_width="0dp" android:layout_height="wrap_content" android:gravity="center" android:text="現在地：GPS受信待ち" android:textColor="#FFFFFF" android:textSize="16sp" android:layout_weight="1.3" />
         </LinearLayout>
         <LinearLayout android:id="@+id/settingsPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="速度・距離の単位" android:textColor="#FFFFFF" />
+            <Spinner android:id="@+id/unitSelector" android:layout_width="match_parent" android:layout_height="48dp" />
             <TextView android:id="@+id/tvGpsInfo" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="GPS&#10;受信待ち" android:textColor="#BBBBBB" android:textSize="14sp" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ETE：目標までの直線距離 ÷ 現在速度。約0.5 kt未満では表示しません。" android:textSize="12sp" android:textColor="#BBBBBB" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">

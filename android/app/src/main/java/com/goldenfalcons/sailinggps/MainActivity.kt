@@ -37,6 +37,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var haveMagnetic = false
     private var magneticHeading: Double? = null
 
+    private var previewListener: android.location.LocationListener? = null
+    private var foregroundActive = false
+    private var metricUnits: Boolean
+        get() = displayPrefs.getBoolean("metricUnits", false)
+        set(value) { displayPrefs.edit().putBoolean("metricUnits", value).apply() }
     private var latestFixAt = 0L
     private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var quickLocationListener: android.location.LocationListener? = null
@@ -78,7 +83,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
                     b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, 0f), intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, 0.0))
-                    updateMap()
+                    latestLat?.let { lat -> latestLon?.let { lon -> mapPanel?.updateLocation(lat, lon, mapHeading(), recordTrack = true) } }
                     updateNavigationUi()
                     debug("GPS update lat=${latestLat} lon=${latestLon} speed=${latestSpeedMps} bearing=${latestGpsBearing}")
                 }
@@ -145,6 +150,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onResume() {
         super.onResume()
+        foregroundActive = true
+        startPreview()
         uiHandler.removeCallbacks(clockTick)
         uiHandler.post(clockTick)
         mapPanel?.resume()
@@ -159,6 +166,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onPause() {
+        foregroundActive = false
+        stopPreview()
         uiHandler.removeCallbacks(clockTick)
         cancelQuickLocation()
         mapPanel?.pause()
@@ -190,7 +199,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             mapPanel?.setWaypoints(waypoints, activeWaypoint)
             updateMap()
             mapPanel?.resume()
-            mapPanel?.showWaypoints()
         }
         b.speedPanel.visibility = if (navigator) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
@@ -204,7 +212,51 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun updateMap() {
         val lat = latestLat ?: return
         val lon = latestLon ?: return
-        mapPanel?.updateLocation(lat, lon, latestGpsBearing)
+        mapPanel?.updateLocation(lat, lon, mapHeading(), recordTrack = false)
+    }
+
+    // Foreground preview never opens the recording file or starts a foreground service.
+    private fun startPreview() {
+        if (!foregroundActive || previewListener != null || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        val manager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        val listener = object : android.location.LocationListener {
+            override fun onLocationChanged(location: Location) {
+                val age = android.os.SystemClock.elapsedRealtime() - location.elapsedRealtimeNanos / 1_000_000L
+                if (age !in 0..30_000 || location.accuracy < 0) return
+                latestLat = location.latitude; latestLon = location.longitude
+                latestFixAt = location.elapsedRealtimeNanos / 1_000_000L
+                latestSpeedMps = if (location.hasSpeed()) location.speed.toDouble().coerceAtLeast(0.0) else null
+                latestGpsBearing = if (location.hasBearing()) location.bearing.toDouble() else null
+                b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(location.accuracy, location.altitude)
+                updateMap(); updateNavigationUi()
+            }
+            override fun onProviderDisabled(provider: String) { debug("GPS preview provider disabled") }
+            override fun onProviderEnabled(provider: String) { debug("GPS preview provider enabled") }
+        }
+        runCatching {
+            manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 1000L, 0f, listener, android.os.Looper.getMainLooper())
+            previewListener = listener
+            debug("GPS preview started (no recording)")
+        }.onFailure { debug("GPS preview: ${it.message}") }
+    }
+
+    private fun stopPreview() {
+        previewListener?.let { listener -> (getSystemService(LOCATION_SERVICE) as android.location.LocationManager).removeUpdates(listener) }
+        previewListener = null
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_LOCATION) startPreview()
+    }
+
+    private fun mapHeading(): Double? {
+        if ((latestSpeedMps ?: 0.0) >= 0.25 && latestGpsBearing != null) return latestGpsBearing
+        val magnetic = magneticHeading ?: return null
+        val lat = latestLat ?: return null
+        val lon = latestLon ?: return null
+        val field = GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis())
+        return NavigationUtils.normalize360(magnetic + field.declination)
     }
 
     override fun onDestroy() {
@@ -214,6 +266,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupSpinners() {
+        b.unitSelector.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("knot / nm", "km/h / m・km"))
+        b.unitSelector.setSelection(if (metricUnits) 1 else 0)
+        b.unitSelector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                metricUnits = position == 1
+                updateNavigationUi()
+                debug("Units metric=$metricUnits")
+            }
+        }
         b.spLatDir.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("N", "S"))
         b.spLonDir.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("E", "W"))
     }
@@ -300,10 +362,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateNavigationUi() {
-        val speedKt = latestSpeedMps?.times(NavigationUtils.MPS_TO_KT)
-        b.tvSog.text = if (speedKt != null) "%.1f kt".format(speedKt) else "-- kt"
-
-        b.tvLargeSpeed.speedKnots = speedKt
+        val speed = latestSpeedMps?.takeIf { it >= 0 }?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
+        val unit = if (metricUnits) "km/h" else "knot"
+        b.tvSpeedUnit.text = "SOG · $unit"
+        b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
+        b.tvLargeSpeed.speedKnots = speed
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${NavigationUtils.formatDm(latestLat!!, true)}   ${NavigationUtils.formatDm(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
@@ -316,7 +379,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val lat = latestLat
         val lon = latestLon
         if (wp == null || lat == null || lon == null) {
-            b.tvDistance.text = "-- NM"
+            b.tvDistance.text = if (metricUnits) "-- m/km" else "-- nm"
             b.tvDistanceSub.text = "-- m"
             b.tvClock.text = "--時方向"
             b.tvWpName.text = wp?.name ?: "未設定"
@@ -328,8 +391,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val distanceM = NavigationUtils.distanceMeters(lat, lon, wp.lat, wp.lon)
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
         b.tvEte.text = "ETE\n" + NavigationUtils.ete(distanceM, latestSpeedMps)
-        b.tvDistance.text = "%.2f NM".format(distanceM * NavigationUtils.M_TO_NM)
-        b.tvDistanceSub.text = if (distanceM < 1000) "${distanceM.roundToInt()} m" else "%.2f km".format(distanceM / 1000.0)
+        b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
+        b.tvDistanceSub.text = "目標までの直線距離"
         b.tvWpName.text = wp.name
         b.tvWpCoords.text = "${NavigationUtils.formatDm(wp.lat, true)}\n${NavigationUtils.formatDm(wp.lon, false)}"
 
@@ -567,6 +630,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } ?: raw
 
         updateNavigationUi()
+        updateMap()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {

@@ -34,4 +34,16 @@ enum CoordinateInput {
         let direction = isLatitude ? (value < 0 ? "S" : "N") : (value < 0 ? "W" : "E")
         return String(format: "%d°%.4f′%@", locale: Locale(identifier: "en_US_POSIX"), degrees, minutes, direction)
     }
+    static func distance(_ meters: Double, metric: Bool) -> String {
+        if !metric { return String(format: "%.2f nm", meters / 1852) }
+        return meters < 1000 ? String(format: "%.0f m", meters) : String(format: "%.2f km", meters / 1000)
+    }
+
+    static func destination(latitude: Double, longitude: Double, bearing: Double, meters: Double) -> (latitude: Double, longitude: Double) {
+        let a = latitude * .pi / 180, b = longitude * .pi / 180
+        let h = bearing * .pi / 180, d = meters / 6371000
+        let x = asin(min(1, max(-1, sin(a)*cos(d) + cos(a)*sin(d)*cos(h))))
+        let y = b + atan2(sin(h)*sin(d)*cos(a), cos(d)-sin(a)*sin(x))
+        return (x * 180 / .pi, (y * 180 / .pi + 540).truncatingRemainder(dividingBy: 360) - 180)
+    }
 }
