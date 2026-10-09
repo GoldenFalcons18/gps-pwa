@@ -29,9 +29,11 @@ Windowsでローカル署名する補助ツールは `scripts/build-signed-andro
 
 ## iPhone（開発版）
 
-SwiftUI / CoreLocation / MapKitを使用し、iOS 17以降を対象にしています。2表示モード、SOG、GPS／磁気方位、円形方位計、地図と航跡、複数ウェイポイント、GPX共有、バックグラウンド位置記録を実装しています。Androidと同じ機能・表示がすべて移植済みという意味ではありません。iPhone実機テストは未実施です。
+SwiftUI / CoreLocation / MapKitを使用し、iOS 17以降を対象にしています。2表示モード、SOG、GPS／磁気方位、円形方位計、地図と航跡、複数ウェイポイント、GPX共有、バックグラウンド位置記録を実装しています。Androidと同じ機能・表示がすべて移植済みという意味ではありません。旧版1.1.0はiPhoneで起動確認済みです。画面OFF記録の実機確認は未完了です。
 
-MacではXcodeとXcodeGenを準備し、`ios/` で `xcodegen generate` を実行して生成されたプロジェクトを開きます。署名チームは自分のApple Developerアカウントに設定します。GitHub Actions の iPhone compile check でMac上のコンパイル確認を行えます。取得できる成果物は**シミュレーター用**で、そのままiPhoneにインストールするIPAではありません。
+iPhone版1.1.1（5）ではウェイポイントをAndroidと同じ度・分とN/S・E/Wで入力します。既存のウェイポイント保存形式は維持しています。座標変換・範囲チェックは `swift test --package-path ios` で検証します。
+
+MacではXcodeとXcodeGenを準備し、`ios/` で `xcodegen generate` を実行して生成されたプロジェクトを開きます。署名チームは自分のApple Developerアカウントに設定します。GitHub Actions の iPhone compile check でMac上のコンパイル確認を行えます。シミュレーター用アプリに加え、個人署名用の未署名IPAを生成します。
 
 記録は前面で開始してください。位置情報許可とバックグラウンドlocation設定を使い、画面OFF中も継続する設計です。強制終了・OSによる終了後の自動再開は保証しません。記録とウェイポイントはアプリ内Documents、エラーや開始停止はdebug.logに保存します。GPX共有は記録中も可能です。地図はAppleのネットワークサービスを使用します。
 
@@ -52,7 +54,7 @@ AltStore ClassicとWindows版AltServerは無料Appleアカウントで個人署�
 1. GitHub Actionsの `iPhone compile check` が成功したら、成果物 `iPhone-unsigned-IPA-requires-AltStore-Classic-signing` をダウンロードして展開します。
 2. 公式手順でWindows版AltServerとiPhoneのAltStore Classicを設定します。Appleアカウントの入力はご自身で行い、チャットには送らないでください。
 3. `SailingGPS-unsigned.ipa` をiPhoneへ移し、AltStore ClassicのMy Appsの追加操作から署名してインストールします。直接タップするだけではインストールできません。
-4. 位置情報を許可し、記録開始後に画面をOFFにして実機で確認します。このアプリでのAltStore経由インストール・バックグラウンド記録はまだ実機検証していません。
+4. 位置情報を許可し、記録開始後に画面をOFFにして実機で確認します。旧版はAltServerからの個人署名インストールと起動を確認済みです。画面OFF記録は実機検証が必要です。更新時はアプリを削除せず、同じAppleアカウントで上書きしてください。
 
 公式手順: https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows
 制限: https://faq.altstore.io/altstore-classic/your-altstore

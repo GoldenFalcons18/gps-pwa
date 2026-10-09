@@ -88,6 +88,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { fail(error) }
     func add(_ waypoint: Waypoint) {
         waypoints.append(waypoint); saveWaypoints()
+        log("Waypoint added: \(CoordinateInput.format(waypoint.latitude, isLatitude: true)) \(CoordinateInput.format(waypoint.longitude, isLatitude: false))")
     }
     func remove(_ id: UUID) { waypoints.removeAll { $0.id == id }; saveWaypoints() }
     private func saveWaypoints() {
@@ -146,8 +147,12 @@ struct ContentView: View {
     @State private var magnetic = false
     @State private var selected: UUID?
     @State private var name = ""
-    @State private var latitude = ""
-    @State private var longitude = ""
+    @State private var latitudeDegrees = ""
+    @State private var latitudeMinutes = ""
+    @State private var latitudeDirection = "N"
+    @State private var longitudeDegrees = ""
+    @State private var longitudeMinutes = ""
+    @State private var longitudeDirection = "E"
     @State private var camera: MapCameraPosition = .automatic
     @State private var exported: URL?
     @State private var sharing = false
@@ -158,6 +163,20 @@ struct ContentView: View {
         let b = waypoint.latitude * .pi / 180
         let difference = (waypoint.longitude - point.coordinate.longitude) * .pi / 180
         return (atan2(sin(difference) * cos(b), cos(a) * sin(b) - sin(a) * cos(b) * cos(difference)) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+    }
+    private func coordinateFields(_ title: String, degrees: Binding<String>, minutes: Binding<String>, direction: Binding<String>, directions: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.subheadline)
+            HStack {
+                TextField("度", text: degrees).keyboardType(.numberPad).accessibilityLabel("\(title)の度")
+                Text("°")
+                TextField("分", text: minutes).keyboardType(.decimalPad).accessibilityLabel("\(title)の分")
+                Text("′")
+            }.textFieldStyle(.roundedBorder)
+            Picker("\(title)の方向", selection: direction) {
+                ForEach(directions, id: \.self) { value in Text(value).tag(value) }
+            }.pickerStyle(.segmented)
+        }
     }
     var body: some View {
         ScrollView {
@@ -200,15 +219,32 @@ struct ContentView: View {
                 }
                 Text("ウェイポイント").font(.headline)
                 ForEach(gps.waypoints) { wp in
-                    HStack { Button(wp.name) { selected = wp.id }; Spacer(); Button("削除", role: .destructive) { gps.remove(wp.id) } }
+                    HStack {
+                        Button { selected = wp.id } label: {
+                            VStack(alignment: .leading) {
+                                Text(wp.name)
+                                Text("\(CoordinateInput.format(wp.latitude, isLatitude: true)) / \(CoordinateInput.format(wp.longitude, isLatitude: false))").font(.caption.monospacedDigit())
+                            }
+                        }
+                        Spacer()
+                        Button("削除", role: .destructive) { gps.remove(wp.id) }
+                    }
                 }
                 TextField("名前", text: $name)
-                TextField("緯度（十進度、南緯はマイナス）", text: $latitude).keyboardType(.numbersAndPunctuation)
-                TextField("経度（十進度、西経はマイナス）", text: $longitude).keyboardType(.numbersAndPunctuation)
+                coordinateFields("緯度", degrees: $latitudeDegrees, minutes: $latitudeMinutes, direction: $latitudeDirection, directions: ["N", "S"])
+                coordinateFields("経度", degrees: $longitudeDegrees, minutes: $longitudeMinutes, direction: $longitudeDirection, directions: ["E", "W"])
+                Text("例：35°19.046′N → 度 35 ／ 分 19.046 ／ N").font(.caption)
                 Button("追加") {
-                    if let lat = Double(latitude), let lon = Double(longitude), (-90...90).contains(lat), (-180...180).contains(lon), !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                        gps.add(.init(name: name, latitude: lat, longitude: lon)); name = ""; latitude = ""; longitude = ""
-                    } else { gps.message = "名前と有効な緯度・経度を入力してください" }
+                    guard let lat = CoordinateInput.decimal(degrees: latitudeDegrees, minutes: latitudeMinutes, direction: latitudeDirection, isLatitude: true),
+                          let lon = CoordinateInput.decimal(degrees: longitudeDegrees, minutes: longitudeMinutes, direction: longitudeDirection, isLatitude: false) else {
+                        gps.message = "度は緯度0〜90・経度0〜180の整数、分は0以上60未満で入力してください。90度・180度では分は0です。"
+                        return
+                    }
+                    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let waypoint = Waypoint(name: trimmedName.isEmpty ? "Waypoint \(gps.waypoints.count + 1)" : trimmedName, latitude: lat, longitude: lon)
+                    gps.add(waypoint); selected = waypoint.id
+                    name = ""; latitudeDegrees = ""; latitudeMinutes = ""; longitudeDegrees = ""; longitudeMinutes = ""
+                    latitudeDirection = "N"; longitudeDirection = "E"
                 }
             }.padding()
         }.preferredColorScheme(.dark)
