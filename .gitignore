@@ -10,3 +10,6 @@
 **/xcuserdata/
 ios/*.xcodeproj/
 .DS_Store
+dist/
+ci-logs/
+*-ci-logs.zip

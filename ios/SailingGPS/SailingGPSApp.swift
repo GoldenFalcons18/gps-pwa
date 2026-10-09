@@ -48,6 +48,8 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: csv.path)
             handle = try FileHandle(forWritingTo: csv)
             try handle?.seekToEnd()
+            try handle?.write(contentsOf: Data("#session\n".utf8))
+            track.removeAll()
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
             recording = true
@@ -112,6 +114,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
                     while let newline = pending.firstIndex(of: 10) {
                         let line = String(decoding: pending.prefix(upTo: newline), as: UTF8.self)
                         pending.removeSubrange(...newline)
+                        if line == "#session" { try write("</trkseg><trkseg>"); continue }
                         let fields = line.split(separator: ",")
                         if fields.count >= 4, let time = Double(fields[0]), let lat = Double(fields[1]), let lon = Double(fields[2]), let alt = Double(fields[3]) {
                             try write("<trkpt lat=\"\(lat)\" lon=\"\(lon)\"><ele>\(alt)</ele><time>\(formatter.string(from: Date(timeIntervalSince1970: time)))</time></trkpt>")
@@ -150,6 +153,12 @@ struct ContentView: View {
     @State private var sharing = false
     private var heading: Double? { magnetic ? gps.magneticHeading : gps.location.flatMap { $0.course >= 0 ? $0.course : nil } }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
+    private func bearing(to waypoint: Waypoint, from point: CLLocation) -> Double {
+        let a = point.coordinate.latitude * .pi / 180
+        let b = waypoint.latitude * .pi / 180
+        let difference = (waypoint.longitude - point.coordinate.longitude) * .pi / 180
+        return (atan2(sin(difference) * cos(b), cos(a) * sin(b) - sin(a) * cos(b) * cos(difference)) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+    }
     var body: some View {
         ScrollView {
             VStack(spacing: 18) {
@@ -187,6 +196,7 @@ struct ContentView: View {
                 }
                 if let target, let point = gps.location {
                     Text("目標: \(target.name) / \(String(format: "%.2f", point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)) / 1852)) nm")
+                    Text(String(format: "目標方位（真北） %.0f°", bearing(to: target, from: point)))
                 }
                 Text("ウェイポイント").font(.headline)
                 ForEach(gps.waypoints) { wp in
