@@ -8,4 +8,5 @@
     <color name="gray_text">#B8B8B8</color>
     <color name="panel">#080808</color>
     <color name="border">#666666</color>
+    <color name="launcher_background">#071B2B</color>
 </resources>

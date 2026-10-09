@@ -11,6 +11,7 @@ targets:
     info:
       path: SailingGPS/Info.plist
       properties:
+        CFBundleDisplayName: Sailing GPS
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UIBackgroundModes: [location]
@@ -20,8 +21,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.2.0'
-        CURRENT_PROJECT_VERSION: 6
+        MARKETING_VERSION: '1.2.1'
+        CURRENT_PROJECT_VERSION: 7
         TARGETED_DEVICE_FAMILY: '1,2'
     scheme: {}
