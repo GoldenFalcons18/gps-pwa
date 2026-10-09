@@ -39,6 +39,20 @@ MacではXcodeとXcodeGenを準備し、`ios/` で `xcodegen generate` を実行
 - https://developer.apple.com/support/app-distribution-in-japan/
 - https://developer.apple.com/programs/enroll/
 
+対応マーケットプレイスの具体例は AltStore PAL です。日本でも利用でき、公証後の配布パッケージとソースJSONを準備して配布します。手順: https://faq.altstore.io/developers/distribute-with-altstore-pal
+
+### Macも有料登録もない場合の個人テスト
+
+AltStore ClassicとWindows版AltServerは無料Appleアカウントで個人署名・インストールする方法です。これは日本の新制度による一般配布とは別の方式です。アプリは7日で期限切れとなるため、Windows PCのAltServerと接続して期限内に更新してください。無料アカウントでは同時に3アプリまで等の制限があります。
+
+1. GitHub Actionsの `iPhone compile check` が成功したら、成果物 `iPhone-unsigned-IPA-requires-AltStore-Classic-signing` をダウンロードして展開します。
+2. 公式手順でWindows版AltServerとiPhoneのAltStore Classicを設定します。Appleアカウントの入力はご自身で行い、チャットには送らないでください。
+3. `SailingGPS-unsigned.ipa` をiPhoneへ移し、AltStore ClassicのMy Appsの追加操作から署名してインストールします。直接タップするだけではインストールできません。
+4. 位置情報を許可し、記録開始後に画面をOFFにして実機で確認します。このアプリでのAltStore経由インストール・バックグラウンド記録はまだ実機検証していません。
+
+公式手順: https://faq.altstore.io/altstore-classic/how-to-install-altstore-windows
+制限: https://faq.altstore.io/altstore-classic/your-altstore
+
 ## 検証
 
 Android: 更新メタデータの単体テストおよびデバッグAPKビルド成功。エミュレーターと実機での今回変更の動作確認は未完了。

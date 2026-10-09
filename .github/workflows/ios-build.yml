@@ -19,3 +19,15 @@ jobs:
         with:
           name: iPhone-simulator-build-not-installable-on-device
           path: ios/build/Build/Products/Debug-iphonesimulator/*.app
+      - name: Build unsigned iPhone app for personal signing with AltStore Classic
+        run: |
+          xcodebuild -project SailingGPS.xcodeproj -scheme SailingGPS -sdk iphoneos -configuration Release -derivedDataPath device-build CODE_SIGNING_ALLOWED=NO build
+          mkdir -p package/Payload
+          cp -R device-build/Build/Products/Release-iphoneos/SailingGPS.app package/Payload/
+          cd package
+          zip -qr SailingGPS-unsigned.ipa Payload
+        working-directory: ios
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iPhone-unsigned-IPA-requires-AltStore-Classic-signing
+          path: ios/package/SailingGPS-unsigned.ipa
