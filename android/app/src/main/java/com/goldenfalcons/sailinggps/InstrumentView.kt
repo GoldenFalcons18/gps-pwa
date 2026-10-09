@@ -20,6 +20,7 @@ class InstrumentView @JvmOverloads constructor(
     private var targetAngle = 0f
     private var currentAngle = 0f
     private var relativeAngle = 0f
+    private var compassHeading = 0f
     private var centerText = "--"
     private var sideText = "--"
     var mode: Mode = Mode.RELATIVE
@@ -32,18 +33,16 @@ class InstrumentView @JvmOverloads constructor(
         if (relativeDeg == null || absoluteBearing == null) {
             centerText = "--"
             sideText = "--"
+            invalidate()
             return
         }
+        compassHeading = NavigationUtils.normalize360(absoluteBearing - relativeDeg).toFloat()
         relativeAngle = relativeDeg.toFloat()
         targetAngle = when (mode) {
             Mode.RELATIVE -> NavigationUtils.normalize360(relativeDeg).toFloat()
             Mode.ABSOLUTE -> NavigationUtils.normalize360(absoluteBearing).toFloat()
         }
-        centerText = if (mode == Mode.RELATIVE) {
-            "${abs(relativeDeg).roundToInt()}°"
-        } else {
-            "${absoluteBearing.roundToInt()}°"
-        }
+        centerText = "${absoluteBearing.roundToInt()}°"
         sideText = NavigationUtils.relativeText(relativeDeg)
         postInvalidateOnAnimation()
     }
@@ -66,6 +65,8 @@ class InstrumentView @JvmOverloads constructor(
         paint.color = Color.GRAY
         canvas.drawCircle(cx, cy, radius, paint)
 
+        canvas.save()
+        if (mode == Mode.RELATIVE) canvas.rotate(-compassHeading, cx, cy)
         // outer ticks
         for (deg in 0 until 360 step 10) {
             val a = Math.toRadians((deg - 90).toDouble())
@@ -88,17 +89,11 @@ class InstrumentView @JvmOverloads constructor(
         paint.color = Color.LTGRAY
         paint.textSize = 22f
 
-        if (mode == Mode.RELATIVE) {
-            canvas.drawText("0°", cx, cy - radius + 36f, paint)
-            canvas.drawText("右90°", cx + radius - 42f, cy + 7f, paint)
-            canvas.drawText("180°", cx, cy + radius - 18f, paint)
-            canvas.drawText("左90°", cx - radius + 42f, cy + 7f, paint)
-        } else {
-            canvas.drawText("N", cx, cy - radius + 36f, paint)
-            canvas.drawText("E", cx + radius - 25f, cy + 7f, paint)
-            canvas.drawText("S", cx, cy + radius - 18f, paint)
-            canvas.drawText("W", cx - radius + 25f, cy + 7f, paint)
-        }
+        canvas.drawText("北", cx, cy - radius + 36f, paint)
+        canvas.drawText("東", cx + radius - 25f, cy + 7f, paint)
+        canvas.drawText("南", cx, cy + radius - 18f, paint)
+        canvas.drawText("西", cx - radius + 25f, cy + 7f, paint)
+        canvas.restore()
 
         // triangle at circumference, vertex points outward
         val rad = Math.toRadians((currentAngle - 90).toDouble())
@@ -123,23 +118,15 @@ class InstrumentView @JvmOverloads constructor(
             close()
         }
 
-        paint.color = when {
-            abs(relativeAngle) < 0.5f -> Color.WHITE
-            relativeAngle > 0f -> Color.rgb(0, 255, 56)
-            else -> Color.rgb(255, 32, 32)
-        }
+        paint.color = Color.GREEN
         canvas.drawPath(path, paint)
 
         paint.textSize = 18f
         paint.color = Color.LTGRAY
-        canvas.drawText(if (mode == Mode.RELATIVE) "目標 / 前方基準" else "目標 / 絶対方位", cx, cy - 18f, paint)
+        canvas.drawText("目標方位（真北）", cx, cy - 18f, paint)
 
         paint.textSize = 48f
-        paint.color = when {
-            abs(relativeAngle) < 0.5f -> Color.WHITE
-            relativeAngle > 0f -> Color.rgb(0, 255, 56)
-            else -> Color.rgb(255, 32, 32)
-        }
+        paint.color = Color.GREEN
         canvas.drawText(centerText, cx, cy + 34f, paint)
 
         paint.textSize = 17f

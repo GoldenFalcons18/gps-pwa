@@ -22,6 +22,7 @@ class NavigationMapPanel(
     context: Context,
     container: FrameLayout,
     private val log: (String) -> Unit,
+    private val createWaypoint: (Double, Double) -> Unit,
     private val selectWaypoint: (Waypoint) -> Unit
 ) {
     private val map: MapView
@@ -29,6 +30,8 @@ class NavigationMapPanel(
     private val trail: Polyline
     private val points = mutableListOf<GeoPoint>()
     private val waypointMarkers = mutableListOf<Marker>()
+    private val targetLine = Polyline()
+    private var target: GeoPoint? = null
     private val course = Polyline()
     private val courseDots = mutableListOf<Marker>()
     private var lastHeading: Double? = null
@@ -58,6 +61,14 @@ class NavigationMapPanel(
                 false
             }
         }
+        map.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint) = false
+            override fun longPressHelper(p: GeoPoint): Boolean {
+                following = false
+                createWaypoint(p.latitude, p.longitude)
+                return true
+            }
+        }))
         container.addView(map, FrameLayout.LayoutParams(-1, -1))
         trail = Polyline(map).apply {
             outlinePaint.color = Color.rgb(255, 170, 0)
@@ -85,8 +96,11 @@ class NavigationMapPanel(
             isEnabled = false
         }
         map.overlays.add(trail)
-        course.outlinePaint.color = Color.CYAN
+        course.outlinePaint.color = Color.BLACK
         course.outlinePaint.strokeWidth = 2f * map.resources.displayMetrics.density
+        targetLine.outlinePaint.color = Color.GREEN
+        targetLine.outlinePaint.strokeWidth = 3f * map.resources.displayMetrics.density
+        map.overlays.add(targetLine)
         map.overlays.add(course)
         for (distance in 100..500 step 100) {
             val density = map.resources.displayMetrics.density
@@ -94,9 +108,9 @@ class NavigationMapPanel(
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-            paint.color = Color.BLACK
+            paint.color = Color.WHITE
             canvas.drawCircle(size / 2f, size / 2f, 6f * density, paint)
-            paint.color = Color.CYAN
+            paint.color = Color.BLACK
             canvas.drawCircle(size / 2f, size / 2f, 4f * density, paint)
             courseDots.add(Marker(map).apply {
                 icon = BitmapDrawable(map.resources, bitmap)
@@ -130,11 +144,18 @@ class NavigationMapPanel(
             course.setPoints(listOf(point) + projected)
             courseDots.forEachIndexed { index, marker -> marker.position = projected[index]; marker.isEnabled = true }
         } else { course.setPoints(emptyList()); courseDots.forEach { it.isEnabled = false } }
+        updateTargetLine()
         if (following) applyFollow()
         map.invalidate()
     }
 
+    private fun updateTargetLine() {
+        targetLine.setPoints(if (current != null && target != null) listOf(current!!, target!!) else emptyList())
+    }
+
     fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?) {
+        target = active?.let { GeoPoint(it.lat, it.lon) }
+        updateTargetLine()
         map.overlays.removeAll(waypointMarkers.toSet())
         waypointMarkers.clear()
         waypoints.forEach { wp ->

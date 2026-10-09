@@ -15,7 +15,7 @@
                 <Button android:textAllCaps="false" android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="追従 1cm≒200m" android:layout_weight="1" />
                 <Button android:id="@+id/btnShowWaypoints" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="全ウェイポイント" />
             </LinearLayout>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="© OpenStreetMap contributors · 地図の読み込みには通信が必要です" android:textColor="#BBBBBB" android:textSize="12sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="12sp" />
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="160dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.25" android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp">
@@ -32,7 +32,7 @@
                 <Button android:id="@+id/btnSetTarget" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="設定目標" android:textColor="#FFAA00" android:textSize="14sp" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="目標" android:textColor="@color/white" android:textSize="18sp" android:textStyle="bold" android:padding="6dp" />
                 <TextView android:id="@+id/tvWpName" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="未設定" android:textColor="@color/white" android:textSize="18sp" android:textStyle="bold" android:gravity="center" />
-                <TextView android:id="@+id/tvWpCoords" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="--" android:textColor="@color/white" android:textSize="16sp" android:gravity="center" />
+                <TextView android:id="@+id/tvWpCoords" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="--" android:textColor="@color/white" android:textSize="11sp" android:gravity="center" />
             </LinearLayout>
         </LinearLayout>
         <TextView android:id="@+id/tvModeTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" />

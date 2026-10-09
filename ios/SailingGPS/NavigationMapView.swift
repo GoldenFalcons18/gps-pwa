@@ -10,6 +10,7 @@ struct NavigationMapView: UIViewRepresentable {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let showAllRequest: Int
+    let createWaypoint: (CLLocationCoordinate2D) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIView(context: Context) -> MKMapView {
@@ -17,6 +18,8 @@ struct NavigationMapView: UIViewRepresentable {
         map.delegate = context.coordinator
         map.isPitchEnabled = false
         map.showsCompass = true
+        let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPress(_:)))
+        map.addGestureRecognizer(press)
         map.setRegion(MKCoordinateRegion(center: .init(latitude: 35.30, longitude: 139.48), latitudinalMeters: 3000, longitudinalMeters: 3000), animated: false)
         return map
     }
@@ -38,6 +41,11 @@ struct NavigationMapView: UIViewRepresentable {
         private var signature = ""
         init(_ parent: NavigationMapView) { self.parent = parent }
 
+        @objc func longPress(_ gesture: UILongPressGestureRecognizer) {
+            guard gesture.state == .began, let map = gesture.view as? MKMapView else { return }
+            parent.following = false
+            parent.createWaypoint(map.convert(gesture.location(in: map), toCoordinateFrom: map))
+        }
         func render(_ map: MKMapView) {
             guard !rendering else { return }
             rendering = true
@@ -56,6 +64,10 @@ struct NavigationMapView: UIViewRepresentable {
                 if let location = p.location {
                     let pin = Pin(); pin.kind = "boat"; pin.title = "現在地"; pin.coordinate = location.coordinate
                     map.addAnnotation(pin)
+                    if let target = p.waypoints.first(where: { $0.id == p.selected }) {
+                        let line = MKPolyline(coordinates: [location.coordinate, target.coordinate], count: 2)
+                        line.title = "target"; map.addOverlay(line)
+                    }
                     if let heading = p.heading {
                         var coordinates = [location.coordinate]
                         for distance in stride(from: 100, through: 500, by: 100) {
@@ -113,7 +125,7 @@ struct NavigationMapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let line = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: line)
-                renderer.strokeColor = line.title == "course" ? .cyan : .orange
+                renderer.strokeColor = line.title == "target" ? .green : line.title == "course" ? .black : .orange
                 renderer.lineWidth = line.title == "course" ? 2 : 3
                 return renderer
             }
@@ -130,8 +142,8 @@ struct NavigationMapView: UIViewRepresentable {
             if pin.kind == "course" {
                 let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 8, height: 8)
-                view.backgroundColor = .cyan; view.layer.cornerRadius = 4; view.canShowCallout = true
-                view.layer.borderColor = UIColor.black.cgColor; view.layer.borderWidth = 1
+                view.backgroundColor = .black; view.layer.cornerRadius = 4; view.canShowCallout = true
+                view.layer.borderColor = UIColor.white.cgColor; view.layer.borderWidth = 1
                 view.displayPriority = .required; view.collisionMode = .circle
                 return view
             }

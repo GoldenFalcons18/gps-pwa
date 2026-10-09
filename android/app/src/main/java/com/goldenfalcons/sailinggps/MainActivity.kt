@@ -189,7 +189,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setDisplayMode(navigator: Boolean) {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
-            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }) { waypoint ->
+            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> createMapWaypoint(lat, lon) }) { waypoint ->
                 activeWaypoint = waypoint
                 waypointStore.setActiveId(waypoint.id)
                 renderWaypointList()
@@ -398,7 +398,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvWpCoords.text = "${NavigationUtils.formatDm(wp.lat, true)}\n${NavigationUtils.formatDm(wp.lon, false)}"
 
         if (heading != null) {
-            val relative = NavigationUtils.normalize180(bearing - heading)
+            val relative = NavigationUtils.normalize180(bearing - (mapHeading() ?: heading))
             b.tvClock.text = NavigationUtils.relativeClock(relative)
             b.instrumentView.update(relative, bearing)
         } else {
@@ -492,6 +492,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } catch (error: Exception) {
             cancelQuickLocation(); debug("Quick waypoint location error: ${error.message}")
         }
+    }
+
+    private fun createMapWaypoint(lat: Double, lon: Double) {
+        val input = android.widget.EditText(this).apply { hint = "ウェイポイント名"; setSingleLine(true) }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("地図の地点を追加")
+            .setMessage("${NavigationUtils.formatDm(lat, true)} / ${NavigationUtils.formatDm(lon, false)}")
+            .setView(input).setNegativeButton("キャンセル", null)
+            .setPositiveButton("保存して目標に設定") { _, _ ->
+                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon)
+                waypoints += wp; activeWaypoint = wp
+                waypointStore.saveAll(waypoints); waypointStore.setActiveId(wp.id)
+                renderWaypointList(); updateNavigationUi()
+                debug("Map waypoint saved / ${wp.id}")
+                Toast.makeText(this, "${wp.name} を保存しました", Toast.LENGTH_SHORT).show()
+            }.show()
     }
 
     private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {

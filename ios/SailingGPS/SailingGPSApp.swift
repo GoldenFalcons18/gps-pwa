@@ -202,6 +202,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("metricUnits") private var metricUnits = false
+    @State private var mapDraft: CLLocationCoordinate2D?
+    @State private var mapDraftName = ""
+    @State private var mapDraftPresented = false
     @State private var following = true
     @State private var showAllRequest = 0
     @StateObject private var gps = GPSRecorder()
@@ -259,17 +262,28 @@ struct ContentView: View {
             }.pickerStyle(.segmented)
         }
     }
+    private var targetBearing: Double? {
+        guard let target, let point = gps.location else { return nil }
+        return bearing(to: target, from: point)
+    }
     private var compass: some View {
         ZStack {
-                    Circle().stroke(.gray, lineWidth: 2)
-                    ForEach(0..<12) { index in
-                        Rectangle().fill(.orange).frame(width: 2, height: 12).offset(y: -67).rotationEffect(.degrees(Double(index) * 30))
-                    }
-                    VStack { Text("北 N"); Spacer(); Text("南 S") }.padding(8)
-                    HStack { Text("西 W"); Spacer(); Text("東 E") }.padding(8)
-                    Image(systemName: "location.north.fill").font(.system(size: 34)).foregroundStyle(.orange).rotationEffect(.degrees(heading ?? 0))
-                    Text(heading.map { String(format: "%.0f°", $0) } ?? "—").offset(y: 38)
-                }.frame(width: 154, height: 154)
+            Circle().stroke(.gray, lineWidth: 2)
+            ZStack {
+                ForEach(0..<36) { index in
+                    Rectangle().fill(.gray).frame(width: 1, height: index % 3 == 0 ? 10 : 5).offset(y: -71).rotationEffect(.degrees(Double(index) * 10))
+                }
+                VStack { Text("北"); Spacer(); Text("南") }.padding(12)
+                HStack { Text("西"); Spacer(); Text("東") }.padding(12)
+            }.rotationEffect(.degrees(-(mapHeading ?? heading ?? 0)))
+            if let targetBearing, let ownHeading = mapHeading ?? heading {
+                Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetBearing - ownHeading))
+            }
+            VStack(spacing: 4) {
+                Text("目標方位（真北）").font(.caption2)
+                Text(targetBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
+            }
+        }.frame(width: 154, height: 154)
     }
     private func reading(_ label: String, _ value: String) -> some View {
         VStack(spacing: 6) {
@@ -290,12 +304,18 @@ struct ContentView: View {
             VStack(spacing: 8) {
                 Button("設定目標") { settings = true }.font(.headline).tint(.orange)
                 Text(target?.name ?? "未設定").font(.caption).lineLimit(2)
+                if let target {
+                    Text(CoordinateInput.format(target.latitude, isLatitude: true) + "\n" + CoordinateInput.format(target.longitude, isLatitude: false)).font(.caption2.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(2)
+                }
             }.frame(maxWidth: .infinity)
         }.padding(.vertical, 8).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
     }
     private var mapPanel: some View {
         VStack(spacing: 4) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest).frame(height: 270)
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, createWaypoint: { coordinate in
+                mapDraft = coordinate; mapDraftName = ""; mapDraftPresented = true
+            }).frame(height: 270)
+            Text("地図を長押ししてウェイポイントを追加").font(.caption2).foregroundStyle(.gray)
             HStack {
                 Button("追従 1cm≒200m") { following = true }
                 Spacer()
@@ -404,7 +424,18 @@ struct ContentView: View {
         }.background(.black).preferredColorScheme(.dark)
     }
     private var presentedDashboard: some View {
-        dashboard.sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+        dashboard.alert("地図の地点を追加", isPresented: $mapDraftPresented) {
+            TextField("ウェイポイント名", text: $mapDraftName)
+            Button("キャンセル", role: .cancel) { mapDraft = nil }
+            Button("保存して目標に設定") {
+                guard let coordinate = mapDraft else { return }
+                let title = mapDraftName.trimmingCharacters(in: .whitespacesAndNewlines)
+                let waypoint = Waypoint(name: title.isEmpty ? "地点 \(gps.waypoints.count + 1)" : title, latitude: coordinate.latitude, longitude: coordinate.longitude)
+                gps.add(waypoint); selected = waypoint.id; mapDraft = nil
+            }
+        } message: {
+            if let coordinate = mapDraft { Text(CoordinateInput.format(coordinate.latitude, isLatitude: true) + " / " + CoordinateInput.format(coordinate.longitude, isLatitude: false)) }
+        }.sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
     }
     private var previewDashboard: some View {
