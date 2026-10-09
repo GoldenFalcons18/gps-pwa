@@ -101,21 +101,22 @@ read -r MAP_X MAP_Y <<< "$MAP_POINT"
 adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1200
 sleep 1
 adb exec-out screencap -p > screenshots/Android-map-create-dialog.png
+# Pixel 6 fixture: coordinates measured from Android-map-create-dialog.png.
+# Avoid UIAutomator idle waits while the live compass/seconds clock keep updating.
+read -r INPUT_X INPUT_Y SAVE_X SAVE_Y < <(python3 - <<'PYBOUNDS'
+import struct
+with open('screenshots/Android-map-create-dialog.png','rb') as f:
+    f.seek(16);width,height=struct.unpack('>II',f.read(8))
+print(int(width*.5),int(height*.525),int(width*.73),int(height*.584))
+PYBOUNDS
+)
+adb shell input tap "$INPUT_X" "$INPUT_Y"
+sleep 1
 adb shell input text MAP_TEST
 adb shell input keyevent 4
 sleep 1
-for attempt in 1 2 3; do
-  adb shell uiautomator dump /sdcard/map-dialog.xml
-  if adb pull /sdcard/map-dialog.xml screenshots/map-dialog.xml; then break; fi
-done
-SAVE_POINT=$(python3 - <<'PYSAVE'
-import xml.etree.ElementTree as E,re
-node=next(n for n in E.parse('screenshots/map-dialog.xml').iter('node') if n.get('resource-id')=='android:id/button1')
-x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
-print((x1+x2)//2,(y1+y2)//2)
-PYSAVE
-)
-adb shell input tap $SAVE_POINT
+adb exec-out screencap -p > screenshots/Android-map-name-entered.png
+adb shell input tap "$SAVE_X" "$SAVE_Y"
 sleep 2
 adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/map-waypoints.xml
 python3 - <<'PYVERIFY'
