@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
         b.tvEte.text = "ETE\n" + NavigationUtils.ete(distanceM, latestSpeedMps)
         b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
-        b.tvDistanceSub.text = "目標までの直線距離"
+        b.tvDistanceSub.text = ""
         b.tvWpName.text = wp.name
         b.tvWpCoords.text = "${NavigationUtils.formatDm(wp.lat, true)}\n${NavigationUtils.formatDm(wp.lon, false)}"
 

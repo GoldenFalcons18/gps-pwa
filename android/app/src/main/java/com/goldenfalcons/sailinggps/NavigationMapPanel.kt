@@ -70,11 +70,18 @@ class NavigationMapPanel(
         }
         map.overlays.add(trail)
         course.outlinePaint.color = Color.CYAN
-        course.outlinePaint.strokeWidth = 4f * map.resources.displayMetrics.density
+        course.outlinePaint.strokeWidth = 2f * map.resources.displayMetrics.density
         map.overlays.add(course)
         for (distance in 100..500 step 100) {
-            val bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
-            Canvas(bitmap).drawCircle(8f, 8f, 6f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.CYAN })
+            val density = map.resources.displayMetrics.density
+            val size = (14 * density).toInt()
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color = Color.BLACK
+            canvas.drawCircle(size / 2f, size / 2f, 6f * density, paint)
+            paint.color = Color.CYAN
+            canvas.drawCircle(size / 2f, size / 2f, 4f * density, paint)
             courseDots.add(Marker(map).apply {
                 icon = BitmapDrawable(map.resources, bitmap)
                 title = "${distance} m"

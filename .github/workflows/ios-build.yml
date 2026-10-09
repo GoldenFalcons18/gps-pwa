@@ -54,6 +54,8 @@ jobs:
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-speed.png
           xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 1
+          # Simulated movement supplies COG so heading-up and course marks can be inspected.
+          xcrun simctl location "$DEVICE" start --speed=5 --interval=1 --distance=5 35.318,139.467 35.322,139.471
           sleep 8
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-map.png
         working-directory: ios

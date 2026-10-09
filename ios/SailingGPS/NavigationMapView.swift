@@ -125,11 +125,14 @@ struct NavigationMapView: UIViewRepresentable {
                 let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
                 view.frame = CGRect(x: 0, y: 0, width: 8, height: 8)
                 view.backgroundColor = .cyan; view.layer.cornerRadius = 4; view.canShowCallout = true
+                view.layer.borderColor = UIColor.black.cgColor; view.layer.borderWidth = 1
+                view.displayPriority = .required; view.collisionMode = .circle
                 return view
             }
             let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
             view.markerTintColor = pin.kind == "boat" ? .red : pin.id == parent.selected ? .orange : .systemBlue
             view.glyphImage = UIImage(systemName: pin.kind == "boat" ? "location.north.fill" : "flag.fill")
+            view.displayPriority = .required
             view.titleVisibility = .visible
             view.canShowCallout = true
             return view

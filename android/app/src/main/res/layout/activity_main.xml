@@ -12,7 +12,7 @@
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
             <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="220dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="追従 1cm≒200m" android:layout_weight="1" />
+                <Button android:textAllCaps="false" android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="追従 1cm≒200m" android:layout_weight="1" />
                 <Button android:id="@+id/btnShowWaypoints" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="全ウェイポイント" />
             </LinearLayout>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="© OpenStreetMap contributors · 地図の読み込みには通信が必要です" android:textColor="#BBBBBB" android:textSize="12sp" />
@@ -21,7 +21,7 @@
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.25" android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="目標まで" android:textColor="@color/gray_text" android:textSize="18sp" android:textStyle="bold" />
                 <TextView android:id="@+id/tvDistance" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- NM" android:textColor="@color/white" android:textSize="18sp" android:textStyle="bold" />
-                <TextView android:id="@+id/tvDistanceSub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- m" android:textColor="@color/gray_text" android:textSize="18sp" />
+                <TextView android:visibility="gone" android:id="@+id/tvDistanceSub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- m" android:textColor="@color/gray_text" android:textSize="18sp" />
                 <TextView android:id="@+id/tvEte" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ETE&#10;--:--:--" android:textSize="14sp" android:textColor="#FFAA00" android:fontFamily="monospace" />
                 <TextView android:id="@+id/tvClock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--時方向" android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" />
             </LinearLayout>
