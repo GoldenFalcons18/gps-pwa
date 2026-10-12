@@ -189,7 +189,7 @@ struct NavigationMapView: UIViewRepresentable {
             if pin.kind == "boat" {
                 let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
                 view.image = UIImage(systemName: "location.north.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .bold))?.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
-                view.transform = CGAffineTransform(rotationAngle: ((parent.heading ?? 0) - map.camera.heading) * .pi / 180)
+                view.transform = CGAffineTransform(rotationAngle: ((parent.heading ?? 0) - mapView.camera.heading) * .pi / 180)
                 view.displayPriority = .required; view.canShowCallout = true
                 return view
             }
