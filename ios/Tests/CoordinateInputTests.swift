@@ -37,7 +37,7 @@ final class CoordinateInputTests: XCTestCase {
         let second = try XCTUnwrap(CoordinateInput.headingReference(preferGps: false, magnetic: 119, trueHeading: 111.1, course: 200, speed: 3))
         XCTAssertTrue(first.magnetic)
         XCTAssertEqual(first.heading, 26)
-        XCTAssertEqual(try XCTUnwrap(second.trueHeading), 111.1)
+        XCTAssertEqual(try XCTUnwrap(second.trueHeading), 111.1, accuracy: 0.0001)
         XCTAssertEqual(132.1 - (try XCTUnwrap(first.trueHeading)), 140 - first.heading, accuracy: 0.0001)
         XCTAssertFalse(try XCTUnwrap(CoordinateInput.headingReference(preferGps: true, magnetic: 26, trueHeading: 18.1, course: 200, speed: 3)).magnetic)
         XCTAssertTrue(try XCTUnwrap(CoordinateInput.headingReference(preferGps: true, magnetic: 26, trueHeading: 18.1, course: 200, speed: 0)).magnetic)
