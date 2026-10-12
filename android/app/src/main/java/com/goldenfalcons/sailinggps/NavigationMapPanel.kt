@@ -67,6 +67,16 @@ class NavigationMapPanel(
             map.postOnAnimation(followFrame)
         }
     }
+    private var touchX = 0f
+    private var touchY = 0f
+    private var longPressTriggered = false
+    private fun fireLongPress() {
+        following = false
+        longPressTriggered = true
+        val point = map.projection.fromPixels(touchX.toInt(), touchY.toInt())
+        createWaypoint(point.latitude, point.longitude)
+    }
+    private val longPress = Runnable { fireLongPress() }
     private var loadGeneration = 0
 
     init {
@@ -85,15 +95,28 @@ class NavigationMapPanel(
                 container.parent.requestDisallowInterceptTouchEvent(
                     event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL
                 )
-                if (event.actionMasked == MotionEvent.ACTION_MOVE) following = false
-                false
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        touchX = event.x; touchY = event.y
+                        longPressTriggered = false
+                        postDelayed(longPress, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+                        if (kotlin.math.hypot(event.x - touchX, event.y - touchY) > slop) {
+                            removeCallbacks(longPress)
+                            following = false
+                        }
+                    }
+                    MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> removeCallbacks(longPress)
+                }
+                longPressTriggered
             }
         }
         map.overlays.add(org.osmdroid.views.overlay.MapEventsOverlay(object : org.osmdroid.events.MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint) = false
             override fun longPressHelper(p: GeoPoint): Boolean {
-                following = false
-                createWaypoint(p.latitude, p.longitude)
+                // The touch listener owns long press, including over navigation overlays.
                 return true
             }
         }))
