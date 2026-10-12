@@ -17,6 +17,12 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var foregroundActive = false
     @Published var recording = false
     @Published var track: [CLLocationCoordinate2D] = []
+    @Published var recordedDistance = 0.0
+    @Published var maximumSpeed = 0.0
+    @Published var elapsedBeforeStart = 0.0
+    @Published var recordingStartedAt: Date?
+    private var previousRecordedLocation: CLLocation?
+    func elapsed(at date: Date) -> Double { elapsedBeforeStart + (recordingStartedAt.map { max(0, date.timeIntervalSince($0)) } ?? 0) }
     @Published var message = "記録を開始してください"
     @Published var waypoints: [Waypoint] = []
     @Published var quickWaypointID: UUID?
@@ -66,6 +72,8 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             try handle?.seekToEnd()
             try handle?.write(contentsOf: Data("#session\n".utf8))
             track.removeAll()
+            recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
+            previousRecordedLocation = nil; recordingStartedAt = Date()
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
             recording = true
@@ -111,6 +119,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
         manager.allowsBackgroundLocationUpdates = false
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
+        elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
         handle = nil; recording = false; message = "記録停止"; log("Recording stopped")
         preview(foregroundActive)
     }
@@ -137,6 +146,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             guard recording else { continue }
             let row = "\(point.timestamp.timeIntervalSince1970),\(point.coordinate.latitude),\(point.coordinate.longitude),\(point.altitude),\(point.speed),\(point.course)\n"
             do { try handle?.write(contentsOf: Data(row.utf8)) } catch { stop(); fail(error); return }
+            if let previous = previousRecordedLocation { recordedDistance += point.distance(from: previous) }
+            previousRecordedLocation = point
+            maximumSpeed = max(maximumSpeed, max(0, point.speed))
             track.append(point.coordinate)
             if track.count > 10000 { track.removeFirst(track.count - 10000) }
         }
@@ -303,35 +315,46 @@ struct ContentView: View {
         }.frame(maxWidth: .infinity)
     }
     private var targetPanel: some View {
-        HStack(spacing: 4) {
-            VStack(spacing: 12) {
-                Text("目標まで").font(.caption).foregroundStyle(.gray)
-                if let target, let point = gps.location {
-                    Text(CoordinateInput.distance(point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)), metric: metricUnits)).font(.title2.bold()).minimumScaleFactor(0.5)
-                    Text(String(format: "目標 %.0f°", bearing(to: target, from: point))).font(.caption)
-                } else { Text("—").font(.title); Text(metricUnits ? "m/km" : "nm").font(.caption) }
-            }.frame(maxWidth: .infinity)
-            compass
-            VStack(spacing: 8) {
-                Button("設定目標") { settings = true }.font(.headline).tint(.orange)
-                Text(target?.name ?? "未設定").font(.caption).lineLimit(2)
-                if let target {
-                    Text(CoordinateInput.format(target.latitude, isLatitude: true) + "\n" + CoordinateInput.format(target.longitude, isLatitude: false)).font(.caption2.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(2)
-                }
-            }.frame(maxWidth: .infinity)
-        }.padding(.vertical, 8).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+        GeometryReader { proxy in
+            let dial = min(proxy.size.height, proxy.size.width * 0.45)
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("目標", systemImage: "ruler").font(.caption).foregroundStyle(.gray)
+                    Text(targetDistance).font(.system(size: 25, weight: .bold)).minimumScaleFactor(0.45).lineLimit(1)
+                    Label("目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
+                    Text(ete).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.45).lineLimit(1)
+                }.frame(width: proxy.size.width * 0.26, alignment: .leading)
+                compass.scaleEffect(dial / 154).frame(width: dial, height: dial)
+                VStack(spacing: 8) {
+                    Button("目標") { settings = true }.font(.headline).foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange))
+                    Text(target?.name ?? "設定目標").font(.system(size: 23, weight: .bold)).foregroundStyle(target == nil ? .orange : .white).minimumScaleFactor(0.5).lineLimit(2)
+                    if let target {
+                        Text(CoordinateInput.format(target.latitude, isLatitude: true) + "\n" + CoordinateInput.format(target.longitude, isLatitude: false))
+                            .font(.caption.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(2)
+                    }
+                }.frame(maxWidth: .infinity)
+            }.padding(.horizontal, 5).frame(height: proxy.size.height)
+        }.overlay(RoundedRectangle(cornerRadius: 5).stroke(.gray))
+    }
+    private var targetDistance: String {
+        guard let target, let point = gps.location else { return "---" }
+        return CoordinateInput.distance(point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)), metric: metricUnits)
     }
     private var mapPanel: some View {
-        VStack(spacing: 4) {
+        ZStack(alignment: .bottom) {
             NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, createWaypoint: { coordinate in
                 mapDraft = coordinate; mapDraftName = ""; mapDraftPresented = true
-            }).frame(height: 270)
-            Text("地図を長押ししてウェイポイントを追加").font(.caption2).foregroundStyle(.gray)
+            })
             HStack {
-                Button("追従 1cm≒200m") { following = true }
+                Button { following = true } label: { Image(systemName: "location.north.fill") }
+                    .accessibilityLabel("現在地へ追従 1cm約200m")
                 Spacer()
-                Button("全ウェイポイント") { following = false; showAllRequest += 1 }
-            }.font(.caption).tint(.orange)
+                Text("長押しで地点追加").font(.caption2).padding(4).background(.black.opacity(0.5)).foregroundStyle(.white)
+                Spacer()
+                Button { following = false; showAllRequest += 1 } label: { Image(systemName: "square.3.layers.3d") }
+                    .accessibilityLabel("全ウェイポイント")
+            }.font(.title3).tint(.black).buttonStyle(.borderedProminent).padding(8)
         }
     }
     private var waypointEditor: some View {
@@ -340,6 +363,9 @@ struct ContentView: View {
                 HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
                 Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }.pickerStyle(.segmented)
                 Toggle("端末の向きで追従（OFF: GPS進行方位）", isOn: $magnetic)
+                Text("Sailing GPS 1.6.1 · build 12").font(.caption).foregroundStyle(.orange)
+                Picker("表示モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
+                Button("GPX共有") { exported = gps.export(); sharing = exported != nil }
                 Text(gps.message).font(.caption)
                 reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                 Text("ETEは目標までの直線距離と現在速度から計算します。約0.5 kt未満では表示しません。").font(.caption)
@@ -375,64 +401,110 @@ struct ContentView: View {
             }.padding()
         }.preferredColorScheme(.dark)
     }
-    private var recordControls: some View {
-                HStack {
-                    Text(mode == 0 ? "スピードメーター" : "ナビゲーター").font(.title2).foregroundStyle(.orange)
-                    Spacer()
-                    Button { gps.saveCurrentWaypoint() } label: {
-                        Image(systemName: "mappin.and.ellipse").font(.title2).foregroundStyle(.orange)
-                    }.accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-                    Button { gps.recording ? gps.stop() : gps.start() } label: {
-                        Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
-                    }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
-                }
+    private var topControls: some View {
+        HStack {
+            Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
+                .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
+            Button { mode = mode == 0 ? 1 : 0 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
+                .accessibilityLabel("表示モードを切替")
+            Spacer()
+            if mode == 0 { Text(speedUnit).font(.title2.bold()) }
+            Spacer()
+            Button { gps.recording ? gps.stop() : gps.start() } label: {
+                Image(systemName: "record.circle.fill").foregroundStyle(.red)
+            }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
+        }.font(.title2).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 6)
+            .background(mode == 0 ? Color.black : Color.black.opacity(0.25))
     }
-    private var navigationReadings: some View {
-                HStack {
-                    reading("SOG / \(speedUnit)", speedText)
-                    reading("ETE", ete)
-                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }.accessibilityLabel("ウェイポイント・設定メニュー")
-                }.padding(10).overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+    private func instrument(_ value: String, label: String, size: CGFloat = 25) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.system(size: size, weight: .bold, design: .monospaced)).minimumScaleFactor(0.45).lineLimit(1)
+            Text(label).font(.caption2).foregroundStyle(.gray).lineLimit(1)
+        }.frame(maxWidth: .infinity)
     }
-    private var timeReadings: some View {
-                HStack {
-                    reading("高度", gps.location.map { String(format: "%.0f m", $0.altitude) } ?? "—")
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        reading("時間", Self.clockFormatter.string(from: context.date))
+    private func duration(_ seconds: Double) -> String {
+        let value = max(0, Int(seconds))
+        return String(format: "%02d:%02d:%02d", value / 3600, value / 60 % 60, value % 60)
+    }
+    private var pace: String {
+        guard let speed = gps.location?.speed, speed > 0.25 else { return "--" }
+        return duration((metricUnits ? 1000 : 1852) / speed)
+    }
+    private var instruments: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let elapsed = gps.elapsed(at: context.date)
+            VStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 5) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "location.fill").foregroundStyle(gps.location == nil ? .gray : .green)
+                        Text("GPS").font(.caption2).foregroundStyle(.gray)
                     }
-                    Button("GPX共有") { exported = gps.export(); sharing = exported != nil }.tint(.orange)
+                    if mode == 1 {
+                        instrument(duration(elapsed), label: "追跡タイマー", size: 26)
+                        instrument(CoordinateInput.distance(gps.recordedDistance, metric: metricUnits), label: "追跡距離")
+                    } else {
+                        instrument(elapsed > 0 ? String(format: "%.1f", gps.recordedDistance / elapsed * (metricUnits ? 3.6 : 1.943844)) : "--", label: "平均速度 / " + speedUnit)
+                        instrument(String(format: "%.1f", gps.maximumSpeed * (metricUnits ? 3.6 : 1.943844)), label: "MAX / " + speedUnit)
+                    }
+                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }
+                        .accessibilityLabel("ウェイポイント・設定メニュー")
                 }
+                HStack(alignment: .bottom, spacing: 4) {
+                    instrument(gps.location.map { String(format: "%.0f", $0.altitude) } ?? "--", label: "高度 m")
+                    instrument(pace, label: metricUnits ? "ペース / km" : "ペース / 海里", size: 19)
+                    instrument(speedText, label: speedUnit)
+                    instrument(Self.clockFormatter.string(from: context.date), label: "時間", size: 23)
+                }
+            }.padding(8).frame(maxHeight: .infinity)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
+        }
+    }
+    private var modeTitle: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            Text(mode == 0 ? "スピードメーター" : "ナビゲーター")
+                .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            Button { gps.recording ? gps.stop() : gps.start() } label: {
+                HStack(spacing: 3) {
+                    Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
+                    Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
+                }
+            }
+        }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
-                HStack {
-                    reading(navigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
-                    Rectangle().fill(.orange).frame(width: 1)
-                    VStack(alignment: .trailing, spacing: 5) {
-                        Text("緯度・経度").font(.caption).foregroundStyle(.gray)
-                        Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "—")
-                        Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "—")
-                    }.font(.headline.monospacedDigit()).frame(maxWidth: .infinity)
-                }.frame(height: 92)
+        HStack(spacing: 5) {
+            VStack(spacing: 1) {
+                Text(navigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位").font(.caption2).foregroundStyle(.gray)
+                Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
+                    .font(.system(size: 45, weight: .medium, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1)
+            }.frame(maxWidth: .infinity)
+            Rectangle().fill(.orange).frame(width: 1)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "---")
+                Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "---")
+            }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
+        }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
     }
     private var dashboard: some View {
-        ScrollView {
-            VStack(spacing: 10) {
-                Picker("表示", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
-                if mode == 0 {
-                    VStack(spacing: 0) {
-                        Text(speedUnit).font(.title.bold()).foregroundStyle(.orange)
-                        Text(speedText)
-                            .font(.system(size: 130, weight: .bold, design: .monospaced)).minimumScaleFactor(0.4).foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }.frame(height: 270)
-                } else { mapPanel }
-                targetPanel
-                recordControls
-                navigationReadings
-                timeReadings
-                positionReadings
-                Text(gps.message).font(.caption).foregroundStyle(.gray)
-            }.padding(8)
-        }.background(.black).preferredColorScheme(.dark)
+        GeometryReader { geometry in
+            let height = max(620, geometry.size.height)
+            ScrollView {
+                VStack(spacing: 6) {
+                    ZStack(alignment: .top) {
+                        if mode == 1 { mapPanel }
+                        else {
+                            SevenSegmentSpeed(text: speedText).padding(.horizontal, 12).padding(.top, 48).padding(.bottom, 12)
+                        }
+                        topControls
+                    }.frame(height: height * 0.39)
+                    targetPanel.frame(height: height * 0.205).padding(.horizontal, 3)
+                    modeTitle.frame(height: 40)
+                    instruments.frame(height: height * 0.205).padding(.horizontal, 3)
+                    positionReadings.frame(height: height * 0.11)
+                }.frame(minHeight: geometry.size.height)
+            }.scrollIndicators(.hidden)
+        }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private var presentedDashboard: some View {
         dashboard.alert("地図の地点を追加", isPresented: $mapDraftPresented) {
