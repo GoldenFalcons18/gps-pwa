@@ -57,7 +57,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         log("Foreground GPS/compass preview (no recording)")
     }
 
-    func start() {
+    func start(newTrack: Bool = false) {
         guard !recording else { return }
         if manager.authorizationStatus == .notDetermined {
             pendingStart = true
@@ -73,8 +73,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             handle = try FileHandle(forWritingTo: csv)
             try handle?.seekToEnd()
             try handle?.write(contentsOf: Data("#session\n".utf8))
-            track.removeAll()
-            recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
+            if newTrack {
+                track.removeAll()
+                recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
+            }
             previousRecordedLocation = nil; recordingStartedAt = Date()
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
@@ -184,7 +186,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             defer { try? output.close() }
             func write(_ value: String) throws { try output.write(contentsOf: Data(value.utf8)) }
             try write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><gpx version=\"1.1\" creator=\"SailingGPS\" xmlns=\"http://www.topografix.com/GPX/1/1\">")
-            for wp in waypoints { try write("<wpt lat=\"\(wp.latitude)\" lon=\"\(wp.longitude)\"><name>\(escape(wp.name))</name></wpt>") }
+            for wp in waypoints { try write("<wpt lat=\"\(wp.latitude)\" lon=\"\(wp.longitude)\"><name>\(escape(wp.name))</name><desc>\(escape(wp.note ?? ""))</desc></wpt>") }
             try write("<trk><name>Sailing track</name><trkseg>")
             if FileManager.default.fileExists(atPath: csv.path) {
                 let input = try FileHandle(forReadingFrom: csv)
@@ -433,7 +435,7 @@ struct ContentView: View {
         GeometryReader { proxy in
             HStack(spacing: proxy.size.width * 0.12) {
                 VStack(spacing: 5) {
-                    menuTile("新規追跡", detail: gps.recording ? "記録中" : "GPS記録を開始") { menuAction { gps.start() } }
+                    menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
                     menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
                     menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
