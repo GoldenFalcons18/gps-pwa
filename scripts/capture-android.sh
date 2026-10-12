@@ -28,14 +28,14 @@ if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
-adb shell uiautomator dump /sdcard/quick-wp-ui.xml
-adb pull /sdcard/quick-wp-ui.xml quick-wp-ui.xml
-cp quick-wp-ui.xml screenshots/quick-wp-ui.xml
+# Pixel 6 bounds measured from the actual Android-map.png fixture (1080x2400).
+# The live compass/clock never reach UIAutomator's idle state; use verified screen coordinates.
 COORDS=$(python3 - <<'PY'
-import xml.etree.ElementTree as E,re
-node=next(n for n in E.parse('quick-wp-ui.xml').iter('node') if n.get('resource-id')=='com.goldenfalcons.sailinggps:id/btnCurrentWp')
-x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
-print((x1+x2)//2,(y1+y2)//2)
+import struct
+with open('screenshots/Android-map.png','rb') as f:
+    f.seek(16);width,height=struct.unpack('>II',f.read(8))
+assert (width,height)==(1080,2400),(width,height)
+print(783,1845)
 PY
 )
 adb emu geo fix 139.467 35.318
@@ -91,10 +91,8 @@ sleep 4
 adb emu geo fix 139.467 35.318
 sleep 2
 MAP_POINT=$(python3 - <<'PYMAP'
-import xml.etree.ElementTree as E,re
-node=next(n for n in E.parse('quick-wp-ui.xml').iter('node') if n.get('resource-id')=='com.goldenfalcons.sailinggps:id/mapContainer')
-x1,y1,x2,y2=map(int,re.findall(r'\d+',node.get('bounds')))
-print(int(x1+(x2-x1)*.75),int(y1+(y2-y1)*.25))
+# Point inside the verified map bounds [16,249][1064,827], away from the boat.
+print(802,393)
 PYMAP
 )
 read -r MAP_X MAP_Y <<< "$MAP_POINT"
