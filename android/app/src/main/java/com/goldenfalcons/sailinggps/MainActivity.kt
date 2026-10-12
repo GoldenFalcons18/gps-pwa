@@ -533,7 +533,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 renderWaypointList(); updateNavigationUi()
                 debug("Map waypoint saved / ${wp.id}")
                 Toast.makeText(this, "${wp.name} を保存しました", Toast.LENGTH_SHORT).show()
-            }.show()
+            }.show().also { dialog ->
+                if (BuildConfig.DEBUG) {
+                    dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
+                        fun bounds(view: android.view.View): String {
+                            val xy = IntArray(2); view.getLocationOnScreen(xy)
+                            return "${xy[0]},${xy[1]},${xy[0] + view.width},${xy[1] + view.height}"
+                        }
+                        android.util.Log.d("SailingUiBounds", "DIALOG input=${bounds(input)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+                    }
+                }
+            }
     }
 
     private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {

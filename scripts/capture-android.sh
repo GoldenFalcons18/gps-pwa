@@ -103,13 +103,14 @@ read -r MAP_X MAP_Y <<< "$MAP_POINT"
 adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1200
 sleep 1
 adb exec-out screencap -p > screenshots/Android-map-create-dialog.png
-# Pixel 6 fixture: coordinates measured from Android-map-create-dialog.png.
-# Avoid UIAutomator idle waits while the live compass/seconds clock keep updating.
+# Read actual dialog bounds rather than assuming an inset/keyboard configuration.
+adb logcat -d -s SailingUiBounds > screenshots/dialog-bounds.log
 read -r INPUT_X INPUT_Y SAVE_X SAVE_Y < <(python3 - <<'PYBOUNDS'
-import struct
-with open('screenshots/Android-map-create-dialog.png','rb') as f:
-    f.seek(16);width,height=struct.unpack('>II',f.read(8))
-print(int(width*.5),int(height*.525),int(width*.73),int(height*.584))
+import pathlib,re
+records=re.findall(r'DIALOG input=(\d+),(\d+),(\d+),(\d+) save=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/dialog-bounds.log').read_text())
+assert records,'Map long press did not open the waypoint dialog'
+x1,y1,x2,y2,a,b,c,d=map(int,records[-1])
+print((x1+x2)//2,(y1+y2)//2,(a+c)//2,(b+d)//2)
 PYBOUNDS
 )
 adb shell input tap "$INPUT_X" "$INPUT_Y"
