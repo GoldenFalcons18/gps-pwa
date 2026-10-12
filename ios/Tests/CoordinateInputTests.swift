@@ -2,6 +2,20 @@ import XCTest
 @testable import CoordinateInput
 
 final class CoordinateInputTests: XCTestCase {
+    func testCoordinateWheels() {
+        XCTAssertEqual(CoordinateInput.wheelRows(35 + 19.528 / 60, latitude: true, format: 1), [35,19,5,2,8,0])
+        XCTAssertEqual(CoordinateInput.wheelValue([139,27,1,3,0,0], latitude: false, format: 1), 139 + 27.130/60, accuracy: 1e-10)
+        for format in 0...2 {
+            for value in [0.0, -0.0, 35.3254666667, -35.3254666667, 90.0, -90.0] {
+                let rows = CoordinateInput.wheelRows(value, latitude: true, format: format)
+                XCTAssertEqual(CoordinateInput.wheelValue(rows, latitude: true, format: format), value, accuracy: 0.000009)
+            }
+        }
+        XCTAssertEqual(CoordinateInput.wheelValue([90,59,9,9,9,0], latitude: true, format: 1), 90)
+        XCTAssertEqual(CoordinateInput.wheelValue([180,59,59,9,9,1], latitude: false, format: 2), -180)
+        XCTAssertEqual(CoordinateInput.wheelValue([0,0,0,0,0,1], latitude: true, format: 1).sign, .minus)
+    }
+
     func testHemisphereConversion() throws {
         let cases: [(String, Bool, String, String, Double)] = [
             ("N", true, "35", "19.046", 35 + 19.046 / 60),

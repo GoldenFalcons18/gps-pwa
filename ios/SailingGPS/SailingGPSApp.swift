@@ -574,6 +574,12 @@ struct ContentView: View {
         presentedDashboard.onChange(of: scenePhase) { _, phase in gps.preview(phase == ScenePhase.active) }
         .onAppear {
             gps.preview(true)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
+            if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
+                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60)
+            }
+            #endif
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
         }
     }

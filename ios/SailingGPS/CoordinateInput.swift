@@ -47,6 +47,25 @@ enum CoordinateInput {
         return (x * 180 / .pi, (y * 180 / .pi + 540).truncatingRemainder(dividingBy: 360) - 180)
     }
 
+    static func wheelRows(_ value: Double, latitude: Bool, format: Int) -> [Int] {
+        let maximum = latitude ? 90 : 180
+        let scale = format == 0 ? 1000000 : format == 1 ? 60000 : 360000
+        let total = min(maximum * scale, Int((abs(value) * Double(scale)).rounded()))
+        let degrees = total / scale, remainder = total % scale
+        let sign = value.sign == .minus ? 1 : 0
+        if format == 0 { return [degrees] + (0..<6).map { remainder / Int(pow(10.0, Double(5-$0))) % 10 } + [sign] }
+        if format == 1 { return [degrees, remainder / 1000, remainder / 100 % 10, remainder / 10 % 10, remainder % 10, sign] }
+        return [degrees, remainder / 6000, remainder / 100 % 60, remainder / 10 % 10, remainder % 10, sign]
+    }
+    static func wheelValue(_ rows: [Int], latitude: Bool, format: Int) -> Double {
+        var result = Double(rows[0])
+        if format == 0 { for index in 1...6 { result += Double(rows[index]) / pow(10, Double(index)) } }
+        else if format == 1 { result += (Double(rows[1]) + Double(rows[2]*100 + rows[3]*10 + rows[4])/1000) / 60 }
+        else { result += Double(rows[1])/60 + (Double(rows[2]) + Double(rows[3]*10 + rows[4])/100)/3600 }
+        result = min(Double(latitude ? 90 : 180), result)
+        return rows.last == 1 ? -result : result
+    }
+
     struct HeadingReading {
         let heading: Double
         let trueHeading: Double?

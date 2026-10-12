@@ -58,6 +58,14 @@ jobs:
           xcrun simctl location "$DEVICE" start --speed=5 --interval=1 --distance=5 35.318,139.467 35.322,139.471
           sleep 8
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-map.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 1 --preview-menu
+          sleep 3
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-menu.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-waypoint
+          sleep 3
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-waypoint-editor.png
         working-directory: ios
       - uses: actions/upload-artifact@v4
         if: always()

@@ -11,7 +11,7 @@ struct WaypointEntryView: View {
         latitudeSelected ? $waypoint.latitude : $waypoint.longitude
     }
     private func formatted(_ value: Double, latitude: Bool) -> String {
-        let suffix = latitude ? (value < 0 ? "S" : "N") : (value < 0 ? "W" : "E")
+        let suffix = latitude ? (value.sign == .minus ? "S" : "N") : (value.sign == .minus ? "W" : "E")
         let absolute = abs(value)
         if format == 0 { return String(format: "%.6f°%@", absolute, suffix) }
         if format == 1 { return CoordinateInput.format(value, isLatitude: latitude) }
@@ -100,16 +100,7 @@ struct CoordinateWheel: UIViewRepresentable {
         var parent: CoordinateWheel
         init(_ parent: CoordinateWheel) { self.parent = parent }
         var maximum: Int { parent.latitude ? 90 : 180 }
-        var rows: [Int] {
-            let negative = parent.value < 0 ? 1 : 0
-            let scale = parent.format == 0 ? 1000000 : parent.format == 1 ? 60000 : 360000
-            let total = min(maximum * scale, Int((abs(parent.value) * Double(scale)).rounded()))
-            let degrees = total / scale
-            let remainder = total % scale
-            if parent.format == 0 { return [degrees] + (0..<6).map { remainder / Int(pow(10.0, Double(5-$0))) % 10 } + [negative] }
-            if parent.format == 1 { return [degrees, remainder / 1000, remainder / 100 % 10, remainder / 10 % 10, remainder % 10, negative] }
-            return [degrees, remainder / 6000, remainder / 100 % 60, remainder / 10 % 10, remainder % 10, negative]
-        }
+        var rows: [Int] { CoordinateInput.wheelRows(parent.value, latitude: parent.latitude, format: parent.format) }
         func numberOfComponents(in pickerView: UIPickerView) -> Int { parent.format == 0 ? 8 : 6 }
         func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
             if component == 0 { return maximum + 1 }
@@ -134,12 +125,7 @@ struct CoordinateWheel: UIViewRepresentable {
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
             let count = numberOfComponents(in: pickerView)
             let values = (0..<count).map { pickerView.selectedRow(inComponent: $0) }
-            var result = Double(values[0])
-            if parent.format == 0 { for index in 1...6 { result += Double(values[index]) / pow(10, Double(index)) } }
-            else if parent.format == 1 { result += (Double(values[1]) + Double(values[2]*100 + values[3]*10 + values[4])/1000) / 60 }
-            else { result += Double(values[1])/60 + (Double(values[2]) + Double(values[3]*10 + values[4])/100)/3600 }
-            result = min(Double(maximum), result)
-            parent.value = values.last == 1 ? -result : result
+            parent.value = CoordinateInput.wheelValue(values, latitude: parent.latitude, format: parent.format)
         }
     }
 }

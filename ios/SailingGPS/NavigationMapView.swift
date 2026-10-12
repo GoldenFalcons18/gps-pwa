@@ -38,6 +38,7 @@ struct NavigationMapView: UIViewRepresentable {
     final class Pin: MKPointAnnotation {
         var id: UUID?
         var kind = "waypoint"
+        var colorName: String?
     }
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: NavigationMapView
@@ -130,14 +131,14 @@ struct NavigationMapView: UIViewRepresentable {
             self.map = map
             let p = parent
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
-            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { $0.id.uuidString }.joined())|\(p.track.count)"
+            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")" }.joined())|\(p.track.count)"
             if key != signature {
                 signature = key
                 courseHeading = nil
                 map.removeAnnotations(map.annotations)
                 map.removeOverlays(map.overlays)
                 for wp in p.waypoints {
-                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate
+                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName
                     map.addAnnotation(pin)
                 }
                 if p.track.count > 1 { map.addOverlay(MKPolyline(coordinates: p.track, count: p.track.count)) }
@@ -202,7 +203,7 @@ struct NavigationMapView: UIViewRepresentable {
                 return view
             }
             let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
-            view.markerTintColor = pin.kind == "boat" ? .red : pin.id == parent.selected ? .orange : .systemBlue
+            view.markerTintColor = UIColor(waypointColor(pin.colorName))
             view.glyphImage = UIImage(systemName: pin.kind == "boat" ? "location.north.fill" : "flag.fill")
             view.displayPriority = .required
             view.titleVisibility = .visible
