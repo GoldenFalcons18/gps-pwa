@@ -62,6 +62,8 @@
         <LinearLayout android:id="@+id/settingsPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="速度・距離の単位" android:textColor="#FFFFFF" />
             <Spinner android:id="@+id/unitSelector" android:layout_width="match_parent" android:layout_height="48dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="地図・方位計の追従" android:textColor="@color/gray_text" android:textSize="14sp" />
+            <Spinner android:id="@+id/headingSelector" android:layout_width="match_parent" android:layout_height="48dp" />
             <TextView android:id="@+id/tvGpsInfo" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="GPS&#10;受信待ち" android:textColor="#BBBBBB" android:textSize="14sp" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="ETE：目標までの直線距離 ÷ 現在速度。約0.5 kt未満では表示しません。" android:textSize="12sp" android:textColor="#BBBBBB" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">

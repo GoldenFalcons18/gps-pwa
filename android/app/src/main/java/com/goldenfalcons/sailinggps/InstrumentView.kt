@@ -19,6 +19,10 @@ class InstrumentView @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var targetAngle = 0f
     private var currentAngle = 0f
+    private var displayedHeading: Float? = null
+    private var lastDrawAt = 0L
+    private var hasTarget = false
+    private var magneticReference = false
     private var relativeAngle = 0f
     private var compassHeading = 0f
     private var centerText = "--"
@@ -29,21 +33,16 @@ class InstrumentView @JvmOverloads constructor(
             invalidate()
         }
 
-    fun update(relativeDeg: Double?, absoluteBearing: Double?) {
-        if (relativeDeg == null || absoluteBearing == null) {
-            centerText = "--"
-            sideText = "--"
-            invalidate()
-            return
-        }
-        compassHeading = NavigationUtils.normalize360(absoluteBearing - relativeDeg).toFloat()
-        relativeAngle = relativeDeg.toFloat()
-        targetAngle = when (mode) {
-            Mode.RELATIVE -> NavigationUtils.normalize360(relativeDeg).toFloat()
-            Mode.ABSOLUTE -> NavigationUtils.normalize360(absoluteBearing).toFloat()
-        }
-        centerText = "${absoluteBearing.roundToInt()}°"
-        sideText = NavigationUtils.relativeText(relativeDeg)
+    fun update(relativeDeg: Double?, absoluteBearing: Double?, heading: Double? = null, magnetic: Boolean = false) {
+        magneticReference = magnetic
+        heading?.let { compassHeading = NavigationUtils.normalize360(it).toFloat() }
+        hasTarget = relativeDeg != null && absoluteBearing != null
+        if (hasTarget) {
+            relativeAngle = relativeDeg!!.toFloat()
+            targetAngle = NavigationUtils.normalize360(absoluteBearing!!).toFloat()
+            centerText = "${NavigationUtils.normalize360(absoluteBearing).roundToInt() % 360}°"
+            sideText = NavigationUtils.relativeText(relativeDeg)
+        } else { centerText = "--"; sideText = "--" }
         postInvalidateOnAnimation()
     }
 
@@ -55,10 +54,16 @@ class InstrumentView @JvmOverloads constructor(
         val cy = h / 2f
         val radius = min(w, h) * 0.43f
 
-        // Smooth triangle animation every frame
-        val diff = normalize180f(targetAngle - currentAngle)
-        currentAngle += diff * 0.22f
-        if (abs(diff) > 0.1f) postInvalidateOnAnimation()
+        // One animated reference drives BOTH the dial and arrow; wrap through north by the short arc.
+        val now = android.os.SystemClock.uptimeMillis()
+        val dt = if (lastDrawAt == 0L) 0.016 else ((now - lastDrawAt) / 1000.0).coerceIn(0.0, 0.05)
+        lastDrawAt = now
+        val previous = displayedHeading ?: compassHeading
+        val delta = normalize180f(compassHeading - previous)
+        val shown = previous + delta * (1 - exp(-dt / 0.12)).toFloat()
+        displayedHeading = shown
+        currentAngle = if (mode == Mode.RELATIVE) targetAngle - shown else targetAngle
+        if (abs(delta) > 0.05f) postInvalidateOnAnimation()
 
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 4f
@@ -66,7 +71,7 @@ class InstrumentView @JvmOverloads constructor(
         canvas.drawCircle(cx, cy, radius, paint)
 
         canvas.save()
-        if (mode == Mode.RELATIVE) canvas.rotate(-compassHeading, cx, cy)
+        if (mode == Mode.RELATIVE) canvas.rotate(-(displayedHeading ?: compassHeading), cx, cy)
         // outer ticks
         for (deg in 0 until 360 step 10) {
             val a = Math.toRadians((deg - 90).toDouble())
@@ -119,11 +124,11 @@ class InstrumentView @JvmOverloads constructor(
         }
 
         paint.color = Color.GREEN
-        canvas.drawPath(path, paint)
+        if (hasTarget) canvas.drawPath(path, paint)
 
         paint.textSize = 18f
         paint.color = Color.LTGRAY
-        canvas.drawText("目標方位（真北）", cx, cy - 18f, paint)
+        canvas.drawText(if (magneticReference) "目標方位（磁北）" else "目標方位（真北）", cx, cy - 18f, paint)
 
         paint.textSize = 48f
         paint.color = Color.GREEN

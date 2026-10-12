@@ -209,7 +209,8 @@ struct ContentView: View {
     @State private var showAllRequest = 0
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
-    @State private var magnetic = false
+    @AppStorage("magneticHeadingMode") private var magnetic = true
+    @State private var compassDialAngle = 0.0
     @State private var selected: UUID?
     @AppStorage("activeWaypointID") private var savedTarget = ""
     @State private var name = ""
@@ -222,12 +223,11 @@ struct ContentView: View {
     @State private var exported: URL?
     @State private var sharing = false
     @State private var settings = false
-    private var hasCourse: Bool { gps.location.map { $0.speed >= 0.25 && $0.course >= 0 } ?? false }
-    private var heading: Double? { !magnetic && hasCourse ? gps.location?.course : gps.magneticHeading }
-    private var mapHeading: Double? {
-        if let p = gps.location, p.speed >= 0.25, p.course >= 0 { return p.course }
-        return gps.trueHeading
+    private var navigationReference: CoordinateInput.HeadingReading? {
+        CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
+    private var heading: Double? { navigationReference?.heading }
+    private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
     private var speedText: String { gps.location.flatMap { $0.speed >= 0 ? String(format: "%.1f", $0.speed * (metricUnits ? 3.6 : 1.943844)) : nil } ?? "—" }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
@@ -266,12 +266,11 @@ struct ContentView: View {
         guard let target, let point = gps.location else { return nil }
         return bearing(to: target, from: point)
     }
-    private var compassReferenceHeading: Double? { magnetic ? gps.magneticHeading : (mapHeading ?? gps.trueHeading) }
+    private var compassReferenceHeading: Double? { navigationReference?.heading }
     private var targetDisplayBearing: Double? {
         guard let bearing = targetBearing else { return nil }
-        if !magnetic { return bearing }
-        guard let trueHeading = gps.trueHeading, let magneticHeading = gps.magneticHeading else { return nil }
-        return (bearing - (trueHeading - magneticHeading) + 720).truncatingRemainder(dividingBy: 360)
+        guard let reference = navigationReference, let trueHeading = reference.trueHeading else { return nil }
+        return CoordinateInput.normalizeHeading(bearing - trueHeading + reference.heading)
     }
     private var compass: some View {
         ZStack {
@@ -282,15 +281,20 @@ struct ContentView: View {
                 }
                 VStack { Text("北"); Spacer(); Text("南") }.padding(12)
                 HStack { Text("西"); Spacer(); Text("東") }.padding(12)
-            }.rotationEffect(.degrees(-(compassReferenceHeading ?? 0)))
-            if let targetAngle = targetDisplayBearing, let ownHeading = compassReferenceHeading {
-                Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - ownHeading))
+            }.rotationEffect(.degrees(-compassDialAngle))
+            if let targetAngle = targetDisplayBearing, compassReferenceHeading != nil {
+                Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
             VStack(spacing: 4) {
-                Text(magnetic ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
+                Text(navigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
                 Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
             }
         }.frame(width: 154, height: 154)
+        .animation(.linear(duration: 0.12), value: compassDialAngle)
+        .onAppear { compassDialAngle = compassReferenceHeading ?? 0 }
+        .onChange(of: compassReferenceHeading) { _, value in
+            if let value { compassDialAngle = CoordinateInput.unwrapHeading(from: compassDialAngle, to: value) }
+        }
     }
     private func reading(_ label: String, _ value: String) -> some View {
         VStack(spacing: 6) {
@@ -335,7 +339,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
                 Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }.pickerStyle(.segmented)
-                Toggle("磁気コンパス（OFF: GPS進行方位）", isOn: $magnetic)
+                Toggle("端末の向きで追従（OFF: GPS進行方位）", isOn: $magnetic)
                 Text(gps.message).font(.caption)
                 reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                 Text("ETEは目標までの直線距離と現在速度から計算します。約0.5 kt未満では表示しません。").font(.caption)
@@ -401,7 +405,7 @@ struct ContentView: View {
     }
     private var positionReadings: some View {
                 HStack {
-                    reading(magnetic || !hasCourse ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
+                    reading(navigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位", heading.map { String(format: "%.0f°", $0) } ?? "—")
                     Rectangle().fill(.orange).frame(width: 1)
                     VStack(alignment: .trailing, spacing: 5) {
                         Text("緯度・経度").font(.caption).foregroundStyle(.gray)

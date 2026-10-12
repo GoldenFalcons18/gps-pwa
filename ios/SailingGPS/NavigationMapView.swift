@@ -30,6 +30,11 @@ struct NavigationMapView: UIViewRepresentable {
         DispatchQueue.main.async { coordinator.render(map) }
     }
 
+    static func dismantleUIView(_ map: MKMapView, coordinator: Coordinator) {
+        coordinator.stopAnimation()
+        map.delegate = nil
+    }
+
     final class Pin: MKPointAnnotation {
         var id: UUID?
         var kind = "waypoint"
@@ -39,6 +44,78 @@ struct NavigationMapView: UIViewRepresentable {
         var lastShowAll = 0
         private var rendering = false
         private var signature = ""
+        private var courseHeading: Double?
+        private weak var map: MKMapView?
+        private var displayLink: CADisplayLink?
+        private var shownHeading: Double?
+        private var frameTime: CFTimeInterval = 0
+        private var scaleSignature = ""
+        private var wasFollowing = false
+        func stopAnimation() {
+            displayLink?.invalidate(); displayLink = nil; frameTime = 0
+        }
+        private func startAnimation() {
+            guard displayLink == nil else { return }
+            let link = CADisplayLink(target: self, selector: #selector(animateHeading(_:)))
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            link.add(to: .main, forMode: .common)
+            displayLink = link
+        }
+        @objc private func animateHeading(_ link: CADisplayLink) {
+            guard parent.following, let map, let target = parent.heading else { stopAnimation(); return }
+            let previous = shownHeading ?? target
+            let unwrapped = CoordinateInput.unwrapHeading(from: previous, to: target)
+            let dt = frameTime == 0 ? 1.0 / 30 : min(0.05, link.timestamp - frameTime)
+            frameTime = link.timestamp
+            shownHeading = previous + (unwrapped - previous) * (1 - exp(-dt / 0.12))
+            applyCamera(map)
+            if abs(unwrapped - previous) < 0.05 { stopAnimation() }
+        }
+        private func applyCamera(_ map: MKMapView) {
+            guard parent.following, let point = parent.location, map.bounds.width > 0, map.bounds.height > 0 else { return }
+            let camera = map.camera.copy() as! MKMapCamera
+            camera.centerCoordinate = point.coordinate
+            camera.heading = CoordinateInput.normalizeHeading(shownHeading ?? parent.heading ?? 0)
+            camera.pitch = 0
+            map.setCamera(camera, animated: false)
+            // Recalibrate scale for layout/location changes, not for every compass sample.
+            let key = "\(map.bounds.size)|\(point.coordinate.latitude)"
+            if key != scaleSignature {
+                scaleSignature = key
+                let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
+                let desiredMetersPerPoint = 200 / pointsPerCm
+                let mid = CGPoint(x: map.bounds.midX, y: map.bounds.midY)
+                let a = map.convert(CGPoint(x: mid.x - 25, y: mid.y), toCoordinateFrom: map)
+                let b = map.convert(CGPoint(x: mid.x + 25, y: mid.y), toCoordinateFrom: map)
+                let measured = CLLocation(latitude: a.latitude, longitude: a.longitude).distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude)) / 50
+                if measured.isFinite && measured > 0 {
+                    camera.altitude = max(1, camera.altitude * desiredMetersPerPoint / measured)
+                    map.setCamera(camera, animated: false)
+                }
+            }
+            updateBoatRotation(map)
+        }
+        private func updateBoatRotation(_ map: MKMapView) {
+            for pin in map.annotations.compactMap({ $0 as? Pin }) where pin.kind == "boat" {
+                map.view(for: pin)?.transform = CGAffineTransform(rotationAngle: ((parent.heading ?? 0) - map.camera.heading) * .pi / 180)
+            }
+        }
+        private func updateCourse(_ map: MKMapView) {
+            map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "course" })
+            map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "course" })
+            courseHeading = parent.heading
+            guard let location = parent.location, let heading = parent.heading else { return }
+            var coordinates = [location.coordinate]
+            for distance in stride(from: 100, through: 500, by: 100) {
+                let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
+                let coordinate = CLLocationCoordinate2D(latitude: q.latitude, longitude: q.longitude)
+                coordinates.append(coordinate)
+                let dot = Pin(); dot.kind = "course"; dot.title = "\(distance) m"; dot.coordinate = coordinate
+                map.addAnnotation(dot)
+            }
+            let line = MKPolyline(coordinates: coordinates, count: coordinates.count)
+            line.title = "course"; map.addOverlay(line)
+        }
         init(_ parent: NavigationMapView) { self.parent = parent }
 
         @objc func longPress(_ gesture: UILongPressGestureRecognizer) {
@@ -50,10 +127,13 @@ struct NavigationMapView: UIViewRepresentable {
             guard !rendering else { return }
             rendering = true
             defer { rendering = false }
+            self.map = map
             let p = parent
-            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.heading ?? -1)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { $0.id.uuidString }.joined())|\(p.track.count)"
+            if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
+            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { $0.id.uuidString }.joined())|\(p.track.count)"
             if key != signature {
                 signature = key
+                courseHeading = nil
                 map.removeAnnotations(map.annotations)
                 map.removeOverlays(map.overlays)
                 for wp in p.waypoints {
@@ -68,51 +148,24 @@ struct NavigationMapView: UIViewRepresentable {
                         let line = MKPolyline(coordinates: [location.coordinate, target.coordinate], count: 2)
                         line.title = "target"; map.addOverlay(line)
                     }
-                    if let heading = p.heading {
-                        var coordinates = [location.coordinate]
-                        for distance in stride(from: 100, through: 500, by: 100) {
-                            let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
-                            let coordinate = CLLocationCoordinate2D(latitude: q.latitude, longitude: q.longitude)
-                            coordinates.append(coordinate)
-                            let dot = Pin(); dot.kind = "course"; dot.title = "\(distance) m"; dot.coordinate = coordinate
-                            map.addAnnotation(dot)
-                        }
-                        let line = MKPolyline(coordinates: coordinates, count: coordinates.count)
-                        line.title = "course"
-                        map.addOverlay(line)
-                    }
+
                 }
             }
+            if key != signature || courseHeading != p.heading || !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" }) {
+                updateCourse(map)
+            }
+            updateBoatRotation(map)
             if lastShowAll != p.showAllRequest {
                 lastShowAll = p.showAllRequest
                 let pins = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind != "course" }
                 if !pins.isEmpty { map.showAnnotations(pins, animated: false) }
-            } else if p.following, let point = p.location, map.bounds.width > 0, map.bounds.height > 0 {
-                let camera = map.camera.copy() as! MKMapCamera
-                if let heading = p.heading {
-                    let center = CoordinateInput.destination(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, bearing: heading, meters: 250)
-                    camera.centerCoordinate = CLLocationCoordinate2D(latitude: center.latitude, longitude: center.longitude)
-                } else { camera.centerCoordinate = point.coordinate }
-                camera.heading = p.heading ?? 0
-                camera.pitch = 0
-                map.setCamera(camera, animated: false)
-                // UIKit does not expose screen PPI. Nominal iPhone/iPad points per inch
-                // provide an approximate physical cm (iPhone 11: 326 PPI at 2x).
-                let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
-                let desiredMetersPerPoint = 200 / pointsPerCm
-                let mid = CGPoint(x: map.bounds.midX, y: map.bounds.midY)
-                let a = map.convert(CGPoint(x: mid.x - 25, y: mid.y), toCoordinateFrom: map)
-                let b = map.convert(CGPoint(x: mid.x + 25, y: mid.y), toCoordinateFrom: map)
-                let measured = CLLocation(latitude: a.latitude, longitude: a.longitude).distance(from: CLLocation(latitude: b.latitude, longitude: b.longitude)) / 50
-                if measured.isFinite && measured > 0 {
-                    let ratio = desiredMetersPerPoint / measured
-                    if abs(ratio - 1) > 0.005 {
-                        camera.altitude = max(1, camera.altitude * ratio)
-                        map.setCamera(camera, animated: false)
-                    }
-                }
-            }
+            } else if p.following {
+                if shownHeading == nil { shownHeading = p.heading }
+                applyCamera(map)
+                if p.heading != nil { startAnimation() }
+            } else { stopAnimation() }
         }
+
         func mapView(_ mapView: MKMapView, regionWillChangeAnimated animated: Bool) {
             var interacting = false
             for child in mapView.subviews {
@@ -136,6 +189,7 @@ struct NavigationMapView: UIViewRepresentable {
             if pin.kind == "boat" {
                 let view = MKAnnotationView(annotation: pin, reuseIdentifier: nil)
                 view.image = UIImage(systemName: "location.north.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 24, weight: .bold))?.withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+                view.transform = CGAffineTransform(rotationAngle: ((parent.heading ?? 0) - map.camera.heading) * .pi / 180)
                 view.displayPriority = .required; view.canShowCallout = true
                 return view
             }

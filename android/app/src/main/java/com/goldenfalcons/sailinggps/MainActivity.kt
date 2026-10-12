@@ -42,6 +42,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var metricUnits: Boolean
         get() = displayPrefs.getBoolean("metricUnits", false)
         set(value) { displayPrefs.edit().putBoolean("metricUnits", value).apply() }
+    private var preferGpsHeading: Boolean
+        get() = displayPrefs.getBoolean("preferGpsHeading", false)
+        set(value) { displayPrefs.edit().putBoolean("preferGpsHeading", value).apply() }
+    private var latestHeadingLogAt = 0L
     private var latestFixAt = 0L
     private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var quickLocationListener: android.location.LocationListener? = null
@@ -250,14 +254,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (requestCode == REQ_LOCATION) startPreview()
     }
 
-    private fun mapHeading(): Double? {
-        if ((latestSpeedMps ?: 0.0) >= 0.25 && latestGpsBearing != null) return latestGpsBearing
-        val magnetic = magneticHeading ?: return null
-        val lat = latestLat ?: return null
-        val lon = latestLon ?: return null
-        val field = GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis())
-        return NavigationUtils.normalize360(magnetic + field.declination)
+    private fun headingReference(): HeadingReference.Reading? {
+        val declination = latestLat?.let { lat -> latestLon?.let { lon ->
+            GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis()).declination.toDouble()
+        } }
+        return HeadingReference.resolve(preferGpsHeading, magneticHeading, declination, latestGpsBearing, latestSpeedMps)
     }
+
+    private fun mapHeading(): Double? = headingReference()?.trueHeading
 
     override fun onDestroy() {
         if (::updateChecker.isInitialized) updateChecker.close()
@@ -266,6 +270,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupSpinners() {
+        b.headingSelector.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("磁気コンパスで追従", "GPS進行方位で追従"))
+        b.headingSelector.setSelection(if (preferGpsHeading) 1 else 0)
+        b.headingSelector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                preferGpsHeading = position == 1
+                updateNavigationUi(); updateMap()
+                debug("Heading preference=" + if (preferGpsHeading) "GPS" else "MAG")
+            }
+        }
         b.unitSelector.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("knot / nm", "km/h / m・km"))
         b.unitSelector.setSelection(if (metricUnits) 1 else 0)
         b.unitSelector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
@@ -350,17 +364,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnStop.isEnabled = running
     }
 
-    private fun navigationHeading(): Pair<Double?, String> {
-        val speedKt = latestSpeedMps?.times(NavigationUtils.MPS_TO_KT)
-        val useGps = speedKt != null && speedKt >= GPS_COURSE_THRESHOLD_KT && latestGpsBearing != null
-        return when {
-            useGps -> latestGpsBearing to "GPS対地針路（COG）"
-            magneticHeading != null -> magneticHeading to "磁気コンパス（MAG）"
-            latestGpsBearing != null -> latestGpsBearing to "GPS（暫定）"
-            else -> null to "未取得"
-        }
-    }
-
     private fun updateNavigationUi() {
         val speed = latestSpeedMps?.takeIf { it >= 0 }?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
         val unit = if (metricUnits) "km/h" else "knot"
@@ -371,8 +374,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${NavigationUtils.formatDm(latestLat!!, true)}   ${NavigationUtils.formatDm(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
-        val (heading, source) = navigationHeading()
-        b.tvCog.text = heading?.let { "${it.roundToInt()}°" } ?: "--°"
+        val reference = headingReference()
+        val heading = reference?.heading
+        val source = if (reference == null) "未取得" else if (reference.magnetic) "磁気コンパス（MAG）" else "GPS対地針路（COG）"
+        b.tvCog.text = heading?.let { "${NavigationUtils.normalize360(it).roundToInt() % 360}°" } ?: "--°"
         b.tvHeadingSource.text = "方位ソース：$source"
 
         val wp = activeWaypoint
@@ -385,7 +390,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvClock.text = "--時方向"
             b.tvWpName.text = wp?.name ?: "未設定"
             b.tvWpCoords.text = wp?.let { "${NavigationUtils.formatDm(it.lat, true)}\n${NavigationUtils.formatDm(it.lon, false)}" } ?: "--"
-            b.instrumentView.update(null, null)
+            b.instrumentView.update(null, null, heading, reference?.magnetic == true)
             return
         }
 
@@ -397,13 +402,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvWpName.text = wp.name
         b.tvWpCoords.text = "${NavigationUtils.formatDm(wp.lat, true)}\n${NavigationUtils.formatDm(wp.lon, false)}"
 
-        if (heading != null) {
-            val relative = NavigationUtils.normalize180(bearing - (mapHeading() ?: heading))
+        val trueHeading = reference?.trueHeading
+        if (heading != null && trueHeading != null) {
+            val relative = HeadingReference.relative(bearing, trueHeading)
+            val displayBearing = NavigationUtils.normalize360(heading + relative)
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - latestHeadingLogAt >= 500) {
+                latestHeadingLogAt = now
+                debug("Nav heading=$heading true=$trueHeading target=$displayBearing relative=$relative source=$source")
+            }
             b.tvClock.text = NavigationUtils.relativeClock(relative)
-            b.instrumentView.update(relative, bearing)
+            b.instrumentView.update(relative, displayBearing, heading, reference?.magnetic == true)
         } else {
             b.tvClock.text = "方位待ち"
-            b.instrumentView.update(null, bearing)
+            b.instrumentView.update(null, null, heading, reference?.magnetic == true)
         }
     }
 
@@ -470,7 +482,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 latestSpeedMps = if (point.hasSpeed()) point.speed.toDouble() else null
                 latestGpsBearing = if (point.hasBearing()) point.bearing.toDouble() else null
                 b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(point.accuracy, point.altitude)
-                mapPanel?.updateLocation(point.latitude, point.longitude, latestGpsBearing, recordTrack = false)
+                mapPanel?.updateLocation(point.latitude, point.longitude, mapHeading(), recordTrack = false)
                 saveCurrentLocationWaypoint(point.latitude, point.longitude)
             }
             override fun onProviderEnabled(provider: String) {}

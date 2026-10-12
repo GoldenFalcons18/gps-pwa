@@ -134,3 +134,42 @@ PYVERIFY
 adb exec-out screencap -p > screenshots/Android-map-created.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# Rotate the virtual device while its GPS position stays fixed: camera and target must agree.
+adb shell am force-stop "$APP"
+printf '%s' '<map><boolean name="navigator" value="true"/><boolean name="preferGpsHeading" value="false"/></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
+adb emu sensor set acceleration 0:0:9.81
+adb emu sensor set magnetic-field 0:50:-35
+adb logcat -c
+adb shell am start -W -n "$APP/.MainActivity"
+adb emu geo fix 139.467 35.318
+sleep 3
+adb shell screenrecord --time-limit 18 --bit-rate 2000000 /sdcard/heading-rotation.mp4 > /dev/null 2>&1 &
+RECORDER_PID=$!
+for CASE in 'north,0:50:-35' 'east,-50:0:-35' 'south,0:-50:-35' 'west,50:0:-35' '359,0.8726:49.9924:-35' '001,-0.8726:49.9924:-35'; do
+  LABEL=${CASE%%,*}
+  VECTOR=${CASE#*,}
+  adb emu sensor set magnetic-field "$VECTOR"
+  sleep 2
+  adb exec-out screencap -p > "screenshots/Android-heading-$LABEL.png"
+done
+wait "$RECORDER_PID"
+adb pull /sdcard/heading-rotation.mp4 screenshots/Android-heading-rotation.mp4
+adb logcat -d -s SailingGpsLogger > screenshots/heading-rotation.log
+python3 - <<'PYROTATION'
+import pathlib,re,math
+p=pathlib.Path('screenshots/heading-rotation.log')
+records=[tuple(map(float,m)) for m in re.findall(r'Nav heading=([0-9.Ee+-]+) true=([0-9.Ee+-]+) target=([0-9.Ee+-]+) relative=([0-9.Ee+-]+) source=',p.read_text())]
+assert len(records)>=6,records
+wrap=lambda a:(a+180)%360-180
+assert any(abs(wrap(b[0]-a[0]))>40 for a in records for b in records),records
+# The fixed goal bearing must not rotate along with the phone.
+assert max(abs(wrap(row[2]-records[0][2])) for row in records)<0.5,records
+for heading,true,target,relative in records:
+    assert abs(wrap((target-heading)-relative))<0.001,(heading,true,target,relative)
+assert 'Map follow heading=' in p.read_text()
+pathlib.Path('screenshots/heading-result.txt').write_text('PASS: stationary device rotation changes heading; target bearing stays fixed; map and arrow use matching true/magnetic references.\n')
+print('Stationary device rotation and invariant goal bearing verified')
+PYROTATION
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

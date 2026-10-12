@@ -10,9 +10,8 @@ chmod 600 "$SAILING_KEYSTORE_FILE"
 VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
 CODE=$(sed -n 's/^appVersionCode=//p' android/gradle.properties | tr -d '\r')
 test "$CODE" -gt 1
-# Same key, previous versionCode: verify Android accepts an update and retains data.
-gradle -p android :app:assembleRelease -PappVersionCode="$((CODE - 1))" -PappVersionName=1.5.0 --no-daemon
-cp android/app/build/outputs/apk/release/app-release.apk upgrade-fixture.apk
+# Verify migration from the actual published fixed-signature baseline.
+curl --fail --location --retry 3 'https://github.com/GoldenFalcons18/gps-pwa/releases/download/android-v1.5.1/SailingGpsLogger-1.5.1.apk' -o upgrade-fixture.apk
 gradle -p android :app:testDebugUnitTest :app:assembleRelease --no-daemon
 mkdir -p dist
 APK="dist/SailingGpsLogger-$VERSION.apk"

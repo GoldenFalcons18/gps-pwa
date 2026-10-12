@@ -39,6 +39,34 @@ class NavigationMapPanel(
     private var current: GeoPoint? = null
     private var following = true
     private var destroyed = false
+    private var paused = false
+    private var shownHeading: Double? = null
+    private var frameQueued = false
+    private var frameTime = 0L
+    private var lastFollowLogAt = 0L
+    private val followFrame = object : Runnable {
+        override fun run() {
+            frameQueued = false
+            if (destroyed || paused || !following) return
+            val targetHeading = lastHeading ?: return
+            val now = android.os.SystemClock.uptimeMillis()
+            val dt = if (frameTime == 0L) 0.016 else ((now - frameTime) / 1000.0).coerceIn(0.0, 0.05)
+            frameTime = now
+            val previous = shownHeading ?: targetHeading
+            val delta = NavigationUtils.normalize180(targetHeading - previous)
+            shownHeading = previous + delta * (1 - kotlin.math.exp(-dt / 0.12))
+            applyFollow()
+            map.invalidate()
+            if (kotlin.math.abs(delta) > 0.05) queueFollowFrame()
+        }
+    }
+
+    private fun queueFollowFrame() {
+        if (!frameQueued && !destroyed && !paused && following && lastHeading != null) {
+            frameQueued = true
+            map.postOnAnimation(followFrame)
+        }
+    }
     private var loadGeneration = 0
 
     init {
@@ -130,7 +158,10 @@ class NavigationMapPanel(
         lastHeading = bearing
         boat.position = point
         boat.isEnabled = true
-        boat.snippet = bearing?.let { "COG %.0f°".format(it) } ?: "COG 未取得"
+        boat.snippet = bearing?.let { "表示方位（真北） %.0f°".format(it) } ?: "方位 未取得"
+        // Flat markers rotate with the map; osmdroid rotations are counter-clockwise.
+        boat.setFlat(true)
+        boat.rotation = -(bearing ?: 0.0).toFloat()
         if (recordTrack && points.lastOrNull()?.let { it.latitude != lat || it.longitude != lon } != false) {
             lastRecorded = point
             points.add(point)
@@ -145,7 +176,11 @@ class NavigationMapPanel(
             courseDots.forEachIndexed { index, marker -> marker.position = projected[index]; marker.isEnabled = true }
         } else { course.setPoints(emptyList()); courseDots.forEach { it.isEnabled = false } }
         updateTargetLine()
-        if (following) applyFollow()
+        if (following) {
+            if (shownHeading == null) shownHeading = bearing
+            applyFollow()
+            queueFollowFrame()
+        }
         map.invalidate()
     }
 
@@ -215,18 +250,23 @@ class NavigationMapPanel(
         val point = current ?: return
         val metrics = map.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
-        map.controller.setZoom(DisplayNavigation.zoom(point.latitude, dpi / 2.54).coerceIn(map.minZoomLevel, map.maxZoomLevel))
-        map.mapOrientation = -(lastHeading ?: 0.0).toFloat()
-        val center = lastHeading?.let { heading ->
-            DisplayNavigation.destination(point.latitude, point.longitude, heading, 250.0).let { GeoPoint(it.first, it.second) }
-        } ?: point
-        map.controller.setCenter(center)
+        val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54).coerceIn(map.minZoomLevel, map.maxZoomLevel)
+        if (kotlin.math.abs(map.zoomLevelDouble - zoom) > 0.005) map.controller.setZoom(zoom)
+        map.mapOrientation = -(shownHeading ?: lastHeading ?: 0.0).toFloat()
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastFollowLogAt >= 500) {
+            lastFollowLogAt = now
+            log("Map follow heading=$lastHeading shown=$shownHeading")
+        }
+        // Keep the boat at the rotation center, matching the reference recording.
+        if (map.mapCenter.latitude != point.latitude || map.mapCenter.longitude != point.longitude) map.controller.setCenter(point)
     }
 
     fun followLocation() {
         following = true
         applyFollow()
-        log("Map follow enabled")
+        queueFollowFrame()
+        log("Map follow enabled / heading-up / centered")
     }
 
     fun clearTrack() {
@@ -239,6 +279,9 @@ class NavigationMapPanel(
 
     // Restore points recorded while the screen was off, without blocking the UI.
     fun resume() {
+        paused = false
+        frameTime = 0L
+        queueFollowFrame()
         map.onResume()
         val generation = ++loadGeneration
         val file = GpsLoggingService.trackFile(map.context)
@@ -271,9 +314,16 @@ class NavigationMapPanel(
         }.start()
     }
 
-    fun pause() { map.onPause() }
+    fun pause() {
+        paused = true
+        map.removeCallbacks(followFrame)
+        frameQueued = false
+        frameTime = 0L
+        map.onPause()
+    }
     fun destroy() {
         destroyed = true
+        map.removeCallbacks(followFrame)
         loadGeneration++
         map.onDetach()
     }
