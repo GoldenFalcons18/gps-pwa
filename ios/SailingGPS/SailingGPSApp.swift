@@ -7,6 +7,8 @@ struct Waypoint: Identifiable, Codable {
     var name: String
     var latitude: Double
     var longitude: Double
+    var note: String?
+    var colorName: String?
     var coordinate: CLLocationCoordinate2D { .init(latitude: latitude, longitude: longitude) }
 }
 
@@ -160,6 +162,15 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         waypoints.append(waypoint); saveWaypoints()
         log("Waypoint added: \(CoordinateInput.format(waypoint.latitude, isLatitude: true)) \(CoordinateInput.format(waypoint.longitude, isLatitude: false))")
     }
+    func upsert(_ waypoint: Waypoint) {
+        if let index = waypoints.firstIndex(where: { $0.id == waypoint.id }) { waypoints[index] = waypoint; saveWaypoints(); log("Waypoint updated: " + waypoint.name) }
+        else { add(waypoint) }
+    }
+    func resetCounter() {
+        recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
+        previousRecordedLocation = nil; recordingStartedAt = recording ? Date() : nil
+        log("Dashboard counter reset; saved track retained")
+    }
     func remove(_ id: UUID) { waypoints.removeAll { $0.id == id }; saveWaypoints() }
     private func saveWaypoints() {
         do { try JSONEncoder().encode(waypoints).write(to: waypointFile, options: .atomic) } catch { fail(error) }
@@ -235,6 +246,9 @@ struct ContentView: View {
     @State private var exported: URL?
     @State private var sharing = false
     @State private var settings = false
+    @State private var menuPresented = false
+    @State private var waypointListPresented = false
+    @State private var editorDraft: Waypoint?
     private var navigationReference: CoordinateInput.HeadingReading? {
         CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
@@ -326,7 +340,7 @@ struct ContentView: View {
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)
                 compass.scaleEffect(dial / 154).frame(width: dial, height: dial)
                 VStack(spacing: 8) {
-                    Button("目標") { settings = true }.font(.headline).foregroundStyle(.orange)
+                    Button("目標") { waypointListPresented = true }.font(.headline).foregroundStyle(.orange)
                         .frame(maxWidth: .infinity).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange))
                     Text(target?.name ?? "設定目標").font(.system(size: 23, weight: .bold)).foregroundStyle(target == nil ? .orange : .white).minimumScaleFactor(0.5).lineLimit(2)
                     if let target {
@@ -344,7 +358,7 @@ struct ContentView: View {
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
             NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, createWaypoint: { coordinate in
-                mapDraft = coordinate; mapDraftName = ""; mapDraftPresented = true
+                editorDraft = makeDraft(coordinate)
             })
             HStack {
                 Button { following = true } label: { Image(systemName: "location.north.fill") }
@@ -358,48 +372,84 @@ struct ContentView: View {
         }
     }
     private var waypointEditor: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack { Text("ウェイポイント・設定").font(.title2); Spacer(); Button("閉じる") { settings = false } }
-                Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }.pickerStyle(.segmented)
-                Toggle("端末の向きで追従（OFF: GPS進行方位）", isOn: $magnetic)
-                Text("Sailing GPS 1.6.1 · build 12").font(.caption).foregroundStyle(.orange)
-                Picker("表示モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }.pickerStyle(.segmented)
-                Button("GPX共有") { exported = gps.export(); sharing = exported != nil }
-                Text(gps.message).font(.caption)
-                reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
-                Text("ETEは目標までの直線距離と現在速度から計算します。約0.5 kt未満では表示しません。").font(.caption)
-                Text("ウェイポイント").font(.headline)
+        NavigationStack {
+            Form {
+                Section("表示") {
+                    Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }
+                    Toggle("端末の向きで追従", isOn: $magnetic)
+                    Text("OFFではGPS進行方位で追従します").font(.caption)
+                }
+                Section("GPS") {
+                    reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
+                    Text(gps.message).font(.caption)
+                }
+                Section("アプリ") { Text("Sailing GPS 1.6.2 · build 13") }
+            }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
+        }.tint(.orange).preferredColorScheme(.dark)
+    }
+    private func makeDraft(_ coordinate: CLLocationCoordinate2D? = nil) -> Waypoint {
+        let coordinate = coordinate ?? gps.location?.coordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
+        return Waypoint(name: Date.now.formatted(date: .numeric, time: .shortened), latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+    private var waypointList: some View {
+        NavigationStack {
+            List {
+                if gps.waypoints.isEmpty { Text("ウェイポイントはありません") }
                 ForEach(gps.waypoints) { wp in
                     HStack {
-                        Button { selected = wp.id; settings = false } label: {
+                        Button {
+                            selected = wp.id; following = true; waypointListPresented = false
+                        } label: {
                             VStack(alignment: .leading) {
-                                Text(wp.name)
-                                Text("\(CoordinateInput.format(wp.latitude, isLatitude: true)) / \(CoordinateInput.format(wp.longitude, isLatitude: false))").font(.caption.monospacedDigit())
+                                Label(wp.name, systemImage: selected == wp.id ? "location.fill" : "mappin").foregroundStyle(waypointColor(wp.colorName))
+                                Text(CoordinateInput.format(wp.latitude, isLatitude: true) + " / " + CoordinateInput.format(wp.longitude, isLatitude: false)).font(.caption)
                             }
                         }
                         Spacer()
-                        Button("削除", role: .destructive) { gps.remove(wp.id) }
-                    }
+                        Button("編集") {
+                            waypointListPresented = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { editorDraft = wp }
+                        }.buttonStyle(.borderless)
+                    }.swipeActions { Button("削除", role: .destructive) { gps.remove(wp.id) } }
                 }
-                TextField("名前", text: $name)
-                coordinateFields("緯度", degrees: $latitudeDegrees, minutes: $latitudeMinutes, direction: $latitudeDirection, directions: ["N", "S"])
-                coordinateFields("経度", degrees: $longitudeDegrees, minutes: $longitudeMinutes, direction: $longitudeDirection, directions: ["E", "W"])
-                Text("例：35°19.046′N → 度 35 ／ 分 19.046 ／ N").font(.caption)
-                Button("追加") {
-                    guard let lat = CoordinateInput.decimal(degrees: latitudeDegrees, minutes: latitudeMinutes, direction: latitudeDirection, isLatitude: true),
-                          let lon = CoordinateInput.decimal(degrees: longitudeDegrees, minutes: longitudeMinutes, direction: longitudeDirection, isLatitude: false) else {
-                        gps.message = "度は緯度0〜90・経度0〜180の整数、分は0以上60未満で入力してください。90度・180度では分は0です。"
-                        return
-                    }
-                    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let waypoint = Waypoint(name: trimmedName.isEmpty ? "Waypoint \(gps.waypoints.count + 1)" : trimmedName, latitude: lat, longitude: lon)
-                    gps.add(waypoint); selected = waypoint.id; following = false; showAllRequest += 1
-                    name = ""; latitudeDegrees = ""; latitudeMinutes = ""; longitudeDegrees = ""; longitudeMinutes = ""
-                    latitudeDirection = "N"; longitudeDirection = "E"
+            }.navigationTitle("ウェイポイント")
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("完了") { waypointListPresented = false } }
+                    ToolbarItem(placement: .primaryAction) { Button { waypointListPresented = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { editorDraft = makeDraft() } } label: { Image(systemName: "plus") } }
                 }
-            }.padding()
-        }.preferredColorScheme(.dark)
+        }.tint(.orange).preferredColorScheme(.dark)
+    }
+    private func menuAction(_ action: () -> Void) { menuPresented = false; action() }
+    private func menuTile(_ title: String, detail: String = "", done: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text(title).font(.headline).multilineTextAlignment(.center).foregroundStyle(.white)
+                if !detail.isEmpty { Text(detail).font(.caption).foregroundStyle(.gray).multilineTextAlignment(.center) }
+            }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(6).background(.black.opacity(0.93))
+                .overlay(RoundedRectangle(cornerRadius: 5).stroke(done ? Color.green : .orange))
+        }
+    }
+    private var navigationMenu: some View {
+        GeometryReader { proxy in
+            HStack(spacing: proxy.size.width * 0.12) {
+                VStack(spacing: 5) {
+                    menuTile("新規追跡", detail: gps.recording ? "記録中" : "GPS記録を開始") { menuAction { gps.start() } }
+                    menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
+                    menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
+                    menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
+                    menuTile("設定") { menuAction { settings = true } }
+                    menuTile("モード", detail: mode == 0 ? "スピードメーター → ナビゲーター" : "ナビゲーター → スピードメーター") { menuAction { mode = mode == 0 ? 1 : 0 } }
+                }
+                VStack(spacing: 5) {
+                    menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
+                    menuTile("目標", detail: target?.name ?? "未設定") { menuAction { waypointListPresented = true } }
+                    menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
+                    menuTile("現在地に打つ") { menuAction { gps.saveCurrentWaypoint() } }
+                    menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
+                    menuTile("完了", done: true) { menuPresented = false }
+                }
+            }.padding(4)
+        }.background(.black.opacity(0.45))
     }
     private var topControls: some View {
         HStack {
@@ -446,7 +496,7 @@ struct ContentView: View {
                         instrument(elapsed > 0 ? String(format: "%.1f", gps.recordedDistance / elapsed * (metricUnits ? 3.6 : 1.943844)) : "--", label: "平均速度 / " + speedUnit)
                         instrument(String(format: "%.1f", gps.maximumSpeed * (metricUnits ? 3.6 : 1.943844)), label: "MAX / " + speedUnit)
                     }
-                    Button { settings = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }
+                    Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal").font(.title).foregroundStyle(.orange) }
                         .accessibilityLabel("ウェイポイント・設定メニュー")
                 }
                 HStack(alignment: .bottom, spacing: 4) {
@@ -507,19 +557,18 @@ struct ContentView: View {
         }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private var presentedDashboard: some View {
-        dashboard.alert("地図の地点を追加", isPresented: $mapDraftPresented) {
-            TextField("ウェイポイント名", text: $mapDraftName)
-            Button("キャンセル", role: .cancel) { mapDraft = nil }
-            Button("保存して目標に設定") {
-                guard let coordinate = mapDraft else { return }
-                let title = mapDraftName.trimmingCharacters(in: .whitespacesAndNewlines)
-                let waypoint = Waypoint(name: title.isEmpty ? "地点 \(gps.waypoints.count + 1)" : title, latitude: coordinate.latitude, longitude: coordinate.longitude)
-                gps.add(waypoint); selected = waypoint.id; mapDraft = nil
-            }
-        } message: {
-            if let coordinate = mapDraft { Text(CoordinateInput.format(coordinate.latitude, isLatitude: true) + " / " + CoordinateInput.format(coordinate.longitude, isLatitude: false)) }
-        }.sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+        ZStack {
+            dashboard
+            if menuPresented { navigationMenu }
+        }
+        .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
+        .sheet(isPresented: $waypointListPresented) { waypointList }
+        .sheet(item: $editorDraft) { draft in
+            WaypointEntryView(waypoint: draft) { waypoint in
+                gps.upsert(waypoint); selected = waypoint.id; following = true
+            }
+        }
     }
     private var previewDashboard: some View {
         presentedDashboard.onChange(of: scenePhase) { _, phase in gps.preview(phase == ScenePhase.active) }
