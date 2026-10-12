@@ -79,4 +79,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
-          gh release create "android-v$VERSION" signed/dist/* --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          TAG="android-v$VERSION"
+          if gh release view "$TAG" --json isDraft > release-state.json 2>/dev/null; then
+            python3 -c 'import json; assert json.load(open("release-state.json"))["isDraft"], "Refusing to replace a published APK"'
+            gh release upload "$TAG" signed/dist/* --clobber
+            gh release edit "$TAG" --target "$GITHUB_SHA" --notes-file android/RELEASE_NOTES.md
+          else
+            gh release create "$TAG" signed/dist/* --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          fi

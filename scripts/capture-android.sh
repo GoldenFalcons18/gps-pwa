@@ -28,14 +28,14 @@ if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
-# Pixel 6 bounds measured from the actual Android-map.png fixture (1080x2400).
-# The live compass/clock never reach UIAutomator's idle state; use verified screen coordinates.
+# Read actual laid-out bounds from the debuggable app: no UI-idle wait or fixed pixel offsets.
+adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
 COORDS=$(python3 - <<'PY'
-import struct
-with open('screenshots/Android-map.png','rb') as f:
-    f.seek(16);width,height=struct.unpack('>II',f.read(8))
-assert (width,height)==(1080,2400),(width,height)
-print(783,1845)
+import pathlib,re
+records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
+assert records,'No visible layout bounds'
+x1,y1,x2,y2,*_=map(int,records[-1])
+print((x1+x2)//2,(y1+y2)//2)
 PY
 )
 adb emu geo fix 139.467 35.318
@@ -90,9 +90,13 @@ adb shell am start -n "$APP/.MainActivity"
 sleep 4
 adb emu geo fix 139.467 35.318
 sleep 2
+adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
 MAP_POINT=$(python3 - <<'PYMAP'
-# Point inside the verified map bounds [16,249][1064,827], away from the boat.
-print(802,393)
+import pathlib,re
+records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
+assert records
+x1,y1,x2,y2=map(int,records[-1][4:])
+print(int(x1+(x2-x1)*.75),int(y1+(y2-y1)*.25))
 PYMAP
 )
 read -r MAP_X MAP_Y <<< "$MAP_POINT"

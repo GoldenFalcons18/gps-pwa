@@ -129,6 +129,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         updateNavigationUi()
         updateStatusUi()
         requestNeededPermissions()
+        if (BuildConfig.DEBUG) {
+            var previousBounds = ""
+            b.root.viewTreeObserver.addOnGlobalLayoutListener {
+                val button = android.graphics.Rect()
+                val map = android.graphics.Rect()
+                if (b.btnCurrentWp.getGlobalVisibleRect(button) && b.mapContainer.getGlobalVisibleRect(map)) {
+                    val bounds = "UI current=${button.left},${button.top},${button.right},${button.bottom} map=${map.left},${map.top},${map.right},${map.bottom}"
+                    if (bounds != previousBounds) {
+                        previousBounds = bounds
+                        Log.d("SailingUiBounds", bounds)
+                    }
+                }
+            }
+        }
 
         debug("MainActivity onCreate / waypoints=${waypoints.size}")
     }
