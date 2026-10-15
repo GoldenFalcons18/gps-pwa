@@ -240,7 +240,16 @@ class NavigationMapPanel(
         }
         map.overlays.addAll(waypointMarkers)
         map.invalidate()
-        if (BuildConfig.DEBUG) map.post {
+        logWaypointTouchBounds()
+    }
+
+    private var lastTouchBoundsLogAt = 0L
+    private fun logWaypointTouchBounds() {
+        if (!BuildConfig.DEBUG) return
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastTouchBoundsLogAt < 500) return
+        lastTouchBoundsLogAt = now
+        map.post {
             if (!destroyed) waypointMarkers.forEachIndexed { index, marker ->
                 val point = map.projection.toPixels(marker.position, null)
                 val screen = map.projection.rotateAndScalePoint(point.x, point.y, null)
@@ -307,6 +316,7 @@ class NavigationMapPanel(
         }
         // Keep the boat at the rotation center, matching the reference recording.
         if (map.mapCenter.latitude != point.latitude || map.mapCenter.longitude != point.longitude) map.controller.setCenter(point)
+        logWaypointTouchBounds()
     }
 
     fun followLocation() {
