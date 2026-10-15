@@ -19,3 +19,8 @@ ci-logs/
 /upgrade-fixture.apk
 /upgrade-results/
 /signed/
+
+# Apple signing and App Store Connect private credentials
+**/*.p8
+**/*.private-key.pem
+/testflight-logs/
