@@ -96,7 +96,7 @@ import pathlib,re
 records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
 assert records
 x1,y1,x2,y2=map(int,records[-1][4:])
-print(int(x1+(x2-x1)*.75),int(y1+(y2-y1)*.25))
+print(int(x1+(x2-x1)*.25),int(y1+(y2-y1)*.60))
 PYMAP
 )
 read -r MAP_X MAP_Y <<< "$MAP_POINT"
