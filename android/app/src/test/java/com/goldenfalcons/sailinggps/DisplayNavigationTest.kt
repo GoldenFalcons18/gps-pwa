@@ -3,6 +3,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DisplayNavigationTest {
+    @org.junit.Test fun lowerBoatAnchorLooksAheadInEveryHeading() {
+        for (bearing in listOf(0.0, 90.0, 180.0, 270.0, 359.0, 1.0)) {
+            val center = DisplayNavigation.followCenter(35.318, 139.467, bearing, 600.0, 100.0)
+            org.junit.Assert.assertEquals(264.0, NavigationUtils.distanceMeters(35.318,139.467,center.first,center.second), 0.1)
+            val delta = NavigationUtils.normalize180(NavigationUtils.bearingDegrees(35.318,139.467,center.first,center.second)-bearing)
+            org.junit.Assert.assertEquals(0.0, delta, 0.01)
+        }
+    }
+
     @Test fun projectedMarksAreGeodesicAndCrossDateline() {
         for (distance in 100..500 step 100) {
             val p = DisplayNavigation.destination(35.318, 139.467, 87.0, distance.toDouble())

@@ -326,16 +326,24 @@ class NavigationMapPanel(
             lastFollowLogAt = now
             log("Map follow heading=$lastHeading shown=$shownHeading")
         }
-        // Keep the boat at the rotation center, matching the reference recording.
-        if (map.mapCenter.latitude != point.latitude || map.mapCenter.longitude != point.longitude) map.controller.setCenter(point)
+        // Center the camera ahead so the real boat stays 72% down the viewport.
+        val center = DisplayNavigation.followCenter(point.latitude, point.longitude, shownHeading ?: lastHeading ?: 0.0, map.height.toDouble(), dpi / 2.54)
+        if (map.mapCenter.latitude != center.first || map.mapCenter.longitude != center.second) map.controller.setCenter(GeoPoint(center.first, center.second))
         logWaypointTouchBounds()
+        if (BuildConfig.DEBUG) map.post {
+            if (!destroyed && following && map.height > 0) {
+                val pixel = map.projection.toPixels(point, null)
+                val screen = map.projection.rotateAndScalePoint(pixel.x, pixel.y, null)
+                android.util.Log.d("SailingGpsLogger", "FOLLOW_ANCHOR ratio=${screen.y.toDouble()/map.height}")
+            }
+        }
     }
 
     fun followLocation() {
         setFollowing(true)
         applyFollow()
         queueFollowFrame()
-        log("Map follow enabled / heading-up / centered")
+        log("Map follow enabled / heading-up / boat-at-72-percent")
     }
 
     fun clearTrack() {

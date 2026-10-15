@@ -2,6 +2,15 @@ import XCTest
 @testable import CoordinateInput
 
 final class CoordinateInputTests: XCTestCase {
+    func testLowerBoatAnchorLooksAhead() {
+        let north = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 0, mapHeight: 600, pointsPerCm: 100)
+        let south = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 180, mapHeight: 600, pointsPerCm: 100)
+        let east = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 90, mapHeight: 600, pointsPerCm: 100)
+        XCTAssertEqual(north.latitude * .pi / 180 * 6371000, 264, accuracy: 0.01)
+        XCTAssertEqual(south.latitude, -north.latitude, accuracy: 0.0000001)
+        XCTAssertEqual(east.longitude, north.latitude, accuracy: 0.0000001)
+    }
+
     func testCoordinateWheels() {
         XCTAssertEqual(CoordinateInput.wheelRows(35 + 19.528 / 60, latitude: true, format: 1), [35,19,5,2,8,0])
         XCTAssertEqual(CoordinateInput.wheelValue([139,27,1,3,0,0], latitude: false, format: 1), 139 + 27.130/60, accuracy: 1e-10)

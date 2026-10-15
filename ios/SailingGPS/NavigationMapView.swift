@@ -80,15 +80,16 @@ struct NavigationMapView: UIViewRepresentable {
         private func applyCamera(_ map: MKMapView) {
             guard parent.following, let point = parent.location, map.bounds.width > 0, map.bounds.height > 0 else { return }
             let camera = map.camera.copy() as! MKMapCamera
-            camera.centerCoordinate = point.coordinate
             camera.heading = CoordinateInput.normalizeHeading(shownHeading ?? parent.heading ?? 0)
+            let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
+            let center = CoordinateInput.followCenter(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, heading: camera.heading, mapHeight: map.bounds.height, pointsPerCm: pointsPerCm)
+            camera.centerCoordinate = .init(latitude: center.latitude, longitude: center.longitude)
             camera.pitch = 0
             map.setCamera(camera, animated: false)
             // Recalibrate scale for layout/location changes, not for every compass sample.
             let key = "\(map.bounds.size)|\(point.coordinate.latitude)"
             if key != scaleSignature {
                 scaleSignature = key
-                let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
                 let desiredMetersPerPoint = 200 / pointsPerCm
                 let mid = CGPoint(x: map.bounds.midX, y: map.bounds.midY)
                 let a = map.convert(CGPoint(x: mid.x - 25, y: mid.y), toCoordinateFrom: map)

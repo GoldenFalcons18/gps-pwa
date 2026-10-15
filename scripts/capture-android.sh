@@ -182,6 +182,10 @@ assert max(abs(wrap(row[2]-records[0][2])) for row in records)<0.5,records
 for heading,true,target,relative in records:
     assert abs(wrap((target-heading)-relative))<0.001,(heading,true,target,relative)
 assert 'Map follow heading=' in p.read_text()
+anchors=[float(x) for x in re.findall(r'FOLLOW_ANCHOR ratio=([0-9.Ee+-]+)',p.read_text())]
+assert len(anchors)>=6,anchors
+assert all(0.67 < ratio < 0.77 for ratio in anchors[-30:]),anchors[-30:]
+pathlib.Path('screenshots/boat-anchor-result.txt').write_text('PASS: real boat remains near 72 percent down the map while virtual heading rotates.\n')
 pathlib.Path('screenshots/heading-result.txt').write_text('PASS: stationary device rotation changes heading; target bearing stays fixed; map and arrow use matching true/magnetic references.\n')
 print('Stationary device rotation and invariant goal bearing verified')
 PYROTATION

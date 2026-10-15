@@ -47,6 +47,12 @@ enum CoordinateInput {
         return (x * 180 / .pi, (y * 180 / .pi + 540).truncatingRemainder(dividingBy: 360) - 180)
     }
 
+    static let boatScreenFraction = 0.72
+    static func followCenter(latitude: Double, longitude: Double, heading: Double, mapHeight: Double, pointsPerCm: Double) -> (latitude: Double, longitude: Double) {
+        let ahead = mapHeight * (boatScreenFraction - 0.5) * 200 / pointsPerCm
+        return destination(latitude: latitude, longitude: longitude, bearing: heading, meters: ahead)
+    }
+
     static func wheelRows(_ value: Double, latitude: Bool, format: Int) -> [Int] {
         let maximum = latitude ? 90 : 180
         let scale = format == 0 ? 1000000 : format == 1 ? 60000 : 360000

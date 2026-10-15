@@ -400,7 +400,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.6 · build 17") }
+                Section("アプリ") { Text("Sailing GPS 1.6.7 · build 18") }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
