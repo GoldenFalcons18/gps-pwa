@@ -207,7 +207,7 @@ struct NavigationMapView: UIViewRepresentable {
             let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
             view.markerTintColor = UIColor(waypointColor(pin.colorName))
             if let text = pin.markText, !text.isEmpty { view.glyphText = text; view.glyphImage = nil }
-            else { view.glyphText = nil; view.glyphImage = UIImage(systemName: pin.markSymbol ?? "flag.fill") }
+            else { view.glyphText = nil; view.glyphImage = MarineMarks.image(pin.markSymbol ?? "flag.fill") }
             view.displayPriority = .required
             view.titleVisibility = .visible
             view.canShowCallout = true

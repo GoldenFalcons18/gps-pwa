@@ -255,7 +255,9 @@ class NavigationMapPanel(
         val glyph = mark.ifEmpty { "●" }
         val available = 23f * density
         if (paint.measureText(glyph) > available) paint.textSize *= available / paint.measureText(glyph)
-        canvas.drawText(glyph, width / 2f, 40f * density - (paint.ascent() + paint.descent()) / 2, paint)
+        if (!MarineMarks.draw(canvas, glyph, width / 2f, 40f * density, 21f * density, paint.color)) {
+            canvas.drawText(glyph, width / 2f, 40f * density - (paint.ascent() + paint.descent()) / 2, paint)
+        }
         return BitmapDrawable(map.resources, bitmap)
     }
 

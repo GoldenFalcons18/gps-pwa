@@ -388,7 +388,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.3 · build 14") }
+                Section("アプリ") { Text("Sailing GPS 1.6.4 · build 15") }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -408,7 +408,7 @@ struct ContentView: View {
                             VStack(alignment: .leading) {
                                 HStack {
                                     if let text = wp.markText, !text.isEmpty { Text(text) }
-                                    else { Image(systemName: wp.markSymbol ?? "flag.fill") }
+                                    else { WaypointMarkIcon(symbol: wp.markSymbol ?? "flag.fill") }
                                     Text(wp.name)
                                     if selected == wp.id { Image(systemName: "checkmark") }
                                 }.foregroundStyle(waypointColor(wp.colorName))
@@ -586,7 +586,7 @@ struct ContentView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
-                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "star.fill")
+                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "marine.lighthouse")
             }
             #endif
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id

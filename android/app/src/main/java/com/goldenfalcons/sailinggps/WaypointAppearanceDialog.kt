@@ -14,10 +14,16 @@ object WaypointAppearanceDialog {
         column.addView(preview)
         val input = EditText(context).apply { setText(mark); hint = "マーク・絵文字・文字"; setSingleLine(true); filters = arrayOf(android.text.InputFilter.LengthFilter(8)) }
         column.addView(input)
-        val grid = GridLayout(context).apply { columnCount = 6 }
-        for (symbol in listOf("●", "▲", "■", "◆", "★", "⚑", "⚓", "⛵", "🏠", "☀", "🐟", "!")) {
+        val grid = GridLayout(context).apply { columnCount = 4 }
+        for (symbol in MarineMarks.names + listOf("●", "▲", "■", "◆", "★", "⚑", "⚓", "⛵", "🏠", "☀", "🐟", "!")) {
             grid.addView(Button(context).apply {
-                text = symbol; textSize = 20f
+                text = symbol; textSize = if (symbol in MarineMarks.names) 13f else 20f
+                if (symbol in MarineMarks.names) {
+                    val side = (28 * resources.displayMetrics.density).toInt()
+                    val image = android.graphics.Bitmap.createBitmap(side, side, android.graphics.Bitmap.Config.ARGB_8888)
+                    MarineMarks.draw(android.graphics.Canvas(image), symbol, side/2f, side/2f, side.toFloat(), Color.BLACK)
+                    setCompoundDrawablesWithIntrinsicBounds(null, android.graphics.drawable.BitmapDrawable(resources, image), null, null)
+                }
                 layoutParams = GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f) }
                 setOnClickListener { input.setText(symbol) }
             })

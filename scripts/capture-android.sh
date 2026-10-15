@@ -204,10 +204,12 @@ items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 active=next(n.text for n in root if n.get('name')=='activeId')
 point=next(p for p in items if p['id']==active)
 assert point['name']=='MAP_TEST',point
-assert point['mark']=='★' and point['color']=='#12ABCD',point
+assert point['mark']=='灯台' and point['color']=='#12ABCD',point
 assert len(items)==4
 pathlib.Path('screenshots/appearance-result.txt').write_text('PASS: custom mark and RGB color saved through native dialog and retained after restart; existing waypoints retained.\n')
 PYAPPEARANCEVERIFY
+adb emu geo fix 139.467 35.318
+sleep 3
 adb exec-out screencap -p > screenshots/Android-custom-waypoint-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

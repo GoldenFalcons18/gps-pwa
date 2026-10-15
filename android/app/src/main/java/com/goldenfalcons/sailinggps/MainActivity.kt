@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupSensors()
         renderWaypointList()
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
-            WaypointAppearanceDialog.show(this, "★", "#12ABCD") { mark, color ->
+            WaypointAppearanceDialog.show(this, "灯台", "#12ABCD") { mark, color ->
                 activeWaypoint?.let { original ->
                     val changed = original.copy(mark = mark, color = color)
                     val index = waypoints.indexOfFirst { it.id == original.id }

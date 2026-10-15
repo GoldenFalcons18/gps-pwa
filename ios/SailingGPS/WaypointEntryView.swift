@@ -7,7 +7,7 @@ struct WaypointEntryView: View {
     @State private var format = 1
     @State private var latitudeSelected = true
     let save: (Waypoint) -> Void
-    private let symbols = ["flag.fill", "mappin", "star.fill", "circle.fill", "triangle.fill", "square.fill", "diamond.fill", "sailboat.fill", "ferry.fill", "house.fill", "sun.max.fill", "moon.fill", "exclamationmark.triangle.fill", "fish.fill", "binoculars.fill", "light.beacon.max.fill"]
+    private let symbols = MarineMarks.choices
     private var selectedColor: Binding<Color> {
         Binding(get: { waypointColor(waypoint.colorName) }, set: { color in
             var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
@@ -59,12 +59,12 @@ struct WaypointEntryView: View {
                     row("マーク") {
                         VStack(alignment: .leading, spacing: 10) {
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
-                                ForEach(symbols, id: \.self) { symbol in
+                                ForEach(symbols, id: \.0) { symbol, title in
                                     Button { waypoint.markSymbol = symbol; waypoint.markText = nil } label: {
-                                        Image(systemName: symbol).font(.title2).frame(width: 38, height: 36)
+                                        VStack(spacing: 3) { WaypointMarkIcon(symbol: symbol); Text(title).font(.caption2) }.frame(minWidth: 38, minHeight: 48)
                                             .foregroundStyle(selectedColor.wrappedValue)
                                             .background((waypoint.markText ?? "").isEmpty && (waypoint.markSymbol ?? "flag.fill") == symbol ? Color.white.opacity(0.2) : .clear)
-                                    }.accessibilityLabel(symbol)
+                                    }.accessibilityLabel(title)
                                 }
                             }
                             TextField("絵文字・文字も入力できます", text: Binding(get: { waypoint.markText ?? "" }, set: { waypoint.markText = String($0.prefix(2)) }))
@@ -75,7 +75,7 @@ struct WaypointEntryView: View {
                     row("プレビュー") {
                         HStack {
                             if let text = waypoint.markText, !text.isEmpty { Text(text).font(.title) }
-                            else { Image(systemName: waypoint.markSymbol ?? "flag.fill").font(.title) }
+                            else { WaypointMarkIcon(symbol: waypoint.markSymbol ?? "flag.fill") }
                             Text(waypoint.name).lineLimit(1)
                         }.foregroundStyle(selectedColor.wrappedValue)
                     }
