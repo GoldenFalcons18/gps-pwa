@@ -450,7 +450,7 @@ struct ContentView: View {
         return Array(gps.waypoints.reversed())
     }
     private func proposeNavigation(_ waypoint: Waypoint) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { navigationCandidate = waypoint; confirmNavigation = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { navigationCandidate = waypoint; confirmNavigation = true }
     }
     private func operationButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.subheadline.bold()).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 62).padding(5)

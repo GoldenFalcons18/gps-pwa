@@ -131,11 +131,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
             WaypointAppearanceDialog.show(this, "灯台", "#12ABCD") { mark, color ->
-                activeWaypoint?.let { original ->
+                (waypoints.firstOrNull { it.name == "MAP_TEST" } ?: activeWaypoint)?.let { original ->
                     val changed = original.copy(mark = mark, color = color)
                     val index = waypoints.indexOfFirst { it.id == original.id }
                     if (index >= 0) waypoints[index] = changed
-                    activeWaypoint = changed; waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                    if (activeWaypoint?.id == original.id) activeWaypoint = changed
+                    waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
                     debug("Appearance fixture saved")
                 }
             }
@@ -637,10 +638,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setTitle("地図の地点を追加")
             .setMessage("${NavigationUtils.formatDm(lat, true)} / ${NavigationUtils.formatDm(lon, false)}")
             .setView(content).setNegativeButton("キャンセル", null)
-            .setPositiveButton("保存して目標に設定") { _, _ ->
+            .setPositiveButton("保存") { _, _ ->
                 val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor)
-                waypoints += wp; activeWaypoint = wp
-                waypointStore.saveAll(waypoints); waypointStore.setActiveId(wp.id)
+                waypoints += wp
+                waypointStore.saveAll(waypoints)
                 renderWaypointList(); updateNavigationUi()
                 debug("Map waypoint saved / ${wp.id}")
                 Toast.makeText(this, "${wp.name} を保存しました", Toast.LENGTH_SHORT).show()

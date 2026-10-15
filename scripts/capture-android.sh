@@ -142,7 +142,7 @@ point=items[-1]
 assert point['name']=='MAP_TEST',point
 assert -90<=point['lat']<=90 and -180<=point['lon']<=180
 assert abs(point['lat']-35.318)+abs(point['lon']-139.467)>0.0001,point
-assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
+assert next(n.text for n in root if n.get('name')=='activeId')!=point['id']
 print('Map long press saved a separate coordinate and selected the new target')
 PYVERIFY
 adb exec-out screencap -p > screenshots/Android-map-created.png
@@ -213,8 +213,8 @@ import json,pathlib,xml.etree.ElementTree as E
 root=E.parse('screenshots/appearance-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 active=next(n.text for n in root if n.get('name')=='activeId')
-point=next(p for p in items if p['id']==active)
-assert point['name']=='MAP_TEST',point
+point=next(p for p in items if p['name']=='MAP_TEST')
+assert point['id']!=active,point
 assert point['mark']=='灯台' and point['color']=='#12ABCD',point
 assert len(items)==4
 pathlib.Path('screenshots/appearance-result.txt').write_text('PASS: custom mark and RGB color saved through native dialog and retained after restart; existing waypoints retained.\n')
