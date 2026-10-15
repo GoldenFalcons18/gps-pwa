@@ -5,7 +5,9 @@ enum MarineMarks {
     static let choices: [(String, String)] = [
         ("marine.lighthouse", "灯台"), ("marine.net", "網"), ("exclamationmark.triangle.fill", "危険"),
         ("marine.buoy", "ブイ"), ("mountain.2.fill", "岩礁"), ("marine.anchor", "錨"), ("sailboat.fill", "帆船"), ("ferry.fill", "船"),
-        ("flag.fill", "旗"), ("star.fill", "星"), ("circle.fill", "丸"), ("mappin", "ピン")
+        ("flag.fill", "旗"), ("star.fill", "星"), ("circle.fill", "丸"), ("mappin", "ピン"),
+        ("triangle.fill", "三角"), ("square.fill", "四角"), ("diamond.fill", "ひし形"), ("house.fill", "家"),
+        ("sun.max.fill", "太陽"), ("moon.fill", "月"), ("fish.fill", "魚"), ("binoculars.fill", "双眼鏡"), ("light.beacon.max.fill", "灯火")
     ]
     static func image(_ symbol: String) -> UIImage {
         guard symbol.hasPrefix("marine.") else { return UIImage(systemName: symbol) ?? UIImage(systemName: "flag.fill")! }
