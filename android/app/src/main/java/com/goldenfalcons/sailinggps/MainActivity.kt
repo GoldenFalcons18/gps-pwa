@@ -314,6 +314,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnExport.setOnClickListener { exportGpx() }
         b.btnClearTrack.setOnClickListener { clearTrack() }
         b.btnAddWp.setOnClickListener { addWaypointFromInputs() }
+        b.btnWpAppearance.setOnClickListener { chooseDraftAppearance() }
         b.btnCurrentWp.setOnClickListener { addCurrentLocationWaypoint() }
 
         b.btnRelativeMode.setOnClickListener {
@@ -449,7 +450,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             return
         }
         val name = b.etWpName.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor)
         waypoints += wp
         activeWaypoint = wp
         waypointStore.saveAll(waypoints)
@@ -520,14 +521,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private var draftMark = "●"
+    private var draftColor = "#FFAA00"
+    private fun chooseDraftAppearance() {
+        WaypointAppearanceDialog.show(this, draftMark, draftColor) { mark, color ->
+            draftMark = mark; draftColor = color
+            b.btnWpAppearance.text = "$mark マーク・色を選ぶ"
+            b.btnWpAppearance.setTextColor(runCatching { Color.parseColor(color) }.getOrDefault(Color.WHITE))
+        }
+    }
+
     private fun createMapWaypoint(lat: Double, lon: Double) {
         val input = android.widget.EditText(this).apply { hint = "ウェイポイント名"; setSingleLine(true) }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; addView(input)
+            addView(Button(this@MainActivity).apply { text = "マーク・色を選ぶ"; setOnClickListener { chooseDraftAppearance() } })
+        }
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("地図の地点を追加")
             .setMessage("${NavigationUtils.formatDm(lat, true)} / ${NavigationUtils.formatDm(lon, false)}")
-            .setView(input).setNegativeButton("キャンセル", null)
+            .setView(content).setNegativeButton("キャンセル", null)
             .setPositiveButton("保存して目標に設定") { _, _ ->
-                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon)
+                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor)
                 waypoints += wp; activeWaypoint = wp
                 waypointStore.saveAll(waypoints); waypointStore.setActiveId(wp.id)
                 renderWaypointList(); updateNavigationUi()
@@ -548,7 +563,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {
         val name = b.etWpName.text.toString().trim().ifEmpty { "現在地 ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor)
         waypoints += wp
         activeWaypoint = wp
         waypointStore.saveAll(waypoints)
@@ -584,7 +599,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setTextColor(Color.WHITE)
                 textSize = 17f
-                text = "${wp.name}\n${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
+                text = "${wp.mark} ${wp.name}\n${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
             }
             val select = Button(this).apply {
                 this.text = if (activeWaypoint?.id == wp.id) "選択中" else "選択"
@@ -595,6 +610,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     renderWaypointList()
                     updateNavigationUi()
                     debug("WP selected ${wp.name}")
+                }
+            }
+            val appearance = Button(this).apply {
+                this.text = "外観"
+                setOnClickListener {
+                    WaypointAppearanceDialog.show(this@MainActivity, wp.mark, wp.color) { mark, color ->
+                        val changed = wp.copy(mark = mark, color = color)
+                        val index = waypoints.indexOfFirst { it.id == wp.id }
+                        if (index >= 0) waypoints[index] = changed
+                        if (activeWaypoint?.id == wp.id) activeWaypoint = changed
+                        waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                        debug("WP appearance saved ${wp.id} / $color")
+                    }
                 }
             }
             val delete = Button(this).apply {
@@ -611,6 +639,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             row.addView(text)
             row.addView(select)
+            row.addView(appearance)
             row.addView(delete)
             b.waypointContainer.addView(row)
         }

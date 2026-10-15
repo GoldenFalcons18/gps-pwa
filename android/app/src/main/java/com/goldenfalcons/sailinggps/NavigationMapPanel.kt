@@ -218,7 +218,7 @@ class NavigationMapPanel(
         waypointMarkers.clear()
         waypoints.forEach { wp ->
             waypointMarkers.add(Marker(map).apply {
-                icon = waypointIcon(wp.name, wp.id == active?.id)
+                icon = waypointIcon(wp.name, wp.id == active?.id, wp.mark, wp.color)
                 position = GeoPoint(wp.lat, wp.lon)
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
                 snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
@@ -235,20 +235,27 @@ class NavigationMapPanel(
         map.invalidate()
     }
 
-    private fun waypointIcon(name: String, active: Boolean): BitmapDrawable {
+    private fun waypointIcon(name: String, active: Boolean, mark: String, color: String): BitmapDrawable {
         val density = map.resources.displayMetrics.density
         val label = name.take(24)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12f * density }
         val width = (paint.measureText(label) + 16f * density).toInt().coerceAtLeast((60 * density).toInt())
-        val bitmap = Bitmap.createBitmap(width, (44 * density).toInt(), Bitmap.Config.ARGB_8888)
+        val bitmap = Bitmap.createBitmap(width, (54 * density).toInt(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         paint.color = Color.rgb(15, 15, 15)
         canvas.drawRoundRect(0f, 0f, width.toFloat(), 26f * density, 4f * density, 4f * density, paint)
         paint.color = if (active) Color.rgb(255, 170, 0) else Color.WHITE
         paint.textAlign = Paint.Align.CENTER
         canvas.drawText(label, width / 2f, 18f * density, paint)
-        paint.color = if (active) Color.rgb(255, 170, 0) else Color.rgb(30, 140, 255)
-        canvas.drawCircle(width / 2f, 36f * density, 7f * density, paint)
+        val selectedColor = runCatching { Color.parseColor(color) }.getOrDefault(Color.rgb(255, 170, 0))
+        paint.color = selectedColor
+        canvas.drawCircle(width / 2f, 40f * density, 12f * density, paint)
+        paint.color = if (Color.red(selectedColor) * 0.299 + Color.green(selectedColor) * 0.587 + Color.blue(selectedColor) * 0.114 > 160) Color.BLACK else Color.WHITE
+        paint.textSize = 17f * density
+        val glyph = mark.ifEmpty { "●" }
+        val available = 23f * density
+        if (paint.measureText(glyph) > available) paint.textSize *= available / paint.measureText(glyph)
+        canvas.drawText(glyph, width / 2f, 40f * density - (paint.ascent() + paint.descent()) / 2, paint)
         return BitmapDrawable(map.resources, bitmap)
     }
 

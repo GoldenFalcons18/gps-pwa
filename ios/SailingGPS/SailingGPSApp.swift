@@ -9,6 +9,8 @@ struct Waypoint: Identifiable, Codable {
     var longitude: Double
     var note: String?
     var colorName: String?
+    var markSymbol: String?
+    var markText: String?
     var coordinate: CLLocationCoordinate2D { .init(latitude: latitude, longitude: longitude) }
 }
 
@@ -386,7 +388,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.2 · build 13") }
+                Section("アプリ") { Text("Sailing GPS 1.6.3 · build 14") }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -404,7 +406,12 @@ struct ContentView: View {
                             selected = wp.id; following = true; waypointListPresented = false
                         } label: {
                             VStack(alignment: .leading) {
-                                Label(wp.name, systemImage: selected == wp.id ? "location.fill" : "mappin").foregroundStyle(waypointColor(wp.colorName))
+                                HStack {
+                                    if let text = wp.markText, !text.isEmpty { Text(text) }
+                                    else { Image(systemName: wp.markSymbol ?? "flag.fill") }
+                                    Text(wp.name)
+                                    if selected == wp.id { Image(systemName: "checkmark") }
+                                }.foregroundStyle(waypointColor(wp.colorName))
                                 Text(CoordinateInput.format(wp.latitude, isLatitude: true) + " / " + CoordinateInput.format(wp.longitude, isLatitude: false)).font(.caption)
                             }
                         }

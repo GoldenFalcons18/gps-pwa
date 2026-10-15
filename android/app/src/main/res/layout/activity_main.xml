@@ -74,6 +74,7 @@
             <Button android:id="@+id/btnCheckUpdate" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="更新を確認" android:textSize="18sp" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="ウェイポイント追加（度分式）" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" />
             <EditText android:id="@+id/etWpName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="名称" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <Button android:id="@+id/btnWpAppearance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="● マーク・色を選ぶ" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="緯度" android:textColor="@color/white" android:textSize="18sp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                 <EditText android:id="@+id/etLatDeg" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="度" android:inputType="number" android:textColor="@color/white" android:textColorHint="@color/gray_text" />

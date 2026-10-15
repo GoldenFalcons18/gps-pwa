@@ -39,6 +39,8 @@ struct NavigationMapView: UIViewRepresentable {
         var id: UUID?
         var kind = "waypoint"
         var colorName: String?
+        var markSymbol: String?
+        var markText: String?
     }
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: NavigationMapView
@@ -131,14 +133,14 @@ struct NavigationMapView: UIViewRepresentable {
             self.map = map
             let p = parent
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
-            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")" }.joined())|\(p.track.count)"
+            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)"
             if key != signature {
                 signature = key
                 courseHeading = nil
                 map.removeAnnotations(map.annotations)
                 map.removeOverlays(map.overlays)
                 for wp in p.waypoints {
-                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName
+                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
                     map.addAnnotation(pin)
                 }
                 if p.track.count > 1 { map.addOverlay(MKPolyline(coordinates: p.track, count: p.track.count)) }
@@ -204,7 +206,8 @@ struct NavigationMapView: UIViewRepresentable {
             }
             let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
             view.markerTintColor = UIColor(waypointColor(pin.colorName))
-            view.glyphImage = UIImage(systemName: pin.kind == "boat" ? "location.north.fill" : "flag.fill")
+            if let text = pin.markText, !text.isEmpty { view.glyphText = text; view.glyphImage = nil }
+            else { view.glyphText = nil; view.glyphImage = UIImage(systemName: pin.markSymbol ?? "flag.fill") }
             view.displayPriority = .required
             view.titleVisibility = .visible
             view.canShowCallout = true

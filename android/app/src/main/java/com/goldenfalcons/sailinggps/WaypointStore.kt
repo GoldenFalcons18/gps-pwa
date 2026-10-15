@@ -9,7 +9,9 @@ data class Waypoint(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val lat: Double,
-    val lon: Double
+    val lon: Double,
+    val mark: String = "●",
+    val color: String = "#FFAA00"
 )
 
 class WaypointStore(context: Context) {
@@ -25,7 +27,9 @@ class WaypointStore(context: Context) {
                 id = o.getString("id"),
                 name = o.getString("name"),
                 lat = o.getDouble("lat"),
-                lon = o.getDouble("lon")
+                lon = o.getDouble("lon"),
+                mark = o.optString("mark", "●"),
+                color = o.optString("color", "#FFAA00")
             )
         }
         return result
@@ -39,6 +43,8 @@ class WaypointStore(context: Context) {
                 put("name", w.name)
                 put("lat", w.lat)
                 put("lon", w.lon)
+                put("mark", w.mark)
+                put("color", w.color)
             })
         }
         prefs.edit().putString("items", arr.toString()).apply()

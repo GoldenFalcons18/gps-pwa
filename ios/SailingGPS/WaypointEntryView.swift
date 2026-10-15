@@ -7,6 +7,15 @@ struct WaypointEntryView: View {
     @State private var format = 1
     @State private var latitudeSelected = true
     let save: (Waypoint) -> Void
+    private let symbols = ["flag.fill", "mappin", "star.fill", "circle.fill", "triangle.fill", "square.fill", "diamond.fill", "sailboat.fill", "ferry.fill", "house.fill", "sun.max.fill", "moon.fill", "exclamationmark.triangle.fill", "fish.fill", "binoculars.fill", "light.beacon.max.fill"]
+    private var selectedColor: Binding<Color> {
+        Binding(get: { waypointColor(waypoint.colorName) }, set: { color in
+            var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+            if UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+                waypoint.colorName = String(format: "#%02X%02X%02X", Int((red*255).rounded()), Int((green*255).rounded()), Int((blue*255).rounded()))
+            }
+        })
+    }
     private var coordinate: Binding<Double> {
         latitudeSelected ? $waypoint.latitude : $waypoint.longitude
     }
@@ -47,15 +56,28 @@ struct WaypointEntryView: View {
                     }
                     CoordinateWheel(value: coordinate, latitude: latitudeSelected, format: format)
                         .id("\(latitudeSelected)-\(format)").frame(height: 210).background(Color(white: 0.11))
-                    row("カラー") {
-                        HStack(spacing: 7) {
-                            ForEach(["orange", "red", "green", "blue", "purple", "cyan"], id: \.self) { color in
-                                Button { waypoint.colorName = color } label: {
-                                    RoundedRectangle(cornerRadius: 4).fill(waypointColor(color)).frame(width: 25, height: 25)
-                                        .overlay(RoundedRectangle(cornerRadius: 4).stroke((waypoint.colorName ?? "orange") == color ? Color.white : .clear, lineWidth: 2))
-                                }.accessibilityLabel(color)
+                    row("マーク") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
+                                ForEach(symbols, id: \.self) { symbol in
+                                    Button { waypoint.markSymbol = symbol; waypoint.markText = nil } label: {
+                                        Image(systemName: symbol).font(.title2).frame(width: 38, height: 36)
+                                            .foregroundStyle(selectedColor.wrappedValue)
+                                            .background((waypoint.markText ?? "").isEmpty && (waypoint.markSymbol ?? "flag.fill") == symbol ? Color.white.opacity(0.2) : .clear)
+                                    }.accessibilityLabel(symbol)
+                                }
                             }
+                            TextField("絵文字・文字も入力できます", text: Binding(get: { waypoint.markText ?? "" }, set: { waypoint.markText = String($0.prefix(2)) }))
+                                .textFieldStyle(.roundedBorder).accessibilityLabel("自由なマーク")
                         }
+                    }
+                    row("カラー") { ColorPicker("自由に選ぶ", selection: selectedColor, supportsOpacity: false) }
+                    row("プレビュー") {
+                        HStack {
+                            if let text = waypoint.markText, !text.isEmpty { Text(text).font(.title) }
+                            else { Image(systemName: waypoint.markSymbol ?? "flag.fill").font(.title) }
+                            Text(waypoint.name).lineLimit(1)
+                        }.foregroundStyle(selectedColor.wrappedValue)
                     }
                     row("マップ") { Text("保存後、地図に表示します").font(.caption) }
                     row("操作") {
@@ -76,6 +98,9 @@ struct WaypointEntryView: View {
 }
 
 func waypointColor(_ name: String?) -> Color {
+    if let name, name.hasPrefix("#"), name.count == 7, let rgb = UInt32(name.dropFirst(), radix: 16) {
+        return Color(.sRGB, red: Double((rgb >> 16) & 255)/255, green: Double((rgb >> 8) & 255)/255, blue: Double(rgb & 255)/255, opacity: 1)
+    }
     switch name { case "red": return .red; case "green": return .green; case "blue": return .blue; case "purple": return .purple; case "cyan": return .cyan; default: return .orange }
 }
 
