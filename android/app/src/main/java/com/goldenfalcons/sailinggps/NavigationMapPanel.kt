@@ -23,13 +23,14 @@ class NavigationMapPanel(
     container: FrameLayout,
     private val log: (String) -> Unit,
     private val createWaypoint: (Double, Double) -> Unit,
-    private val selectWaypoint: (Waypoint) -> Unit
+    private val editWaypoint: (Waypoint) -> Unit
 ) {
     private val map: MapView
     private val boat: Marker
     private val trail: Polyline
     private val points = mutableListOf<GeoPoint>()
     private val waypointMarkers = mutableListOf<Marker>()
+    private var waypointData = emptyList<Waypoint>()
     private val targetLine = Polyline()
     private var target: GeoPoint? = null
     private val course = Polyline()
@@ -73,8 +74,16 @@ class NavigationMapPanel(
     private fun fireLongPress() {
         following = false
         longPressTriggered = true
-        val point = map.projection.fromPixels(touchX.toInt(), touchY.toInt())
-        createWaypoint(point.latitude, point.longitude)
+        val local = map.projection.unrotateAndScalePoint(touchX.toInt(), touchY.toInt(), null)
+        val event = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, local.x.toFloat(), local.y.toFloat(), 0)
+        val marker = waypointMarkers.asReversed().firstOrNull { it.hitTest(event, map) }
+        event.recycle()
+        val index = waypointMarkers.indexOf(marker)
+        if (index >= 0) editWaypoint(waypointData[index])
+        else {
+            val point = map.projection.fromPixels(local.x, local.y)
+            createWaypoint(point.latitude, point.longitude)
+        }
     }
     private val longPress = Runnable { fireLongPress() }
     private var loadGeneration = 0
@@ -212,6 +221,7 @@ class NavigationMapPanel(
     }
 
     fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?) {
+        waypointData = waypoints.toList()
         target = active?.let { GeoPoint(it.lat, it.lon) }
         updateTargetLine()
         map.overlays.removeAll(waypointMarkers.toSet())
@@ -223,16 +233,21 @@ class NavigationMapPanel(
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
                 snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                setOnMarkerClickListener { _, _ ->
-                    selectWaypoint(wp)
-                    waypointMarkers.firstOrNull { it.position == GeoPoint(wp.lat, wp.lon) }?.showInfoWindow()
-                    true
-                }
+                setOnMarkerClickListener { _, _ -> true }
+                setInfoWindow(null)
                 alpha = if (wp.id == active?.id) 1f else 0.6f
             })
         }
         map.overlays.addAll(waypointMarkers)
         map.invalidate()
+        if (BuildConfig.DEBUG) map.post {
+            if (!destroyed) waypointMarkers.forEachIndexed { index, marker ->
+                val point = map.projection.toPixels(marker.position, null)
+                val screen = map.projection.rotateAndScalePoint(point.x, point.y, null)
+                val origin = IntArray(2); map.getLocationOnScreen(origin)
+                android.util.Log.d("SailingUiBounds", "WP_TOUCH id=${waypointData[index].id} x=${origin[0]+screen.x} y=${origin[1]+screen.y-(14*map.resources.displayMetrics.density).toInt()}")
+            }
+        }
     }
 
     private fun waypointIcon(name: String, active: Boolean, mark: String, color: String): BitmapDrawable {

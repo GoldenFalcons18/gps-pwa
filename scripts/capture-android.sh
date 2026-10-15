@@ -213,3 +213,68 @@ sleep 3
 adb exec-out screencap -p > screenshots/Android-custom-waypoint-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# Clear target, tap a marker without selecting, long-press to edit that existing ID.
+adb shell am force-stop "$APP"
+adb logcat -c
+adb shell am start -W -n "$APP/.MainActivity" --ez clearTarget true
+adb emu geo fix 139.467 35.318
+sleep 4
+adb logcat -d -s SailingUiBounds > screenshots/touch-bounds.log
+read -r WP_X WP_Y < <(python3 - <<'PYTOUCH'
+import pathlib,re,json,xml.etree.ElementTree as E
+root=E.parse('screenshots/appearance-waypoints.xml').getroot()
+points=json.loads(next(n.text for n in root if n.get('name')=='items'))
+wp=next(p for p in points if p['name']=='MAP_TEST')
+rows=re.findall(r'WP_TOUCH id='+re.escape(wp['id'])+r' x=(-?\d+) y=(-?\d+)',pathlib.Path('screenshots/touch-bounds.log').read_text())
+assert rows,'Waypoint screen bounds missing'
+print(*rows[-1])
+PYTOUCH
+)
+adb shell input tap "$WP_X" "$WP_Y"
+sleep 1
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/tap-waypoints.xml
+python3 - <<'PYTAP'
+import xml.etree.ElementTree as E
+root=E.parse('screenshots/tap-waypoints.xml').getroot()
+assert next(n.text for n in root if n.get('name')=='activeId')=='__none__'
+PYTAP
+adb shell input swipe "$WP_X" "$WP_Y" "$WP_X" "$WP_Y" 1200
+sleep 1
+adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
+read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDIT'
+import pathlib,re
+rows=re.findall(r'EDIT input=(\d+),(\d+),(\d+),(\d+) save=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/edit-bounds.log').read_text())
+assert rows,'Long press did not open existing waypoint editor'
+a,b,c,d,e,f,g,h=map(int,rows[-1]);print((a+c)//2,(b+d)//2,(e+g)//2,(f+h)//2)
+PYEDIT
+)
+adb exec-out screencap -p > screenshots/Android-long-press-edit.png
+adb shell input tap "$NAME_X" "$NAME_Y"
+adb shell input keyevent 123
+adb shell input text _EDIT
+adb shell input keyevent 4
+sleep 1
+adb shell input tap "$SAVE_X" "$SAVE_Y"
+sleep 2
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity"
+sleep 2
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/edited-waypoints.xml
+python3 - <<'PYEDITVERIFY'
+import pathlib,json,xml.etree.ElementTree as E
+def data(path):
+ r=E.parse(path).getroot();return json.loads(next(n.text for n in r if n.get('name')=='items')),next(n.text for n in r if n.get('name')=='activeId')
+before,_=data('screenshots/appearance-waypoints.xml');after,target=data('screenshots/edited-waypoints.xml')
+original=next(p for p in before if p['name']=='MAP_TEST');changed=next(p for p in after if p['id']==original['id'])
+assert changed['name']=='MAP_TEST_EDIT',changed
+assert len(after)==len(before)
+for key in ['id','lat','lon','mark','color']:assert changed[key]==original[key],(key,changed,original)
+assert target=='__none__'
+pathlib.Path('screenshots/map-interaction-result.txt').write_text('PASS: target-none survives restart; tap does not select; long press edits existing waypoint without duplication or target changes.\n')
+PYEDITVERIFY
+adb emu geo fix 139.467 35.318
+sleep 2
+adb exec-out screencap -p > screenshots/Android-target-none.png
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

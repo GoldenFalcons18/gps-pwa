@@ -6,7 +6,7 @@ struct WaypointEntryView: View {
     @State var waypoint: Waypoint
     @State private var format = 1
     @State private var latitudeSelected = true
-    let save: (Waypoint) -> Void
+    let save: (Waypoint, Bool) -> Void
     private let symbols = MarineMarks.choices
     private var selectedColor: Binding<Color> {
         Binding(get: { waypointColor(waypoint.colorName) }, set: { color in
@@ -41,7 +41,7 @@ struct WaypointEntryView: View {
                 Spacer()
                 Button("完了") {
                     if waypoint.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { waypoint.name = "ウェイポイント" }
-                    save(waypoint); dismiss()
+                    save(waypoint, false); dismiss()
                 }.font(.headline)
             }.foregroundStyle(.orange).padding().background(Color(white: 0.09))
             ScrollView {
@@ -81,7 +81,7 @@ struct WaypointEntryView: View {
                     }
                     row("マップ") { Text("保存後、地図に表示します").font(.caption) }
                     row("操作") {
-                        Button("保存してナビゲート") { save(waypoint); dismiss() }.buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black)
+                        Button("保存してナビゲート") { save(waypoint, true); dismiss() }.buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black)
                     }
                 }
             }

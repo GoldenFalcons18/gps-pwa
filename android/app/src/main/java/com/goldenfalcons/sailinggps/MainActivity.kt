@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         waypointStore = WaypointStore(this)
         waypoints += waypointStore.loadAll()
         val activeId = waypointStore.getActiveId()
-        activeWaypoint = waypoints.find { it.id == activeId } ?: waypoints.firstOrNull()
+        activeWaypoint = if (activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
         activeWaypoint?.let { waypointStore.setActiveId(it.id) }
 
         setupDisplayModes()
@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupButtons()
         setupSensors()
         renderWaypointList()
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
             WaypointAppearanceDialog.show(this, "灯台", "#12ABCD") { mark, color ->
                 activeWaypoint?.let { original ->
@@ -219,13 +220,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setDisplayMode(navigator: Boolean) {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
-            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> createMapWaypoint(lat, lon) }) { waypoint ->
-                activeWaypoint = waypoint
-                waypointStore.setActiveId(waypoint.id)
-                renderWaypointList()
-                updateNavigationUi()
-                debug("Map target selected ${waypoint.id}")
-            }
+            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> createMapWaypoint(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
             mapPanel?.setWaypoints(waypoints, activeWaypoint)
             updateMap()
             mapPanel?.resume()
@@ -598,9 +593,50 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.spLonDir.setSelection(0)
     }
 
+    private fun clearTarget() {
+        activeWaypoint = null; waypointStore.setActiveId(null)
+        renderWaypointList(); updateNavigationUi(); debug("Target cleared")
+    }
+
+    private fun editWaypoint(original: Waypoint) {
+        var mark = original.mark; var color = original.color
+        val name = android.widget.EditText(this).apply { setText(original.name); setSingleLine(true) }
+        val lat = android.widget.EditText(this).apply { setText(original.lat.toString()); hint = "緯度（十進度）"; inputType = 12290 }
+        val lon = android.widget.EditText(this).apply { setText(original.lon.toString()); hint = "経度（十進度）"; inputType = 12290 }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(24,8,24,8)
+            addView(TextView(this@MainActivity).apply { text = "名前" }); addView(name)
+            addView(TextView(this@MainActivity).apply { text = "緯度・経度（十進度）" }); addView(lat); addView(lon)
+            addView(Button(this@MainActivity).apply { text = "マーク・色"; setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity, mark, color) { m, c -> mark = m; color = c } } })
+        }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントを編集").setView(content)
+            .setNegativeButton("キャンセル", null).setPositiveButton("保存", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val latitude = lat.text.toString().toDoubleOrNull(); val longitude = lon.text.toString().toDoubleOrNull()
+                if (latitude == null || !latitude.isFinite() || latitude !in -90.0..90.0) { lat.error = "-90〜90で入力"; return@setOnClickListener }
+                if (longitude == null || !longitude.isFinite() || longitude !in -180.0..180.0) { lon.error = "-180〜180で入力"; return@setOnClickListener }
+                val changed = original.copy(name = name.text.toString().trim().ifEmpty { original.name }, lat = latitude, lon = longitude, mark = mark, color = color)
+                val index = waypoints.indexOfFirst { it.id == original.id }
+                if (index >= 0) waypoints[index] = changed
+                if (activeWaypoint?.id == original.id) activeWaypoint = changed
+                waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi(); debug("WP edited ${original.id}"); dialog.dismiss()
+            }
+        }
+        dialog.show()
+        if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
+            fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
+            android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+        }
+    }
+
     private fun renderWaypointList() {
         mapPanel?.setWaypoints(waypoints, activeWaypoint)
         b.waypointContainer.removeAllViews()
+        b.waypointContainer.addView(Button(this).apply {
+            text = if (activeWaypoint == null) "目標なし（選択中）" else "目標なし"
+            setOnClickListener { clearTarget() }
+        })
         waypoints.forEach { wp ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -641,7 +677,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 this.text = "削除"
                 setOnClickListener {
                     waypoints.removeAll { it.id == wp.id }
-                    if (activeWaypoint?.id == wp.id) activeWaypoint = waypoints.firstOrNull()
+                    if (activeWaypoint?.id == wp.id) activeWaypoint = null
                     waypointStore.saveAll(waypoints)
                     waypointStore.setActiveId(activeWaypoint?.id)
                     renderWaypointList()

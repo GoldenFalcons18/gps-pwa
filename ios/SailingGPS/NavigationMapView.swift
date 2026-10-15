@@ -10,6 +10,7 @@ struct NavigationMapView: UIViewRepresentable {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let showAllRequest: Int
+    let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -124,7 +125,13 @@ struct NavigationMapView: UIViewRepresentable {
         @objc func longPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began, let map = gesture.view as? MKMapView else { return }
             parent.following = false
-            parent.createWaypoint(map.convert(gesture.location(in: map), toCoordinateFrom: map))
+            let point = gesture.location(in: map)
+            let hit = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" }.first { pin in
+                guard let view = map.view(for: pin) else { return false }
+                return view.bounds.insetBy(dx: -8, dy: -8).contains(view.convert(point, from: map))
+            }
+            if let id = hit?.id, let waypoint = parent.waypoints.first(where: { $0.id == id }) { parent.editWaypoint(waypoint) }
+            else { parent.createWaypoint(map.convert(point, toCoordinateFrom: map)) }
         }
         func render(_ map: MKMapView) {
             guard !rendering else { return }
@@ -210,11 +217,11 @@ struct NavigationMapView: UIViewRepresentable {
             else { view.glyphText = nil; view.glyphImage = MarineMarks.image(pin.markSymbol ?? "flag.fill") }
             view.displayPriority = .required
             view.titleVisibility = .visible
-            view.canShowCallout = true
+            view.canShowCallout = false; view.isEnabled = false
             return view
         }
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
-            if let id = (view.annotation as? Pin)?.id { parent.selected = id }
+            if (view.annotation as? Pin)?.kind == "waypoint" { mapView.deselectAnnotation(view.annotation, animated: false) }
         }
     }
 }

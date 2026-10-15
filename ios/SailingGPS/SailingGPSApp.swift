@@ -361,7 +361,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 editorDraft = makeDraft(coordinate)
             })
             HStack {
@@ -388,7 +388,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.4 · build 15") }
+                Section("アプリ") { Text("Sailing GPS 1.6.5 · build 16") }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -399,6 +399,9 @@ struct ContentView: View {
     private var waypointList: some View {
         NavigationStack {
             List {
+                Button { selected = nil; savedTarget = "__none__"; waypointListPresented = false } label: {
+                    HStack { Text("目標なし"); Spacer(); if selected == nil { Image(systemName: "checkmark") } }
+                }
                 if gps.waypoints.isEmpty { Text("ウェイポイントはありません") }
                 ForEach(gps.waypoints) { wp in
                     HStack {
@@ -574,8 +577,9 @@ struct ContentView: View {
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList }
         .sheet(item: $editorDraft) { draft in
-            WaypointEntryView(waypoint: draft) { waypoint in
-                gps.upsert(waypoint); selected = waypoint.id; following = true
+            WaypointEntryView(waypoint: draft) { waypoint, navigate in
+                gps.upsert(waypoint)
+                if navigate { selected = waypoint.id; following = true }
             }
         }
     }
@@ -589,7 +593,10 @@ struct ContentView: View {
                 editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "marine.lighthouse")
             }
             #endif
-            selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id
+            selected = savedTarget == "__none__" ? nil : (gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--target-none") { selected = nil; savedTarget = "__none__" }
+            #endif
         }
     }
     var body: some View {
@@ -597,10 +604,10 @@ struct ContentView: View {
             if let value { selected = value; following = true }
         }
         .onChange(of: selected) { _, value in
-            savedTarget = value?.uuidString ?? ""
+            savedTarget = value?.uuidString ?? "__none__"
         }
         .onChange(of: gps.waypoints.count) { _, _ in
-            if !gps.waypoints.contains(where: { $0.id == selected }) { selected = gps.waypoints.first?.id }
+            if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
         }
     }
 }

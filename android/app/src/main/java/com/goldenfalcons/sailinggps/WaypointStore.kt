@@ -54,7 +54,7 @@ class WaypointStore(context: Context) {
 
     fun setActiveId(id: String?) {
         prefs.edit().apply {
-            if (id == null) remove("activeId") else putString("activeId", id)
+            putString("activeId", id ?: "__none__")
         }.apply()
     }
 }
