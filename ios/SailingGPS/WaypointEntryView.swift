@@ -110,11 +110,12 @@ struct CoordinateWheel: UIViewRepresentable {
             return 10
         }
         func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
-            pickerView.bounds.width / CGFloat(numberOfComponents(in: pickerView))
+            max(24, pickerView.bounds.width / CGFloat(numberOfComponents(in: pickerView)) - 12)
         }
         func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
             let label = (view as? UILabel) ?? UILabel(); label.textAlignment = .center; label.textColor = .white
             label.font = .monospacedDigitSystemFont(ofSize: 23, weight: .medium)
+            label.adjustsFontSizeToFitWidth = true; label.minimumScaleFactor = 0.6
             if component == numberOfComponents(in: pickerView)-1 { label.text = parent.latitude ? (row == 0 ? "N" : "S") : (row == 0 ? "E" : "W") }
             else if component == 0 { label.text = "\(row)°" }
             else if parent.format != 0 && component == 1 { label.text = "\(row)" + (parent.format == 1 ? "." : "′") }
