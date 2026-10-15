@@ -176,3 +176,38 @@ print('Stationary device rotation and invariant goal bearing verified')
 PYROTATION
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# Save a custom appearance through the real dialog, then restart and verify persistence.
+adb shell am force-stop "$APP"
+adb logcat -c
+adb shell am start -W -n "$APP/.MainActivity" --ez previewAppearance true
+sleep 3
+adb exec-out screencap -p > screenshots/Android-waypoint-appearance.png
+adb logcat -d -s SailingUiBounds > screenshots/appearance-bounds.log
+read -r SAVE_X SAVE_Y < <(python3 - <<'PYAPPEARANCE'
+import re,pathlib
+rows=re.findall(r'APPEARANCE save=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/appearance-bounds.log').read_text())
+assert rows,'Appearance dialog not visible'
+a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
+PYAPPEARANCE
+)
+adb shell input tap "$SAVE_X" "$SAVE_Y"
+sleep 2
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity"
+sleep 3
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/appearance-waypoints.xml
+python3 - <<'PYAPPEARANCEVERIFY'
+import json,pathlib,xml.etree.ElementTree as E
+root=E.parse('screenshots/appearance-waypoints.xml').getroot()
+items=json.loads(next(n.text for n in root if n.get('name')=='items'))
+active=next(n.text for n in root if n.get('name')=='activeId')
+point=next(p for p in items if p['id']==active)
+assert point['name']=='MAP_TEST',point
+assert point['mark']=='★' and point['color']=='#12ABCD',point
+assert len(items)==4
+pathlib.Path('screenshots/appearance-result.txt').write_text('PASS: custom mark and RGB color saved through native dialog and retained after restart; existing waypoints retained.\n')
+PYAPPEARANCEVERIFY
+adb exec-out screencap -p > screenshots/Android-custom-waypoint-map.png
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

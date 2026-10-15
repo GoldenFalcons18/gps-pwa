@@ -126,6 +126,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupButtons()
         setupSensors()
         renderWaypointList()
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
+            WaypointAppearanceDialog.show(this, "★", "#12ABCD") { mark, color ->
+                activeWaypoint?.let { original ->
+                    val changed = original.copy(mark = mark, color = color)
+                    val index = waypoints.indexOfFirst { it.id == original.id }
+                    if (index >= 0) waypoints[index] = changed
+                    activeWaypoint = changed; waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                    debug("Appearance fixture saved")
+                }
+            }
+        }
+
         updateNavigationUi()
         updateStatusUi()
         requestNeededPermissions()

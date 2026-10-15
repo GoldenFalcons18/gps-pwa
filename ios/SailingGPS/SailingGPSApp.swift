@@ -586,7 +586,7 @@ struct ContentView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
-                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60)
+                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "star.fill")
             }
             #endif
             selected = gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id

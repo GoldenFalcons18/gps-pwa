@@ -69,5 +69,10 @@ object WaypointAppearanceDialog {
             save(input.text.toString().trim().ifEmpty { "●" }, String.format("#%06X", selected and 0xFFFFFF)); dialog.dismiss()
         } }
         dialog.show()
+        if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
+            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val xy = IntArray(2); button.getLocationOnScreen(xy)
+            android.util.Log.d("SailingUiBounds", "APPEARANCE save=${xy[0]},${xy[1]},${xy[0] + button.width},${xy[1] + button.height}")
+        }
     }
 }
