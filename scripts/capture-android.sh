@@ -102,6 +102,17 @@ PYMAP
 read -r MAP_X MAP_Y <<< "$MAP_POINT"
 adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1200
 sleep 1
+adb exec-out screencap -p > screenshots/Android-map-operations.png
+adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
+read -r CREATE_X CREATE_Y < <(python3 - <<'PYMAPOPS'
+import pathlib,re
+rows=re.findall(r'MAPOPS create=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/map-operations-bounds.log').read_text())
+assert rows,'Map operation panel missing'
+a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
+PYMAPOPS
+)
+adb shell input tap "$CREATE_X" "$CREATE_Y"
+sleep 1
 adb exec-out screencap -p > screenshots/Android-map-create-dialog.png
 # Read actual dialog bounds rather than assuming an inset/keyboard configuration.
 adb logcat -d -s SailingUiBounds > screenshots/dialog-bounds.log
@@ -276,5 +287,61 @@ PYEDITVERIFY
 adb emu geo fix 139.467 35.318
 sleep 2
 adb exec-out screencap -p > screenshots/Android-target-none.png
+adb logcat -d -s AndroidRuntime > screenshots/runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# Choose an existing goal through navigation options; only Go commits the selection.
+adb shell am force-stop "$APP"
+adb logcat -c
+adb shell am start -W -n "$APP/.MainActivity" --ez previewNavigationOptions true
+adb emu geo fix 139.467 35.318
+sleep 3
+adb exec-out screencap -p > screenshots/Android-navigation-options.png
+adb logcat -d -s SailingUiBounds > screenshots/navigation-options-bounds.log
+read -r ACTION_X ACTION_Y < <(python3 - <<'PYNAV'
+import pathlib,re
+rows=re.findall(r'ACTION label=既存ウェイポイント（近い順） bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/navigation-options-bounds.log').read_text())
+assert rows
+a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
+PYNAV
+)
+adb shell input tap "$ACTION_X" "$ACTION_Y"
+sleep 1
+adb logcat -d -s SailingUiBounds > screenshots/candidate-bounds.log
+read -r ACTION_X ACTION_Y < <(python3 - <<'PYCANDIDATE'
+import pathlib,re
+rows=re.findall(r'ACTION label=[^\n]*MAP_TEST_EDIT[^\n]* bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/candidate-bounds.log').read_text())
+assert rows
+a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
+PYCANDIDATE
+)
+adb shell input tap "$ACTION_X" "$ACTION_Y"
+sleep 1
+adb exec-out screencap -p > screenshots/Android-go-confirmation.png
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/before-go-waypoints.xml
+python3 - <<'PYBEFOREGO'
+import xml.etree.ElementTree as E
+r=E.parse('screenshots/before-go-waypoints.xml').getroot()
+assert next(n.text for n in r if n.get('name')=='activeId')=='__none__'
+PYBEFOREGO
+adb logcat -d -s SailingUiBounds > screenshots/go-bounds.log
+read -r ACTION_X ACTION_Y < <(python3 - <<'PYGO'
+import pathlib,re
+rows=re.findall(r'GO bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/go-bounds.log').read_text())
+assert rows
+a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
+PYGO
+)
+adb shell input tap "$ACTION_X" "$ACTION_Y"
+sleep 2
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/after-go-waypoints.xml
+python3 - <<'PYAFTERGO'
+import pathlib,json,xml.etree.ElementTree as E
+r=E.parse('screenshots/after-go-waypoints.xml').getroot()
+points=json.loads(next(n.text for n in r if n.get('name')=='items'))
+active=next(n.text for n in r if n.get('name')=='activeId')
+assert next(p for p in points if p['id']==active)['name']=='MAP_TEST_EDIT'
+pathlib.Path('screenshots/navigation-go-result.txt').write_text('PASS: blank long press opens operations before creation; navigation options select a candidate; Go alone commits target.\n')
+PYAFTERGO
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

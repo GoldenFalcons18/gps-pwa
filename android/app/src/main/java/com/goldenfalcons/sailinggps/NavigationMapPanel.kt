@@ -39,6 +39,17 @@ class NavigationMapPanel(
     private var lastRecorded: GeoPoint? = null
     private var current: GeoPoint? = null
     private var following = true
+    var onFollowingChanged: ((Boolean) -> Unit)? = null
+    private var showWaypoints = true
+    private var showCourse = true
+    private fun setFollowing(value: Boolean) { following = value; onFollowingChanged?.invoke(value) }
+    fun setDisplayOptions(waypointsVisible: Boolean, courseVisible: Boolean) {
+        showWaypoints = waypointsVisible; showCourse = courseVisible
+        waypointMarkers.forEach { it.isEnabled = showWaypoints }
+        course.isEnabled = showCourse
+        courseDots.forEach { it.isEnabled = showCourse && lastHeading != null }
+        map.invalidate()
+    }
     private var destroyed = false
     private var paused = false
     private var shownHeading: Double? = null
@@ -72,11 +83,11 @@ class NavigationMapPanel(
     private var touchY = 0f
     private var longPressTriggered = false
     private fun fireLongPress() {
-        following = false
+        setFollowing(false)
         longPressTriggered = true
         val local = map.projection.unrotateAndScalePoint(touchX.toInt(), touchY.toInt(), null)
         val event = MotionEvent.obtain(0, 0, MotionEvent.ACTION_DOWN, local.x.toFloat(), local.y.toFloat(), 0)
-        val marker = waypointMarkers.asReversed().firstOrNull { it.hitTest(event, map) }
+        val marker = waypointMarkers.asReversed().firstOrNull { it.isEnabled && it.hitTest(event, map) }
         event.recycle()
         val index = waypointMarkers.indexOf(marker)
         if (index >= 0) editWaypoint(waypointData[index])
@@ -114,7 +125,7 @@ class NavigationMapPanel(
                         val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
                         if (kotlin.math.hypot(event.x - touchX, event.y - touchY) > slop) {
                             removeCallbacks(longPress)
-                            following = false
+                            setFollowing(false)
                         }
                     }
                     MotionEvent.ACTION_POINTER_DOWN, MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> removeCallbacks(longPress)
@@ -205,7 +216,7 @@ class NavigationMapPanel(
                 DisplayNavigation.destination(lat, lon, bearing, distance.toDouble()).let { GeoPoint(it.first, it.second) }
             }
             course.setPoints(listOf(point) + projected)
-            courseDots.forEachIndexed { index, marker -> marker.position = projected[index]; marker.isEnabled = true }
+            courseDots.forEachIndexed { index, marker -> marker.position = projected[index]; marker.isEnabled = showCourse }
         } else { course.setPoints(emptyList()); courseDots.forEach { it.isEnabled = false } }
         updateTargetLine()
         if (following) {
@@ -233,6 +244,7 @@ class NavigationMapPanel(
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
                 snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                isEnabled = showWaypoints
                 setOnMarkerClickListener { _, _ -> true }
                 setInfoWindow(null)
                 alpha = if (wp.id == active?.id) 1f else 0.6f
@@ -288,7 +300,7 @@ class NavigationMapPanel(
     fun showWaypoints() {
         val positions = waypointMarkers.map { it.position }
         if (positions.isEmpty()) return
-        following = false
+        setFollowing(false)
         val visible = positions + listOfNotNull(current)
         map.post {
             if (destroyed) return@post
@@ -320,7 +332,7 @@ class NavigationMapPanel(
     }
 
     fun followLocation() {
-        following = true
+        setFollowing(true)
         applyFollow()
         queueFollowFrame()
         log("Map follow enabled / heading-up / centered")

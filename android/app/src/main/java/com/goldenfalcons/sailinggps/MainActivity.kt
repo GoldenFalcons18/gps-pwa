@@ -126,6 +126,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupButtons()
         setupSensors()
         renderWaypointList()
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.318,139.467) }
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
             WaypointAppearanceDialog.show(this, "灯台", "#12ABCD") { mark, color ->
@@ -211,8 +213,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSpeedMode.setOnClickListener { setDisplayMode(false) }
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
-        b.btnMenu.setOnClickListener { b.settingsPanel.visibility = if (b.settingsPanel.visibility == android.view.View.VISIBLE) android.view.View.GONE else android.view.View.VISIBLE }
-        b.btnSetTarget.setOnClickListener { b.settingsPanel.visibility = android.view.View.VISIBLE; b.etWpName.requestFocus(); b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) } }
+        b.btnMenu.setOnClickListener { showNavigationMenu() }
+        b.btnSetTarget.setOnClickListener { showNavigationOptions() }
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(displayPrefs.getBoolean("navigator", false))
     }
@@ -220,7 +222,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setDisplayMode(navigator: Boolean) {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
-            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> createMapWaypoint(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
+            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
+            mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
+            mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
             mapPanel?.setWaypoints(waypoints, activeWaypoint)
             updateMap()
             mapPanel?.resume()
@@ -459,12 +463,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val name = b.etWpName.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" }
         val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor)
         waypoints += wp
-        activeWaypoint = wp
+        val shouldConfirm = pendingNavigation
+        pendingNavigation = false
+        if (!shouldConfirm) activeWaypoint = wp
         waypointStore.saveAll(waypoints)
-        waypointStore.setActiveId(wp.id)
+        if (!shouldConfirm) waypointStore.setActiveId(wp.id)
         clearWaypointInputs()
         renderWaypointList()
         updateNavigationUi()
+        if (shouldConfirm) confirmTarget(wp)
         debug("WP added $name ${NavigationUtils.formatDm(lat, true)} ${NavigationUtils.formatDm(lon, false)}")
     }
 
@@ -536,6 +543,88 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.btnWpAppearance.text = "$mark マーク・色を選ぶ"
             b.btnWpAppearance.setTextColor(runCatching { Color.parseColor(color) }.getOrDefault(Color.WHITE))
         }
+    }
+
+    private var pendingNavigation = false
+    private fun showSettings() {
+        b.settingsPanel.visibility = android.view.View.VISIBLE
+        b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) }
+    }
+    private fun showActionPanel(title: String, actions: List<Pair<String, () -> Unit>>) {
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12,12,12,12); setBackgroundColor(Color.rgb(15,15,15)) }
+        column.addView(TextView(this).apply { text = title; textSize = 17f; setTextColor(Color.WHITE); setPadding(8,8,8,12) })
+        val grid = android.widget.GridLayout(this).apply { columnCount = 2 }
+        (actions + ("閉じる" to {})).forEach { (label, action) ->
+            val button = Button(this).apply {
+                text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false
+                background = android.graphics.drawable.GradientDrawable().apply { setColor(Color.rgb(40,40,40)); setStroke(2,Color.rgb(255,170,0)); cornerRadius = 8f }
+                layoutParams = android.widget.GridLayout.LayoutParams().apply { width = 0; height = (76*resources.displayMetrics.density).toInt(); columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f); setMargins(4,4,4,4) }
+                setOnClickListener { dialog.dismiss(); action() }
+            }
+            grid.addView(button)
+            if (BuildConfig.DEBUG) button.viewTreeObserver.addOnGlobalLayoutListener {
+                val xy=IntArray(2);button.getLocationOnScreen(xy)
+                android.util.Log.d("SailingUiBounds", "ACTION label=$label bounds=${xy[0]},${xy[1]},${xy[0]+button.width},${xy[1]+button.height}")
+            }
+            if (BuildConfig.DEBUG && label == "ここにウェイポイントを作成") button.viewTreeObserver.addOnGlobalLayoutListener {
+                val xy=IntArray(2);button.getLocationOnScreen(xy)
+                android.util.Log.d("SailingUiBounds", "MAPOPS create=${xy[0]},${xy[1]},${xy[0]+button.width},${xy[1]+button.height}")
+            }
+        }
+        column.addView(grid)
+        dialog.setContentView(android.widget.ScrollView(this).apply { addView(column) }); dialog.show()
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+    }
+    private fun showMapOperations(lat: Double, lon: Double) {
+        val coords = NavigationUtils.formatDm(lat,true)+", "+NavigationUtils.formatDm(lon,false)
+        val showWaypoints = displayPrefs.getBoolean("showWaypoints",true)
+        val showCourse = displayPrefs.getBoolean("showCourse",true)
+        showActionPanel("地図の操作\n$coords", listOf(
+            "ここにウェイポイントを作成" to { createMapWaypoint(lat,lon) },
+            "座標をコピー" to { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("座標",coords)); Toast.makeText(this,"座標をコピーしました",Toast.LENGTH_SHORT).show() },
+            (if (showWaypoints) "ウェイポイントを非表示" else "ウェイポイントを表示") to { displayPrefs.edit().putBoolean("showWaypoints",!showWaypoints).apply(); mapPanel?.setDisplayOptions(!showWaypoints,showCourse) },
+            (if (showCourse) "進路ラインを隠す" else "進路ラインを表示") to { displayPrefs.edit().putBoolean("showCourse",!showCourse).apply(); mapPanel?.setDisplayOptions(showWaypoints,!showCourse) },
+            "再度中心に配置" to { mapPanel?.followLocation() }
+        ))
+    }
+    private fun showNavigationOptions() {
+        showActionPanel("ナビゲーションのオプション", listOf(
+            "新規ウェイポイント" to { pendingNavigation = true; showSettings(); b.etWpName.requestFocus() },
+            "既存ウェイポイント（近い順）" to { showTargetList(true) },
+            "既存ウェイポイント（最近）" to { showTargetList(false) },
+            "目標なし" to { clearTarget() }
+        ))
+    }
+    private fun showTargetList(nearest: Boolean) {
+        val lat = latestLat; val lon = latestLon
+        val ordered = if (nearest && lat != null && lon != null) waypoints.sortedBy { NavigationUtils.distanceMeters(lat,lon,it.lat,it.lon) } else waypoints.asReversed()
+        val actions = ordered.map { waypoint ->
+            val distance = if (lat != null && lon != null) " · "+DisplayNavigation.distance(NavigationUtils.distanceMeters(lat,lon,waypoint.lat,waypoint.lon), metricUnits) else ""
+            ("${waypoint.mark} ${waypoint.name}$distance") to { confirmTarget(waypoint) }
+        }
+        showActionPanel(if (nearest) "目標・近い順" else "目標・最近", actions + ("目標なし" to { clearTarget() }))
+    }
+    private fun confirmTarget(waypoint: Waypoint) {
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle(waypoint.name)
+            .setMessage(NavigationUtils.formatDm(waypoint.lat,true)+", "+NavigationUtils.formatDm(waypoint.lon,false))
+            .setNegativeButton("キャンセル",null).setPositiveButton("Go!") { _,_ ->
+                activeWaypoint = waypoint; waypointStore.setActiveId(waypoint.id); renderWaypointList(); updateNavigationUi(); mapPanel?.followLocation()
+            }.show().also { dialog ->
+                if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
+                    val button=dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);val xy=IntArray(2);button.getLocationOnScreen(xy)
+                    android.util.Log.d("SailingUiBounds", "GO bounds=${xy[0]},${xy[1]},${xy[0]+button.width},${xy[1]+button.height}")
+                }
+            }
+    }
+    private fun showNavigationMenu() {
+        showActionPanel("メニュー", listOf(
+            "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showSettings() },
+            "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ" to { addCurrentLocationWaypoint() },
+            "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
+            "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
+            "モード切替" to { setDisplayMode(!navigatorMode) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
+        ))
     }
 
     private fun createMapWaypoint(lat: Double, lon: Double) {
@@ -653,11 +742,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 this.text = if (activeWaypoint?.id == wp.id) "選択中" else "選択"
                 isEnabled = activeWaypoint?.id != wp.id
                 setOnClickListener {
-                    activeWaypoint = wp
-                    waypointStore.setActiveId(wp.id)
-                    renderWaypointList()
-                    updateNavigationUi()
-                    debug("WP selected ${wp.name}")
+                    confirmTarget(wp)
                 }
             }
             val appearance = Button(this).apply {

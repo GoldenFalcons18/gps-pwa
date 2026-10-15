@@ -6,6 +6,8 @@ struct NavigationMapView: UIViewRepresentable {
     let location: CLLocation?
     let heading: Double?
     let waypoints: [Waypoint]
+    let showWaypoints: Bool
+    let showCourse: Bool
     let track: [CLLocationCoordinate2D]
     @Binding var selected: UUID?
     @Binding var following: Bool
@@ -108,7 +110,7 @@ struct NavigationMapView: UIViewRepresentable {
             map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "course" })
             map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "course" })
             courseHeading = parent.heading
-            guard let location = parent.location, let heading = parent.heading else { return }
+            guard parent.showCourse, let location = parent.location, let heading = parent.heading else { return }
             var coordinates = [location.coordinate]
             for distance in stride(from: 100, through: 500, by: 100) {
                 let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
@@ -126,7 +128,7 @@ struct NavigationMapView: UIViewRepresentable {
             guard gesture.state == .began, let map = gesture.view as? MKMapView else { return }
             parent.following = false
             let point = gesture.location(in: map)
-            let hit = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" }.first { pin in
+            let hit = map.annotations.compactMap { $0 as? Pin }.filter { parent.showWaypoints && $0.kind == "waypoint" }.first { pin in
                 guard let view = map.view(for: pin) else { return false }
                 return view.bounds.insetBy(dx: -8, dy: -8).contains(view.convert(point, from: map))
             }
@@ -140,13 +142,13 @@ struct NavigationMapView: UIViewRepresentable {
             self.map = map
             let p = parent
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
-            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)"
+            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)|\(p.showWaypoints)|\(p.showCourse)"
             if key != signature {
                 signature = key
                 courseHeading = nil
                 map.removeAnnotations(map.annotations)
                 map.removeOverlays(map.overlays)
-                for wp in p.waypoints {
+                for wp in p.showWaypoints ? p.waypoints : [] {
                     let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
                     map.addAnnotation(pin)
                 }

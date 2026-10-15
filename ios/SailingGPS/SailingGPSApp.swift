@@ -253,6 +253,15 @@ struct ContentView: View {
     @State private var menuPresented = false
     @State private var waypointListPresented = false
     @State private var editorDraft: Waypoint?
+    @State private var mapOperationsCoordinate: CLLocationCoordinate2D?
+    @State private var mapOperationsPresented = false
+    @State private var navigationOptionsPresented = false
+    @State private var nearestWaypoints = false
+    @State private var navigationCandidate: Waypoint?
+    @State private var confirmNavigation = false
+    @State private var pendingNavigationEditor = false
+    @AppStorage("showMapWaypoints") private var showMapWaypoints = true
+    @AppStorage("showCourseLine") private var showCourseLine = true
     private var navigationReference: CoordinateInput.HeadingReading? {
         CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
@@ -344,7 +353,7 @@ struct ContentView: View {
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)
                 compass.scaleEffect(dial / 154).frame(width: dial, height: dial)
                 VStack(spacing: 8) {
-                    Button("目標") { waypointListPresented = true }.font(.headline).foregroundStyle(.orange)
+                    Button("目標") { navigationOptionsPresented = true }.font(.headline).foregroundStyle(.orange)
                         .frame(maxWidth: .infinity).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange))
                     Text(target?.name ?? "設定目標").font(.system(size: 23, weight: .bold)).foregroundStyle(target == nil ? .orange : .white).minimumScaleFactor(0.5).lineLimit(2)
                     if let target {
@@ -361,14 +370,17 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
-                editorDraft = makeDraft(coordinate)
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+                mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
+            .overlay(alignment: .top) {
+                if !following { Button("再度中心に配置") { following = true }.font(.caption).buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black).padding(.top, 48) }
+            }
             HStack {
                 Button { following = true } label: { Image(systemName: "location.north.fill") }
                     .accessibilityLabel("現在地へ追従 1cm約200m")
                 Spacer()
-                Text("長押しで地点追加").font(.caption2).padding(4).background(.black.opacity(0.5)).foregroundStyle(.white)
+                Text("長押しで地図操作").font(.caption2).padding(4).background(.black.opacity(0.5)).foregroundStyle(.white)
                 Spacer()
                 Button { following = false; showAllRequest += 1 } label: { Image(systemName: "square.3.layers.3d") }
                     .accessibilityLabel("全ウェイポイント")
@@ -388,7 +400,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.5 · build 16") }
+                Section("アプリ") { Text("Sailing GPS 1.6.6 · build 17") }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -403,10 +415,10 @@ struct ContentView: View {
                     HStack { Text("目標なし"); Spacer(); if selected == nil { Image(systemName: "checkmark") } }
                 }
                 if gps.waypoints.isEmpty { Text("ウェイポイントはありません") }
-                ForEach(gps.waypoints) { wp in
+                ForEach(orderedWaypoints) { wp in
                     HStack {
                         Button {
-                            selected = wp.id; following = true; waypointListPresented = false
+                            waypointListPresented = false; proposeNavigation(wp)
                         } label: {
                             VStack(alignment: .leading) {
                                 HStack {
@@ -425,11 +437,57 @@ struct ContentView: View {
                         }.buttonStyle(.borderless)
                     }.swipeActions { Button("削除", role: .destructive) { gps.remove(wp.id) } }
                 }
-            }.navigationTitle("ウェイポイント")
+            }.navigationTitle(nearestWaypoints ? "目標・近い順" : "ウェイポイント・最近")
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("完了") { waypointListPresented = false } }
                     ToolbarItem(placement: .primaryAction) { Button { waypointListPresented = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { editorDraft = makeDraft() } } label: { Image(systemName: "plus") } }
                 }
         }.tint(.orange).preferredColorScheme(.dark)
+    }
+    private var orderedWaypoints: [Waypoint] {
+        if nearestWaypoints, let point = gps.location {
+            return gps.waypoints.sorted { point.distance(from: CLLocation(latitude: $0.latitude, longitude: $0.longitude)) < point.distance(from: CLLocation(latitude: $1.latitude, longitude: $1.longitude)) }
+        }
+        return Array(gps.waypoints.reversed())
+    }
+    private func proposeNavigation(_ waypoint: Waypoint) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { navigationCandidate = waypoint; confirmNavigation = true }
+    }
+    private func operationButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Text(title).font(.subheadline.bold()).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 62).padding(5)
+            .foregroundStyle(.white).background(Color(white: 0.18)).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange)) }
+    }
+    private var mapOperations: some View {
+        VStack(spacing: 5) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("地図の操作").font(.headline)
+                    if let coordinate = mapOperationsCoordinate { Text(CoordinateInput.format(coordinate.latitude, isLatitude: true) + ", " + CoordinateInput.format(coordinate.longitude, isLatitude: false)).font(.caption.monospacedDigit()) }
+                }
+                Spacer(); Button { mapOperationsPresented = false } label: { Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.orange) }
+            }
+            HStack {
+                operationButton("ここにウェイポイントを作成") { mapOperationsPresented = false; if let coordinate = mapOperationsCoordinate { editorDraft = makeDraft(coordinate) } }
+                operationButton("座標をコピー") { if let coordinate = mapOperationsCoordinate { UIPasteboard.general.string = CoordinateInput.format(coordinate.latitude, isLatitude: true) + ", " + CoordinateInput.format(coordinate.longitude, isLatitude: false) }; mapOperationsPresented = false }
+            }
+            HStack {
+                operationButton(showMapWaypoints ? "ウェイポイントを非表示" : "ウェイポイントを表示") { showMapWaypoints.toggle(); mapOperationsPresented = false }
+                operationButton(showCourseLine ? "進路ラインを隠す" : "進路ラインを表示") { showCourseLine.toggle(); mapOperationsPresented = false }
+            }
+            operationButton("再度中心に配置") { following = true; mapOperationsPresented = false }
+        }.padding(8).background(Color(white: 0.08).opacity(0.97)).overlay(RoundedRectangle(cornerRadius: 8).stroke(.orange)).padding(4)
+    }
+    private var navigationOptions: some View {
+        VStack(spacing: 5) {
+            HStack { Text("ナビゲーションのオプション").font(.headline); Spacer(); Button { navigationOptionsPresented = false } label: { Image(systemName: "xmark.circle.fill").font(.title2).foregroundStyle(.orange) } }
+            HStack {
+                operationButton("新規ウェイポイント") { navigationOptionsPresented = false; pendingNavigationEditor = true; editorDraft = makeDraft() }
+                operationButton("既存ウェイポイント\n（近い順）") { navigationOptionsPresented = false; nearestWaypoints = true; waypointListPresented = true }
+            }
+            HStack {
+                operationButton("既存ウェイポイント\n（最近）") { navigationOptionsPresented = false; nearestWaypoints = false; waypointListPresented = true }
+                operationButton("目標なし") { navigationOptionsPresented = false; selected = nil; savedTarget = "__none__" }
+            }
+        }.padding(8).background(Color(white: 0.08).opacity(0.97)).overlay(RoundedRectangle(cornerRadius: 8).stroke(.orange)).padding(4)
     }
     private func menuAction(_ action: () -> Void) { menuPresented = false; action() }
     private func menuTile(_ title: String, detail: String = "", done: Bool = false, action: @escaping () -> Void) -> some View {
@@ -454,7 +512,7 @@ struct ContentView: View {
                 }
                 VStack(spacing: 5) {
                     menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
-                    menuTile("目標", detail: target?.name ?? "未設定") { menuAction { waypointListPresented = true } }
+                    menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
                     menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
                     menuTile("現在地に打つ") { menuAction { gps.saveCurrentWaypoint() } }
                     menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
@@ -572,14 +630,21 @@ struct ContentView: View {
         ZStack {
             dashboard
             if menuPresented { navigationMenu }
+            VStack { Spacer(); if mapOperationsPresented { mapOperations } else if navigationOptionsPresented { navigationOptions } }
+        }
+        .alert("この目標へナビ開始", isPresented: $confirmNavigation) {
+            Button("Go!") { if let waypoint = navigationCandidate { selected = waypoint.id; following = true } }
+            Button("キャンセル", role: .cancel) { navigationCandidate = nil }
+        } message: {
+            if let waypoint = navigationCandidate { Text(waypoint.name + "\n" + CoordinateInput.format(waypoint.latitude, isLatitude: true) + ", " + CoordinateInput.format(waypoint.longitude, isLatitude: false)) }
         }
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList }
-        .sheet(item: $editorDraft) { draft in
+        .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
             WaypointEntryView(waypoint: draft) { waypoint, navigate in
                 gps.upsert(waypoint)
-                if navigate { selected = waypoint.id; following = true }
+                if navigate || pendingNavigationEditor { proposeNavigation(waypoint) }
             }
         }
     }
@@ -588,6 +653,8 @@ struct ContentView: View {
         .onAppear {
             gps.preview(true)
             #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--preview-map-operations") { mapOperationsCoordinate = .init(latitude: 35.318, longitude: 139.467); mapOperationsPresented = true }
+            if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
                 editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "marine.lighthouse")
