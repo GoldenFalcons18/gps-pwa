@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 MapFeature(name="半径200m",kind="circle",waypointIds=ids.take(1),group="デモ海域"),
                 MapFeature(name="囲みエリア",kind="area",waypointIds=ids,color="#CC44AA",group="デモ海域"),
                 MapFeature(name="地点間の直線",kind="line",waypointIds=ids.take(2),color="#FFFF00",group="デモ海域")))
-                waypointStore.saveLibrary(waypoints,library);renderWaypointList();updateNavigationUi() }
+                waypointStore.saveLibrary(waypoints,library);renderWaypointList();updateNavigationUi();b.root.postDelayed({mapPanel?.showWaypoints()},1000) }
         }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewLibrary", false)) b.root.post { showMapLibrary() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.318,139.467) }
