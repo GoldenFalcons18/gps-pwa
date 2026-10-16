@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct MapLibraryView: View {
     @ObservedObject var gps: GPSRecorder
@@ -60,7 +61,7 @@ struct MapLibraryView: View {
             }.buttonStyle(.borderless)
                 .onAppear {
                     #if DEBUG
-                    if ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { featureDraft=MapFeature(name:"円エリア",kind:"circle") }
+                    if ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { featureDraft=MapFeature(name:gps.waypoints.first?.name ?? "円エリア",kind:"circle",waypointIDs:gps.waypoints.first.map{[$0.id]} ?? []) }
                     #endif
                 }
                 .navigationTitle("地点・グループ・エリア")
@@ -94,6 +95,8 @@ struct MapFeatureEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var error = ""
     @State private var radiusUnit = "m"
+    @State private var pointFolder = ""
+    private var pointFolders:[String] { Array(Set(groups + waypoints.compactMap(\.group))).filter{!$0.isEmpty}.sorted() }
     private var radiusFactor: Double { radiusUnit == "km" ? 1000 : radiusUnit == "nm" ? 1852 : 1 }
     var body: some View {
         NavigationStack {
@@ -102,16 +105,19 @@ struct MapFeatureEditor: View {
                 if feature.kind=="circle" { HStack { Text("半径");TextField("200",value:Binding(get:{feature.radius/radiusFactor},set:{feature.radius=$0*radiusFactor}),format:.number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) };Picker("半径の単位",selection:$radiusUnit){Text("m").tag("m");Text("km").tag("km");Text("nm").tag("nm")}.pickerStyle(.segmented) }
                 ColorPicker("色",selection:Binding(get:{waypointColor(feature.color)},set:{c in let ui=UIColor(c);var r:CGFloat=0,g:CGFloat=0,b:CGFloat=0,a:CGFloat=0;ui.getRed(&r,green:&g,blue:&b,alpha:&a);feature.color=String(format:"#%02X%02X%02X",Int(r*255),Int(g*255),Int(b*255))}),supportsOpacity:false)
                 Picker("グループ",selection:$feature.group){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
+                Section("作成中の地図") { FeatureDraftMap(feature:feature,entries:waypoints.map(\.archiveEntry)).frame(height:240);Text("選択順に結びます。保存するまでは仮表示です。").font(.caption) }
                 Section(feature.kind=="circle" ? "中心を1地点選択" : "結ぶ順に地点を選択") {
+                    Picker("地点のフォルダ",selection:$pointFolder){ForEach(pointFolders,id:\.self){Text($0).tag($0)}}
+                    Text("選択済み: \(feature.waypointIDs.count)地点。フォルダを切り替えても選択は残ります。").font(.caption)
                     if feature.waypointIDs.isEmpty && !feature.coordinates.isEmpty { Text("取り込み済みの座標を維持しています。地点を選ぶと結び直します。").font(.caption) }
-                    ForEach(waypoints){w in Button {
+                    ForEach(waypoints.filter{($0.group ?? "")==pointFolder}){w in Button {
                         if feature.waypointIDs.contains(w.id){feature.waypointIDs.removeAll{$0==w.id}}
                         else if feature.kind=="circle"{feature.waypointIDs=[w.id];feature.name=w.name}
                         else{feature.waypointIDs.append(w.id)}
                     }label:{HStack{Text(feature.waypointIDs.firstIndex(of:w.id).map{"\($0+1)."} ?? "○");Text(w.name)}} }
                 }
                 if !error.isEmpty { Text(error).foregroundStyle(.red) }
-            }.navigationTitle(feature.kind=="circle" ? "円エリア" : feature.kind=="area" ? "囲みエリア" : "地点間の直線")
+            }.onAppear { let saved=UserDefaults.standard.string(forKey:"mainWaypointFolder") ?? "";pointFolder=pointFolders.contains(saved) ? saved : (waypoints.first(where:{feature.waypointIDs.contains($0.id)})?.group ?? pointFolders.first ?? "") }.navigationTitle(feature.kind=="circle" ? "円エリア" : feature.kind=="area" ? "囲みエリア" : "地点間の直線")
                 .toolbar {
                     ToolbarItem(placement:.cancellationAction){Button("キャンセル"){dismiss()}}
                     ToolbarItem(placement:.confirmationAction){Button("保存"){
@@ -119,5 +125,39 @@ struct MapFeatureEditor: View {
                     }}
                 }
         }.preferredColorScheme(.dark).tint(.orange)
+    }
+}
+
+
+/// Preview only: editing never modifies the saved library until Save is tapped.
+struct FeatureDraftMap: UIViewRepresentable {
+    let feature: MapFeature
+    let entries: [WaypointArchive.Entry]
+    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeUIView(context: Context) -> MKMapView { let map=MKMapView();map.delegate=context.coordinator;return map }
+    func updateUIView(_ map:MKMapView,context:Context) {
+        context.coordinator.color=UIColor(waypointColor(feature.color))
+        map.removeOverlays(map.overlays);map.removeAnnotations(map.annotations)
+        let selected=entries.filter{feature.waypointIDs.contains($0.id)}
+        let visible=selected.isEmpty ? entries : selected
+        for entry in visible { let a=MKPointAnnotation();a.coordinate=CLLocationCoordinate2D(latitude:entry.latitude,longitude:entry.longitude);a.title=entry.name;map.addAnnotation(a) }
+        let coordinates=feature.boundary(entries).map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
+        if coordinates.count>=3 && feature.kind != "line" { map.addOverlay(MKPolygon(coordinates:coordinates,count:coordinates.count)) }
+        else if coordinates.count>=2 { map.addOverlay(MKPolyline(coordinates:coordinates,count:coordinates.count)) }
+        let all=coordinates + visible.map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
+        var rect=MKMapRect.null
+        for coordinate in all { let point=MKMapPoint(coordinate);rect=rect.union(MKMapRect(x:point.x,y:point.y,width:1,height:1)) }
+        if !rect.isNull {
+            if rect.size.width<100 && rect.size.height<100,let first=all.first { map.setRegion(MKCoordinateRegion(center:first,latitudinalMeters:600,longitudinalMeters:600),animated:false) }
+            else { map.setVisibleMapRect(rect,edgePadding:UIEdgeInsets(top:35,left:25,bottom:35,right:25),animated:false) }
+        }
+    }
+    final class Coordinator:NSObject,MKMapViewDelegate {
+        var color=UIColor.systemBlue
+        func mapView(_ mapView:MKMapView,rendererFor overlay:MKOverlay)->MKOverlayRenderer {
+            if let polygon=overlay as? MKPolygon { let r=MKPolygonRenderer(polygon:polygon);r.strokeColor=color;r.fillColor=color.withAlphaComponent(0.22);r.lineWidth=2;return r }
+            if let line=overlay as? MKPolyline { let r=MKPolylineRenderer(polyline:line);r.strokeColor=color;r.lineWidth=3;return r }
+            return MKOverlayRenderer(overlay:overlay)
+        }
     }
 }

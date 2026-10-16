@@ -10,13 +10,13 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
     private val export: (List<Waypoint>, List<MapFeature>, String) -> Unit, private val importFile: () -> Unit) {
     private fun menu(title: String, actions: List<Pair<String,()->Unit>>) { AlertDialog.Builder(context).setTitle(title).setItems(actions.map{it.first}.toTypedArray()){_,i->actions[i].second()}.setNegativeButton("閉じる",null).show() }
     private fun groups() = (state().groups+points().map{it.group}+state().features.map{it.group}).filter{it.isNotBlank()}.distinct().sorted()
-    fun show(): Unit = menu("地点・グループ・エリア",listOf(
+    fun show(): Unit = if(BuildConfig.DEBUG && (context as? android.app.Activity)?.intent?.getBooleanExtra("previewCircleEditor",false)==true) editFeature(points().firstOrNull()?.let{MapFeature(name=it.name,kind="circle",waypointIds=listOf(it.id))},"circle") else menu("地点・グループ・エリア",listOf(
         "KMZ / KML / JSON インポート" to importFile, "エクスポート" to { exportScope() },
         "グループ" to { groupList() }, "円エリアを作成" to { editFeature(null,"circle") },
         "囲みエリアを作成" to { editFeature(null,"area") }, "地点間の直線を作成" to { editFeature(null,"line") },
         "エリア・直線の一覧" to { featureList() }))
-    private fun selected(title: String, done: (List<Waypoint>)->Unit) {
-        val all=points();val order=mutableListOf<Int>()
+    private fun selected(title: String, source: List<Waypoint> = points(), done: (List<Waypoint>)->Unit) {
+        val all=source;val order=mutableListOf<Int>()
         AlertDialog.Builder(context).setTitle(title + "（選択順に結ぶ）")
             .setMultiChoiceItems(all.map{"${it.name} [${it.group.ifEmpty{"メインフォルダ"}}]"}.toTypedArray(),BooleanArray(all.size)){_,i,checked->if(checked)order.add(i) else order.remove(i)}
             .setPositiveButton("選択完了"){_,_->done(order.map{all[it]})}.setNegativeButton("キャンセル",null).show()
@@ -58,20 +58,43 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         val color=EditText(context).apply{hint="#RRGGBB";setText(original?.color ?: "#00AAFF")}
         val group=Spinner(context);val names=listOf("")+groups();group.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,names.map{it.ifEmpty{"メインフォルダ"}});group.setSelection(names.indexOf(original?.group ?: "").coerceAtLeast(0))
         var ids=original?.waypointIds ?: emptyList();val chosen=TextView(context)
-        fun update(){chosen.text=if(ids.isEmpty())"地点未選択（編集時は元の座標を維持）" else ids.mapNotNull{id->points().firstOrNull{it.id==id}?.name}.joinToString(" → ")};update()
+        val folder=Spinner(context);val folders=groups();folder.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,folders)
+        val preferred=context.getSharedPreferences("display",Context.MODE_PRIVATE).getString("mainWaypointFolder","") ?: ""
+        folder.setSelection(folders.indexOf(preferred).coerceAtLeast(0))
+        val preview=org.osmdroid.views.MapView(context).apply { setTileSource(org.osmdroid.tileprovider.tilesource.TileSourceFactory.MAPNIK);setMultiTouchControls(true);layoutParams=LinearLayout.LayoutParams(-1,(240*context.resources.displayMetrics.density).toInt());setOnTouchListener{v,e->v.parent?.requestDisallowInterceptTouchEvent(e.action!=android.view.MotionEvent.ACTION_UP && e.action!=android.view.MotionEvent.ACTION_CANCEL);false} }
+        fun drawPreview() {
+            preview.overlays.clear()
+            val selectedPoints=points().filter{it.id in ids}
+            val visible=selectedPoints.ifEmpty{points().filter{it.group==folders.getOrNull(folder.selectedItemPosition)}}
+            val meters=((radius.text.toString().toDoubleOrNull() ?: 0.0)*radiusFactor).coerceIn(0.0,1000000.0)
+            val draft=MapFeature(name="preview",kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=meters)
+            val boundary=draft.boundary(points()).map{org.osmdroid.util.GeoPoint(it.lat,it.lon)}
+            if(boundary.size>=3 && kind!="line")preview.overlays.add(org.osmdroid.views.overlay.Polygon(preview).apply{setPoints(boundary);outlinePaint.color=android.graphics.Color.CYAN;fillPaint.color=0x4000AAFF;outlinePaint.strokeWidth=3f})
+            else if(boundary.size>=2)preview.overlays.add(org.osmdroid.views.overlay.Polyline(preview).apply{setPoints(boundary);outlinePaint.color=android.graphics.Color.CYAN;outlinePaint.strokeWidth=3f})
+            visible.forEach{w->preview.overlays.add(org.osmdroid.views.overlay.Marker(preview).apply{position=org.osmdroid.util.GeoPoint(w.lat,w.lon);title=w.name})}
+            val bounds=(boundary+visible.map{org.osmdroid.util.GeoPoint(it.lat,it.lon)}).distinct()
+            preview.post { if(bounds.size>1)preview.zoomToBoundingBox(org.osmdroid.util.BoundingBox.fromGeoPoints(bounds),false,28,17.0,null) else if(bounds.isNotEmpty()){preview.controller.setZoom(16.0);preview.controller.setCenter(bounds.first())};preview.invalidate() }
+        }
+        fun update(){chosen.text=if(ids.isEmpty())"地点未選択（編集時は元の座標を維持）" else ids.mapNotNull{id->points().firstOrNull{it.id==id}?.name}.joinToString(" → ");if(kind=="circle")points().firstOrNull{it.id==ids.firstOrNull()}?.let{name.setText(it.name)};drawPreview()};update()
         val container=LinearLayout(context).apply {
             orientation=LinearLayout.VERTICAL;setPadding(24,12,24,12)
-            addView(name);if(kind=="circle"){addView(radius);addView(unit)};addView(color);addView(group);addView(chosen)
+            addView(name);if(kind=="circle"){addView(radius);addView(unit)};addView(color);addView(group);addView(TextView(context).apply{text="作成中の地図（保存前の仮表示） · © OpenStreetMap contributors"});addView(preview);addView(TextView(context).apply{text="地点のフォルダ"});addView(folder);addView(chosen)
             addView(Button(context).apply {
                 text=if(kind=="circle")"中心の地点を選ぶ" else "結ぶ順に地点を選ぶ"
-                setOnClickListener { selected("地点選択") { items -> ids=items.map{w->w.id};update() } }
+                setOnClickListener {
+                    val visible=points().filter{it.group==folders.getOrNull(folder.selectedItemPosition)}
+                    if(kind=="circle")AlertDialog.Builder(context).setTitle("中心の地点").setItems(visible.map{it.name}.toTypedArray()){_,i->ids=listOf(visible[i].id);update()}.show()
+                    else { val working=ids.toMutableList();AlertDialog.Builder(context).setTitle("結ぶ順に地点を選択").setMultiChoiceItems(visible.map{it.name}.toTypedArray(),BooleanArray(visible.size){visible[it].id in ids}){_,i,checked->if(checked){if(visible[i].id !in working)working.add(visible[i].id)}else working.remove(visible[i].id)}.setPositiveButton("選択完了"){_,_->ids=working;update()}.setNegativeButton("キャンセル",null).show() }
+                }
             })
         }
+        folder.onItemSelectedListener=object:AdapterView.OnItemSelectedListener { override fun onNothingSelected(parent:AdapterView<*>?){};override fun onItemSelected(parent:AdapterView<*>?,view:android.view.View?,position:Int,id:Long){drawPreview()} }
+        radius.addTextChangedListener(object:android.text.TextWatcher{override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){drawPreview()};override fun afterTextChanged(s:android.text.Editable?){} })
         val d=AlertDialog.Builder(context).setTitle("エリア・直線").setView(ScrollView(context).apply{addView(container)}).setPositiveButton("保存",null).setNegativeButton("キャンセル",null).create()
         d.setOnShowListener{d.getButton(-1).setOnClickListener{runCatching{
             require(kind!="circle" || (if(ids.isEmpty())original?.coordinates?.size ?: 0 else ids.size)==1){"円の中心は1地点を選んでください"}
             val f=MapFeature(id=original?.id ?: java.util.UUID.randomUUID().toString(),name=if(kind=="circle")points().firstOrNull{it.id==ids.firstOrNull()}?.name ?: name.text.toString().trim() else name.text.toString().trim(),kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=radius.text.toString().toDouble()*radiusFactor,color=color.text.toString().uppercase(),group=names[group.selectedItemPosition],visible=original?.visible ?: true);f.validate()
             save(points(),state().copy(features=state().features.filter{it.id!=f.id}+f));d.dismiss()
-        }.onFailure{Toast.makeText(context,it.message,Toast.LENGTH_LONG).show()}}};d.show()
+        }.onFailure{Toast.makeText(context,it.message,Toast.LENGTH_LONG).show()}}};d.setOnDismissListener{preview.onPause();preview.onDetach()};d.show();preview.onResume();drawPreview()
     }
 }

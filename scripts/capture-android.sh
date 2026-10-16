@@ -368,3 +368,8 @@ assert {f['kind'] for f in l['features']}=={'circle','area','line'}
 assert len(l['groups'])==1
 pathlib.Path('screenshots/library-result.txt').write_text('PASS: circle, area and line stored, restored after restart and rendered on map.\n')
 PYLIBRARY
+
+adb shell am force-stop "$APP"
+adb shell am start -n "$APP/.MainActivity" --ez previewLibrary true --ez previewCircleEditor true >/dev/null
+sleep 5
+adb exec-out screencap -p > screenshots/Android-circle-editor.png
