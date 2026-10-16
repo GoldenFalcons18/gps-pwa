@@ -236,6 +236,12 @@ struct NavigationMapView: UIViewRepresentable {
             view.canShowCallout = false; view.isEnabled = false
             return view
         }
+        func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+            for view in views where (view.annotation as? Pin)?.kind == "waypoint" {
+                // MapKit initializes marker transforms after viewFor; apply the approved scale after insertion.
+                DispatchQueue.main.async { view.transform=CGAffineTransform(scaleX:0.65,y:0.65) }
+            }
+        }
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             if (view.annotation as? Pin)?.kind == "waypoint" { mapView.deselectAnnotation(view.annotation, animated: false) }
         }

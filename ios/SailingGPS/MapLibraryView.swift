@@ -158,6 +158,9 @@ struct FeatureDraftMap: UIViewRepresentable {
             if annotation is MKUserLocation { return nil }
             let view=MKMarkerAnnotationView(annotation:annotation,reuseIdentifier:nil);view.transform=CGAffineTransform(scaleX:0.65,y:0.65);view.canShowCallout=true;return view
         }
+        func mapView(_ mapView:MKMapView,didAdd views:[MKAnnotationView]) {
+            for view in views where !(view.annotation is MKUserLocation) { DispatchQueue.main.async { view.transform=CGAffineTransform(scaleX:0.65,y:0.65) } }
+        }
         func mapView(_ mapView:MKMapView,rendererFor overlay:MKOverlay)->MKOverlayRenderer {
             if let polygon=overlay as? MKPolygon { let r=MKPolygonRenderer(polygon:polygon);r.strokeColor=color;r.fillColor=color.withAlphaComponent(0.22);r.lineWidth=2;return r }
             if let line=overlay as? MKPolyline { let r=MKPolylineRenderer(polyline:line);r.strokeColor=color;r.lineWidth=3;return r }
