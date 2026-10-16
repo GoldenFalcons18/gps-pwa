@@ -660,14 +660,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "目標なし" to { clearTarget() }
         ))
     }
-    private fun showTargetList(nearest: Boolean) {
+    private fun showTargetList(nearest: Boolean, folder: String = "") {
         val lat = latestLat; val lon = latestLon
         val ordered = if (nearest && lat != null && lon != null) waypoints.sortedBy { NavigationUtils.distanceMeters(lat,lon,it.lat,it.lon) } else waypoints.asReversed()
-        val actions = ordered.map { waypoint ->
+        val actions = ordered.filter{it.group==folder}.map { waypoint ->
             val distance = if (lat != null && lon != null) " · "+DisplayNavigation.distance(NavigationUtils.distanceMeters(lat,lon,waypoint.lat,waypoint.lon), metricUnits) else ""
             ("${waypoint.mark} ${waypoint.name}$distance") to { confirmTarget(waypoint) }
         }
-        showActionPanel(if (nearest) "目標・近い順" else "目標・最近", actions + ("目標なし" to { clearTarget() }))
+        val folders=(listOf("")+library.groups+waypoints.map{it.group}).distinct().sorted()
+        val changeFolder:Pair<String,()->Unit> = ("フォルダ: ${folder.ifEmpty{"メインフォルダ"}} ▾") to { androidx.appcompat.app.AlertDialog.Builder(this).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->showTargetList(nearest,folders[i])}.show();Unit }
+        showActionPanel(if (nearest) "目標・近い順" else "目標・最近", listOf(changeFolder)+actions + ("目標なし" to { clearTarget() }))
     }
     private fun confirmTarget(waypoint: Waypoint) {
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle(waypoint.name)
@@ -796,6 +798,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private var waypointFolder = ""
     private fun renderWaypointList() {
         mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
@@ -804,7 +807,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             text = if (activeWaypoint == null) "目標なし（選択中）" else "目標なし"
             setOnClickListener { clearTarget() }
         })
-        waypoints.forEach { wp ->
+        val folders=(listOf("")+library.groups+waypoints.map{it.group}).distinct().sorted()
+        b.waypointContainer.addView(Button(this).apply {
+            text="フォルダ: ${waypointFolder.ifEmpty{"メインフォルダ"}} ▾"
+            setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->waypointFolder=folders[i];renderWaypointList()}.show() }
+        })
+        waypoints.filter{it.group==waypointFolder}.forEach { wp ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(6, 6, 6, 6)

@@ -93,11 +93,13 @@ struct MapFeatureEditor: View {
     let save: (MapFeature)->Void
     @Environment(\.dismiss) private var dismiss
     @State private var error = ""
+    @State private var radiusUnit = "m"
+    private var radiusFactor: Double { radiusUnit == "km" ? 1000 : radiusUnit == "nm" ? 1852 : 1 }
     var body: some View {
         NavigationStack {
             Form {
                 TextField("名前",text:$feature.name)
-                if feature.kind=="circle" { HStack { Text("半径（m）");TextField("200",value:$feature.radius,format:.number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) } }
+                if feature.kind=="circle" { HStack { Text("半径");TextField("200",value:Binding(get:{feature.radius/radiusFactor},set:{feature.radius=$0*radiusFactor}),format:.number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) };Picker("半径の単位",selection:$radiusUnit){Text("m").tag("m");Text("km").tag("km");Text("nm").tag("nm")}.pickerStyle(.segmented) }
                 ColorPicker("色",selection:Binding(get:{waypointColor(feature.color)},set:{c in let ui=UIColor(c);var r:CGFloat=0,g:CGFloat=0,b:CGFloat=0,a:CGFloat=0;ui.getRed(&r,green:&g,blue:&b,alpha:&a);feature.color=String(format:"#%02X%02X%02X",Int(r*255),Int(g*255),Int(b*255))}),supportsOpacity:false)
                 Picker("グループ",selection:$feature.group){Text("未分類").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
                 Section(feature.kind=="circle" ? "中心を1地点選択" : "結ぶ順に地点を選択") {

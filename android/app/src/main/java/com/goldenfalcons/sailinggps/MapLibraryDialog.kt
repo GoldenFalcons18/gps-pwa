@@ -48,14 +48,20 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         "削除" to {AlertDialog.Builder(context).setTitle("${f.name}を削除しますか？").setPositiveButton("削除"){_,_->save(points(),state().copy(features=state().features.filter{it.id!=f.id}));featureList()}.setNegativeButton("キャンセル",null).show()}))}})
     private fun editFeature(original: MapFeature?, kind: String) {
         val name=EditText(context).apply{hint="名前";setText(original?.name ?: if(kind=="circle")"円エリア" else if(kind=="area")"囲みエリア" else "直線")}
-        val radius=EditText(context).apply{hint="半径（m）";inputType=8194;setText((original?.radius ?: 200.0).toString())}
+        val radius=EditText(context).apply{hint="半径";inputType=8194;setText((original?.radius ?: 200.0).toString())}
+        val unit=Spinner(context);val units=listOf("m","km","nm");val factors=listOf(1.0,1000.0,1852.0);var radiusFactor=1.0
+        unit.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,units)
+        unit.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { val meters=radius.text.toString().toDoubleOrNull()?.times(radiusFactor);radiusFactor=factors[position];if(meters!=null)radius.setText((meters/radiusFactor).toString()) }
+        }
         val color=EditText(context).apply{hint="#RRGGBB";setText(original?.color ?: "#00AAFF")}
         val group=Spinner(context);val names=listOf("")+groups();group.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,names.map{it.ifEmpty{"未分類"}});group.setSelection(names.indexOf(original?.group ?: "").coerceAtLeast(0))
         var ids=original?.waypointIds ?: emptyList();val chosen=TextView(context)
         fun update(){chosen.text=if(ids.isEmpty())"地点未選択（編集時は元の座標を維持）" else ids.mapNotNull{id->points().firstOrNull{it.id==id}?.name}.joinToString(" → ")};update()
         val container=LinearLayout(context).apply {
             orientation=LinearLayout.VERTICAL;setPadding(24,12,24,12)
-            addView(name);if(kind=="circle")addView(radius);addView(color);addView(group);addView(chosen)
+            addView(name);if(kind=="circle"){addView(radius);addView(unit)};addView(color);addView(group);addView(chosen)
             addView(Button(context).apply {
                 text=if(kind=="circle")"中心の地点を選ぶ" else "結ぶ順に地点を選ぶ"
                 setOnClickListener { selected("地点選択") { items -> ids=items.map{w->w.id};update() } }
@@ -64,7 +70,7 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         val d=AlertDialog.Builder(context).setTitle("エリア・直線").setView(ScrollView(context).apply{addView(container)}).setPositiveButton("保存",null).setNegativeButton("キャンセル",null).create()
         d.setOnShowListener{d.getButton(-1).setOnClickListener{runCatching{
             require(kind!="circle" || (if(ids.isEmpty())original?.coordinates?.size ?: 0 else ids.size)==1){"円の中心は1地点を選んでください"}
-            val f=MapFeature(id=original?.id ?: java.util.UUID.randomUUID().toString(),name=name.text.toString().trim(),kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=radius.text.toString().toDouble(),color=color.text.toString().uppercase(),group=names[group.selectedItemPosition],visible=original?.visible ?: true);f.validate()
+            val f=MapFeature(id=original?.id ?: java.util.UUID.randomUUID().toString(),name=name.text.toString().trim(),kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=radius.text.toString().toDouble()*radiusFactor,color=color.text.toString().uppercase(),group=names[group.selectedItemPosition],visible=original?.visible ?: true);f.validate()
             save(points(),state().copy(features=state().features.filter{it.id!=f.id}+f));d.dismiss()
         }.onFailure{Toast.makeText(context,it.message,Toast.LENGTH_LONG).show()}}};d.show()
     }
