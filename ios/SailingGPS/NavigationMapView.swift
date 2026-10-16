@@ -226,7 +226,8 @@ struct NavigationMapView: UIViewRepresentable {
                 return view
             }
             let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
-            view.transform=CGAffineTransform(scaleX:0.8,y:0.8)
+            let markerScale:CGFloat = 0.65
+            view.transform=CGAffineTransform(scaleX:markerScale,y:markerScale)
             view.markerTintColor = UIColor(waypointColor(pin.colorName))
             if let text = pin.markText, !text.isEmpty { view.glyphText = text; view.glyphImage = nil }
             else { view.glyphText = nil; view.glyphImage = MarineMarks.image(pin.markSymbol ?? "flag.fill") }
