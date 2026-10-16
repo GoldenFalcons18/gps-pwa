@@ -179,6 +179,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupButtons()
         setupSensors()
         renderWaypointList()
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewLibraryOverlay", false)) {
+            val selected=waypoints.take(3);val ids=selected.map{it.id}
+            if(ids.size>=3) { library=MapLibrary(groups=listOf("デモ海域"),features=listOf(
+                MapFeature(name="半径200m",kind="circle",waypointIds=ids.take(1),group="デモ海域"),
+                MapFeature(name="囲みエリア",kind="area",waypointIds=ids,color="#CC44AA",group="デモ海域"),
+                MapFeature(name="地点間の直線",kind="line",waypointIds=ids.take(2),color="#FFFF00",group="デモ海域")))
+                waypointStore.saveLibrary(waypoints,library);renderWaypointList();updateNavigationUi() }
+        }
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewLibrary", false)) b.root.post { showMapLibrary() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.318,139.467) }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()

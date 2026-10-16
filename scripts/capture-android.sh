@@ -349,3 +349,22 @@ pathlib.Path('screenshots/navigation-go-result.txt').write_text('PASS: blank lon
 PYAFTERGO
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+
+# New overlays and library UI; only synthetic emulator waypoints are used.
+adb shell am force-stop "$APP"
+adb shell am start -n "$APP/.MainActivity" --ez previewLibraryOverlay true >/dev/null
+sleep 3
+adb exec-out screencap -p > screenshots/Android-library-overlays.png
+adb shell am force-stop "$APP"
+adb shell am start -n "$APP/.MainActivity" --ez previewLibrary true >/dev/null
+sleep 2
+adb exec-out screencap -p > screenshots/Android-map-library.png
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/library-persistence.xml
+python3 - <<'PYLIBRARY'
+import json,pathlib,xml.etree.ElementTree as E
+r=E.parse('screenshots/library-persistence.xml').getroot()
+l=json.loads(next(n.text for n in r if n.get('name')=='library'))
+assert {f['kind'] for f in l['features']}=={'circle','area','line'}
+assert len(l['groups'])==1
+pathlib.Path('screenshots/library-result.txt').write_text('PASS: circle, area and line stored, restored after restart and rendered on map.\n')
+PYLIBRARY

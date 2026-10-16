@@ -265,7 +265,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;").replacingOccurrences(of: "'", with: "&apos;")
     }
     private func fail(_ error: Error) { message = error.localizedDescription; log("Error: \(error.localizedDescription)") }
-    private func log(_ text: String) {
+    func log(_ text: String) {
         let url = directory.appendingPathComponent("debug.log")
         if !FileManager.default.fileExists(atPath: url.path) { FileManager.default.createFile(atPath: url.path, contents: nil) }
         if let file = try? FileHandle(forWritingTo: url) {
@@ -444,6 +444,11 @@ struct ContentView: View {
             }.font(.title3).tint(.black).buttonStyle(.borderedProminent).padding(8)
         }
     }
+    private var appVersionText: String {
+        let version=Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? ""
+        let build=Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? ""
+        return "Sailing GPS \(version) · build \(build)"
+    }
     private var waypointEditor: some View {
         NavigationStack {
             Form {
@@ -457,7 +462,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") + " · build " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "")) }
+                Section("アプリ") { Text(appVersionText) }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -704,7 +709,7 @@ struct ContentView: View {
             importConfirmation = true
         } catch { gps.log("Waypoint import rejected: " + error.localizedDescription); reportTransfer("取り込みできませんでした。\n" + error.localizedDescription) }
     }
-    private var presentedDashboard: some View {
+    private var navigationDashboard: some View {
         ZStack {
             dashboard
             if menuPresented { navigationMenu }
@@ -716,6 +721,9 @@ struct ContentView: View {
         } message: {
             if let waypoint = navigationCandidate { Text(waypoint.name + "\n" + CoordinateInput.format(waypoint.latitude, isLatitude: true) + ", " + CoordinateInput.format(waypoint.longitude, isLatitude: false)) }
         }
+    }
+    private var transferDashboard: some View {
+        navigationDashboard
         .fileImporter(isPresented: $importingWaypoints, allowedContentTypes: [.json, .xml, .zip, .data, UTType(filenameExtension:"kmz") ?? .data, UTType(filenameExtension:"kml") ?? .xml], allowsMultipleSelection: false, onCompletion: readWaypointImport)
         .confirmationDialog("ウェイポイントを取り込みますか？", isPresented: $importConfirmation, titleVisibility: .visible) {
             Button("追加する") {
@@ -726,10 +734,11 @@ struct ContentView: View {
             Button("キャンセル", role: .cancel) { pendingWaypointImport = KmlArchive.Import() }
         } message: { Text(importSummary) }
         .alert("ウェイポイントの入出力", isPresented: $showTransferNotice) { Button("OK", role: .cancel) {} } message: { Text(transferNotice) }
+    }
+    private var presentedDashboard: some View {
+        transferDashboard
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
-        .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:{items,features,format in
-            do { exported=try gps.exportWaypoints(items,features:features,format:format);libraryPresented=false;DispatchQueue.main.asyncAfter(deadline:.now()+0.5){sharing=true} } catch { reportTransfer(error.localizedDescription) }
-        },importFile:{libraryPresented=false;DispatchQueue.main.asyncAfter(deadline:.now()+0.5){importingWaypoints=true}}) }
+        .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:exportLibrary,importFile:beginLibraryImport) }
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
@@ -739,11 +748,28 @@ struct ContentView: View {
             }
         }
     }
+    private func exportLibrary(_ items:[Waypoint], _ features:[MapFeature], _ format:String) {
+        do { exported=try gps.exportWaypoints(items,features:features,format:format);libraryPresented=false
+            DispatchQueue.main.asyncAfter(deadline:.now()+0.5){sharing=true}
+        } catch { reportTransfer(error.localizedDescription) }
+    }
+    private func beginLibraryImport() { libraryPresented=false;DispatchQueue.main.asyncAfter(deadline:.now()+0.5){importingWaypoints=true} }
     private var previewDashboard: some View {
         presentedDashboard.onChange(of: scenePhase) { _, phase in gps.preview(phase == ScenePhase.active) }
         .onAppear {
             gps.preview(true)
             #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--preview-library-overlays") {
+                var items=gps.waypoints
+                if items.count<3 { items.append(Waypoint(name:"TEST C",latitude:35.316,longitude:139.468)) }
+                if items.count>=3 {
+                    var circle=MapFeature(name:"半径200m",kind:"circle");circle.waypointIDs=[items[0].id];circle.group="デモ海域"
+                    var area=MapFeature(name:"囲みエリア",kind:"area");area.waypointIDs=Array(items.prefix(3)).map(\.id);area.color="#CC44AA";area.group="デモ海域"
+                    var line=MapFeature(name:"地点間の直線",kind:"line");line.waypointIDs=Array(items.prefix(2)).map(\.id);line.color="#FFFF00";line.group="デモ海域"
+                    try? gps.saveLibrary(items,MapLibrary(groups:["デモ海域"],features:[circle,area,line]))
+                }
+            }
+            if ProcessInfo.processInfo.arguments.contains("--preview-library") { libraryPresented=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-map-operations") { mapOperationsCoordinate = .init(latitude: 35.318, longitude: 139.467); mapOperationsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
