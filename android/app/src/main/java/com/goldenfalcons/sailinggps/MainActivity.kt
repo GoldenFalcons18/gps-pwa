@@ -29,6 +29,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var waypointStore: WaypointStore
     private val waypoints = mutableListOf<Waypoint>()
     private var activeWaypoint: Waypoint? = null
+    private var library = MapLibrary()
+    private var pendingExport: ByteArray? = null
 
     private lateinit var sensorManager: SensorManager
     private var accel = FloatArray(3)
@@ -68,6 +70,56 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private val logBuffer = ArrayDeque<String>()
     private lateinit var updateChecker: GitHubUpdateChecker
+
+    private val exportWaypointsDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        if (uri != null) runCatching {
+            val data = pendingExport ?: WaypointArchive.encode(waypoints)
+            contentResolver.openOutputStream(uri, "wt")?.use { it.write(data) } ?: error("保存先を開けません")
+            debug("Waypoints exported count=${waypoints.size}")
+            Toast.makeText(this, "ウェイポイントを保存しました", Toast.LENGTH_LONG).show()
+        }.onFailure { transferError(it) }
+    }
+    private val importWaypointsDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) Thread {
+            val result = runCatching {
+                val data = contentResolver.openInputStream(uri)?.use { input ->
+                    val bytes = java.io.ByteArrayOutputStream(); val buffer = ByteArray(8192)
+                    while (true) { val count = input.read(buffer); if (count < 0) break
+                        require(bytes.size() + count <= KmlArchive.MAX_BYTES) { "32MBを超えています" }; bytes.write(buffer, 0, count) }
+                    bytes.toByteArray()
+                } ?: error("ファイルを開けません")
+                if(data.toString(Charsets.UTF_8).trimStart().startsWith("{")) KmlArchive.Import(WaypointArchive.decode(data),emptyList()) else KmlArchive.decode(data)
+            }
+            runOnUiThread { if (!isFinishing && !isDestroyed) result.onSuccess(::confirmWaypointImport).onFailure(::transferError) }
+        }.start()
+    }
+    private fun transferError(error: Throwable) {
+        debug("Waypoint transfer failed: ${error.message}")
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントの入出力").setMessage("処理できませんでした。既存の地点は削除しません。\n${error.message}").setPositiveButton("OK", null).show()
+    }
+    private fun confirmWaypointImport(archive: KmlArchive.Import) {
+        val incoming = archive.waypoints
+        runCatching {
+            val preview = WaypointArchive.merge(waypoints, incoming)
+            androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントを取り込みますか？")
+                .setMessage("追加 ${preview.added}件・重複 ${preview.skipped}件・図形 ${archive.features.size}件\n${archive.warnings.joinToString("\n")}\n既存の地点と選択中の目標は保持します。")
+                .setNegativeButton("キャンセル", null).setPositiveButton("追加する") { _, _ ->
+                    runCatching {
+                        val merged = WaypointArchive.merge(waypoints, incoming)
+                        val mapping = incoming.associate { w -> w.id to (merged.items.firstOrNull { it.name==w.name && it.lat==w.lat && it.lon==w.lon && it.group==w.group }?.id ?: w.id) }
+                        val imported = archive.features.map { f -> f.copy(waypointIds=f.waypointIds.map { mapping[it] ?: it }) }
+                        val features=library.features.toMutableList()
+                        for(f in imported) { if(features.any { it.name==f.name && it.kind==f.kind && it.points(merged.items)==f.points(merged.items) && it.radius==f.radius && it.group==f.group }) continue
+                            features += if(features.any { it.id==f.id }) f.copy(id=java.util.UUID.randomUUID().toString()) else f }
+                        val updated=library.copy(groups=(library.groups+incoming.map{it.group}+imported.map{it.group}).filter{it.isNotBlank()}.distinct(),features=features)
+                        waypointStore.saveLibrary(merged.items,updated); library=updated
+                        waypoints.clear(); waypoints.addAll(merged.items); renderWaypointList(); updateNavigationUi()
+                        debug("Waypoints imported added=${merged.added} skipped=${merged.skipped}")
+                        Toast.makeText(this, "追加 ${merged.added}件・重複 ${merged.skipped}件", Toast.LENGTH_LONG).show()
+                    }.onFailure(::transferError)
+                }.show()
+        }.onFailure(::transferError)
+    }
 
     companion object {
         private const val REQ_LOCATION = 10
@@ -113,6 +165,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         androidx.core.view.ViewCompat.requestApplyInsets(b.root)
 
         waypointStore = WaypointStore(this)
+        library = waypointStore.loadLibrary()
         waypoints += waypointStore.loadAll()
         val activeId = waypointStore.getActiveId()
         activeWaypoint = if (activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
@@ -226,7 +279,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
             mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
-            mapPanel?.setWaypoints(waypoints, activeWaypoint)
+            mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
+        mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
             updateMap()
             mapPanel?.resume()
         }
@@ -618,11 +672,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
             }
     }
+    private fun showMapLibrary() {
+        MapLibraryDialog(this,{waypoints.toList()},{library},{items,updated ->
+            runCatching { waypointStore.saveLibrary(items,updated);waypoints.clear();waypoints.addAll(items);library=updated
+                activeWaypoint=waypoints.firstOrNull{it.id==activeWaypoint?.id};renderWaypointList();updateNavigationUi();debug("Map library saved groups=${library.groups.size} features=${library.features.size}") }.onFailure(::transferError)
+        },{items,features,format -> runCatching {
+            pendingExport=if(format=="json")WaypointArchive.encode(items)else KmlArchive.encode(items,features,format=="kmz")
+            exportWaypointsDocument.launch("SailingGPS-waypoints-${System.currentTimeMillis()}.$format")
+        }.onFailure(::transferError) },{importWaypointsDocument.launch(arrayOf("*/*"))}).show()
+    }
+
     private fun showNavigationMenu() {
         showActionPanel("メニュー", listOf(
             "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showSettings() },
             "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ" to { addCurrentLocationWaypoint() },
             "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
+            "地点・グループ・エリア" to { showMapLibrary() },
+            "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
             "モード切替" to { setDisplayMode(!navigatorMode) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
@@ -721,7 +787,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun renderWaypointList() {
-        mapPanel?.setWaypoints(waypoints, activeWaypoint)
+        mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
+        mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
         b.waypointContainer.removeAllViews()
         b.waypointContainer.addView(Button(this).apply {
             text = if (activeWaypoint == null) "目標なし（選択中）" else "目標なし"
@@ -762,7 +829,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val delete = Button(this).apply {
                 this.text = "削除"
                 setOnClickListener {
+                    library=library.copy(features=library.features.map { f -> if(wp.id in f.waypointIds) f.copy(coordinates=f.points(waypoints),waypointIds=emptyList()) else f })
                     waypoints.removeAll { it.id == wp.id }
+                    waypointStore.saveLibrary(waypoints,library)
                     if (activeWaypoint?.id == wp.id) activeWaypoint = null
                     waypointStore.saveAll(waypoints)
                     waypointStore.setActiveId(activeWaypoint?.id)

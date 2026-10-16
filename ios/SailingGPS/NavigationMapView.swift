@@ -6,6 +6,7 @@ struct NavigationMapView: UIViewRepresentable {
     let location: CLLocation?
     let heading: Double?
     let waypoints: [Waypoint]
+    let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
     let track: [CLLocationCoordinate2D]
@@ -143,15 +144,22 @@ struct NavigationMapView: UIViewRepresentable {
             self.map = map
             let p = parent
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
-            let key = "\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)|\(p.showWaypoints)|\(p.showCourse)"
+            let librarySignature = (try? JSONEncoder().encode(p.library)).map { String(decoding:$0,as:UTF8.self) } ?? ""
+            let key = "\(librarySignature)|\(p.waypoints.map{$0.group ?? ""}.joined())|\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)|\(p.showWaypoints)|\(p.showCourse)"
             if key != signature {
                 signature = key
                 courseHeading = nil
                 map.removeAnnotations(map.annotations)
                 map.removeOverlays(map.overlays)
-                for wp in p.showWaypoints ? p.waypoints : [] {
+                for wp in p.showWaypoints ? p.waypoints.filter{!p.library.hiddenGroups.contains($0.group ?? "")} : [] {
                     let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
                     map.addAnnotation(pin)
+                }
+                for f in p.library.features where f.visible && !p.library.hiddenGroups.contains(f.group) {
+                    let points = f.boundary(p.waypoints.map(\.archiveEntry)).map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
+                    guard points.count >= 2 else { continue }
+                    if f.kind == "line" { let line=MKPolyline(coordinates:points,count:points.count);line.title="feature:"+f.color;map.addOverlay(line) }
+                    else { let area=MKPolygon(coordinates:points,count:points.count);area.title="feature:"+f.color;map.addOverlay(area) }
                 }
                 if p.track.count > 1 { map.addOverlay(MKPolyline(coordinates: p.track, count: p.track.count)) }
                 if let location = p.location {
@@ -189,9 +197,12 @@ struct NavigationMapView: UIViewRepresentable {
             if interacting && parent.following { DispatchQueue.main.async { self.parent.following = false } }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let area = overlay as? MKPolygon {
+                let renderer=MKPolygonRenderer(polygon:area);let color=UIColor(waypointColor(area.title?.replacingOccurrences(of:"feature:",with:"") ?? "#00AAFF"));renderer.strokeColor=color;renderer.fillColor=color.withAlphaComponent(0.25);renderer.lineWidth=3;return renderer
+            }
             if let line = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: line)
-                renderer.strokeColor = line.title == "target" ? .green : line.title == "course" ? .black : .orange
+                renderer.strokeColor = line.title?.hasPrefix("feature:")==true ? UIColor(waypointColor(String(line.title!.dropFirst(8)))) : line.title == "target" ? .green : line.title == "course" ? .black : .orange
                 renderer.lineWidth = line.title == "course" ? 2 : 3
                 return renderer
             }

@@ -11,7 +11,10 @@ data class Waypoint(
     val lat: Double,
     val lon: Double,
     val mark: String = "●",
-    val color: String = "#FFAA00"
+    val color: String = "#FFAA00",
+    val note: String? = null,
+    val archiveMark: String? = null,
+    val group: String = ""
 )
 
 class WaypointStore(context: Context) {
@@ -29,13 +32,16 @@ class WaypointStore(context: Context) {
                 lat = o.getDouble("lat"),
                 lon = o.getDouble("lon"),
                 mark = o.optString("mark", "●"),
-                color = o.optString("color", "#FFAA00")
+                color = o.optString("color", "#FFAA00"),
+                note = if (o.isNull("note")) null else o.getString("note"),
+                archiveMark = if (o.isNull("archiveMark")) null else o.getString("archiveMark"),
+                group = o.optString("group", "")
             )
         }
         return result
     }
 
-    fun saveAll(items: List<Waypoint>) {
+    private fun serialized(items: List<Waypoint>): JSONArray {
         val arr = JSONArray()
         items.forEach { w ->
             arr.put(JSONObject().apply {
@@ -45,9 +51,20 @@ class WaypointStore(context: Context) {
                 put("lon", w.lon)
                 put("mark", w.mark)
                 put("color", w.color)
+                put("note", w.note ?: JSONObject.NULL)
+                put("archiveMark", w.archiveMark ?: JSONObject.NULL)
+                put("group", w.group)
             })
         }
-        prefs.edit().putString("items", arr.toString()).apply()
+        return arr
+    }
+    fun loadLibrary(): MapLibrary = MapLibrary.from(prefs.getString("library", "{}") ?: "{}")
+    fun saveLibrary(items: List<Waypoint>, library: MapLibrary) {
+        check(prefs.edit().putString("items", serialized(items).toString()).putString("library", library.json().toString()).commit()) { "保存に失敗しました" }
+    }
+    fun saveAll(items: List<Waypoint>, synchronous: Boolean = false) {
+        val edit = prefs.edit().putString("items", serialized(items).toString())
+        if (synchronous) check(edit.commit()) { "保存に失敗しました" } else edit.apply()
     }
 
     fun getActiveId(): String? = prefs.getString("activeId", null)

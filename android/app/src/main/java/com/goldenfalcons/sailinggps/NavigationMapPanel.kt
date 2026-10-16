@@ -231,6 +231,18 @@ class NavigationMapPanel(
         targetLine.setPoints(if (current != null && target != null) listOf(current!!, target!!) else emptyList())
     }
 
+    private val featureOverlays = mutableListOf<org.osmdroid.views.overlay.Overlay>()
+    fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
+        map.overlays.removeAll(featureOverlays.toSet());featureOverlays.clear()
+        for(f in features) {
+            val points=f.boundary(waypoints).map{GeoPoint(it.lat,it.lon)}
+            if(points.size<2)continue
+            val color=runCatching{Color.parseColor(f.color)}.getOrDefault(Color.CYAN)
+            if(f.kind=="line") featureOverlays += Polyline(map).apply{setPoints(points);outlinePaint.color=color;outlinePaint.strokeWidth=3f;title=f.name;setOnClickListener{_,_,_->true}}
+            else featureOverlays += org.osmdroid.views.overlay.Polygon(map).apply{setPoints(points);outlinePaint.color=color;outlinePaint.strokeWidth=3f;fillPaint.color=(color and 0x00FFFFFF) or 0x40000000;title=f.name;setOnClickListener{_,_,_->true}}
+        }
+        map.overlays.addAll(0,featureOverlays);map.invalidate()
+    }
     fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?) {
         waypointData = waypoints.toList()
         target = active?.let { GeoPoint(it.lat, it.lon) }

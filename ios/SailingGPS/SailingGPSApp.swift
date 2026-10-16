@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import UniformTypeIdentifiers
 
 struct Waypoint: Identifiable, Codable {
     var id = UUID()
@@ -11,7 +12,23 @@ struct Waypoint: Identifiable, Codable {
     var colorName: String?
     var markSymbol: String?
     var markText: String?
+    var group: String?
     var coordinate: CLLocationCoordinate2D { .init(latitude: latitude, longitude: longitude) }
+}
+
+extension Waypoint {
+    var archiveEntry: WaypointArchive.Entry {
+        let ui = UIColor(waypointColor(colorName)); var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        ui.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let color = String(format: "#%02X%02X%02X", Int((red*255).rounded()), Int((green*255).rounded()), Int((blue*255).rounded()))
+        let mark = (markText?.isEmpty == false) ? "text:" + markText! : "symbol:" + (markSymbol ?? "flag.fill")
+        return .init(id: id, name: name, latitude: latitude, longitude: longitude, mark: mark, color: color, note: note, group: group)
+    }
+    init(archive e: WaypointArchive.Entry) {
+        self.init(id: e.id, name: e.name, latitude: e.latitude, longitude: e.longitude, note: e.note, colorName: e.color,
+                  markSymbol: e.mark.hasPrefix("symbol:") ? String(e.mark.dropFirst(7)) : nil,
+                  markText: e.mark.hasPrefix("text:") ? String(e.mark.dropFirst(5)) : nil, group: e.group)
+    }
 }
 
 final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -29,6 +46,8 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func elapsed(at date: Date) -> Double { elapsedBeforeStart + (recordingStartedAt.map { max(0, date.timeIntervalSince($0)) } ?? 0) }
     @Published var message = "記録を開始してください"
     @Published var waypoints: [Waypoint] = []
+    @Published var library = MapLibrary()
+    private struct LibraryDocument: Codable { var waypoints: [Waypoint]; var library: MapLibrary }
     @Published var quickWaypointID: UUID?
     @Published var savingCurrentWaypoint = false
     private var waypointTimeout: Timer?
@@ -39,6 +58,8 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var csv: URL { directory.appendingPathComponent("track.csv") }
     private var waypointFile: URL { directory.appendingPathComponent("waypoints.json") }
 
+    private var libraryFile: URL { directory.appendingPathComponent("map-library-v2.json") }
+
     override init() {
         super.init()
         manager.delegate = self
@@ -46,6 +67,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.activityType = .otherNavigation
         manager.pausesLocationUpdatesAutomatically = false
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
+        if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(LibraryDocument.self, from: data) { waypoints = saved.waypoints; library = saved.library }
     }
 
     func preview(_ active: Bool) {
@@ -175,10 +197,38 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         previousRecordedLocation = nil; recordingStartedAt = recording ? Date() : nil
         log("Dashboard counter reset; saved track retained")
     }
-    func remove(_ id: UUID) { waypoints.removeAll { $0.id == id }; saveWaypoints() }
-    private func saveWaypoints() {
-        do { try JSONEncoder().encode(waypoints).write(to: waypointFile, options: .atomic) } catch { fail(error) }
+    func remove(_ id: UUID) {
+        library.features=library.features.map { f in var f=f;if f.waypointIDs.contains(id) { f.coordinates=f.points(waypoints.map(\.archiveEntry));f.waypointIDs=[] };return f }
+        waypoints.removeAll { $0.id == id };saveWaypoints()
     }
+    func exportWaypoints(_ items: [Waypoint]? = nil, features: [MapFeature] = [], format: String = "json") throws -> URL {
+        let entries=(items ?? waypoints).map(\.archiveEntry)
+        let data = try format == "json" ? WaypointArchive.encode(entries) : KmlArchive.encode(entries,features:features,kmz:format == "kmz")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SailingGPS-waypoints-\(UUID().uuidString).\(format)")
+        try data.write(to:url,options:.atomic);log("Waypoints exported count=\(entries.count) features=\(features.count) format=\(format)");return url
+    }
+    func saveLibrary(_ items: [Waypoint], _ updated: MapLibrary) throws {
+        try WaypointArchive.validate(items.map(\.archiveEntry));for f in updated.features { try f.validate() }
+        try JSONEncoder().encode(LibraryDocument(waypoints:items,library:updated)).write(to:libraryFile,options:.atomic)
+        waypoints=items;library=updated;log("Map library saved groups=\(updated.groups.count) features=\(updated.features.count)")
+    }
+    func importWaypoints(_ archive: KmlArchive.Import) throws -> (Int, Int) {
+        let incoming=archive.waypoints
+        let result = try WaypointArchive.merge(existing: waypoints.map(\.archiveEntry), incoming: incoming)
+        var mapping: [UUID:UUID] = [:]
+        for e in incoming { mapping[e.id]=result.entries.first(where:{$0.sameContent(e)})?.id ?? e.id }
+        var updated=library
+        for var feature in archive.features {
+            feature.waypointIDs=feature.waypointIDs.map{mapping[$0] ?? $0}
+            if updated.features.contains(where:{$0.name==feature.name && $0.kind==feature.kind && $0.group==feature.group && $0.radius==feature.radius && $0.points(result.entries)==feature.points(result.entries)}) { continue }
+            if updated.features.contains(where:{$0.id==feature.id}) { feature.id=UUID() };updated.features.append(feature)
+        }
+        updated.groups=Array(Set(updated.groups + incoming.compactMap(\.group) + archive.features.map(\.group))).filter{!$0.isEmpty}.sorted()
+        try saveLibrary(result.entries.map{Waypoint(archive:$0)},updated)
+        log("Waypoints imported added=\(result.added) skipped=\(result.skipped) features=\(archive.features.count)")
+        return (result.added,result.skipped)
+    }
+    private func saveWaypoints() { do { try saveLibrary(waypoints,library) } catch { fail(error) } }
     func export() -> URL? {
         do {
             try handle?.synchronize()
@@ -249,6 +299,13 @@ struct ContentView: View {
     @State private var longitudeDirection = "E"
     @State private var exported: URL?
     @State private var sharing = false
+    @State private var importingWaypoints = false
+    @State private var pendingWaypointImport = KmlArchive.Import()
+    @State private var libraryPresented = false
+    @State private var importConfirmation = false
+    @State private var transferNotice = ""
+    @State private var showTransferNotice = false
+    @State private var importSummary = ""
     @State private var settings = false
     @State private var menuPresented = false
     @State private var waypointListPresented = false
@@ -370,7 +427,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
             .overlay(alignment: .top) {
@@ -400,7 +457,7 @@ struct ContentView: View {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")
                     Text(gps.message).font(.caption)
                 }
-                Section("アプリ") { Text("Sailing GPS 1.6.7 · build 18") }
+                Section("アプリ") { Text("Sailing GPS " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") + " · build " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "")) }
             }.navigationTitle("設定").toolbar { Button("完了") { settings = false } }
         }.tint(.orange).preferredColorScheme(.dark)
     }
@@ -506,6 +563,8 @@ struct ContentView: View {
                     menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
                     menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
                     menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
+                    menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
+                    menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
                     menuTile("設定") { menuAction { settings = true } }
                     menuTile("モード", detail: mode == 0 ? "スピードメーター → ナビゲーター" : "ナビゲーター → スピードメーター") { menuAction { mode = mode == 0 ? 1 : 0 } }
@@ -626,6 +685,25 @@ struct ContentView: View {
             }.scrollIndicators(.hidden)
         }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
+    private func reportTransfer(_ text: String) {
+        transferNotice = text; showTransferNotice = true
+    }
+    private func readWaypointImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }
+            let data = try handle.read(upToCount: KmlArchive.maxBytes + 1) ?? Data()
+            let archive: KmlArchive.Import
+            if String(decoding:data.prefix(40),as:UTF8.self).trimmingCharacters(in:.whitespacesAndNewlines).hasPrefix("{") { archive = .init(waypoints:try WaypointArchive.decode(data)) } else { archive = try KmlArchive.decode(data) }
+            let entries = archive.waypoints
+            let preview = try WaypointArchive.merge(existing: gps.waypoints.map(\.archiveEntry), incoming: entries)
+            pendingWaypointImport = archive
+            importSummary = "追加 \(preview.added)件・重複 \(preview.skipped)件・図形 \(archive.features.count)件\n\(archive.warnings.joined(separator:"\n"))\n既存の地点と選択中の目標は保持します。"
+            importConfirmation = true
+        } catch { gps.log("Waypoint import rejected: " + error.localizedDescription); reportTransfer("取り込みできませんでした。\n" + error.localizedDescription) }
+    }
     private var presentedDashboard: some View {
         ZStack {
             dashboard
@@ -638,7 +716,20 @@ struct ContentView: View {
         } message: {
             if let waypoint = navigationCandidate { Text(waypoint.name + "\n" + CoordinateInput.format(waypoint.latitude, isLatitude: true) + ", " + CoordinateInput.format(waypoint.longitude, isLatitude: false)) }
         }
+        .fileImporter(isPresented: $importingWaypoints, allowedContentTypes: [.json, .xml, .zip, .data, UTType(filenameExtension:"kmz") ?? .data, UTType(filenameExtension:"kml") ?? .xml], allowsMultipleSelection: false, onCompletion: readWaypointImport)
+        .confirmationDialog("ウェイポイントを取り込みますか？", isPresented: $importConfirmation, titleVisibility: .visible) {
+            Button("追加する") {
+                do { let counts = try gps.importWaypoints(pendingWaypointImport); reportTransfer("追加 \(counts.0)件・重複 \(counts.1)件") }
+                catch { gps.log("Waypoint import save failed: " + error.localizedDescription); reportTransfer("保存できませんでした。\n" + error.localizedDescription) }
+                pendingWaypointImport = KmlArchive.Import()
+            }
+            Button("キャンセル", role: .cancel) { pendingWaypointImport = KmlArchive.Import() }
+        } message: { Text(importSummary) }
+        .alert("ウェイポイントの入出力", isPresented: $showTransferNotice) { Button("OK", role: .cancel) {} } message: { Text(transferNotice) }
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+        .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:{items,features,format in
+            do { exported=try gps.exportWaypoints(items,features:features,format:format);libraryPresented=false;DispatchQueue.main.asyncAfter(deadline:.now()+0.5){sharing=true} } catch { reportTransfer(error.localizedDescription) }
+        },importFile:{libraryPresented=false;DispatchQueue.main.asyncAfter(deadline:.now()+0.5){importingWaypoints=true}}) }
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
