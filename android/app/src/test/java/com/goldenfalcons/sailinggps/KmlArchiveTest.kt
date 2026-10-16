@@ -32,9 +32,8 @@ class KmlArchiveTest {
     @Test fun providedCompassFileWhenAvailable() {
         val path=System.getenv("SAILING_KMZ_TEST") ?: return
         val result=KmlArchive.decode(java.io.File(path).readBytes())
-        assertEquals(79,result.waypoints.size);assertEquals(5,result.waypoints.map{it.group}.distinct().size)
+        assertEquals(79,result.waypoints.size);assertEquals(79,result.waypoints.map{it.id}.toSet().size);assertEquals(setOf("#FF8000","#FF00FF","#0000FF","#800080","#FFFFFF","#00C7C7","#00B300","#CC0000"),result.waypoints.map{it.color.uppercase()}.toSet());assertEquals(5,result.waypoints.map{it.group}.distinct().size)
         assertTrue(result.waypoints.all{it.mark=="📍"});assertEquals(0,WaypointArchive.merge(result.waypoints,result.waypoints).added)
         val round=KmlArchive.decode(KmlArchive.encode(result.waypoints,emptyList(),true));assertEquals(0,WaypointArchive.merge(result.waypoints,round.waypoints).added)
     }
 }
-

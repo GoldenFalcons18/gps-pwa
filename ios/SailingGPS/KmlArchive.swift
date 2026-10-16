@@ -97,7 +97,7 @@ enum KmlArchive {
                 let group = extras["sailing.group"] ?? group
                 let styleID = String(node.value("styleUrl").dropFirst())
                 let style = node.direct("Style") ?? styles[maps[styleID] ?? styleID]
-                let rgb = extras["sailing.color"] ?? color(style?.descendants("color").first?.content) ?? "#FFAA00"
+                let rgb = extras["sailing.color"] ?? color(style?.direct(node.descendants("Point").isEmpty ? "LineStyle" : "IconStyle")?.value("color")) ?? "#FFAA00"
                 let href = style?.descendants("href").first?.content ?? ""
                 let mark = extras["sailing.mark"] ?? (href.contains("pushpin") ? "symbol:mappin" : "symbol:flag.fill")
                 let id = UUID(uuidString:extras["sailing.id"] ?? extras["uuid"] ?? "") ?? UUID()
@@ -118,7 +118,7 @@ enum KmlArchive {
                         guard a.count == 2, let lat = Double(a[0]), let lon = Double(a[1]) else { throw WaypointArchive.ArchiveError.invalid }
                         points = [.init(latitude:lat,longitude:lon)]
                     }
-                    f.coordinates = points; f.radius = Double(extras["sailing.radius"] ?? "200") ?? .nan; f.color = rgb; f.group = group
+                    f.coordinates = points; f.radius = Double(extras["sailing.radius"] ?? "200") ?? .nan; f.color = rgb; f.group = group; f.visible = extras["sailing.visible"] != "false"
                     try f.validate(); result.features.append(f)
                     if !g.descendants("innerBoundaryIs").isEmpty { result.warnings.append("穴のあるエリアは外周のみ取り込みました") }
                 }
@@ -152,7 +152,7 @@ enum KmlArchive {
             for f in features where f.group == group {
                 let p = f.boundary(points); guard p.count >= 2 else { continue }
                 xml += "<Placemark><name>\(escape(f.name))</name><Style><LineStyle><color>\(kmlColor(f.color))</color><width>3</width></LineStyle><PolyStyle><color>\(kmlColor(f.color,"40"))</color></PolyStyle></Style><ExtendedData>"
-                xml += extra("sailing.id",f.id.uuidString) + extra("sailing.group",group) + extra("sailing.color",f.color) + extra("sailing.kind",f.kind) + extra("sailing.radius",String(f.radius)) + extra("sailing.waypointIds",f.waypointIDs.map(\.uuidString).joined(separator:","))
+                xml += extra("sailing.id",f.id.uuidString) + extra("sailing.group",group) + extra("sailing.color",f.color) + extra("sailing.visible",String(f.visible)) + extra("sailing.kind",f.kind) + extra("sailing.radius",String(f.radius)) + extra("sailing.waypointIds",f.waypointIDs.map(\.uuidString).joined(separator:","))
                 if let c = f.points(points).first { xml += extra("sailing.center","\(c.latitude),\(c.longitude)") }; xml += "</ExtendedData>"
                 if f.kind == "line" { xml += "<LineString><tessellate>1</tessellate><coordinates>\(coord(p))</coordinates></LineString>" }
                 else { xml += "<Polygon><outerBoundaryIs><LinearRing><coordinates>\(coord(p + [p[0]]))</coordinates></LinearRing></outerBoundaryIs></Polygon>" }

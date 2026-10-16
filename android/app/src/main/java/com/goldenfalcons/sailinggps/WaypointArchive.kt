@@ -39,12 +39,13 @@ object WaypointArchive {
             Waypoint(id = UUID.fromString(o.getString("id")).toString(), name = o.getString("name"), lat = o.getDouble("latitude"), lon = o.getDouble("longitude"), mark = displayMark(mark), color = o.getString("color").uppercase(java.util.Locale.ROOT), note = if (o.isNull("note")) null else o.getString("note"), archiveMark = mark, group = o.optString("group", "")).also(::validate)
         }
     }
+    fun sameContent(a: Waypoint, b: Waypoint): Boolean = a.name==b.name && a.lat==b.lat && a.lon==b.lon && a.group==b.group && archiveMark(a)==archiveMark(b) && a.color.equals(b.color,true) && (a.note ?: "")== (b.note ?: "")
     data class Result(val items: List<Waypoint>, val added: Int, val skipped: Int)
     fun merge(existing: List<Waypoint>, incoming: List<Waypoint>): Result {
         incoming.forEach(::validate)
         val result = existing.toMutableList(); var skipped = 0; var added = 0
         for (item in incoming) {
-            if (result.any { it.group == item.group && it.name == item.name && it.lat == item.lat && it.lon == item.lon && archiveMark(it) == archiveMark(item) && it.color.equals(item.color, true) && (it.note ?: "") == (item.note ?: "") }) { skipped++; continue }
+            if (result.any { sameContent(it,item) }) { skipped++; continue }
             result += if (result.any { it.id == item.id }) item.copy(id = UUID.randomUUID().toString()) else item
             added++
         }

@@ -31,6 +31,10 @@ object KmlArchive {
             val points=mutableListOf<Waypoint>();val features=mutableListOf<MapFeature>();val warnings=mutableListOf<String>();var total=0;var entries=0;var files=0
             ZipInputStream(ByteArrayInputStream(data)).use { zip -> while(true) {
                 val entry=zip.nextEntry ?: break;require(++entries<=2000) { "ZIP内のファイルが多すぎます" }
+                if(!entry.isDirectory && !entry.name.lowercase().endsWith(".kml")) {
+                    val buffer=ByteArray(8192)
+                    while(true) { val n=zip.read(buffer);if(n<0)break;total+=n;require(total<=MAX_BYTES) { "展開したKMZが32MBを超えています" } }
+                }
                 if(!entry.isDirectory && entry.name.lowercase().endsWith(".kml")) {
                     val out=ByteArrayOutputStream();val buffer=ByteArray(8192)
                     while(true) { val n=zip.read(buffer);if(n<0)break;total+=n;require(total<=MAX_BYTES) { "展開したKMLが32MBを超えています" };out.write(buffer,0,n) }
@@ -61,7 +65,7 @@ object KmlArchive {
                 val extras=descendants(e,"Data").associate { it.getAttribute("name") to text(it,"value") } + descendants(e,"SimpleData").associate { it.getAttribute("name") to it.textContent.trim() }
                 val g=extras["sailing.group"] ?: group
                 val styleId=text(e,"styleUrl").removePrefix("#");val style=direct(e,"Style") ?: styles[maps[styleId] ?: styleId]
-                val color=extras["sailing.color"] ?: style?.let { descendants(it,"color").firstOrNull()?.textContent?.let(::rgb) } ?: "#FFAA00"
+                val color=extras["sailing.color"] ?: style?.let { (direct(it,if(descendants(e,"Point").isNotEmpty())"IconStyle" else "LineStyle")?.let { c -> text(c,"color") })?.let(::rgb) } ?: "#FFAA00"
                 val href=style?.let { descendants(it,"href").firstOrNull()?.textContent }.orEmpty()
                 val mark=extras["sailing.mark"] ?: if(href.contains("pushpin")) "symbol:mappin" else "symbol:flag.fill"
                 if(!mark.startsWith("text:") && !mark.startsWith("symbol:")) error("マークの形式が無効です")
@@ -74,7 +78,7 @@ object KmlArchive {
                     val shape=kind ?: if(tag(geometry)=="Polygon") "area" else "line"
                     val ids=extras["sailing.waypointIds"]?.split(',')?.filter { it.isNotBlank() }?.map { UUID.fromString(it).toString() } ?: emptyList()
                     val center=extras["sailing.center"]?.split(',')?.takeIf { it.size==2 }?.let { listOf(MapCoordinate(it[0].toDouble(),it[1].toDouble())) }
-                    features+=MapFeature(id=if(index==0)id else UUID.randomUUID().toString(),name=name,kind=shape,waypointIds=ids,coordinates=if(shape=="circle")center ?: p.take(1) else p,radius=extras["sailing.radius"]?.toDouble() ?: 200.0,color=color,group=g).also { it.validate() }
+                    features+=MapFeature(id=if(index==0)id else UUID.randomUUID().toString(),name=name,kind=shape,waypointIds=ids,coordinates=if(shape=="circle")center ?: p.take(1) else p,radius=extras["sailing.radius"]?.toDouble() ?: 200.0,color=color,group=g,visible=extras["sailing.visible"]!="false").also { it.validate() }
                     if(descendants(geometry,"innerBoundaryIs").isNotEmpty())warnings+="穴のあるエリアは外周のみ取り込みました"
                 }
                 if(descendants(e,"Track").isNotEmpty() || descendants(e,"Model").isNotEmpty())warnings+="軌跡時刻・3Dモデルは取り込み対象外です"
@@ -103,7 +107,7 @@ object KmlArchive {
                 features.filter { it.group==group }.forEach { f ->
                     val p=f.boundary(points);if(p.size<2)return@forEach
                     append("<Placemark><name>${escape(f.name)}</name><Style><LineStyle><color>${kmlColor(f.color)}</color><width>3</width></LineStyle><PolyStyle><color>${kmlColor(f.color,"40")}</color></PolyStyle></Style><ExtendedData>")
-                    append(extra("sailing.id",f.id));append(extra("sailing.group",group));append(extra("sailing.color",f.color));append(extra("sailing.kind",f.kind));append(extra("sailing.radius",f.radius.toString()));append(extra("sailing.waypointIds",f.waypointIds.joinToString(",")))
+                    append(extra("sailing.id",f.id));append(extra("sailing.group",group));append(extra("sailing.color",f.color));append(extra("sailing.kind",f.kind));append(extra("sailing.visible",f.visible.toString()));append(extra("sailing.radius",f.radius.toString()));append(extra("sailing.waypointIds",f.waypointIds.joinToString(",")))
                     f.points(points).firstOrNull()?.let { append(extra("sailing.center","${it.lat},${it.lon}")) };append("</ExtendedData>")
                     if(f.kind=="line")append("<LineString><tessellate>1</tessellate><coordinates>${coord(p)}</coordinates></LineString>")
                     else append("<Polygon><outerBoundaryIs><LinearRing><coordinates>${coord(p+listOf(p.first()))}</coordinates></LinearRing></outerBoundaryIs></Polygon>")

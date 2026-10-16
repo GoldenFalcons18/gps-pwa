@@ -75,6 +75,7 @@ struct MapLibraryView: View {
         let ids=Set(items.map(\.id))
         let features = format=="json" ? [] : gps.library.features.filter{f in scope=="all" || (scope=="group" ? f.group==exportGroup : !f.waypointIDs.isEmpty && Set(f.waypointIDs).isSubset(of:ids))}
         let needed=Set(features.flatMap(\.waypointIDs));items += gps.waypoints.filter{needed.contains($0.id) && !ids.contains($0.id)}
+        guard !items.isEmpty || !features.isEmpty else { error="出力する地点・図形を選んでください";showingError=true;return }
         export(items,features,format)
     }
 }

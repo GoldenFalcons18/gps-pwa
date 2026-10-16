@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 .setNegativeButton("キャンセル", null).setPositiveButton("追加する") { _, _ ->
                     runCatching {
                         val merged = WaypointArchive.merge(waypoints, incoming)
-                        val mapping = incoming.associate { w -> w.id to (merged.items.firstOrNull { it.name==w.name && it.lat==w.lat && it.lon==w.lon && it.group==w.group }?.id ?: w.id) }
+                        val mapping = incoming.associate { w -> w.id to (merged.items.firstOrNull { WaypointArchive.sameContent(it,w) }?.id ?: w.id) }
                         val imported = archive.features.map { f -> f.copy(waypointIds=f.waypointIds.map { mapping[it] ?: it }) }
                         val features=library.features.toMutableList()
                         for(f in imported) { if(features.any { it.name==f.name && it.kind==f.kind && it.points(merged.items)==f.points(merged.items) && it.radius==f.radius && it.group==f.group }) continue
@@ -686,6 +686,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             runCatching { waypointStore.saveLibrary(items,updated);waypoints.clear();waypoints.addAll(items);library=updated
                 activeWaypoint=waypoints.firstOrNull{it.id==activeWaypoint?.id};renderWaypointList();updateNavigationUi();debug("Map library saved groups=${library.groups.size} features=${library.features.size}") }.onFailure(::transferError)
         },{items,features,format -> runCatching {
+            require(items.isNotEmpty() || features.isNotEmpty()) { "出力する地点・図形を選んでください" }
             pendingExport=if(format=="json")WaypointArchive.encode(items)else KmlArchive.encode(items,features,format=="kmz")
             exportWaypointsDocument.launch("SailingGPS-waypoints-${System.currentTimeMillis()}.$format")
         }.onFailure(::transferError) },{importWaypointsDocument.launch(arrayOf("*/*"))}).show()
