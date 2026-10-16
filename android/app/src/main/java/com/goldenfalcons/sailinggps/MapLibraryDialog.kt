@@ -70,7 +70,7 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         val d=AlertDialog.Builder(context).setTitle("エリア・直線").setView(ScrollView(context).apply{addView(container)}).setPositiveButton("保存",null).setNegativeButton("キャンセル",null).create()
         d.setOnShowListener{d.getButton(-1).setOnClickListener{runCatching{
             require(kind!="circle" || (if(ids.isEmpty())original?.coordinates?.size ?: 0 else ids.size)==1){"円の中心は1地点を選んでください"}
-            val f=MapFeature(id=original?.id ?: java.util.UUID.randomUUID().toString(),name=name.text.toString().trim(),kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=radius.text.toString().toDouble()*radiusFactor,color=color.text.toString().uppercase(),group=names[group.selectedItemPosition],visible=original?.visible ?: true);f.validate()
+            val f=MapFeature(id=original?.id ?: java.util.UUID.randomUUID().toString(),name=if(kind=="circle")points().firstOrNull{it.id==ids.firstOrNull()}?.name ?: name.text.toString().trim() else name.text.toString().trim(),kind=kind,waypointIds=ids,coordinates=if(ids.isEmpty())original?.coordinates ?: emptyList() else emptyList(),radius=radius.text.toString().toDouble()*radiusFactor,color=color.text.toString().uppercase(),group=names[group.selectedItemPosition],visible=original?.visible ?: true);f.validate()
             save(points(),state().copy(features=state().features.filter{it.id!=f.id}+f));d.dismiss()
         }.onFailure{Toast.makeText(context,it.message,Toast.LENGTH_LONG).show()}}};d.show()
     }

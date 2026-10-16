@@ -106,7 +106,7 @@ struct MapFeatureEditor: View {
                     if feature.waypointIDs.isEmpty && !feature.coordinates.isEmpty { Text("取り込み済みの座標を維持しています。地点を選ぶと結び直します。").font(.caption) }
                     ForEach(waypoints){w in Button {
                         if feature.waypointIDs.contains(w.id){feature.waypointIDs.removeAll{$0==w.id}}
-                        else if feature.kind=="circle"{feature.waypointIDs=[w.id]}
+                        else if feature.kind=="circle"{feature.waypointIDs=[w.id];feature.name=w.name}
                         else{feature.waypointIDs.append(w.id)}
                     }label:{HStack{Text(feature.waypointIDs.firstIndex(of:w.id).map{"\($0+1)."} ?? "○");Text(w.name)}} }
                 }
@@ -115,7 +115,7 @@ struct MapFeatureEditor: View {
                 .toolbar {
                     ToolbarItem(placement:.cancellationAction){Button("キャンセル"){dismiss()}}
                     ToolbarItem(placement:.confirmationAction){Button("保存"){
-                        do { guard feature.kind != "circle" || feature.waypointIDs.count==1 || (feature.waypointIDs.isEmpty && feature.coordinates.count==1) else{throw WaypointArchive.ArchiveError.invalid};try feature.validate();save(feature);dismiss() }catch{self.error="地点数・半径・名前を確認してください。囲みは3地点以上、線は2地点以上が必要です。"}
+                        do { guard feature.kind != "circle" || feature.waypointIDs.count==1 || (feature.waypointIDs.isEmpty && feature.coordinates.count==1) else{throw WaypointArchive.ArchiveError.invalid};if feature.kind=="circle",let id=feature.waypointIDs.first,let center=waypoints.first(where:{$0.id==id}) { feature.name=center.name };try feature.validate();save(feature);dismiss() }catch{self.error="地点数・半径・名前を確認してください。囲みは3地点以上、線は2地点以上が必要です。"}
                     }}
                 }
         }.preferredColorScheme(.dark).tint(.orange)

@@ -186,6 +186,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         savingCurrentWaypoint = false; waypointTimeout?.invalidate(); fail(error)
     }
     func add(_ waypoint: Waypoint) {
+        var waypoint=waypoint
+        let saved=UserDefaults.standard.string(forKey:"mainWaypointFolder") ?? ""
+        waypoint.group = saved.isEmpty ? (waypoints.compactMap(\.group).first ?? "メインフォルダ") : saved
         waypoints.append(waypoint); saveWaypoints()
         log("Waypoint added: \(CoordinateInput.format(waypoint.latitude, isLatitude: true)) \(CoordinateInput.format(waypoint.longitude, isLatitude: false))")
     }
@@ -311,7 +314,10 @@ struct ContentView: View {
     @State private var settings = false
     @State private var menuPresented = false
     @State private var waypointListPresented = false
-    @State private var waypointFolder = "メインフォルダ"
+    @State private var waypointFolder = ""
+    @AppStorage("mainWaypointFolder") private var savedMainWaypointFolder = ""
+    private var waypointFolders: [String] { Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty}.sorted() }
+    private var mainWaypointFolder: String { waypointFolders.contains(savedMainWaypointFolder) ? savedMainWaypointFolder : (waypointFolders.first(where:{g in gps.waypoints.contains{ $0.group == g }}) ?? waypointFolders.first ?? "メインフォルダ") }
     @State private var editorDraft: Waypoint?
     @State private var mapOperationsCoordinate: CLLocationCoordinate2D?
     @State private var mapOperationsPresented = false
@@ -471,7 +477,7 @@ struct ContentView: View {
     }
     private func makeDraft(_ coordinate: CLLocationCoordinate2D? = nil) -> Waypoint {
         let coordinate = coordinate ?? gps.location?.coordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
-        return Waypoint(name: Date.now.formatted(date: .numeric, time: .shortened), latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return Waypoint(name: Date.now.formatted(date: .numeric, time: .shortened), latitude: coordinate.latitude, longitude: coordinate.longitude, group: mainWaypointFolder)
     }
     private var waypointList: some View {
         NavigationStack {
@@ -479,7 +485,8 @@ struct ContentView: View {
                 Button { selected = nil; savedTarget = "__none__"; waypointListPresented = false } label: {
                     HStack { Text("目標なし"); Spacer(); if selected == nil { Image(systemName: "checkmark") } }
                 }
-                Picker("フォルダ",selection:$waypointFolder) { Text("メインフォルダ").tag("メインフォルダ");ForEach(Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty && $0 != "メインフォルダ"}.sorted(),id:\.self){Text($0).tag($0)} }
+                Picker("フォルダ",selection:$waypointFolder) { ForEach(waypointFolders,id:\.self){Text($0 + ($0 == mainWaypointFolder ? "（メイン）" : "")).tag($0)} }
+                Button(waypointFolder == mainWaypointFolder ? "このフォルダがメインです" : "このフォルダをメインにする") { savedMainWaypointFolder=waypointFolder }.disabled(waypointFolder.isEmpty || waypointFolder == mainWaypointFolder)
                 if orderedWaypoints.filter({($0.group ?? "")==waypointFolder}).isEmpty { Text("このフォルダにウェイポイントはありません") }
                 ForEach(orderedWaypoints.filter{($0.group ?? "")==waypointFolder}) { wp in
                     HStack {
@@ -744,7 +751,7 @@ struct ContentView: View {
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:exportLibrary,importFile:beginLibraryImport) }
         .sheet(isPresented: $settings) { waypointEditor }
-        .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder="メインフォルダ" } }
+        .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder=mainWaypointFolder } }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
             WaypointEntryView(waypoint: draft) { waypoint, navigate in
                 gps.upsert(waypoint)

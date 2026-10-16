@@ -59,3 +59,8 @@ ActionsのTestFlight-build-logs-*にビルド・書き出し・提出ログを14
 - https://developer.apple.com/jp/programs/enroll/
 - https://developer.apple.com/jp/help/app-store-connect/manage-builds/upload-builds
 - https://developer.apple.com/jp/help/app-store-connect/test-a-beta-version/invite-external-testers/
+
+## 暗号化輸出設定
+
+project.yml の Info.plist 生成設定に ITSAppUsesNonExemptEncryption: false を設定済み。現在のアプリは独自暗号化を実装せず、依存するZIPFoundationもZIP圧縮・展開のみを使用します。暗号化機能や暗号化SDKを追加した更新では、Appleの説明に従って依存ライブラリを含めて再評価し、この値を見直してください。
+https://developer.apple.com/jp/documentation/security/complying-with-encryption-export-regulations

@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントの入出力").setMessage("処理できませんでした。既存の地点は削除しません。\n${error.message}").setPositiveButton("OK", null).show()
     }
     private fun confirmWaypointImport(archive: KmlArchive.Import) {
-        val incoming = archive.waypoints.map{if(it.group.isBlank())it.copy(group="メインフォルダ")else it}
+        val incoming = archive.waypoints.map{if(it.group.isBlank())it.copy(group=mainWaypointFolder)else it}
         runCatching {
             val preview = WaypointArchive.merge(waypoints, incoming)
             androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントを取り込みますか？")
@@ -525,7 +525,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             return
         }
         val name = b.etWpName.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
         waypoints += wp
         val shouldConfirm = pendingNavigation
         pendingNavigation = false
@@ -660,14 +660,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "目標なし" to { clearTarget() }
         ))
     }
-    private fun showTargetList(nearest: Boolean, folder: String = "メインフォルダ") {
+    private fun showTargetList(nearest: Boolean, folder: String = mainWaypointFolder) {
         val lat = latestLat; val lon = latestLon
         val ordered = if (nearest && lat != null && lon != null) waypoints.sortedBy { NavigationUtils.distanceMeters(lat,lon,it.lat,it.lon) } else waypoints.asReversed()
         val actions = ordered.filter{it.group==folder}.map { waypoint ->
             val distance = if (lat != null && lon != null) " · "+DisplayNavigation.distance(NavigationUtils.distanceMeters(lat,lon,waypoint.lat,waypoint.lon), metricUnits) else ""
             ("${waypoint.mark} ${waypoint.name}$distance") to { confirmTarget(waypoint) }
         }
-        val folders=(listOf("メインフォルダ")+library.groups+waypoints.map{it.group}).distinct().sorted()
+        val folders=waypointFolders
         val changeFolder:Pair<String,()->Unit> = ("フォルダ: ${folder.ifEmpty{"メインフォルダ"}} ▾") to { androidx.appcompat.app.AlertDialog.Builder(this).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->showTargetList(nearest,folders[i])}.show();Unit }
         showActionPanel(if (nearest) "目標・近い順" else "目標・最近", listOf(changeFolder)+actions + ("目標なし" to { clearTarget() }))
     }
@@ -685,7 +685,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
     private fun showMapLibrary() {
         MapLibraryDialog(this,{waypoints.toList()},{library},{items,updated ->
-            runCatching { waypointStore.saveLibrary(items,updated);waypoints.clear();waypoints.addAll(items.map{if(it.group.isBlank())it.copy(group="メインフォルダ")else it});library=updated
+            runCatching { waypointStore.saveLibrary(items,updated);waypoints.clear();waypoints.addAll(items.map{if(it.group.isBlank())it.copy(group=mainWaypointFolder)else it});library=updated
                 activeWaypoint=waypoints.firstOrNull{it.id==activeWaypoint?.id};renderWaypointList();updateNavigationUi();debug("Map library saved groups=${library.groups.size} features=${library.features.size}") }.onFailure(::transferError)
         },{items,features,format -> runCatching {
             require(items.isNotEmpty() || features.isNotEmpty()) { "出力する地点・図形を選んでください" }
@@ -717,7 +717,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setMessage("${NavigationUtils.formatDm(lat, true)} / ${NavigationUtils.formatDm(lon, false)}")
             .setView(content).setNegativeButton("キャンセル", null)
             .setPositiveButton("保存") { _, _ ->
-                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor)
+                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
                 waypoints += wp
                 waypointStore.saveAll(waypoints)
                 renderWaypointList(); updateNavigationUi()
@@ -738,7 +738,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {
         val name = b.etWpName.text.toString().trim().ifEmpty { "現在地 ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
         waypoints += wp
         activeWaypoint = wp
         waypointStore.saveAll(waypoints)
@@ -798,20 +798,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private var waypointFolder = "メインフォルダ"
+    private var waypointFolder = ""
+    private val waypointFolders: List<String> get() = (library.groups+waypoints.map{it.group}).filter{it.isNotBlank()}.distinct().sorted()
+    private val mainWaypointFolder: String get() { val saved=displayPrefs.getString("mainWaypointFolder","") ?: "";return saved.takeIf{it in waypointFolders} ?: waypoints.firstOrNull()?.group ?: waypointFolders.firstOrNull() ?: "メインフォルダ" }
     private fun renderWaypointList() {
         mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
+        if(waypointFolder !in waypointFolders)waypointFolder=mainWaypointFolder
         b.waypointContainer.removeAllViews()
         b.waypointContainer.addView(Button(this).apply {
             text = if (activeWaypoint == null) "目標なし（選択中）" else "目標なし"
             setOnClickListener { clearTarget() }
         })
-        val folders=(listOf("メインフォルダ")+library.groups+waypoints.map{it.group}).distinct().sorted()
+        val folders=waypointFolders
         b.waypointContainer.addView(Button(this).apply {
             text="フォルダ: ${waypointFolder.ifEmpty{"メインフォルダ"}} ▾"
             setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->waypointFolder=folders[i];renderWaypointList()}.show() }
         })
+        b.waypointContainer.addView(Button(this).apply { text=if(waypointFolder==mainWaypointFolder)"このフォルダがメインです" else "このフォルダをメインにする";isEnabled=waypointFolder!=mainWaypointFolder;setOnClickListener{displayPrefs.edit().putString("mainWaypointFolder",waypointFolder).apply();renderWaypointList()} })
         waypoints.filter{it.group==waypointFolder}.forEach { wp ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
