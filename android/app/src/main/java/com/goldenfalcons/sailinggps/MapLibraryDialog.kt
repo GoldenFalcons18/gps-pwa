@@ -18,11 +18,11 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
     private fun selected(title: String, done: (List<Waypoint>)->Unit) {
         val all=points();val order=mutableListOf<Int>()
         AlertDialog.Builder(context).setTitle(title + "（選択順に結ぶ）")
-            .setMultiChoiceItems(all.map{"${it.name} [${it.group.ifEmpty{"未分類"}}]"}.toTypedArray(),BooleanArray(all.size)){_,i,checked->if(checked)order.add(i) else order.remove(i)}
+            .setMultiChoiceItems(all.map{"${it.name} [${it.group.ifEmpty{"メインフォルダ"}}]"}.toTypedArray(),BooleanArray(all.size)){_,i,checked->if(checked)order.add(i) else order.remove(i)}
             .setPositiveButton("選択完了"){_,_->done(order.map{all[it]})}.setNegativeButton("キャンセル",null).show()
     }
     private fun exportScope(): Unit = menu("出力する地点",listOf("全件" to { exportFormat(points()) },"グループ" to {
-        val names=listOf("")+groups();menu("グループ",names.map{g->g.ifEmpty{"未分類"} to { exportFormat(points().filter{it.group==g},g) }})
+        val names=listOf("")+groups();menu("グループ",names.map{g->g.ifEmpty{"メインフォルダ"} to { exportFormat(points().filter{it.group==g},g) }})
     },"地点を選択" to { selected("出力する地点を選択"){ exportFormat(it) } }))
     private fun exportFormat(selected: List<Waypoint>, group: String?=null) {
         val ids=selected.map{it.id}.toSet()
@@ -37,12 +37,12 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         d.setOnShowListener { d.getButton(-1).setOnClickListener { val name=input.text.toString().trim();if(name.isBlank())input.error="入力してください" else {done(name);d.dismiss()} } };d.show()
     }
     private fun groupList(): Unit = menu("グループ",listOf("＋ 新規グループ" to { textInput("グループ名"){g->save(points(),state().copy(groups=(state().groups+g).distinct()));groupList()} },"地点の所属を変更" to { selected("移動する地点"){selected->
-        val ids=selected.map{it.id}.toSet();val names=listOf("")+groups();menu("移動先",names.map{g->g.ifEmpty{"未分類"} to {save(points().map{if(it.id in ids)it.copy(group=g) else it},state());groupList()}})
+        val ids=selected.map{it.id}.toSet();val names=listOf("")+groups();menu("移動先",names.map{g->g.ifEmpty{"メインフォルダ"} to {save(points().map{if(it.id in ids)it.copy(group=g) else it},state());groupList()}})
     } })+groups().map{g->"${if(g in state().hiddenGroups)"非表示" else "表示"} · $g (${points().count{it.group==g}})" to { groupActions(g) }})
     private fun groupActions(g: String): Unit =menu(g,listOf(
         "表示 / 非表示" to {val hidden=state().hiddenGroups.toMutableSet();if(!hidden.add(g))hidden.remove(g);save(points(),state().copy(hiddenGroups=hidden));groupList()},
         "名前を変更" to {textInput("グループ名",g){n->save(points().map{if(it.group==g)it.copy(group=n)else it},state().copy(groups=(groups().filter{it!=g}+n).distinct(),hiddenGroups=state().hiddenGroups.map{if(it==g)n else it}.toSet(),features=state().features.map{if(it.group==g)it.copy(group=n)else it}));groupList()}},
-        "グループを削除（地点は未分類へ）" to {AlertDialog.Builder(context).setTitle("グループを削除しますか？").setMessage("地点と図形は残して未分類に移します。").setPositiveButton("削除"){_,_->save(points().map{if(it.group==g)it.copy(group="")else it},state().copy(groups=groups().filter{it!=g},hiddenGroups=state().hiddenGroups-g,features=state().features.map{if(it.group==g)it.copy(group="")else it}));groupList()}.setNegativeButton("キャンセル",null).show()}))
+        "グループを削除（地点は未分類へ）" to {AlertDialog.Builder(context).setTitle("グループを削除しますか？").setMessage("地点と図形は残して未分類に移します。").setPositiveButton("削除"){_,_->save(points().map{if(it.group==g)it.copy(group="メインフォルダ")else it},state().copy(groups=groups().filter{it!=g},hiddenGroups=state().hiddenGroups-g,features=state().features.map{if(it.group==g)it.copy(group="メインフォルダ")else it}));groupList()}.setNegativeButton("キャンセル",null).show()}))
     private fun featureList(): Unit = menu("エリア・直線",state().features.map{f->"${if(f.visible)"表示" else "非表示"} · ${f.name}" to {menu(f.name,listOf(
         "編集" to {editFeature(f,f.kind)},"表示 / 非表示" to {save(points(),state().copy(features=state().features.map{if(it.id==f.id)it.copy(visible=!it.visible)else it}));featureList()},
         "削除" to {AlertDialog.Builder(context).setTitle("${f.name}を削除しますか？").setPositiveButton("削除"){_,_->save(points(),state().copy(features=state().features.filter{it.id!=f.id}));featureList()}.setNegativeButton("キャンセル",null).show()}))}})
@@ -56,7 +56,7 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { val meters=radius.text.toString().toDoubleOrNull()?.times(radiusFactor);radiusFactor=factors[position];if(meters!=null)radius.setText((meters/radiusFactor).toString()) }
         }
         val color=EditText(context).apply{hint="#RRGGBB";setText(original?.color ?: "#00AAFF")}
-        val group=Spinner(context);val names=listOf("")+groups();group.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,names.map{it.ifEmpty{"未分類"}});group.setSelection(names.indexOf(original?.group ?: "").coerceAtLeast(0))
+        val group=Spinner(context);val names=listOf("")+groups();group.adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,names.map{it.ifEmpty{"メインフォルダ"}});group.setSelection(names.indexOf(original?.group ?: "").coerceAtLeast(0))
         var ids=original?.waypointIds ?: emptyList();val chosen=TextView(context)
         fun update(){chosen.text=if(ids.isEmpty())"地点未選択（編集時は元の座標を維持）" else ids.mapNotNull{id->points().firstOrNull{it.id==id}?.name}.joinToString(" → ")};update()
         val container=LinearLayout(context).apply {

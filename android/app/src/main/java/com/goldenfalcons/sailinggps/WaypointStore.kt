@@ -14,7 +14,7 @@ data class Waypoint(
     val color: String = "#FFAA00",
     val note: String? = null,
     val archiveMark: String? = null,
-    val group: String = ""
+    val group: String = "メインフォルダ"
 )
 
 class WaypointStore(context: Context) {
@@ -35,7 +35,7 @@ class WaypointStore(context: Context) {
                 color = o.optString("color", "#FFAA00"),
                 note = if (o.isNull("note")) null else o.getString("note"),
                 archiveMark = if (o.isNull("archiveMark")) null else o.getString("archiveMark"),
-                group = o.optString("group", "")
+                group = o.optString("group", "").ifBlank{"メインフォルダ"}
             )
         }
         return result
@@ -53,7 +53,7 @@ class WaypointStore(context: Context) {
                 put("color", w.color)
                 put("note", w.note ?: JSONObject.NULL)
                 put("archiveMark", w.archiveMark ?: JSONObject.NULL)
-                put("group", w.group)
+                put("group", w.group.ifBlank{"メインフォルダ"})
             })
         }
         return arr

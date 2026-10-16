@@ -30,7 +30,7 @@ struct MapLibraryView: View {
                 }
                 Section("エクスポート") {
                     Picker("対象",selection:$scope) { Text("全件").tag("all");Text("グループ").tag("group");Text("選択した地点").tag("selected") }
-                    if scope == "group" { Picker("グループ",selection:$exportGroup) { Text("未分類").tag("");ForEach(groups,id:\.self){Text($0).tag($0)} } }
+                    if scope == "group" { Picker("グループ",selection:$exportGroup) { Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)} } }
                     HStack { Button("KMZ"){output("kmz")};Spacer();Button("KML"){output("kml")};Spacer();Button("JSON・地点のみ"){output("json")} }
                 }
                 Section("グループ") {
@@ -38,11 +38,11 @@ struct MapLibraryView: View {
                     ForEach(groups,id:\.self){g in
                         HStack {
                             Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") }
-                            Menu { Button("名前を変更"){renameGroup=g;renamedGroup=g};Button("削除・地点は未分類へ",role:.destructive){confirmGroup=g} } label:{Image(systemName:"ellipsis.circle")}
+                            Menu { Button("名前を変更"){renameGroup=g;renamedGroup=g};Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g} } label:{Image(systemName:"ellipsis.circle")}
                         }
                     }
-                    Picker("選択した地点の移動先",selection:$destinationGroup){Text("未分類").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
-                    Button("選択した\(selected.count)地点を移動") { commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup};return w},gps.library) }.disabled(selected.isEmpty)
+                    Picker("選択した地点の移動先",selection:$destinationGroup){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
+                    Button("選択した\(selected.count)地点を移動") { commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup.isEmpty ? "メインフォルダ" : destinationGroup};return w},gps.library) }.disabled(selected.isEmpty)
                 }
                 Section("エリア・直線") {
                     HStack { Button("円"){featureDraft=MapFeature(name:"円エリア",kind:"circle")};Spacer();Button("囲み"){featureDraft=MapFeature(name:"囲みエリア",kind:"area")};Spacer();Button("直線"){featureDraft=MapFeature(name:"直線",kind:"line")} }
@@ -55,7 +55,7 @@ struct MapLibraryView: View {
                 Section("地点を選択（出力・所属変更用）") {
                     ForEach(gps.waypoints){w in Button {
                         if selected.contains(w.id){selected.removeAll{$0==w.id}}else{selected.append(w.id)}
-                    } label:{HStack{Image(systemName:selected.contains(w.id) ? "checkmark.circle.fill" : "circle");Text(w.name);Spacer();Text((w.group ?? "").isEmpty ? "未分類" : w.group!).font(.caption)}} }
+                    } label:{HStack{Image(systemName:selected.contains(w.id) ? "checkmark.circle.fill" : "circle");Text(w.name);Spacer();Text((w.group ?? "").isEmpty ? "メインフォルダ" : w.group!).font(.caption)}} }
                 }
             }.buttonStyle(.borderless)
                 .onAppear {
@@ -72,7 +72,7 @@ struct MapLibraryView: View {
                     Button("保存"){guard let old=renameGroup else{return};let n=renamedGroup.trimmingCharacters(in:.whitespacesAndNewlines);guard !n.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups.filter{$0 != old}+[n])).sorted();l.hiddenGroups=l.hiddenGroups.map{$0==old ? n : $0};l.features=l.features.map{f in var f=f;if f.group==old{f.group=n};return f};commit(gps.waypoints.map{w in var w=w;if w.group==old{w.group=n};return w},l);renameGroup=nil}
                     Button("キャンセル",role:.cancel){renameGroup=nil}
                 }
-                .confirmationDialog("グループを削除しますか？地点と図形は未分類へ移します。",isPresented:Binding(get:{confirmGroup != nil},set:{if !$0{confirmGroup=nil}}),titleVisibility:.visible){Button("グループを削除",role:.destructive){guard let g=confirmGroup else{return};var l=gps.library;l.groups=groups.filter{$0 != g};l.hiddenGroups.removeAll{$0==g};l.features=l.features.map{f in var f=f;if f.group==g{f.group=""};return f};commit(gps.waypoints.map{w in var w=w;if w.group==g{w.group=""};return w},l);confirmGroup=nil}}
+                .confirmationDialog("グループを削除しますか？地点と図形はメインフォルダへ移します。",isPresented:Binding(get:{confirmGroup != nil},set:{if !$0{confirmGroup=nil}}),titleVisibility:.visible){Button("グループを削除",role:.destructive){guard let g=confirmGroup else{return};var l=gps.library;l.groups=groups.filter{$0 != g};l.hiddenGroups.removeAll{$0==g};l.features=l.features.map{f in var f=f;if f.group==g{f.group=""};return f};commit(gps.waypoints.map{w in var w=w;if w.group==g{w.group="メインフォルダ"};return w},l);confirmGroup=nil}}
                 .confirmationDialog("図形を削除しますか？",isPresented:Binding(get:{confirmFeature != nil},set:{if !$0{confirmFeature=nil}}),titleVisibility:.visible){Button("削除",role:.destructive){var l=gps.library;l.features.removeAll{$0.id==confirmFeature?.id};commit(gps.waypoints,l);confirmFeature=nil}}
         }.preferredColorScheme(.dark).tint(.orange)
     }
@@ -101,7 +101,7 @@ struct MapFeatureEditor: View {
                 TextField("名前",text:$feature.name)
                 if feature.kind=="circle" { HStack { Text("半径");TextField("200",value:Binding(get:{feature.radius/radiusFactor},set:{feature.radius=$0*radiusFactor}),format:.number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) };Picker("半径の単位",selection:$radiusUnit){Text("m").tag("m");Text("km").tag("km");Text("nm").tag("nm")}.pickerStyle(.segmented) }
                 ColorPicker("色",selection:Binding(get:{waypointColor(feature.color)},set:{c in let ui=UIColor(c);var r:CGFloat=0,g:CGFloat=0,b:CGFloat=0,a:CGFloat=0;ui.getRed(&r,green:&g,blue:&b,alpha:&a);feature.color=String(format:"#%02X%02X%02X",Int(r*255),Int(g*255),Int(b*255))}),supportsOpacity:false)
-                Picker("グループ",selection:$feature.group){Text("未分類").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
+                Picker("グループ",selection:$feature.group){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
                 Section(feature.kind=="circle" ? "中心を1地点選択" : "結ぶ順に地点を選択") {
                     if feature.waypointIDs.isEmpty && !feature.coordinates.isEmpty { Text("取り込み済みの座標を維持しています。地点を選ぶと結び直します。").font(.caption) }
                     ForEach(waypoints){w in Button {

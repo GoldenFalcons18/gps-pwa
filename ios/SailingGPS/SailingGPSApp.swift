@@ -12,7 +12,7 @@ struct Waypoint: Identifiable, Codable {
     var colorName: String?
     var markSymbol: String?
     var markText: String?
-    var group: String?
+    var group: String? = "メインフォルダ"
     var coordinate: CLLocationCoordinate2D { .init(latitude: latitude, longitude: longitude) }
 }
 
@@ -68,6 +68,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.pausesLocationUpdatesAutomatically = false
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
         if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(LibraryDocument.self, from: data) { waypoints = saved.waypoints; library = saved.library }
+        waypoints=waypoints.map { item in var item=item;if (item.group ?? "").isEmpty { item.group="メインフォルダ" };return item }
     }
 
     func preview(_ active: Bool) {
@@ -208,12 +209,13 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         try data.write(to:url,options:.atomic);log("Waypoints exported count=\(entries.count) features=\(features.count) format=\(format)");return url
     }
     func saveLibrary(_ items: [Waypoint], _ updated: MapLibrary) throws {
+        let items=items.map { item in var item=item;if (item.group ?? "").trimmingCharacters(in:.whitespacesAndNewlines).isEmpty { item.group="メインフォルダ" };return item }
         try WaypointArchive.validate(items.map(\.archiveEntry));for f in updated.features { try f.validate() }
         try JSONEncoder().encode(LibraryDocument(waypoints:items,library:updated)).write(to:libraryFile,options:.atomic)
         waypoints=items;library=updated;log("Map library saved groups=\(updated.groups.count) features=\(updated.features.count)")
     }
     func importWaypoints(_ archive: KmlArchive.Import) throws -> (Int, Int) {
-        let incoming=archive.waypoints
+        let incoming=archive.waypoints.map { item in var item=item;if (item.group ?? "").isEmpty { item.group="メインフォルダ" };return item }
         let result = try WaypointArchive.merge(existing: waypoints.map(\.archiveEntry), incoming: incoming)
         var mapping: [UUID:UUID] = [:]
         for e in incoming { mapping[e.id]=result.entries.first(where:{$0.sameContent(e)})?.id ?? e.id }
@@ -309,7 +311,7 @@ struct ContentView: View {
     @State private var settings = false
     @State private var menuPresented = false
     @State private var waypointListPresented = false
-    @State private var waypointFolder = ""
+    @State private var waypointFolder = "メインフォルダ"
     @State private var editorDraft: Waypoint?
     @State private var mapOperationsCoordinate: CLLocationCoordinate2D?
     @State private var mapOperationsPresented = false
@@ -477,7 +479,7 @@ struct ContentView: View {
                 Button { selected = nil; savedTarget = "__none__"; waypointListPresented = false } label: {
                     HStack { Text("目標なし"); Spacer(); if selected == nil { Image(systemName: "checkmark") } }
                 }
-                Picker("フォルダ",selection:$waypointFolder) { Text("メインフォルダ").tag("");ForEach(Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty}.sorted(),id:\.self){Text($0).tag($0)} }
+                Picker("フォルダ",selection:$waypointFolder) { Text("メインフォルダ").tag("メインフォルダ");ForEach(Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty && $0 != "メインフォルダ"}.sorted(),id:\.self){Text($0).tag($0)} }
                 if orderedWaypoints.filter({($0.group ?? "")==waypointFolder}).isEmpty { Text("このフォルダにウェイポイントはありません") }
                 ForEach(orderedWaypoints.filter{($0.group ?? "")==waypointFolder}) { wp in
                     HStack {
@@ -742,7 +744,7 @@ struct ContentView: View {
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
         .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:exportLibrary,importFile:beginLibraryImport) }
         .sheet(isPresented: $settings) { waypointEditor }
-        .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder="" } }
+        .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder="メインフォルダ" } }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
             WaypointEntryView(waypoint: draft) { waypoint, navigate in
                 gps.upsert(waypoint)

@@ -13,7 +13,7 @@ enum WaypointArchive {
         var note: String?
         var group: String? = nil
         func sameContent(_ other: Entry) -> Bool {
-            (group ?? "") == (other.group ?? "") && name == other.name && latitude == other.latitude && longitude == other.longitude && mark == other.mark && color.uppercased() == other.color.uppercased() && (note ?? "") == (other.note ?? "")
+            ((group ?? "").isEmpty ? "メインフォルダ" : group!) == ((other.group ?? "").isEmpty ? "メインフォルダ" : other.group!) && name == other.name && latitude == other.latitude && longitude == other.longitude && mark == other.mark && color.uppercased() == other.color.uppercased() && (note ?? "") == (other.note ?? "")
         }
     }
     private struct File: Codable {
