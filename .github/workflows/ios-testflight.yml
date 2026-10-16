@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 35
     environment: testflight
     env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       BUILD_NUMBER: ${{ inputs.build_number }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       IOS_DISTRIBUTION_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
@@ -27,6 +28,14 @@ jobs:
       APPSTORE_PRIVATE_KEY_BASE64: ${{ secrets.APPSTORE_PRIVATE_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
+      - name: Verify App Store toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p testflight-logs
+          xcodebuild -version | tee testflight-logs/toolchain.log
+          SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "iOS SDK: $SDK_VERSION" | tee -a testflight-logs/toolchain.log
+          test "${SDK_VERSION%%.*}" -ge 26
       - name: Validate configuration
         run: |
           python3 - <<'PY'

@@ -14,6 +14,12 @@ targets:
         CFBundleDisplayName: Sailing GPS
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIBackgroundModes: [location]
         NSLocationWhenInUseUsageDescription: 航行位置と航跡を表示・記録します。
         NSLocationAlwaysAndWhenInUseUsageDescription: 画面を消した状態でも、開始した航跡記録を続けます。
