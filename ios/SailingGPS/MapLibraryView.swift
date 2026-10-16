@@ -136,7 +136,7 @@ struct FeatureDraftMap: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> MKMapView { let map=MKMapView();map.delegate=context.coordinator;return map }
     func updateUIView(_ map:MKMapView,context:Context) {
-        context.coordinator.color=UIColor(waypointColor(feature.color))
+        context.coordinator.color=UIColor(waypointColor(feature.color));context.coordinator.entries=entries
         map.removeOverlays(map.overlays);map.removeAnnotations(map.annotations)
         let selected=entries.filter{feature.waypointIDs.contains($0.id)}
         let visible=selected.isEmpty ? entries : selected
@@ -154,12 +154,14 @@ struct FeatureDraftMap: UIViewRepresentable {
     }
     final class Coordinator:NSObject,MKMapViewDelegate {
         var color=UIColor.systemBlue
+        var entries:[WaypointArchive.Entry]=[]
         func mapView(_ mapView:MKMapView,viewFor annotation:MKAnnotation)->MKAnnotationView? {
             if annotation is MKUserLocation { return nil }
-            let view=MKMarkerAnnotationView(annotation:annotation,reuseIdentifier:nil);view.transform=CGAffineTransform(scaleX:0.65,y:0.65);view.canShowCallout=true;return view
-        }
-        func mapView(_ mapView:MKMapView,didAdd views:[MKAnnotationView]) {
-            for view in views where !(view.annotation is MKUserLocation) { DispatchQueue.main.async { view.transform=CGAffineTransform(scaleX:0.65,y:0.65) } }
+            let entry=entries.first{$0.latitude==annotation.coordinate.latitude && $0.longitude==annotation.coordinate.longitude}
+            let mark=entry?.mark ?? "symbol:flag.fill"
+            let view=MKAnnotationView(annotation:annotation,reuseIdentifier:nil)
+            view.image=CompactWaypointMarker.image(name:(annotation as? MKPointAnnotation)?.title ?? "",color:entry.map{UIColor(waypointColor($0.color))} ?? color,markText:mark.hasPrefix("text:") ? String(mark.dropFirst(5)) : nil,markSymbol:mark.hasPrefix("symbol:") ? String(mark.dropFirst(7)) : "flag.fill")
+            view.centerOffset=CGPoint(x:0,y:-19);view.displayPriority = .required;view.canShowCallout=true;return view
         }
         func mapView(_ mapView:MKMapView,rendererFor overlay:MKOverlay)->MKOverlayRenderer {
             if let polygon=overlay as? MKPolygon { let r=MKPolygonRenderer(polygon:polygon);r.strokeColor=color;r.fillColor=color.withAlphaComponent(0.22);r.lineWidth=2;return r }

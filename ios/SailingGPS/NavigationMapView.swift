@@ -225,25 +225,42 @@ struct NavigationMapView: UIViewRepresentable {
                 view.displayPriority = .required; view.collisionMode = .circle
                 return view
             }
-            let view = MKMarkerAnnotationView(annotation: pin, reuseIdentifier: nil)
-            let markerScale:CGFloat = 0.65
-            view.transform=CGAffineTransform(scaleX:markerScale,y:markerScale)
-            view.markerTintColor = UIColor(waypointColor(pin.colorName))
-            if let text = pin.markText, !text.isEmpty { view.glyphText = text; view.glyphImage = nil }
-            else { view.glyphText = nil; view.glyphImage = MarineMarks.image(pin.markSymbol ?? "flag.fill") }
-            view.displayPriority = .required
-            view.titleVisibility = .visible
-            view.canShowCallout = false; view.isEnabled = false
+            let view = MKAnnotationView(annotation:pin,reuseIdentifier:nil)
+            view.image=CompactWaypointMarker.image(name:pin.title ?? "",color:UIColor(waypointColor(pin.colorName)),markText:pin.markText,markSymbol:pin.markSymbol)
+            view.centerOffset=CGPoint(x:0,y:-19)
+            view.displayPriority = .required;view.collisionMode = .rectangle
+            view.canShowCallout=false;view.isEnabled=false
+            view.accessibilityLabel=pin.title
             return view
-        }
-        func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
-            for view in views where (view.annotation as? Pin)?.kind == "waypoint" {
-                // MapKit initializes marker transforms after viewFor; apply the approved scale after insertion.
-                DispatchQueue.main.async { view.transform=CGAffineTransform(scaleX:0.65,y:0.65) }
-            }
         }
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             if (view.annotation as? Pin)?.kind == "waypoint" { mapView.deselectAnnotation(view.annotation, animated: false) }
+        }
+    }
+}
+
+
+/// A fixed-size image prevents MapKit from resetting native marker transforms.
+/// Every point keeps its name; selected and ordinary points share the same dimensions.
+enum CompactWaypointMarker {
+    static func image(name:String,color:UIColor,markText:String?,markSymbol:String?)->UIImage {
+        let font=UIFont.systemFont(ofSize:9,weight:.medium)
+        let attrs:[NSAttributedString.Key:Any]=[.font:font,.foregroundColor:UIColor.white,.strokeColor:UIColor.black.withAlphaComponent(0.85),.strokeWidth:-2]
+        let labelSize=(name as NSString).size(withAttributes:attrs)
+        let width=ceil(max(22,labelSize.width+8));let height:CGFloat=38
+        return UIGraphicsImageRenderer(size:CGSize(width:width,height:height)).image { _ in
+            (name as NSString).draw(at:CGPoint(x:(width-labelSize.width)/2,y:0),withAttributes:attrs)
+            let x=width/2
+            color.setFill()
+            let tail=UIBezierPath();tail.move(to:CGPoint(x:x-6,y:27));tail.addLine(to:CGPoint(x:x,y:38));tail.addLine(to:CGPoint(x:x+6,y:27));tail.close();tail.fill()
+            UIBezierPath(ovalIn:CGRect(x:x-9,y:14,width:18,height:18)).fill()
+            if let text=markText,!text.isEmpty {
+                let glyph:[NSAttributedString.Key:Any]=[.font:UIFont.systemFont(ofSize:10,weight:.semibold),.foregroundColor:UIColor.white]
+                let size=(text as NSString).size(withAttributes:glyph)
+                (text as NSString).draw(at:CGPoint(x:x-size.width/2,y:23-size.height/2),withAttributes:glyph)
+            } else {
+                MarineMarks.image(markSymbol ?? "flag.fill").withTintColor(.white,renderingMode:.alwaysOriginal).draw(in:CGRect(x:x-5,y:18,width:10,height:10))
+            }
         }
     }
 }
