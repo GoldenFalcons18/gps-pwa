@@ -86,6 +86,10 @@ jobs:
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-library
           sleep 3
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-map-library.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps || true
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-circle-editor
+          sleep 4
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-circle-editor.png
         working-directory: ios
       - uses: actions/upload-artifact@v4
         if: always()

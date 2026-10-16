@@ -57,7 +57,13 @@ struct MapLibraryView: View {
                         if selected.contains(w.id){selected.removeAll{$0==w.id}}else{selected.append(w.id)}
                     } label:{HStack{Image(systemName:selected.contains(w.id) ? "checkmark.circle.fill" : "circle");Text(w.name);Spacer();Text((w.group ?? "").isEmpty ? "未分類" : w.group!).font(.caption)}} }
                 }
-            }.navigationTitle("地点・グループ・エリア")
+            }.buttonStyle(.borderless)
+                .onAppear {
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { featureDraft=MapFeature(name:"円エリア",kind:"circle") }
+                    #endif
+                }
+                .navigationTitle("地点・グループ・エリア")
                 .toolbar { ToolbarItem(placement:.confirmationAction){Button("閉じる"){dismiss()}} }
                 .sheet(item:$featureDraft){f in MapFeatureEditor(feature:f,waypoints:gps.waypoints,groups:groups){updated in var l=gps.library;l.features.removeAll{$0.id==updated.id};l.features.append(updated);commit(gps.waypoints,l)} }
                 .alert("処理できませんでした",isPresented:$showingError){Button("OK",role:.cancel){}}message:{Text(error)}
@@ -91,7 +97,7 @@ struct MapFeatureEditor: View {
         NavigationStack {
             Form {
                 TextField("名前",text:$feature.name)
-                if feature.kind=="circle" { TextField("半径（m）",value:$feature.radius,format:.number).keyboardType(.decimalPad) }
+                if feature.kind=="circle" { HStack { Text("半径（m）");TextField("200",value:$feature.radius,format:.number).keyboardType(.decimalPad).multilineTextAlignment(.trailing) } }
                 ColorPicker("色",selection:Binding(get:{waypointColor(feature.color)},set:{c in let ui=UIColor(c);var r:CGFloat=0,g:CGFloat=0,b:CGFloat=0,a:CGFloat=0;ui.getRed(&r,green:&g,blue:&b,alpha:&a);feature.color=String(format:"#%02X%02X%02X",Int(r*255),Int(g*255),Int(b*255))}),supportsOpacity:false)
                 Picker("グループ",selection:$feature.group){Text("未分類").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
                 Section(feature.kind=="circle" ? "中心を1地点選択" : "結ぶ順に地点を選択") {

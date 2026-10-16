@@ -769,7 +769,7 @@ struct ContentView: View {
                     try? gps.saveLibrary(items,MapLibrary(groups:["デモ海域"],features:[circle,area,line]))
                 }
             }
-            if ProcessInfo.processInfo.arguments.contains("--preview-library") { libraryPresented=true }
+            if ProcessInfo.processInfo.arguments.contains("--preview-library") || ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { libraryPresented=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-map-operations") { mapOperationsCoordinate = .init(latitude: 35.318, longitude: 139.467); mapOperationsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }

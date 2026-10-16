@@ -36,7 +36,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: '5.0'
         MARKETING_VERSION: '1.7.0'
-        CURRENT_PROJECT_VERSION: 21
+        CURRENT_PROJECT_VERSION: 22
         TARGETED_DEVICE_FAMILY: '1,2'
       configs:
         Release:
