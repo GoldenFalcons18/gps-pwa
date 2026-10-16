@@ -284,7 +284,7 @@ class NavigationMapPanel(
     }
 
     private fun waypointIcon(name: String, active: Boolean, mark: String, color: String): BitmapDrawable {
-        val density = map.resources.displayMetrics.density
+        val density = map.resources.displayMetrics.density * 0.8f
         val label = name.take(24)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 12f * density }
         val width = (paint.measureText(label) + 16f * density).toInt().coerceAtLeast((60 * density).toInt())

@@ -154,6 +154,10 @@ struct FeatureDraftMap: UIViewRepresentable {
     }
     final class Coordinator:NSObject,MKMapViewDelegate {
         var color=UIColor.systemBlue
+        func mapView(_ mapView:MKMapView,viewFor annotation:MKAnnotation)->MKAnnotationView? {
+            if annotation is MKUserLocation { return nil }
+            let view=MKMarkerAnnotationView(annotation:annotation,reuseIdentifier:nil);view.transform=CGAffineTransform(scaleX:0.8,y:0.8);view.canShowCallout=true;return view
+        }
         func mapView(_ mapView:MKMapView,rendererFor overlay:MKOverlay)->MKOverlayRenderer {
             if let polygon=overlay as? MKPolygon { let r=MKPolygonRenderer(polygon:polygon);r.strokeColor=color;r.fillColor=color.withAlphaComponent(0.22);r.lineWidth=2;return r }
             if let line=overlay as? MKPolyline { let r=MKPolylineRenderer(polyline:line);r.strokeColor=color;r.lineWidth=3;return r }
