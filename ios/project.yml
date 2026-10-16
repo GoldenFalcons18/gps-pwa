@@ -38,4 +38,9 @@ targets:
         MARKETING_VERSION: '1.7.0'
         CURRENT_PROJECT_VERSION: 21
         TARGETED_DEVICE_FAMILY: '1,2'
+      configs:
+        Release:
+          CODE_SIGN_STYLE: '$(SAILING_CODE_SIGN_STYLE)'
+          CODE_SIGN_IDENTITY: '$(SAILING_CODE_SIGN_IDENTITY)'
+          PROVISIONING_PROFILE_SPECIFIER: '$(SAILING_PROFILE_UUID)'
     scheme: {}

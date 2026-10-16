@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p testflight-logs
-          xcodebuild -project ios/SailingGPS.xcodeproj -scheme SailingGPS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$DISTRIBUTION_IDENTITY" PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" archive 2>&1 | tee testflight-logs/archive.log
+          xcodebuild -project ios/SailingGPS.xcodeproj -scheme SailingGPS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" SAILING_CODE_SIGN_STYLE=Manual SAILING_CODE_SIGN_IDENTITY="$DISTRIBUTION_IDENTITY" SAILING_PROFILE_UUID="$PROFILE_UUID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" archive 2>&1 | tee testflight-logs/archive.log
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" -exportPath "$RUNNER_TEMP/testflight-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" 2>&1 | tee testflight-logs/export.log
       - name: Upload to App Store Connect for TestFlight
         run: |
