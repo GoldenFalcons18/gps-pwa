@@ -39,3 +39,12 @@ data class MapLibrary(val groups: List<String> = emptyList(), val hiddenGroups: 
             val a=o.optJSONArray("features");return MapLibrary(strings("groups"),strings("hiddenGroups").toSet(),a?.let { (0 until it.length()).map { i -> MapFeature.from(it.getJSONObject(i)) } } ?: emptyList()) }
     }
 }
+
+
+object DefaultWaypointFolder {
+    fun resolve(requested:String?,folders:List<String>,waypointFolders:List<String>):String {
+        val populated=waypointFolders.filter{it.isNotBlank()}.distinct().sorted()
+        val available=(folders+populated).filter{it.isNotBlank()}.distinct().sorted()
+        return requested?.takeIf{it in available} ?: populated.firstOrNull() ?: available.firstOrNull() ?: "メインフォルダ"
+    }
+}

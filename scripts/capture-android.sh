@@ -373,3 +373,28 @@ adb shell am force-stop "$APP"
 adb shell am start -n "$APP/.MainActivity" --ez previewLibrary true --ez previewCircleEditor true >/dev/null
 sleep 5
 adb exec-out screencap -p > screenshots/Android-circle-editor.png
+
+# Use the production current-position save path with a synthetic location.
+adb shell am force-stop "$APP"
+adb shell am start -n "$APP/.MainActivity" --ez previewFolderSave true >/dev/null
+sleep 4
+adb exec-out screencap -p > screenshots/Android-folder-editor.png
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/folder-before.xml
+adb shell run-as "$APP" cat shared_prefs/display.xml > screenshots/default-folder.xml
+adb shell am force-stop "$APP"
+adb shell am start -n "$APP/.MainActivity" >/dev/null
+sleep 3
+adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/folder-after.xml
+python3 - <<'PYFOLDER'
+import json,pathlib,xml.etree.ElementTree as E
+def items(path):
+    root=E.parse(path).getroot()
+    return json.loads(next(n.text for n in root if n.get('name')=='items'))
+before=items('screenshots/folder-before.xml');after=items('screenshots/folder-after.xml')
+r=E.parse('screenshots/default-folder.xml').getroot()
+folder=next(n.text for n in r if n.get('name')=='mainWaypointFolder')
+assert folder=='港一覧'
+assert before[-1]['group']==folder and before[-1]['mark']=='港'
+assert before[-1]==after[-1]
+pathlib.Path('screenshots/default-folder-result.txt').write_text('PASS: current-position save uses selected default folder with harbor mark and persists after restart.\n')
+PYFOLDER

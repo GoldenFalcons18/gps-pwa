@@ -6,8 +6,16 @@ struct WaypointEntryView: View {
     @State var waypoint: Waypoint
     @State private var format = 1
     @State private var latitudeSelected = true
+    let folders: [String]
+    let defaultFolder: String
+    private var folderOptions:[String] { let values=Array(Set(folders + [waypoint.group ?? "",defaultFolder])).filter{!$0.isEmpty}.sorted();return values.isEmpty ? ["メインフォルダ"] : values }
     let save: (Waypoint, Bool) -> Void
     private let symbols = MarineMarks.choices
+    private var folderSelection:some View {
+        Picker("保存フォルダ",selection:Binding(get:{DefaultWaypointFolder.destination(explicit:waypoint.group,defaultFolder:defaultFolder)},set:{waypoint.group=$0})) {
+            ForEach(folderOptions,id:\.self){Text($0 + ($0==defaultFolder ? " ★デフォルト" : "")).tag($0)}
+        }.labelsHidden().accessibilityIdentifier("waypointFolder")
+    }
     private var selectedColor: Binding<Color> {
         Binding(get: { waypointColor(waypoint.colorName) }, set: { color in
             var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
@@ -48,6 +56,7 @@ struct WaypointEntryView: View {
                 VStack(spacing: 1) {
                     row("名前") { TextField("名前", text: $waypoint.name).accessibilityIdentifier("waypointName") }
                     row("注記") { TextField("注記", text: Binding(get: { waypoint.note ?? "" }, set: { waypoint.note = $0 })) }
+                    row("保存フォルダ") { folderSelection }
                     row("緯度/経度") { Text(formatted(waypoint.latitude, latitude: true) + ", " + formatted(waypoint.longitude, latitude: false)).font(.caption.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(1) }
                     Picker("座標形式", selection: $format) { Text("度").tag(0); Text("度分").tag(1); Text("度分秒").tag(2) }.pickerStyle(.segmented).padding(6)
                     HStack(spacing: 0) {
@@ -85,7 +94,7 @@ struct WaypointEntryView: View {
                     }
                 }
             }
-        }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
+        }.onAppear { if (waypoint.group ?? "").isEmpty { waypoint.group=defaultFolder } }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private func axisButton(_ latitude: Bool) -> some View {
         Button { latitudeSelected = latitude } label: {

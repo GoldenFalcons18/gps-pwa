@@ -187,6 +187,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 MapFeature(name="地点間の直線",kind="line",waypointIds=ids.take(2),color="#FFFF00",group="デモ海域")))
                 waypointStore.saveLibrary(waypoints,library);renderWaypointList();updateNavigationUi();b.root.postDelayed({mapPanel?.showWaypoints()},1000) }
         }
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewFolderSave",false)) {
+            library=library.copy(groups=(library.groups+"港一覧").distinct());waypointStore.saveLibrary(waypoints,library)
+            displayPrefs.edit().putString("mainWaypointFolder","港一覧").apply()
+            draftMark="港";saveCurrentLocationWaypoint(35.318,139.467)
+            b.root.post { editWaypoint(waypoints.last()) }
+        }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewLibrary", false)) b.root.post { showMapLibrary() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.318,139.467) }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
@@ -668,7 +674,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             ("${waypoint.mark} ${waypoint.name}$distance") to { confirmTarget(waypoint) }
         }
         val folders=waypointFolders
-        val changeFolder:Pair<String,()->Unit> = ("フォルダ: ${folder.ifEmpty{"メインフォルダ"}} ▾") to { androidx.appcompat.app.AlertDialog.Builder(this).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->showTargetList(nearest,folders[i])}.show();Unit }
+        val changeFolder:Pair<String,()->Unit> = ("フォルダ: ${folder.ifEmpty{"メインフォルダ"}} ▾") to { androidx.appcompat.app.AlertDialog.Builder(this).setTitle("フォルダ").setItems(folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""}.toTypedArray()){_,i->showTargetList(nearest,folders[i])}.show();Unit }
         showActionPanel(if (nearest) "目標・近い順" else "目標・最近", listOf(changeFolder)+actions + ("目標なし" to { clearTarget() }))
     }
     private fun confirmTarget(waypoint: Waypoint) {
@@ -697,7 +703,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun showNavigationMenu() {
         showActionPanel("メニュー", listOf(
             "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showSettings() },
-            "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ" to { addCurrentLocationWaypoint() },
+            "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
             "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
@@ -747,7 +753,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         renderWaypointList()
         updateNavigationUi()
         mapPanel?.showWaypoints()
-        Toast.makeText(this, "$name を保存しました", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "$name を「${wp.group}」に保存しました", Toast.LENGTH_SHORT).show()
         debug("Current location saved as WP $name")
     }
 
@@ -768,12 +774,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun editWaypoint(original: Waypoint) {
         var mark = original.mark; var color = original.color
+        val folders=(waypointFolders+listOf(original.group,mainWaypointFolder)).filter{it.isNotBlank()}.distinct().sorted()
+        val folder=android.widget.Spinner(this).apply { adapter=android.widget.ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""});setSelection(folders.indexOf(original.group).coerceAtLeast(0)) }
         val name = android.widget.EditText(this).apply { setText(original.name); setSingleLine(true) }
         val lat = android.widget.EditText(this).apply { setText(original.lat.toString()); hint = "緯度（十進度）"; inputType = 12290 }
         val lon = android.widget.EditText(this).apply { setText(original.lon.toString()); hint = "経度（十進度）"; inputType = 12290 }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; setPadding(24,8,24,8)
             addView(TextView(this@MainActivity).apply { text = "名前" }); addView(name)
+            addView(TextView(this@MainActivity).apply { text = "保存フォルダ" });addView(folder)
             addView(TextView(this@MainActivity).apply { text = "緯度・経度（十進度）" }); addView(lat); addView(lon)
             addView(Button(this@MainActivity).apply { text = "マーク・色"; setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity, mark, color) { m, c -> mark = m; color = c } } })
         }
@@ -784,7 +793,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 val latitude = lat.text.toString().toDoubleOrNull(); val longitude = lon.text.toString().toDoubleOrNull()
                 if (latitude == null || !latitude.isFinite() || latitude !in -90.0..90.0) { lat.error = "-90〜90で入力"; return@setOnClickListener }
                 if (longitude == null || !longitude.isFinite() || longitude !in -180.0..180.0) { lon.error = "-180〜180で入力"; return@setOnClickListener }
-                val changed = original.copy(name = name.text.toString().trim().ifEmpty { original.name }, lat = latitude, lon = longitude, mark = mark, color = color)
+                val changed = original.copy(name = name.text.toString().trim().ifEmpty { original.name }, lat = latitude, lon = longitude, mark = mark, color = color, group = folders[folder.selectedItemPosition])
                 val index = waypoints.indexOfFirst { it.id == original.id }
                 if (index >= 0) waypoints[index] = changed
                 if (activeWaypoint?.id == original.id) activeWaypoint = changed
@@ -800,7 +809,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private var waypointFolder = ""
     private val waypointFolders: List<String> get() = (library.groups+waypoints.map{it.group}).filter{it.isNotBlank()}.distinct().sorted()
-    private val mainWaypointFolder: String get() { val saved=displayPrefs.getString("mainWaypointFolder","") ?: "";return saved.takeIf{it in waypointFolders} ?: waypoints.firstOrNull()?.group ?: waypointFolders.firstOrNull() ?: "メインフォルダ" }
+    private val mainWaypointFolder: String get() = DefaultWaypointFolder.resolve(displayPrefs.getString("mainWaypointFolder",null),library.groups,waypoints.map{it.group})
     private fun renderWaypointList() {
         mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
@@ -810,12 +819,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             text = if (activeWaypoint == null) "目標なし（選択中）" else "目標なし"
             setOnClickListener { clearTarget() }
         })
+        b.waypointContainer.addView(TextView(this).apply { text="現在地WPの保存先：$mainWaypointFolder";setTextColor(Color.rgb(255,170,0)) })
         val folders=waypointFolders
         b.waypointContainer.addView(Button(this).apply {
             text="フォルダ: ${waypointFolder.ifEmpty{"メインフォルダ"}} ▾"
-            setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("フォルダ").setItems(folders.map{it.ifEmpty{"メインフォルダ"}}.toTypedArray()){_,i->waypointFolder=folders[i];renderWaypointList()}.show() }
+            setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("フォルダ").setItems(folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""}.toTypedArray()){_,i->waypointFolder=folders[i];renderWaypointList()}.show() }
         })
-        b.waypointContainer.addView(Button(this).apply { text=if(waypointFolder==mainWaypointFolder)"このフォルダがメインです" else "このフォルダをメインにする";isEnabled=waypointFolder!=mainWaypointFolder;setOnClickListener{displayPrefs.edit().putString("mainWaypointFolder",waypointFolder).apply();renderWaypointList()} })
+        b.waypointContainer.addView(Button(this).apply { text=if(waypointFolder==mainWaypointFolder)"このフォルダがデフォルトです" else "このフォルダをデフォルトにする";isEnabled=waypointFolder!=mainWaypointFolder;setOnClickListener{displayPrefs.edit().putString("mainWaypointFolder",waypointFolder).apply();renderWaypointList()} })
         waypoints.filter{it.group==waypointFolder}.forEach { wp ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL

@@ -6,7 +6,7 @@ import android.graphics.Path
 
 /** App-owned vector marks; independent of emoji font availability. */
 object MarineMarks {
-    val names = listOf("灯台", "網", "危険", "ブイ", "岩礁", "錨")
+    val names = listOf("灯台", "港", "網", "危険", "ブイ", "岩礁", "錨")
     fun draw(canvas: Canvas, mark: String, centerX: Float, centerY: Float, size: Float, color: Int): Boolean {
         if (mark !in names) return false
         canvas.save(); canvas.translate(centerX - size / 2, centerY - size / 2); canvas.scale(size / 32, size / 32)
@@ -38,6 +38,12 @@ object MarineMarks {
                 canvas.drawCircle(16f,9f,4f,paint); line(2f,28f,8f,30f); line(8f,30f,16f,27f); line(16f,27f,24f,30f); line(24f,30f,30f,28f)
             }
             "岩礁" -> polygon(listOf(2f to 28f, 10f to 10f, 17f to 21f, 23f to 15f, 30f to 28f))
+            "港" -> {
+                line(3f,3f,3f,28f);line(3f,28f,10f,28f);line(29f,3f,29f,28f);line(29f,28f,22f,28f)
+                canvas.drawRect(12f,10f,20f,17f,paint)
+                polygon(listOf(8f to 17f,24f to 17f,20f to 23f,12f to 23f))
+                line(16f,5f,16f,10f)
+            }
             "錨" -> {
                 canvas.drawCircle(16f,6f,4f,paint); line(16f,10f,16f,28f); line(8f,13f,24f,13f)
                 val path = Path(); path.moveTo(4f,19f); path.cubicTo(5f,33f,27f,33f,28f,19f); canvas.drawPath(path,paint)

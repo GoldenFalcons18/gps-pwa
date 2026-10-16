@@ -47,6 +47,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var message = "記録を開始してください"
     @Published var waypoints: [Waypoint] = []
     @Published var library = MapLibrary()
+    var defaultWaypointFolder:String { DefaultWaypointFolder.resolve(requested:UserDefaults.standard.string(forKey:"mainWaypointFolder"),folders:library.groups,waypointFolders:waypoints.compactMap(\.group)) }
     private struct LibraryDocument: Codable { var waypoints: [Waypoint]; var library: MapLibrary }
     @Published var quickWaypointID: UUID?
     @Published var savingCurrentWaypoint = false
@@ -137,10 +138,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private func finishCurrentWaypoint(_ point: CLLocation) {
         waypointTimeout?.invalidate(); waypointTimeout = nil
         savingCurrentWaypoint = false
-        let waypoint = Waypoint(name: "現在地 \(waypoints.count + 1)", latitude: point.coordinate.latitude, longitude: point.coordinate.longitude)
+        let waypoint = Waypoint(name: "現在地 \(waypoints.count + 1)", latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, group: defaultWaypointFolder)
         add(waypoint)
         quickWaypointID = waypoint.id
-        message = "\(waypoint.name) を保存しました"
+        message = "\(waypoint.name) を「\(waypoint.group ?? defaultWaypointFolder)」に保存しました"
     }
 
     func stop() {
@@ -187,8 +188,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     func add(_ waypoint: Waypoint) {
         var waypoint=waypoint
-        let saved=UserDefaults.standard.string(forKey:"mainWaypointFolder") ?? ""
-        waypoint.group = saved.isEmpty ? (waypoints.compactMap(\.group).first ?? "メインフォルダ") : saved
+        waypoint.group=DefaultWaypointFolder.destination(explicit:waypoint.group,defaultFolder:defaultWaypointFolder)
         waypoints.append(waypoint); saveWaypoints()
         log("Waypoint added: \(CoordinateInput.format(waypoint.latitude, isLatitude: true)) \(CoordinateInput.format(waypoint.longitude, isLatitude: false))")
     }
@@ -317,7 +317,7 @@ struct ContentView: View {
     @State private var waypointFolder = ""
     @AppStorage("mainWaypointFolder") private var savedMainWaypointFolder = ""
     private var waypointFolders: [String] { Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty}.sorted() }
-    private var mainWaypointFolder: String { waypointFolders.contains(savedMainWaypointFolder) ? savedMainWaypointFolder : (waypointFolders.first(where:{g in gps.waypoints.contains{ $0.group == g }}) ?? waypointFolders.first ?? "メインフォルダ") }
+    private var mainWaypointFolder: String { DefaultWaypointFolder.resolve(requested:savedMainWaypointFolder,folders:gps.library.groups,waypointFolders:gps.waypoints.compactMap(\.group)) }
     @State private var editorDraft: Waypoint?
     @State private var mapOperationsCoordinate: CLLocationCoordinate2D?
     @State private var mapOperationsPresented = false
@@ -485,8 +485,9 @@ struct ContentView: View {
                 Button { selected = nil; savedTarget = "__none__"; waypointListPresented = false } label: {
                     HStack { Text("目標なし"); Spacer(); if selected == nil { Image(systemName: "checkmark") } }
                 }
-                Picker("フォルダ",selection:$waypointFolder) { ForEach(waypointFolders,id:\.self){Text($0 + ($0 == mainWaypointFolder ? "（メイン）" : "")).tag($0)} }
-                Button(waypointFolder == mainWaypointFolder ? "このフォルダがメインです" : "このフォルダをメインにする") { savedMainWaypointFolder=waypointFolder }.disabled(waypointFolder.isEmpty || waypointFolder == mainWaypointFolder)
+                Picker("フォルダ",selection:$waypointFolder) { ForEach(waypointFolders,id:\.self){Text($0 + ($0 == mainWaypointFolder ? " ★デフォルト" : "")).tag($0)} }
+                Text("現在地WPの保存先：\(mainWaypointFolder)").font(.caption).foregroundStyle(.orange)
+                Button(waypointFolder == mainWaypointFolder ? "このフォルダがデフォルトです" : "このフォルダをデフォルトにする") { savedMainWaypointFolder=waypointFolder }.disabled(waypointFolder.isEmpty || waypointFolder == mainWaypointFolder)
                 if orderedWaypoints.filter({($0.group ?? "")==waypointFolder}).isEmpty { Text("このフォルダにウェイポイントはありません") }
                 ForEach(orderedWaypoints.filter{($0.group ?? "")==waypointFolder}) { wp in
                     HStack {
@@ -589,7 +590,7 @@ struct ContentView: View {
                     menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
                     menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
                     menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
-                    menuTile("現在地に打つ") { menuAction { gps.saveCurrentWaypoint() } }
+                    menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
                     menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
                     menuTile("完了", done: true) { menuPresented = false }
                 }
@@ -753,7 +754,7 @@ struct ContentView: View {
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder=mainWaypointFolder } }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
-            WaypointEntryView(waypoint: draft) { waypoint, navigate in
+            WaypointEntryView(waypoint: draft, folders: waypointFolders, defaultFolder: mainWaypointFolder) { waypoint, navigate in
                 gps.upsert(waypoint)
                 if navigate || pendingNavigationEditor { proposeNavigation(waypoint) }
             }
@@ -785,7 +786,9 @@ struct ContentView: View {
             if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
-                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "marine.lighthouse")
+                gps.library.groups=Array(Set(gps.library.groups+["港一覧","デモ海域"])).sorted()
+                savedMainWaypointFolder="港一覧"
+                editorDraft = Waypoint(name: "新規ウェイポイント", latitude: 35 + 19.528/60, longitude: 139 + 27.130/60, colorName: "#12ABCD", markSymbol: "marine.harbor", group:"港一覧")
             }
             #endif
             selected = savedTarget == "__none__" ? nil : (gps.waypoints.first { $0.id.uuidString == savedTarget }?.id ?? gps.waypoints.first?.id)

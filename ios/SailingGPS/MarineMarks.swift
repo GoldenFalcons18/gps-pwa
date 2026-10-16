@@ -3,7 +3,7 @@ import UIKit
 
 enum MarineMarks {
     static let choices: [(String, String)] = [
-        ("marine.lighthouse", "灯台"), ("marine.net", "網"), ("exclamationmark.triangle.fill", "危険"),
+        ("marine.lighthouse", "灯台"), ("marine.harbor", "港"), ("marine.net", "網"), ("exclamationmark.triangle.fill", "危険"),
         ("marine.buoy", "ブイ"), ("mountain.2.fill", "岩礁"), ("marine.anchor", "錨"), ("sailboat.fill", "帆船"), ("ferry.fill", "船"),
         ("flag.fill", "旗"), ("star.fill", "星"), ("circle.fill", "丸"), ("mappin", "ピン"),
         ("triangle.fill", "三角"), ("square.fill", "四角"), ("diamond.fill", "ひし形"), ("house.fill", "家"),
@@ -31,6 +31,12 @@ enum MarineMarks {
                 line(16, 3, 16, 24); line(8, 24, 24, 24); line(8, 24, 12, 18); line(12, 18, 20, 18); line(20, 18, 24, 24)
                 UIBezierPath(ovalIn: CGRect(x: 12, y: 5, width: 8, height: 8)).fill()
                 line(2, 28, 8, 30); line(8, 30, 16, 27); line(16, 27, 24, 30); line(24, 30, 30, 28)
+            case "marine.harbor":
+                // Two breakwaters and a boat distinguish the harbor from the anchor mark.
+                line(3, 3, 3, 28); line(3, 28, 10, 28); line(29, 3, 29, 28); line(29, 28, 22, 28)
+                path.append(UIBezierPath(rect: CGRect(x: 12, y: 10, width: 8, height: 7)))
+                path.move(to: CGPoint(x: 8, y: 17)); path.addLine(to: CGPoint(x: 24, y: 17)); path.addLine(to: CGPoint(x: 20, y: 23)); path.addLine(to: CGPoint(x: 12, y: 23)); path.close()
+                line(16, 5, 16, 10)
             case "marine.anchor":
                 path.append(UIBezierPath(ovalIn: CGRect(x: 12, y: 2, width: 8, height: 8)))
                 line(16, 10, 16, 28); line(8, 13, 24, 13)

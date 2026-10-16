@@ -40,3 +40,18 @@ struct MapLibrary: Codable, Equatable {
     var hiddenGroups: [String] = []
     var features: [MapFeature] = []
 }
+
+
+/// One rule shared by the displayed default and current-position saves.
+enum DefaultWaypointFolder {
+    static func resolve(requested:String?,folders:[String],waypointFolders:[String])->String {
+        let populated=Array(Set(waypointFolders)).filter{!$0.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty}.sorted()
+        let available=Set(folders+populated).filter{!$0.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty}.sorted()
+        if let requested,available.contains(requested) { return requested }
+        return populated.first ?? available.first ?? "メインフォルダ"
+    }
+    static func destination(explicit:String?,defaultFolder:String)->String {
+        guard let explicit,!explicit.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty else { return defaultFolder }
+        return explicit
+    }
+}

@@ -7,7 +7,7 @@ import java.util.UUID
 object WaypointArchive {
     const val MAX_BYTES = 8 * 1024 * 1024
     const val MAX_COUNT = 10000
-    private val symbols = mapOf("marine.lighthouse" to "灯台", "marine.net" to "網", "exclamationmark.triangle.fill" to "危険", "marine.buoy" to "ブイ", "mountain.2.fill" to "岩礁", "marine.anchor" to "錨", "sailboat.fill" to "⛵", "ferry.fill" to "🚢", "flag.fill" to "⚑", "star.fill" to "★", "circle.fill" to "●", "mappin" to "📍", "triangle.fill" to "▲", "square.fill" to "■", "diamond.fill" to "◆", "house.fill" to "🏠", "sun.max.fill" to "☀", "moon.fill" to "🌙", "fish.fill" to "🐟", "binoculars.fill" to "🔭", "light.beacon.max.fill" to "灯火")
+    private val symbols = mapOf("marine.lighthouse" to "灯台", "marine.harbor" to "港", "marine.net" to "網", "exclamationmark.triangle.fill" to "危険", "marine.buoy" to "ブイ", "mountain.2.fill" to "岩礁", "marine.anchor" to "錨", "sailboat.fill" to "⛵", "ferry.fill" to "🚢", "flag.fill" to "⚑", "star.fill" to "★", "circle.fill" to "●", "mappin" to "📍", "triangle.fill" to "▲", "square.fill" to "■", "diamond.fill" to "◆", "house.fill" to "🏠", "sun.max.fill" to "☀", "moon.fill" to "🌙", "fish.fill" to "🐟", "binoculars.fill" to "🔭", "light.beacon.max.fill" to "灯火")
     fun displayMark(mark: String): String = if (mark.startsWith("text:")) mark.removePrefix("text:") else symbols[mark.removePrefix("symbol:")] ?: "⚑"
     fun archiveMark(w: Waypoint): String = w.archiveMark?.takeIf { displayMark(it) == w.mark } ?: symbols.entries.firstOrNull { it.value == w.mark }?.let { "symbol:${it.key}" } ?: "text:${w.mark}"
     private fun validate(w: Waypoint) {
