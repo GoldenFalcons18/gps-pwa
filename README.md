@@ -1,5 +1,9 @@
 # Sailing GPS Logger
 
+[Android・iPhone・Apple Watch 共通インストールページ](https://goldenfalcons18.github.io/gps-pwa/install/)
+
+このURLを共有すると、端末ごとの取得先を選べます。Androidは公開済みの最新版APK、iPhone・WatchはTestFlight公開リンクへ案内します。iPhoneの新規参加にはTestFlight側の受付が有効である必要があります。
+
 ## Android版
 
 [Android版のダウンロード・更新情報](https://github.com/GoldenFalcons18/gps-pwa/releases/latest)
