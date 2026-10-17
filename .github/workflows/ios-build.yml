@@ -34,6 +34,23 @@ jobs:
           name: iPhone-unsigned-IPA-requires-AltStore-Classic-signing
           path: ios/package/SailingGPS-unsigned.ipa
 
+      - name: Capture Watch navigation and speed previews
+        working-directory: ios
+        run: |
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices available --json | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if "watchOS" in k for x in v if "Apple Watch" in x["name"]))')
+          xcrun simctl boot "$DEVICE" || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" build/Build/Products/Debug-watchsimulator/SailingGPSWatch.app
+          mkdir -p screenshots
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-navigation
+          sleep 4
+          xcrun simctl io "$DEVICE" screenshot screenshots/Watch-navigation.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-speed
+          sleep 4
+          xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed.png
+          xcrun simctl shutdown "$DEVICE"
       - name: Capture simulator dashboard screenshots
         continue-on-error: true
         timeout-minutes: 8

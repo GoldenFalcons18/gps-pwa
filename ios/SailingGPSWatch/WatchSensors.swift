@@ -17,6 +17,9 @@ final class WatchSensors: NSObject, ObservableObject, CLLocationManagerDelegate 
     }
     func setActive(_ value: Bool) {
         active = value
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--preview-watch") { status = "Watch GPS・コンパス（デモ）"; return }
+        #endif
         if !value { manager.stopUpdatingLocation(); manager.stopUpdatingHeading(); return }
         switch manager.authorizationStatus {
         case .notDetermined: manager.requestWhenInUseAuthorization()
@@ -40,6 +43,11 @@ final class WatchSensors: NSObject, ObservableObject, CLLocationManagerDelegate 
         status = (error as? CLError)?.code == .denied ? "位置情報が許可されていません" : "Watch GPSを取得中"
     }
     func fix(at date: Date) -> CLLocation? {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--preview-watch") {
+            return CLLocation(coordinate: CLLocationCoordinate2D(latitude: 35.318, longitude: 139.467), altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, course: 230, speed: 3, timestamp: date)
+        }
+        #endif
         guard let location, WatchNavigationMath.validFix(timestamp: location.timestamp, accuracy: location.horizontalAccuracy, now: date) else { return nil }
         return location
     }

@@ -12,6 +12,13 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
     override init() {
         super.init()
         if let data = UserDefaults.standard.data(forKey: "watchCatalog") { catalog = try? JSONDecoder().decode(WatchWaypointCatalog.self, from: data) }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--preview-watch") {
+            catalog = WatchWaypointCatalog(waypoints: [WatchWaypoint(id: "demo", name: "江の島灯台", latitude: 35.30, longitude: 139.48, folder: "目標")], targetID: "demo", metric: false, selectionChangedAt: Date(), sentAt: Date())
+            selectedID = "demo"; selectionPending = false; pendingTime = nil
+            return
+        }
+        #endif
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self; WCSession.default.activate()
     }
@@ -146,21 +153,33 @@ struct WatchNavigationView: View {
                 }.navigationTitle("目標")
             }
         }
-        .onAppear { receiver.refresh(); sensors.setActive(phase == .active) }
+        .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--preview-speed") { mode = 1 }
+            if ProcessInfo.processInfo.arguments.contains("--preview-navigation") { mode = 0 }
+            #endif
+            receiver.refresh(); sensors.setActive(phase == .active)
+        }
         .onChange(of: phase) { _, value in sensors.setActive(value == .active); if value == .active { receiver.refresh() } }
     }
     @ViewBuilder private func navigation(fix: CLLocation?, compass: CLHeading?) -> some View {
         let target = receiver.target
         let trueBearing = target.flatMap { point in fix.map { WatchNavigationSnapshot.bearing(fromLat: $0.coordinate.latitude, fromLon: $0.coordinate.longitude, toLat: point.latitude, toLon: point.longitude) } }
-        let trueHeading = compass.flatMap { $0.trueHeading >= 0 ? $0.trueHeading : nil }
-        let magnetic = trueHeading != nil && compass != nil
-        let shownBearing = trueBearing.map { value in magnetic ? WatchNavigationMath.magneticBearing(trueBearing: value, trueHeading: trueHeading!, magneticHeading: compass!.magneticHeading) : value }
+        #if DEBUG
+        let demo = ProcessInfo.processInfo.arguments.contains("--preview-watch")
+        #else
+        let demo = false
+        #endif
+        let trueHeading = compass.flatMap { $0.trueHeading >= 0 ? $0.trueHeading : nil } ?? (demo ? 218 : nil)
+        let magneticHeading = compass?.magneticHeading ?? (demo ? 226 : nil)
+        let magnetic = trueHeading != nil && magneticHeading != nil
+        let shownBearing = trueBearing.map { value in magnetic ? WatchNavigationMath.magneticBearing(trueBearing: value, trueHeading: trueHeading!, magneticHeading: magneticHeading!) : value }
         Text(target?.name ?? "目標なし").font(.caption).lineLimit(2)
-        WatchCompass(heading: magnetic ? compass?.magneticHeading : (trueHeading ?? compass?.magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 150)
+        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 150)
         let meters = target.flatMap { point in fix.map { $0.distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude)) } }
         Text(WatchNavigationMath.distance(meters, metric: metric)).font(.title2.bold()).monospacedDigit()
         Text("目標距離・Watch GPS").font(.system(size: 10)).foregroundStyle(.secondary)
-        Text("現在方位 " + (compass.map { String(format: "%.0f° 磁北", $0.magneticHeading) } ?? "未取得")).font(.caption2)
+        Text("現在方位 " + (magneticHeading.map { String(format: "%.0f° 磁北", $0) } ?? "未取得")).font(.caption2)
     }
     @ViewBuilder private func speed(fix: CLLocation?) -> some View {
         Text("SOG").font(.caption).foregroundStyle(.orange)
