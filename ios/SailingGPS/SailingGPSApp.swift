@@ -288,6 +288,7 @@ struct ContentView: View {
     @State private var mapDraftName = ""
     @State private var mapDraftPresented = false
     @State private var following = true
+    @State private var mapMetersPerCm = 200.0
     @State private var showAllRequest = 0
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
@@ -436,15 +437,23 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
+            .overlay(alignment: .trailing) {
+                VStack(spacing: 4) {
+                    Button { mapMetersPerCm = max(12.5, mapMetersPerCm / 2) } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("地図を拡大").disabled(mapMetersPerCm <= 12.5)
+                    Button { mapMetersPerCm = min(6400, mapMetersPerCm * 2) } label: { Image(systemName: "minus") }
+                        .accessibilityLabel("地図を縮小").disabled(mapMetersPerCm >= 6400)
+                }.font(.title2).tint(.orange).buttonStyle(.borderedProminent).padding(8)
+            }
             .overlay(alignment: .top) {
                 if !following { Button("再度中心に配置") { following = true }.font(.caption).buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black).padding(.top, 48) }
             }
             HStack {
                 Button { following = true } label: { Image(systemName: "location.north.fill") }
-                    .accessibilityLabel("現在地へ追従 1cm約200m")
+                    .accessibilityLabel("現在地へ追従")
                 Spacer()
                 Text("長押しで地図操作").font(.caption2).padding(4).background(.black.opacity(0.5)).foregroundStyle(.white)
                 Spacer()
@@ -466,6 +475,15 @@ struct ContentView: View {
                     Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
+                }
+                Section("ウェイポイント") {
+                    Picker("デフォルトの保存先", selection: Binding(get: { mainWaypointFolder }, set: { savedMainWaypointFolder = $0 })) {
+                        ForEach(waypointFolders, id: \.self) { folder in
+                            Text(folder + (folder == mainWaypointFolder ? " ★デフォルト" : "")).tag(folder)
+                        }
+                    }
+                    Text("現在地WP・新規ウェイポイントの保存先：\(mainWaypointFolder)").font(.caption)
+                    Text("既存のウェイポイントは移動しません。個別の編集画面で保存フォルダを変更できます。").font(.caption)
                 }
                 Section("GPS") {
                     reading("GPS精度", gps.location.map { String(format: "±%.0f m", $0.horizontalAccuracy) } ?? "—")

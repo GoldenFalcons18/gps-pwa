@@ -616,7 +616,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private var pendingNavigation = false
+    private fun updateDefaultFolderSetting() {
+        b.btnDefaultWaypointFolder.text = "デフォルトの保存先：$mainWaypointFolder ★デフォルト"
+        b.btnDefaultWaypointFolder.setOnClickListener {
+            val folders = waypointFolders
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("デフォルトの保存先")
+                .setSingleChoiceItems(folders.map { it + if (it == mainWaypointFolder) " ★デフォルト" else "" }.toTypedArray(), folders.indexOf(mainWaypointFolder)) { dialog, index ->
+                    displayPrefs.edit().putString("mainWaypointFolder", folders[index]).apply()
+                    renderWaypointList()
+                    updateDefaultFolderSetting()
+                    Toast.makeText(this, "新規ポイントの保存先：${folders[index]}", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+                .setNegativeButton("キャンセル", null).show()
+        }
+    }
     private fun showSettings() {
+        updateDefaultFolderSetting()
         b.settingsPanel.visibility = android.view.View.VISIBLE
         b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) }
     }

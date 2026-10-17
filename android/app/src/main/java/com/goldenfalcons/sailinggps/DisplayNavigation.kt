@@ -15,11 +15,11 @@ object DisplayNavigation {
     }
 
     const val BOAT_SCREEN_FRACTION = 0.72
-    fun followCenter(lat: Double, lon: Double, bearing: Double, mapHeight: Double, pixelsPerCm: Double): Pair<Double, Double> {
-        val ahead = mapHeight * (BOAT_SCREEN_FRACTION - 0.5) * 200.0 / pixelsPerCm
+    fun followCenter(lat: Double, lon: Double, bearing: Double, mapHeight: Double, pixelsPerCm: Double, metersPerCm: Double = 200.0): Pair<Double, Double> {
+        val ahead = mapHeight * (BOAT_SCREEN_FRACTION - 0.5) * metersPerCm / pixelsPerCm
         return destination(lat, lon, bearing, ahead)
     }
 
-    fun zoom(latitude: Double, pixelsPerCm: Double): Double =
-        log2(156543.033928 * cos(Math.toRadians(latitude)).coerceAtLeast(0.000001) / (200.0 / pixelsPerCm))
+    fun zoom(latitude: Double, pixelsPerCm: Double, metersPerCm: Double = 200.0): Double =
+        log2(156543.033928 * cos(Math.toRadians(latitude)).coerceAtLeast(0.000001) / (metersPerCm / pixelsPerCm))
 }

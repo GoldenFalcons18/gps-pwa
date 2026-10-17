@@ -12,6 +12,7 @@ struct NavigationMapView: UIViewRepresentable {
     let track: [CLLocationCoordinate2D]
     @Binding var selected: UUID?
     @Binding var following: Bool
+    let metersPerCm: Double
     let showAllRequest: Int
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
@@ -52,12 +53,15 @@ struct NavigationMapView: UIViewRepresentable {
         private var rendering = false
         private var signature = ""
         private var courseHeading: Double?
+        private var lastLocationTime: Date?
+        private var lastTrackCount = -1
         private weak var map: MKMapView?
         private var displayLink: CADisplayLink?
         private var shownHeading: Double?
         private var frameTime: CFTimeInterval = 0
         private var scaleSignature = ""
         private var wasFollowing = false
+        private var previousScale: Double?
         func stopAnimation() {
             displayLink?.invalidate(); displayLink = nil; frameTime = 0
         }
@@ -83,15 +87,15 @@ struct NavigationMapView: UIViewRepresentable {
             let camera = map.camera.copy() as! MKMapCamera
             camera.heading = CoordinateInput.normalizeHeading(shownHeading ?? parent.heading ?? 0)
             let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
-            let center = CoordinateInput.followCenter(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, heading: camera.heading, mapHeight: map.bounds.height, pointsPerCm: pointsPerCm)
+            let center = CoordinateInput.followCenter(latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, heading: camera.heading, mapHeight: map.bounds.height, pointsPerCm: pointsPerCm, metersPerCm: parent.metersPerCm)
             camera.centerCoordinate = .init(latitude: center.latitude, longitude: center.longitude)
             camera.pitch = 0
             map.setCamera(camera, animated: false)
             // Recalibrate scale for layout/location changes, not for every compass sample.
-            let key = "\(map.bounds.size)|\(point.coordinate.latitude)"
+            let key = "\(map.bounds.size)|\((point.coordinate.latitude * 100).rounded())|\(parent.metersPerCm)"
             if key != scaleSignature {
                 scaleSignature = key
-                let desiredMetersPerPoint = 200 / pointsPerCm
+                let desiredMetersPerPoint = parent.metersPerCm / pointsPerCm
                 let mid = CGPoint(x: map.bounds.midX, y: map.bounds.midY)
                 let a = map.convert(CGPoint(x: mid.x - 25, y: mid.y), toCoordinateFrom: map)
                 let b = map.convert(CGPoint(x: mid.x + 25, y: mid.y), toCoordinateFrom: map)
@@ -109,17 +113,18 @@ struct NavigationMapView: UIViewRepresentable {
             }
         }
         private func updateCourse(_ map: MKMapView) {
-            map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "course" })
+            let existingDots = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "course" }
             map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "course" })
             courseHeading = parent.heading
-            guard parent.showCourse, let location = parent.location, let heading = parent.heading else { return }
+            guard parent.showCourse, let location = parent.location, let heading = parent.heading else { map.removeAnnotations(existingDots); return }
             var coordinates = [location.coordinate]
             for distance in stride(from: 100, through: 500, by: 100) {
                 let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
                 let coordinate = CLLocationCoordinate2D(latitude: q.latitude, longitude: q.longitude)
                 coordinates.append(coordinate)
-                let dot = Pin(); dot.kind = "course"; dot.title = "\(distance) m"; dot.coordinate = coordinate
-                map.addAnnotation(dot)
+                let title = "\(distance) m"
+                if let dot = existingDots.first(where: { $0.title == title }) { dot.coordinate = coordinate }
+                else { let dot = Pin(); dot.kind = "course"; dot.title = title; dot.coordinate = coordinate; map.addAnnotation(dot) }
             }
             let line = MKPolyline(coordinates: coordinates, count: coordinates.count)
             line.title = "course"; map.addOverlay(line)
@@ -143,14 +148,21 @@ struct NavigationMapView: UIViewRepresentable {
             defer { rendering = false }
             self.map = map
             let p = parent
+            if let previousScale, previousScale != p.metersPerCm, !p.following {
+                let camera = map.camera.copy() as! MKMapCamera
+                camera.altitude *= p.metersPerCm / previousScale
+                map.setCamera(camera, animated: false)
+            }
+            previousScale = p.metersPerCm
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
             let librarySignature = (try? JSONEncoder().encode(p.library)).map { String(decoding:$0,as:UTF8.self) } ?? ""
-            let key = "\(librarySignature)|\(p.waypoints.map{$0.group ?? ""}.joined())|\(p.location?.timestamp.timeIntervalSince1970 ?? 0)|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.track.count)|\(p.showWaypoints)|\(p.showCourse)"
-            if key != signature {
+            let key = "\(librarySignature)|\(p.waypoints.map{$0.group ?? ""}.joined())|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.showWaypoints)|\(p.showCourse)"
+            let staticChanged = key != signature
+            if staticChanged {
                 signature = key
                 courseHeading = nil
-                map.removeAnnotations(map.annotations)
-                map.removeOverlays(map.overlays)
+                map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" })
+                map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
                 for wp in p.showWaypoints ? p.waypoints.filter{!p.library.hiddenGroups.contains($0.group ?? "")} : [] {
                     let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
                     map.addAnnotation(pin)
@@ -161,18 +173,30 @@ struct NavigationMapView: UIViewRepresentable {
                     if f.kind == "line" { let line=MKPolyline(coordinates:points,count:points.count);line.title="feature:"+f.color;map.addOverlay(line) }
                     else { let area=MKPolygon(coordinates:points,count:points.count);area.title="feature:"+f.color;map.addOverlay(area) }
                 }
-                if p.track.count > 1 { map.addOverlay(MKPolyline(coordinates: p.track, count: p.track.count)) }
-                if let location = p.location {
-                    let pin = Pin(); pin.kind = "boat"; pin.title = "現在地"; pin.coordinate = location.coordinate
-                    map.addAnnotation(pin)
-                    if let target = p.waypoints.first(where: { $0.id == p.selected }) {
-                        let line = MKPolyline(coordinates: [location.coordinate, target.coordinate], count: 2)
-                        line.title = "target"; map.addOverlay(line)
-                    }
-
+            }
+            let locationChanged = lastLocationTime != p.location?.timestamp
+            if locationChanged || lastTrackCount != p.track.count {
+                lastLocationTime = p.location?.timestamp
+                lastTrackCount = p.track.count
+                map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "track" || ($0 as? MKPolyline)?.title == "target" })
+                if p.track.count > 1 {
+                    let line = MKPolyline(coordinates: p.track, count: p.track.count)
+                    line.title = "track"; map.addOverlay(line)
                 }
             }
-            if key != signature || courseHeading != p.heading || !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" }) {
+            if let location = p.location {
+                if let pin = map.annotations.compactMap({ $0 as? Pin }).first(where: { $0.kind == "boat" }) { pin.coordinate = location.coordinate }
+                else { let pin = Pin(); pin.kind = "boat"; pin.title = "現在地"; pin.coordinate = location.coordinate; map.addAnnotation(pin) }
+            }
+            if locationChanged || staticChanged {
+                // Refresh the target path without replacing waypoint annotation views.
+                map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "target" })
+                if let location = p.location, let target = p.waypoints.first(where: { $0.id == p.selected }) {
+                    let line = MKPolyline(coordinates: [location.coordinate, target.coordinate], count: 2)
+                    line.title = "target"; map.addOverlay(line)
+                }
+            }
+            if staticChanged || locationChanged || courseHeading != p.heading || (p.showCourse && !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" })) {
                 updateCourse(map)
             }
             updateBoatRotation(map)

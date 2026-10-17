@@ -39,6 +39,7 @@ class NavigationMapPanel(
     private var lastRecorded: GeoPoint? = null
     private var current: GeoPoint? = null
     private var following = true
+    private var metersPerCm = 200.0
     var onFollowingChanged: ((Boolean) -> Unit)? = null
     private var showWaypoints = true
     private var showCourse = true
@@ -141,6 +142,24 @@ class NavigationMapPanel(
             }
         }))
         container.addView(map, FrameLayout.LayoutParams(-1, -1))
+        val zoomControls = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+        }
+        for ((label, factor) in listOf("＋" to 0.5, "−" to 2.0)) {
+            zoomControls.addView(android.widget.Button(context).apply {
+                text = label
+                contentDescription = if (factor < 1) "地図を拡大" else "地図を縮小"
+                setOnClickListener {
+                    val next = (metersPerCm * factor).coerceIn(12.5, 6400.0)
+                    val ratio = next / metersPerCm
+                    metersPerCm = next
+                    if (following) applyFollow()
+                    else map.controller.setZoom((map.zoomLevelDouble - kotlin.math.log2(ratio)).coerceIn(map.minZoomLevel, map.maxZoomLevel))
+                    map.invalidate()
+                }
+            }, android.widget.LinearLayout.LayoutParams((48 * context.resources.displayMetrics.density).toInt(), (48 * context.resources.displayMetrics.density).toInt()))
+        }
+        container.addView(zoomControls, FrameLayout.LayoutParams(-2, -2, android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL))
         trail = Polyline(map).apply {
             outlinePaint.color = Color.rgb(255, 170, 0)
             outlinePaint.strokeWidth = 6f
@@ -231,8 +250,13 @@ class NavigationMapPanel(
         targetLine.setPoints(if (current != null && target != null) listOf(current!!, target!!) else emptyList())
     }
 
+    private var featureSnapshot: Pair<List<MapFeature>, List<Waypoint>>? = null
+    private var waypointSnapshot: Pair<List<Waypoint>, String?>? = null
     private val featureOverlays = mutableListOf<org.osmdroid.views.overlay.Overlay>()
     fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
+        val snapshot = features.toList() to waypoints.toList()
+        if (snapshot == featureSnapshot) return
+        featureSnapshot = snapshot
         map.overlays.removeAll(featureOverlays.toSet());featureOverlays.clear()
         for(f in features) {
             val points=f.boundary(waypoints).map{GeoPoint(it.lat,it.lon)}
@@ -244,6 +268,9 @@ class NavigationMapPanel(
         map.overlays.addAll(0,featureOverlays);map.invalidate()
     }
     fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?) {
+        val snapshot = waypoints.toList() to active?.id
+        if (snapshot == waypointSnapshot) return
+        waypointSnapshot = snapshot
         waypointData = waypoints.toList()
         target = active?.let { GeoPoint(it.lat, it.lon) }
         updateTargetLine()
@@ -330,7 +357,7 @@ class NavigationMapPanel(
         val point = current ?: return
         val metrics = map.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
-        val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54).coerceIn(map.minZoomLevel, map.maxZoomLevel)
+        val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54, metersPerCm).coerceIn(map.minZoomLevel, map.maxZoomLevel)
         if (kotlin.math.abs(map.zoomLevelDouble - zoom) > 0.005) map.controller.setZoom(zoom)
         map.mapOrientation = -(shownHeading ?: lastHeading ?: 0.0).toFloat()
         val now = android.os.SystemClock.uptimeMillis()
@@ -339,7 +366,7 @@ class NavigationMapPanel(
             log("Map follow heading=$lastHeading shown=$shownHeading")
         }
         // Center the camera ahead so the real boat stays 72% down the viewport.
-        val center = DisplayNavigation.followCenter(point.latitude, point.longitude, shownHeading ?: lastHeading ?: 0.0, map.height.toDouble(), dpi / 2.54)
+        val center = DisplayNavigation.followCenter(point.latitude, point.longitude, shownHeading ?: lastHeading ?: 0.0, map.height.toDouble(), dpi / 2.54, metersPerCm)
         if (map.mapCenter.latitude != center.first || map.mapCenter.longitude != center.second) map.controller.setCenter(GeoPoint(center.first, center.second))
         logWaypointTouchBounds()
         if (BuildConfig.DEBUG) map.post {
