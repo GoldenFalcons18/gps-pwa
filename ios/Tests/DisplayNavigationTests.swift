@@ -9,6 +9,12 @@ final class DisplayNavigationTests: XCTestCase {
             XCTAssertEqual(p.latitude, 0, accuracy: 0.000001)
         }
     }
+    func testFollowAnchorScalesWithZoom() {
+        let close = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 0, mapHeight: 400, pointsPerCm: 50, metersPerCm: 100)
+        let far = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 0, mapHeight: 400, pointsPerCm: 50, metersPerCm: 400)
+        XCTAssertEqual(far.latitude, close.latitude * 4, accuracy: 0.000001)
+        XCTAssertEqual(close.longitude, 0, accuracy: 0.000001)
+    }
     func testDistanceUnits() {
         XCTAssertEqual(CoordinateInput.distance(999, metric: true), "999 m")
         XCTAssertEqual(CoordinateInput.distance(1000, metric: true), "1.00 km")
