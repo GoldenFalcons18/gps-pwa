@@ -89,15 +89,15 @@ struct WatchCompass: View {
                     ForEach(0..<36) { tick in
                         Rectangle().fill(.gray).frame(width: 1, height: tick % 3 == 0 ? 10 : 5).offset(y: -radius + 8).rotationEffect(.degrees(Double(tick) * 10))
                     }
-                    VStack { Text("北"); Spacer(); Text("南") }.padding(15)
-                    HStack { Text("西"); Spacer(); Text("東") }.padding(15)
+                    VStack { Text("北"); Spacer(); Text("南") }.font(.system(size: 10)).padding(9)
+                    HStack { Text("西"); Spacer(); Text("東") }.font(.system(size: 10)).padding(9)
                 }.rotationEffect(.degrees(-dial))
                 if canPoint, let bearing, heading != nil {
-                    Image(systemName: "location.north.fill").font(.system(size: 24)).foregroundStyle(.green).offset(y: -radius * 0.64).rotationEffect(.degrees(bearing - dial))
+                    Image(systemName: "location.north.fill").font(.system(size: 17)).foregroundStyle(.green).offset(y: -radius * 0.87).rotationEffect(.degrees(bearing - dial))
                 }
                 VStack(spacing: 2) {
-                    Text(magnetic ? "目標方位（磁北）" : "目標方位（真北）").font(.system(size: 9))
-                    Text(bearing.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 25, weight: .bold)).foregroundStyle(.green)
+                    Text(magnetic ? "目標方位（磁北）" : "目標方位（真北）").font(.system(size: 7))
+                    Text(bearing.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 23, weight: .bold)).foregroundStyle(.green)
                 }
             }.frame(width: size, height: size).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
