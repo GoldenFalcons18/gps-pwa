@@ -9,6 +9,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     static let shared = WatchNavigationBridge()
     private var target: Waypoint?
     private var waypoints: [Waypoint] = []
+    private var waypointsReady = false
     private var selectionChangedAt = (UserDefaults.standard.object(forKey: "watchTargetChangedAt") as? Double).map(Date.init(timeIntervalSince1970:)) ?? .distantPast
     private var lastSelectedID = UserDefaults.standard.string(forKey: "activeWaypointID")
     private var location: CLLocation?
@@ -30,7 +31,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         target = waypoint; self.metric = metric; publish()
     }
     func setWaypoints(_ points: [Waypoint]) {
-        waypoints = points
+        waypoints = points; waypointsReady = true
         if let id = target?.id { target = points.first { $0.id == id } }
         publish()
     }
@@ -50,6 +51,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         return true
     }
     private func publish() {
+        guard waypointsReady else { return }
         let point = location
         let snapshot = WatchNavigationSnapshot(
             name: target?.name,
@@ -73,6 +75,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     func sessionReachabilityDidChange(_ session: WCSession) { DispatchQueue.main.async { self.publish() } }
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         DispatchQueue.main.async {
+            guard self.waypointsReady else { replyHandler(["deferred": true]); return }
             var accepted = true
             if message["selectTarget"] != nil { accepted = self.selectFromWatch(message) }
             self.publish()

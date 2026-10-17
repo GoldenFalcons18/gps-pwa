@@ -53,7 +53,7 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         let sentTime = time
         session.sendMessage(["selectTarget": selectedID ?? "__none__", "selectionTime": time.timeIntervalSince1970], replyHandler: { reply in
             DispatchQueue.main.async {
-                guard self.pendingTime == sentTime else { return }
+                guard self.pendingTime == sentTime, reply["deferred"] as? Bool != true else { return }
                 if reply["selectionAccepted"] as? Bool == false { self.message = "iPhoneの新しい目標を反映します" }
                 self.clearPending(); self.receive(reply)
             }
