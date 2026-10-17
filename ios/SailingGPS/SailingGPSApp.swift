@@ -172,6 +172,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
             location = point
+            WatchNavigationBridge.shared.updateLocation(point)
             if savingCurrentWaypoint { finishCurrentWaypoint(point) }
             guard recording else { continue }
             let row = "\(point.timestamp.timeIntervalSince1970),\(point.coordinate.latitude),\(point.coordinate.longitude),\(point.altitude),\(point.speed),\(point.course)\n"
@@ -821,7 +822,11 @@ struct ContentView: View {
         }
         .onChange(of: selected) { _, value in
             savedTarget = value?.uuidString ?? "__none__"
+            WatchNavigationBridge.shared.setTarget(target, metric: metricUnits)
         }
+        .onAppear { WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
+        .onChange(of: metricUnits) { _, _ in WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
+        .onReceive(gps.$waypoints) { points in WatchNavigationBridge.shared.setTarget(points.first { $0.id == selected }, metric: metricUnits) }
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
         }
