@@ -826,7 +826,15 @@ struct ContentView: View {
         }
         .onAppear { WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
         .onChange(of: metricUnits) { _, _ in WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
-        .onReceive(gps.$waypoints) { points in WatchNavigationBridge.shared.setTarget(points.first { $0.id == selected }, metric: metricUnits) }
+        .onReceive(gps.$waypoints) { points in
+            WatchNavigationBridge.shared.setWaypoints(points)
+            WatchNavigationBridge.shared.setTarget(points.first { $0.id == selected }, metric: metricUnits)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchTargetChanged)) { notification in
+            guard let id = notification.userInfo?["targetID"] as? String else { return }
+            selected = gps.waypoints.first { $0.id.uuidString == id }?.id
+            savedTarget = selected?.uuidString ?? "__none__"
+        }
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
         }

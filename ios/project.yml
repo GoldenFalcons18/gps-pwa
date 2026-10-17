@@ -58,6 +58,7 @@ targets:
         CFBundleDisplayName: Sailing GPS
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSLocationWhenInUseUsageDescription: Watchの現在地から目標距離・方位・SOG・COGを表示します。
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.goldenfalcons.sailinggps
         WKRunsIndependentlyOfCompanionApp: false

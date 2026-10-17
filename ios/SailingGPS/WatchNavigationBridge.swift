@@ -2,10 +2,14 @@ import Foundation
 import CoreLocation
 import WatchConnectivity
 
-/// Shares only the current navigation reading with the paired watch.
+extension Notification.Name { static let watchTargetChanged = Notification.Name("SailingGPSWatchTargetChanged") }
+
+/// Syncs saved waypoints and target selection; Watch navigation uses its own sensors.
 final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     static let shared = WatchNavigationBridge()
     private var target: Waypoint?
+    private var waypoints: [Waypoint] = []
+    private var selectionChangedAt = Date()
     private var location: CLLocation?
     private var metric = false
     private var latest: [String: Any] = [:]
@@ -16,9 +20,23 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         WCSession.default.activate()
     }
     func setTarget(_ waypoint: Waypoint?, metric: Bool) {
+        if target?.id != waypoint?.id { selectionChangedAt = Date() }
         target = waypoint; self.metric = metric; publish()
     }
-    func updateLocation(_ point: CLLocation) { location = point; publish() }
+    func setWaypoints(_ points: [Waypoint]) { waypoints = points; publish() }
+    func updateLocation(_ point: CLLocation) { location = point }
+    private func selectFromWatch(_ message: [String: Any]) -> Bool {
+        guard let id = message["selectTarget"] as? String,
+              let time = message["selectionTime"] as? Double,
+              Date(timeIntervalSince1970: time) >= selectionChangedAt else { return false }
+        guard id == "__none__" || waypoints.contains(where: { $0.id.uuidString == id }) else { return false }
+        target = waypoints.first { $0.id.uuidString == id }
+        selectionChangedAt = Date(timeIntervalSince1970: time)
+        UserDefaults.standard.set(id, forKey: "activeWaypointID")
+        NotificationCenter.default.post(name: .watchTargetChanged, object: nil, userInfo: ["targetID": id])
+        publish()
+        return true
+    }
     private func publish() {
         let point = location
         let snapshot = WatchNavigationSnapshot(
@@ -27,7 +45,9 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             distanceMeters: target.flatMap { wp in point.map { $0.distance(from: CLLocation(latitude: wp.latitude, longitude: wp.longitude)) } },
             metric: metric, locationTime: point?.timestamp, sentAt: Date())
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        latest = ["navigation": data]
+        let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date())
+        guard let catalogData = try? JSONEncoder().encode(catalog) else { return }
+        latest = ["navigation": data, "waypoints": catalogData]
         let session = WCSession.default
         guard WCSession.isSupported(), session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
         // Context replaces older pending readings instead of queuing obsolete fixes.
@@ -40,7 +60,13 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     func sessionWatchStateDidChange(_ session: WCSession) { DispatchQueue.main.async { self.publish() } }
     func sessionReachabilityDidChange(_ session: WCSession) { DispatchQueue.main.async { self.publish() } }
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
-        DispatchQueue.main.async { self.publish(); replyHandler(self.latest) }
+        DispatchQueue.main.async {
+            var accepted = true
+            if message["selectTarget"] != nil { accepted = self.selectFromWatch(message) }
+            self.publish()
+            var reply = self.latest; reply["selectionAccepted"] = accepted
+            replyHandler(reply)
+        }
     }
     func sessionDidBecomeInactive(_ session: WCSession) {}
     func sessionDidDeactivate(_ session: WCSession) { session.activate() }

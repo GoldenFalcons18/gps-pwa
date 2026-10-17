@@ -8,7 +8,7 @@ final class WatchNavigationTests: XCTestCase {
     }
     func testUnitsFreshnessAndRoundTrip() throws {
         let now = Date()
-        var s = WatchNavigationSnapshot(name: "港", bearing: 90, distanceMeters: 1852, metric: false, locationTime: now, sentAt: now)
+        var s = WatchNavigationSnapshot(name: "貂ｯ", bearing: 90, distanceMeters: 1852, metric: false, locationTime: now, sentAt: now)
         XCTAssertEqual(s.distanceText, "1.00 nm")
         s.metric = true
         XCTAssertEqual(s.distanceText, "1.85 km")
@@ -19,5 +19,25 @@ final class WatchNavigationTests: XCTestCase {
         XCTAssertFalse(s.isFresh(at: now))
         s.name = nil
         XCTAssertFalse(s.hasTarget)
+    }
+    func testMagneticReferenceAndNorthWrap() {
+        XCTAssertEqual(WatchNavigationMath.magneticBearing(trueBearing: 144, trueHeading: 10, magneticHeading: 18), 152, accuracy: 0.001)
+        XCTAssertEqual(WatchNavigationMath.unwrap(from: 359, to: 1), 361, accuracy: 0.001)
+        XCTAssertEqual(WatchNavigationMath.unwrap(from: 1, to: 359), -1, accuracy: 0.001)
+    }
+    func testWatchFixAndSpeedValidity() {
+        let now = Date()
+        XCTAssertTrue(WatchNavigationMath.validFix(timestamp: now, accuracy: 10, now: now))
+        XCTAssertFalse(WatchNavigationMath.validFix(timestamp: now.addingTimeInterval(-16), accuracy: 10, now: now))
+        XCTAssertFalse(WatchNavigationMath.validFix(timestamp: now, accuracy: -1, now: now))
+        XCTAssertEqual(WatchNavigationMath.speed(-1, metric: false), "—")
+        XCTAssertEqual(WatchNavigationMath.speed(1, metric: false), "1.9")
+        XCTAssertEqual(WatchNavigationMath.speed(1, metric: true), "3.6")
+        XCTAssertEqual(WatchNavigationMath.distance(1852, metric: false), "1.00 nm")
+    }
+    func testCatalogContainsCoordinatesFoldersAndNoTarget() throws {
+        let p = WatchWaypoint(id: "point-a", name: "灯台", latitude: 35, longitude: 139, folder: "障害物")
+        let c = WatchWaypointCatalog(waypoints: [p], targetID: nil, metric: false, selectionChangedAt: Date(), sentAt: Date())
+        XCTAssertEqual(try JSONDecoder().decode(WatchWaypointCatalog.self, from: JSONEncoder().encode(c)), c)
     }
 }
