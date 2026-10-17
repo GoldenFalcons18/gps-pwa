@@ -9,7 +9,8 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     static let shared = WatchNavigationBridge()
     private var target: Waypoint?
     private var waypoints: [Waypoint] = []
-    private var selectionChangedAt = Date()
+    private var selectionChangedAt = (UserDefaults.standard.object(forKey: "watchTargetChangedAt") as? Double).map(Date.init(timeIntervalSince1970:)) ?? .distantPast
+    private var lastSelectedID = UserDefaults.standard.string(forKey: "activeWaypointID")
     private var location: CLLocation?
     private var metric = false
     private var latest: [String: Any] = [:]
@@ -20,10 +21,19 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         WCSession.default.activate()
     }
     func setTarget(_ waypoint: Waypoint?, metric: Bool) {
-        if target?.id != waypoint?.id { selectionChangedAt = Date() }
+        let id = waypoint?.id.uuidString ?? "__none__"
+        if lastSelectedID != id {
+            selectionChangedAt = Date()
+            UserDefaults.standard.set(selectionChangedAt.timeIntervalSince1970, forKey: "watchTargetChangedAt")
+        }
+        lastSelectedID = id
         target = waypoint; self.metric = metric; publish()
     }
-    func setWaypoints(_ points: [Waypoint]) { waypoints = points; publish() }
+    func setWaypoints(_ points: [Waypoint]) {
+        waypoints = points
+        if let id = target?.id { target = points.first { $0.id == id } }
+        publish()
+    }
     func updateLocation(_ point: CLLocation) { location = point }
     private func selectFromWatch(_ message: [String: Any]) -> Bool {
         guard let id = message["selectTarget"] as? String,
@@ -32,6 +42,8 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         guard id == "__none__" || waypoints.contains(where: { $0.id.uuidString == id }) else { return false }
         target = waypoints.first { $0.id.uuidString == id }
         selectionChangedAt = Date(timeIntervalSince1970: time)
+        lastSelectedID = id
+        UserDefaults.standard.set(time, forKey: "watchTargetChangedAt")
         UserDefaults.standard.set(id, forKey: "activeWaypointID")
         NotificationCenter.default.post(name: .watchTargetChanged, object: nil, userInfo: ["targetID": id])
         publish()

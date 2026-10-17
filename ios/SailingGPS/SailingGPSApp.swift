@@ -814,6 +814,8 @@ struct ContentView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--target-none") { selected = nil; savedTarget = "__none__" }
             #endif
+            WatchNavigationBridge.shared.setWaypoints(gps.waypoints)
+            WatchNavigationBridge.shared.setTarget(target, metric: metricUnits)
         }
     }
     var body: some View {
@@ -824,11 +826,9 @@ struct ContentView: View {
             savedTarget = value?.uuidString ?? "__none__"
             WatchNavigationBridge.shared.setTarget(target, metric: metricUnits)
         }
-        .onAppear { WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
         .onChange(of: metricUnits) { _, _ in WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
         .onReceive(gps.$waypoints) { points in
             WatchNavigationBridge.shared.setWaypoints(points)
-            WatchNavigationBridge.shared.setTarget(points.first { $0.id == selected }, metric: metricUnits)
         }
         .onReceive(NotificationCenter.default.publisher(for: .watchTargetChanged)) { notification in
             guard let id = notification.userInfo?["targetID"] as? String else { return }
