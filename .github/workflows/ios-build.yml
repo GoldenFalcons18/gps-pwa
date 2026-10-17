@@ -51,6 +51,10 @@ jobs:
           sleep 4
           xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed.png
           xcrun simctl shutdown "$DEVICE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Watch-dashboard-screenshots
+          path: ios/screenshots/Watch-*.png
       - name: Capture simulator dashboard screenshots
         continue-on-error: true
         timeout-minutes: 8

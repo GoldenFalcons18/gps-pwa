@@ -118,20 +118,19 @@ struct WatchNavigationView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             ScrollView {
-                VStack(spacing: 5) {
+                VStack(spacing: 2) {
                     HStack {
                         Button("ナビ") { mode = 0 }.tint(mode == 0 ? .orange : .gray)
                         Button("速度") { mode = 1 }.tint(mode == 1 ? .orange : .gray)
-                    }.buttonStyle(.bordered)
+                    }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
+                    Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     let fix = sensors.fix(at: timeline.date)
                     let compass = sensors.compass(at: timeline.date)
                     if mode == 0 { navigation(fix: fix, compass: compass) }
                     else { speed(fix: fix) }
-                    Text(sensors.status).font(.system(size: 10)).foregroundStyle(.secondary)
-                    if fix == nil { Text("Watch GPS未取得").font(.caption2).foregroundStyle(.orange) }
+                    if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
                     if !receiver.message.isEmpty { Text(receiver.message).font(.caption2).foregroundStyle(.orange) }
-                    Button("目標を選ぶ") { targetPicker = true }.tint(.orange)
                 }.padding(.horizontal, 3)
             }
         }
@@ -174,12 +173,19 @@ struct WatchNavigationView: View {
         let magneticHeading = compass?.magneticHeading ?? (demo ? 226 : nil)
         let magnetic = trueHeading != nil && magneticHeading != nil
         let shownBearing = trueBearing.map { value in magnetic ? WatchNavigationMath.magneticBearing(trueBearing: value, trueHeading: trueHeading!, magneticHeading: magneticHeading!) : value }
-        Text(target?.name ?? "目標なし").font(.caption).lineLimit(2)
-        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 150)
+        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 114)
         let meters = target.flatMap { point in fix.map { $0.distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude)) } }
-        Text(WatchNavigationMath.distance(meters, metric: metric)).font(.title2.bold()).monospacedDigit()
-        Text("目標距離・Watch GPS").font(.system(size: 10)).foregroundStyle(.secondary)
-        Text("現在方位 " + (magneticHeading.map { String(format: "%.0f° 磁北", $0) } ?? "未取得")).font(.caption2)
+        HStack {
+            VStack(spacing: 1) {
+                Text(WatchNavigationMath.distance(meters, metric: metric)).font(.system(size: 20, weight: .bold)).minimumScaleFactor(0.6).lineLimit(1)
+                Text("目標距離").font(.system(size: 9)).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity)
+            VStack(spacing: 1) {
+                Text(magneticHeading.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 20, weight: .bold))
+                Text("現在方位（磁北）").font(.system(size: 9)).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity)
+        }
+        if compass == nil && !demo { Text("コンパス未取得／非対応").font(.system(size: 9)).foregroundStyle(.orange) }
     }
     @ViewBuilder private func speed(fix: CLLocation?) -> some View {
         Text("SOG").font(.caption).foregroundStyle(.orange)
