@@ -4,7 +4,7 @@ umask 077
 python3 - <<'PY'
 import base64, os, pathlib
 root = pathlib.Path(os.environ['RUNNER_TEMP'])
-for name, filename in [('IOS_DISTRIBUTION_P12_BASE64','distribution.p12'), ('IOS_APPSTORE_PROFILE_BASE64','appstore.mobileprovision')]:
+for name, filename in [('IOS_DISTRIBUTION_P12_BASE64','distribution.p12'), ('IOS_APPSTORE_PROFILE_BASE64','appstore.mobileprovision'), ('WATCH_APPSTORE_PROFILE_BASE64','watch.mobileprovision')]:
     (root/filename).write_bytes(base64.b64decode(os.environ[name], validate=True))
 key_id = os.environ['APPSTORE_KEY_ID']
 if not key_id.isalnum(): raise SystemExit('Invalid API key ID')
@@ -13,6 +13,7 @@ keys.mkdir(exist_ok=True)
 (keys/('AuthKey_'+key_id+'.p8')).write_bytes(base64.b64decode(os.environ['APPSTORE_PRIVATE_KEY_BASE64'], validate=True))
 PY
 security cms -D -i "$RUNNER_TEMP/appstore.mobileprovision" > "$RUNNER_TEMP/profile.plist"
+security cms -D -i "$RUNNER_TEMP/watch.mobileprovision" > "$RUNNER_TEMP/watch-profile.plist"
 python3 - <<'PY'
 import os, pathlib, plistlib, datetime
 root = pathlib.Path(os.environ['RUNNER_TEMP'])
@@ -30,9 +31,19 @@ assert all(c.isalnum() or c == '-' for c in uuid), 'Invalid profile UUID'
 profiles = pathlib.Path.home()/'Library/MobileDevice/Provisioning Profiles'
 profiles.mkdir(parents=True, exist_ok=True)
 (profiles/(uuid+'.mobileprovision')).write_bytes((root/'appstore.mobileprovision').read_bytes())
-options = {'method':'app-store-connect', 'teamID':team, 'signingStyle':'manual', 'signingCertificate':'Apple Distribution', 'provisioningProfiles':{bundle:uuid}, 'manageAppVersionAndBuildNumber':False, 'uploadSymbols':True}
+watch = plistlib.loads((root/'watch-profile.plist').read_bytes())
+watch_bundle = bundle + '.watchkitapp'
+assert team in watch['TeamIdentifier'], 'Watch profile belongs to a different team'
+assert watch['Entitlements']['application-identifier'] == watch['ApplicationIdentifierPrefix'][0]+'.'+watch_bundle, 'Wrong Watch bundle ID'
+assert not watch['Entitlements'].get('get-task-allow', False), 'Watch requires distribution profile'
+assert not watch.get('ProvisionedDevices') and not watch.get('ProvisionsAllDevices'), 'Watch requires App Store Connect profile'
+assert watch['ExpirationDate'] > datetime.datetime.utcnow(), 'Watch profile expired'
+watch_uuid = watch['UUID']
+assert all(c.isalnum() or c == '-' for c in watch_uuid), 'Invalid Watch profile UUID'
+(profiles/(watch_uuid+'.mobileprovision')).write_bytes((root/'watch.mobileprovision').read_bytes())
+options = {'method':'app-store-connect', 'teamID':team, 'signingStyle':'manual', 'signingCertificate':'Apple Distribution', 'provisioningProfiles':{bundle:uuid,watch_bundle:watch_uuid}, 'manageAppVersionAndBuildNumber':False, 'uploadSymbols':True}
 (root/'ExportOptions.plist').write_bytes(plistlib.dumps(options))
-with open(os.environ['GITHUB_ENV'],'a') as f: f.write('PROFILE_UUID='+uuid+'\n')
+with open(os.environ['GITHUB_ENV'],'a') as f: f.write('PROFILE_UUID='+uuid+'\nWATCH_PROFILE_UUID='+watch_uuid+'\n')
 PY
 SIGNING_KEYCHAIN="$RUNNER_TEMP/testflight-signing.keychain-db"
 KEYCHAIN_PASSWORD=$(openssl rand -hex 24)

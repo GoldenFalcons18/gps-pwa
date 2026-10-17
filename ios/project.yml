@@ -70,4 +70,9 @@ targets:
         MARKETING_VERSION: '1.7.4'
         CURRENT_PROJECT_VERSION: 29
         SKIP_INSTALL: YES
+      configs:
+        Release:
+          CODE_SIGN_STYLE: '$(SAILING_CODE_SIGN_STYLE)'
+          CODE_SIGN_IDENTITY: '$(SAILING_CODE_SIGN_IDENTITY)'
+          PROVISIONING_PROFILE_SPECIFIER: '$(SAILING_WATCH_PROFILE_UUID)'
     scheme: {}
