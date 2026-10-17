@@ -97,7 +97,7 @@ struct WatchCompass: View {
                 }
                 VStack(spacing: 2) {
                     Text(magnetic ? "目標方位（磁北）" : "目標方位（真北）").font(.system(size: 9))
-                    Text(bearing.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 27, weight: .bold)).foregroundStyle(.green)
+                    Text(bearing.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 25, weight: .bold)).foregroundStyle(.green)
                 }
             }.frame(width: size, height: size).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -120,8 +120,8 @@ struct WatchNavigationView: View {
             ScrollView {
                 VStack(spacing: 2) {
                     HStack {
-                        Button("ナビ") { mode = 0 }.tint(mode == 0 ? .orange : .gray)
-                        Button("速度") { mode = 1 }.tint(mode == 1 ? .orange : .gray)
+                        Button("ナビ") { mode = 0 }.foregroundStyle(mode == 0 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
+                        Button("速度") { mode = 1 }.foregroundStyle(mode == 1 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     let fix = sensors.fix(at: timeline.date)
@@ -173,7 +173,7 @@ struct WatchNavigationView: View {
         let magneticHeading = compass?.magneticHeading ?? (demo ? 226 : nil)
         let magnetic = trueHeading != nil && magneticHeading != nil
         let shownBearing = trueBearing.map { value in magnetic ? WatchNavigationMath.magneticBearing(trueBearing: value, trueHeading: trueHeading!, magneticHeading: magneticHeading!) : value }
-        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 114)
+        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 96)
         let meters = target.flatMap { point in fix.map { $0.distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude)) } }
         HStack {
             VStack(spacing: 1) {
@@ -189,10 +189,10 @@ struct WatchNavigationView: View {
     }
     @ViewBuilder private func speed(fix: CLLocation?) -> some View {
         Text("SOG").font(.caption).foregroundStyle(.orange)
-        Text(WatchNavigationMath.speed(fix.map(\.speed), metric: metric)).font(.system(size: 42, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
+        Text(WatchNavigationMath.speed(fix.map(\.speed), metric: metric)).font(.system(size: 32, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
         Text(metric ? "km/h" : "knot").font(.caption)
         Text("COG・真北基準").font(.caption).foregroundStyle(.orange)
-        Text(fix.flatMap { $0.course >= 0 && $0.speed >= 0.5 ? String(format: "%.0f°", $0.course) : nil } ?? "—").font(.title.bold())
+        Text(fix.flatMap { $0.course >= 0 && $0.speed >= 0.5 ? String(format: "%.0f°", $0.course) : nil } ?? "—").font(.title3.bold())
         Text("Watch GPS").font(.caption2).foregroundStyle(.secondary)
     }
 }
