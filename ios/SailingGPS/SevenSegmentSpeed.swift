@@ -35,6 +35,7 @@ struct SevenSegmentSpeed: View {
                     }.frame(width: 88, height: 180).padding(.horizontal, 6)
                 }
             }
+            }
             .frame(width: slots, height: 180)
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: slots * scale, height: 180 * scale, alignment: .topLeading)
