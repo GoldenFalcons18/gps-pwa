@@ -1,0 +1,40 @@
+name: Zone alert integration verification
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Existing Android debug build run
+        required: true
+        default: '39358675777'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+          name: Android-debug-test-only
+          path: apk
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash .github/scripts/verify-zones.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-zone-dashboard-screenshots
+          path: screenshots/
