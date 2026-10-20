@@ -372,7 +372,15 @@ class NavigationMapPanel(
         }
         // Center the camera ahead so the real boat stays 72% down the viewport.
         val center = DisplayNavigation.followCenter(point.latitude, point.longitude, shownHeading ?: lastHeading ?: 0.0, map.height.toDouble(), dpi / 2.54, metersPerCm)
-        if (map.mapCenter.latitude != center.first || map.mapCenter.longitude != center.second) map.controller.setCenter(GeoPoint(center.first, center.second))
+        val mapCenter = map.mapCenter
+        val latitudeErrorMeters = (center.first - mapCenter.latitude) * 111_320.0
+        val longitudeErrorMeters = (center.second - mapCenter.longitude) * 111_320.0 * kotlin.math.cos(Math.toRadians(point.latitude))
+        // Ignore sub-meter camera changes during heading smoothing. Re-centering on
+        // every animation frame forces osmdroid to reload adjacent tiles and makes
+        // the map appear to flash while the compass value changes.
+        if (kotlin.math.hypot(latitudeErrorMeters, longitudeErrorMeters) > 1.0) {
+            map.controller.setCenter(GeoPoint(center.first, center.second))
+        }
         logWaypointTouchBounds()
         if (BuildConfig.DEBUG) map.post {
             if (!destroyed && following && map.height > 0) {

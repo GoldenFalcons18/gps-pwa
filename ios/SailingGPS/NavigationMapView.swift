@@ -1,6 +1,64 @@
 import SwiftUI
 import MapKit
 
+/// A persistent overlay whose points can change without removing the overlay from MapKit.
+/// Replacing MKPolyline on every GPS/compass sample briefly clears the old line and
+/// causes a visible blink while MapKit builds a new renderer.
+private final class LiveLineOverlay: NSObject, MKOverlay {
+    private(set) var points: [CLLocationCoordinate2D] = []
+    private var lastCoordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
+    private var lastBoundingMapRect: MKMapRect?
+    var coordinate: CLLocationCoordinate2D {
+        lastCoordinate
+    }
+    var boundingMapRect: MKMapRect {
+        lastBoundingMapRect ?? MKMapRect(origin: MKMapPoint(coordinate), size: MKMapSize(width: 1, height: 1))
+    }
+
+    func update(_ newPoints: [CLLocationCoordinate2D]) {
+        points = newPoints
+        guard !newPoints.isEmpty else { return }
+        lastCoordinate = CLLocationCoordinate2D(
+            latitude: newPoints.reduce(0) { $0 + $1.latitude } / Double(newPoints.count),
+            longitude: newPoints.reduce(0) { $0 + $1.longitude } / Double(newPoints.count)
+        )
+        let mapPoints = newPoints.map { MKMapPoint($0) }
+        let minX = mapPoints.map(\.x).min() ?? 0
+        let maxX = mapPoints.map(\.x).max() ?? minX
+        let minY = mapPoints.map(\.y).min() ?? 0
+        let maxY = mapPoints.map(\.y).max() ?? minY
+        let newRect = MKMapRect(x: minX, y: minY, width: max(maxX - minX, 1), height: max(maxY - minY, 1))
+        lastBoundingMapRect = lastBoundingMapRect.map { $0.union(newRect) } ?? newRect
+    }
+}
+
+private final class LiveLineRenderer: MKOverlayRenderer {
+    private let line: LiveLineOverlay
+    private let color: UIColor
+    private let width: CGFloat
+
+    init(overlay: LiveLineOverlay, color: UIColor, width: CGFloat) {
+        self.line = overlay
+        self.color = color
+        self.width = width
+        super.init(overlay: overlay)
+    }
+
+    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
+        guard line.points.count > 1 else { return }
+        context.setStrokeColor(color.cgColor)
+        context.setLineWidth(width / zoomScale)
+        context.setLineJoin(.round)
+        context.setLineCap(.round)
+        context.beginPath()
+        for (index, coordinate) in line.points.enumerated() {
+            let point = self.point(for: MKMapPoint(coordinate))
+            if index == 0 { context.move(to: point) } else { context.addLine(to: point) }
+        }
+        context.strokePath()
+    }
+}
+
 /// Map projection and course marks are display-only; they never enter the recorded track.
 struct NavigationMapView: UIViewRepresentable {
     let location: CLLocation?
@@ -57,6 +115,9 @@ struct NavigationMapView: UIViewRepresentable {
         private var lastLocationTime: Date?
         private var lastTrackCount = -1
         private weak var map: MKMapView?
+        private let courseOverlay = LiveLineOverlay()
+        private let trackOverlay = LiveLineOverlay()
+        private let targetOverlay = LiveLineOverlay()
         private var displayLink: CADisplayLink?
         private var shownHeading: Double?
         private var frameTime: CFTimeInterval = 0
@@ -115,9 +176,13 @@ struct NavigationMapView: UIViewRepresentable {
         }
         private func updateCourse(_ map: MKMapView) {
             let existingDots = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "course" }
-            map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "course" })
             courseHeading = parent.heading
-            guard parent.showCourse, let location = parent.location, let heading = parent.heading else { map.removeAnnotations(existingDots); return }
+            guard parent.showCourse, let location = parent.location, let heading = parent.heading else {
+                courseOverlay.update([])
+                map.renderer(for: courseOverlay)?.setNeedsDisplay()
+                map.removeAnnotations(existingDots)
+                return
+            }
             var coordinates = [location.coordinate]
             for distance in stride(from: 100, through: 500, by: 100) {
                 let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
@@ -127,8 +192,8 @@ struct NavigationMapView: UIViewRepresentable {
                 if let dot = existingDots.first(where: { $0.title == title }) { dot.coordinate = coordinate }
                 else { let dot = Pin(); dot.kind = "course"; dot.title = title; dot.coordinate = coordinate; map.addAnnotation(dot) }
             }
-            let line = MKPolyline(coordinates: coordinates, count: coordinates.count)
-            line.title = "course"; map.addOverlay(line)
+            courseOverlay.update(coordinates)
+            map.renderer(for: courseOverlay)?.setNeedsDisplay()
         }
         init(_ parent: NavigationMapView) { self.parent = parent }
 
@@ -149,6 +214,9 @@ struct NavigationMapView: UIViewRepresentable {
             defer { rendering = false }
             self.map = map
             let p = parent
+            for overlay in [trackOverlay, targetOverlay, courseOverlay] where !map.overlays.contains(where: { $0 === overlay }) {
+                map.addOverlay(overlay)
+            }
             if let previousScale, previousScale != p.metersPerCm, !p.following {
                 let camera = map.camera.copy() as! MKMapCamera
                 camera.altitude *= p.metersPerCm / previousScale
@@ -179,23 +247,18 @@ struct NavigationMapView: UIViewRepresentable {
             if locationChanged || lastTrackCount != p.track.count {
                 lastLocationTime = p.location?.timestamp
                 lastTrackCount = p.track.count
-                map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "track" || ($0 as? MKPolyline)?.title == "target" })
-                if p.track.count > 1 {
-                    let line = MKPolyline(coordinates: p.track, count: p.track.count)
-                    line.title = "track"; map.addOverlay(line)
-                }
+                trackOverlay.update(p.track)
+                map.renderer(for: trackOverlay)?.setNeedsDisplay()
             }
             if let location = p.location {
                 if let pin = map.annotations.compactMap({ $0 as? Pin }).first(where: { $0.kind == "boat" }) { pin.coordinate = location.coordinate }
                 else { let pin = Pin(); pin.kind = "boat"; pin.title = "現在地"; pin.coordinate = location.coordinate; map.addAnnotation(pin) }
             }
             if locationChanged || staticChanged {
-                // Refresh the target path without replacing waypoint annotation views.
-                map.removeOverlays(map.overlays.filter { ($0 as? MKPolyline)?.title == "target" })
                 if let location = p.location, let target = p.waypoints.first(where: { $0.id == p.selected }) {
-                    let line = MKPolyline(coordinates: [location.coordinate, target.coordinate], count: 2)
-                    line.title = "target"; map.addOverlay(line)
-                }
+                    targetOverlay.update([location.coordinate, target.coordinate])
+                } else { targetOverlay.update([]) }
+                map.renderer(for: targetOverlay)?.setNeedsDisplay()
             }
             if staticChanged || locationChanged || courseHeading != p.heading || (p.showCourse && !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" })) {
                 updateCourse(map)
@@ -229,6 +292,11 @@ struct NavigationMapView: UIViewRepresentable {
             if interacting && parent.following { DispatchQueue.main.async { self.parent.following = false } }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let line = overlay as? LiveLineOverlay {
+                if line === courseOverlay { return LiveLineRenderer(overlay: line, color: .black, width: 2) }
+                if line === targetOverlay { return LiveLineRenderer(overlay: line, color: .green, width: 3) }
+                return LiveLineRenderer(overlay: line, color: .orange, width: 3)
+            }
             if let area = overlay as? MKPolygon {
                 let renderer=MKPolygonRenderer(polygon:area);let color=UIColor(waypointColor(area.title?.replacingOccurrences(of:"feature:",with:"") ?? "#00AAFF"));renderer.strokeColor=color;renderer.fillColor=color.withAlphaComponent(0.25);renderer.lineWidth=3;return renderer
             }
