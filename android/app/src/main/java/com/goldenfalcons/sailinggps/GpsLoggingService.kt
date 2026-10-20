@@ -33,21 +33,35 @@ class GpsLoggingService : Service(), LocationListener {
         const val EXTRA_HAS_BEARING = "hasBearing"
         const val EXTRA_COUNT = "count"
         const val EXTRA_RUNNING = "running"
+        const val EXTRA_GAP_SECONDS = "gapSeconds"
 
-        fun trackFile(context: Context) = File(context.filesDir, "track_points.csv")
+        fun sessionsDir(context: Context) = File(context.filesDir, "tracks").apply { mkdirs() }
+        fun activeSessionFile(context: Context) = File(context.filesDir, "active_track.txt")
+        fun trackFile(context: Context): File {
+            val active = activeSessionFile(context).takeIf { it.exists() }?.readText()?.trim()
+            return if (!active.isNullOrEmpty()) File(sessionsDir(context), active)
+            else allTrackFiles(context).lastOrNull() ?: File(context.filesDir, "track_points.csv")
+        }
+        fun allTrackFiles(context: Context): List<File> {
+            val legacy = File(context.filesDir, "track_points.csv")
+            val files = sessionsDir(context).listFiles()?.filter { it.extension == "csv" }?.toMutableList() ?: mutableListOf()
+            if (legacy.exists() && legacy.length() > 0) files.add(legacy)
+            return files.sortedBy { it.name }
+        }
     }
 
     private lateinit var locationManager: LocationManager
     private var wakeLock: PowerManager.WakeLock? = null
     private var count = 0
     private var previous: Location? = null
+    private var largestGapSeconds = 0L
 
     override fun onCreate() {
         super.onCreate()
         debug("Service onCreate")
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         createChannel()
-        count = if (trackFile(this).exists()) trackFile(this).readLines().size else 0
+        count = trackFile(this).takeIf { it.exists() }?.readLines()?.size ?: 0
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,6 +73,22 @@ class GpsLoggingService : Service(), LocationListener {
     }
 
     private fun startLogging() {
+        val active = activeSessionFile(this)
+        if (!active.exists()) {
+            val name = "track-${java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date())}.csv"
+            File(sessionsDir(this), name).apply { createNewFile() }
+            active.writeText(name)
+            count = 0
+            largestGapSeconds = 0L
+        }
+        if (previous == null) runCatching {
+            val last = trackFile(this).useLines { it.filter { line -> line.isNotBlank() }.lastOrNull() }
+            val fields = last?.split(',') ?: emptyList()
+            val timestamp = fields.getOrNull(0)?.toLongOrNull()
+            val lat = fields.getOrNull(1)?.toDoubleOrNull()
+            val lon = fields.getOrNull(2)?.toDoubleOrNull()
+            if (timestamp != null && lat != null && lon != null) previous = Location("recovered").apply { time=timestamp;latitude=lat;longitude=lon }
+        }.onFailure { debug("Previous GPS fix recovery failed: ${it.message}") }
         startForeground(1001, notification("GPS記録中 / $count 点"))
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -90,6 +120,7 @@ class GpsLoggingService : Service(), LocationListener {
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
         previous=null
+        activeSessionFile(this).delete()
         broadcastStatus(false)
         debug("GPS logging stopped")
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -98,6 +129,10 @@ class GpsLoggingService : Service(), LocationListener {
 
     override fun onLocationChanged(location: Location) {
         ZoneAlerts.check(this,location)
+        previous?.let { old ->
+            val gap=((location.time-old.time)/1000L).coerceAtLeast(0L)
+            if(gap>30L) { largestGapSeconds=maxOf(largestGapSeconds,gap);debug("GPS gap ${gap}s") }
+        }
         var bearing = if (location.hasBearing()) location.bearing.toDouble() else Double.NaN
         if (!bearing.isFinite()) {
             previous?.let { prev ->
@@ -129,11 +164,12 @@ class GpsLoggingService : Service(), LocationListener {
             putExtra(EXTRA_BEARING, bearing)
             putExtra(EXTRA_HAS_BEARING, bearing.isFinite())
             putExtra(EXTRA_COUNT, count)
+            putExtra(EXTRA_GAP_SECONDS, largestGapSeconds)
         }
         sendBroadcast(intent)
 
         val nm = NavigationUtils.MPS_TO_KT * if (location.hasSpeed()) location.speed else 0f
-        val n = notification("SOG %.1f kt / %d 点".format(nm, count))
+        val n = notification((if(largestGapSeconds>0) "GPS欠落 ${largestGapSeconds}秒 / " else "")+"SOG %.1f kt / %d 点".format(nm, count))
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(1001, n)
     }
 
@@ -157,6 +193,7 @@ class GpsLoggingService : Service(), LocationListener {
         sendBroadcast(Intent(ACTION_STATUS).setPackage(packageName).apply {
             putExtra(EXTRA_RUNNING, running)
             putExtra(EXTRA_COUNT, count)
+            putExtra(EXTRA_GAP_SECONDS, largestGapSeconds)
         })
     }
 

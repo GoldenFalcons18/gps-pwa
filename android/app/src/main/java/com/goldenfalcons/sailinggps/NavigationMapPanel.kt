@@ -399,8 +399,16 @@ class NavigationMapPanel(
         frameTime = 0L
         queueFollowFrame()
         map.onResume()
+        loadTrackFile(GpsLoggingService.trackFile(map.context))
+    }
+
+    fun showTrackFile(file: File) {
+        setFollowing(false)
+        loadTrackFile(file)
+    }
+
+    private fun loadTrackFile(file: File) {
         val generation = ++loadGeneration
-        val file = GpsLoggingService.trackFile(map.context)
         Thread {
             val restored = ArrayDeque<GeoPoint>()
             runCatching {
@@ -424,7 +432,7 @@ class NavigationMapPanel(
                     if (liveTail != null && points.lastOrNull() != liveTail) points.add(liveTail)
                     trail.setPoints(points)
                     map.invalidate()
-                    log("Map track restored / ${points.size} points")
+                    log("Map track restored / ${points.size} points / ${file.name}")
                 }
             }
         }.start()

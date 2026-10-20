@@ -15,8 +15,7 @@ object GpxExporter {
         .replace("\"", "&quot;")
         .replace("'", "&apos;")
 
-    fun export(context: Context, waypoints: List<Waypoint>): File {
-        val source = GpsLoggingService.trackFile(context)
+    fun export(context: Context, waypoints: List<Waypoint>, source: File = GpsLoggingService.trackFile(context)): File {
         val exportDir = File(context.filesDir, "exports").apply { mkdirs() }
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val out = File(exportDir, "sailing-track-$stamp.gpx")
@@ -35,7 +34,7 @@ object GpxExporter {
                 w.appendLine("  <wpt lat=\"${wp.lat}\" lon=\"${wp.lon}\"><name>${esc(wp.name)}</name></wpt>")
             }
 
-            w.appendLine("  <trk><name>Sailing Track $stamp</name><trkseg>")
+            w.appendLine("  <trk><name>${esc(source.nameWithoutExtension)}</name><trkseg>")
             if (source.exists()) {
                 source.forEachLine { line ->
                     val p = line.split(',')

@@ -67,6 +67,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
     private var running = false
+    private var gpsGapSeconds = 0L
 
     private var navigatorMode = false
     private var currentDisplayMode=0
@@ -147,6 +148,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
+                    gpsGapSeconds = maxOf(gpsGapSeconds,intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS,0L))
                     b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, 0f), intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, 0.0))
                     latestLat?.let { lat -> latestLon?.let { lon -> mapPanel?.updateLocation(lat, lon, mapHeading(), recordTrack = true) } }
                     updateNavigationUi()
@@ -155,6 +157,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 GpsLoggingService.ACTION_STATUS -> {
                     running = intent.getBooleanExtra(GpsLoggingService.EXTRA_RUNNING, false)
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
+                    gpsGapSeconds = intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS, gpsGapSeconds)
                     updateStatusUi()
                     debug("Service status running=$running count=$pointCount")
                 }
@@ -501,8 +504,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateStatusUi() {
-        b.tvStatus.text = "状態：${if (running) "記録中" else "停止中"} / 保存点数：$pointCount"
-        b.tvStatus.setTextColor(if (running) Color.rgb(0, 255, 56) else Color.WHITE)
+        b.tvStatus.text = "状態：${if (running) "記録中" else "停止中"} / 保存点数：$pointCount" + if(gpsGapSeconds>0) " / GPS欠落あり（最大${gpsGapSeconds}秒）" else ""
+        b.tvStatus.setTextColor(if (gpsGapSeconds>0) Color.YELLOW else if (running) Color.rgb(0, 255, 56) else Color.WHITE)
         b.btnStart.visibility = if (running) android.view.View.GONE else android.view.View.VISIBLE
         b.btnStop.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
         b.btnStart.isEnabled = !running
@@ -813,8 +816,53 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
+            "航跡一覧" to { showTrackList() },
             "モード切替" to { setDisplayMode((currentDisplayMode+1)%3) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
+    }
+
+    private fun showTrackList() {
+        val files = GpsLoggingService.allTrackFiles(this).reversed()
+        if (files.isEmpty()) { Toast.makeText(this, "保存済みの航跡はありません", Toast.LENGTH_SHORT).show(); return }
+        val active = GpsLoggingService.activeSessionFile(this).takeIf { it.exists() }?.readText()?.trim()
+        val list = android.widget.LinearLayout(this).apply { orientation = android.widget.LinearLayout.VERTICAL; setPadding(12, 8, 12, 8) }
+        files.forEach { file ->
+            val rows = runCatching { file.readLines().mapNotNull { line ->
+                val p=line.split(','); if(p.size<8) null else {
+                    val t=p[0].toLongOrNull();val lat=p[1].toDoubleOrNull();val lon=p[2].toDoubleOrNull();val speed=p[6].toDoubleOrNull()
+                    if(t==null||lat==null||lon==null) null else listOf(t.toDouble(),lat,lon,speed ?: Double.NaN)
+                }
+            } }.getOrDefault(emptyList())
+            val first=rows.firstOrNull();val last=rows.lastOrNull();var meters=0.0
+            rows.zipWithNext().forEach { (a,bp) -> meters+=NavigationUtils.distanceMeters(a[1],a[2],bp[1],bp[2]) }
+            val duration=if(first!=null&&last!=null) ((last[0]-first[0])/1000).toLong().coerceAtLeast(0) else 0L
+            val speeds=rows.map{it[3]}.filter{it.isFinite()&&it>=0}.map{it*NavigationUtils.MPS_TO_KT}
+            val date=first?.let{java.text.SimpleDateFormat("yyyy/MM/dd HH:mm",java.util.Locale.getDefault()).format(java.util.Date(it[0].toLong()))} ?: file.nameWithoutExtension
+            val isRecording=running && active==file.name
+            val card=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.VERTICAL;setPadding(12,10,12,10);setBackgroundColor(Color.rgb(24,24,24)) }
+            val info=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.VERTICAL;setPadding(8,0,0,0) }
+            info.addView(TextView(this).apply { text=(if(isRecording) "● 記録中  " else "")+date;setTextColor(if(isRecording) Color.GREEN else Color.WHITE);textSize=17f })
+            info.addView(TextView(this).apply { text="${"%.2f".format(meters/1852.0)} nm   ${duration/3600}:${"%02d".format((duration/60)%60)}:${"%02d".format(duration%60)}   ${rows.size} 点\n平均 ${if(duration>0) "%.1f".format(meters/duration*NavigationUtils.MPS_TO_KT) else "--"} kt   MAX ${speeds.maxOrNull()?.let{"%.1f".format(it)} ?: "--"} kt";setTextColor(Color.LTGRAY);textSize=14f })
+            val summary=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.HORIZONTAL }
+            val coords=rows.map{it[1] to it[2]}
+            val thumbnail=object:android.view.View(this){
+                private val paint=android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply{color=Color.rgb(238,35,150);strokeWidth=4f;style=android.graphics.Paint.Style.STROKE;strokeCap=android.graphics.Paint.Cap.ROUND;strokeJoin=android.graphics.Paint.Join.ROUND}
+                override fun onDraw(canvas:android.graphics.Canvas){super.onDraw(canvas);canvas.drawColor(Color.rgb(10,75,95));if(coords.size<2)return
+                    val minX=coords.minOf{it.second};val maxX=coords.maxOf{it.second};val minY=coords.minOf{it.first};val maxY=coords.maxOf{it.first};val dx=(maxX-minX).coerceAtLeast(1e-6);val dy=(maxY-minY).coerceAtLeast(1e-6);val scale=minOf((width-12)/dx,(height-12)/dy);val ox=((width-dx*scale)/2).toFloat();val oy=((height-dy*scale)/2).toFloat();val path=android.graphics.Path()
+                    coords.forEachIndexed{i,p->val x=ox+((p.second-minX)*scale).toFloat();val y=height-oy-((p.first-minY)*scale).toFloat();if(i==0)path.moveTo(x,y)else path.lineTo(x,y)};canvas.drawPath(path,paint)
+                }
+            }
+            summary.addView(thumbnail,android.widget.LinearLayout.LayoutParams((72*resources.displayMetrics.density).toInt(),(78*resources.displayMetrics.density).toInt()))
+            summary.addView(info,android.widget.LinearLayout.LayoutParams(0,-2,1f));card.addView(summary)
+            val actions=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.HORIZONTAL }
+            actions.addView(Button(this@MainActivity).apply { text="地図";setOnClickListener{setDisplayMode(1);mapPanel?.showTrackFile(file);Toast.makeText(this@MainActivity,date,Toast.LENGTH_SHORT).show()} })
+            actions.addView(Button(this@MainActivity).apply { text="GPX";setOnClickListener{exportGpx(file)} })
+            actions.addView(Button(this@MainActivity).apply { text="削除";isEnabled=!isRecording;setOnClickListener{androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("航跡を削除").setMessage("$date の航跡を削除しますか？").setNegativeButton("キャンセル",null).setPositiveButton("削除"){_,_->file.delete();showTrackList()}.show()} })
+            card.addView(actions)
+            list.addView(card,android.widget.LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=10})
+        }
+        val scroll=android.widget.ScrollView(this).apply{addView(list)}
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("航跡一覧（${files.size}件）").setView(scroll).setNegativeButton("閉じる",null).show()
     }
 
     private fun createMapWaypoint(lat: Double, lon: Double) {
@@ -985,9 +1033,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun exportGpx() {
+    private fun exportGpx(source: java.io.File = GpsLoggingService.trackFile(this)) {
         try {
-            val file = GpxExporter.export(this, waypoints)
+            val file = GpxExporter.export(this, waypoints, source)
             val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/gpx+xml"

@@ -16,6 +16,86 @@ struct Waypoint: Identifiable, Codable {
     var coordinate: CLLocationCoordinate2D { .init(latitude: latitude, longitude: longitude) }
 }
 
+private struct TrackListView: View {
+    @ObservedObject var gps: GPSRecorder
+    var onSelect: (URL) -> Void
+    var onExport: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var revision = 0
+    private struct Summary: Identifiable {
+        var id: URL { file }; let file: URL; let date: Date?; let points: Int; let coordinates:[CLLocationCoordinate2D]; let distance: Double; let duration: TimeInterval; let average: Double?; let maximum: Double?
+    }
+    private var summaries: [Summary] {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("tracks", isDirectory: true)
+        var result = ((try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey])) ?? []).filter { $0.pathExtension == "csv" }
+        let legacy = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("track.csv")
+        if FileManager.default.fileExists(atPath: legacy.path) { result.append(legacy) }
+        return result.map { file in
+            let rows = ((try? String(contentsOf: file, encoding: .utf8)) ?? "").split(whereSeparator: { $0.isNewline }).compactMap { line -> (Date, CLLocation, Double?)? in
+                let f=line.split(separator:","); guard f.count >= 5, let t=Double(f[0]), let lat=Double(f[1]), let lon=Double(f[2]) else { return nil }
+                let altitude=Double(f[3]) ?? 0;let speed=Double(f[4]).flatMap{$0 >= 0 ? $0 : nil}
+                return (Date(timeIntervalSince1970:t),CLLocation(coordinate:.init(latitude:lat,longitude:lon),altitude:altitude,horizontalAccuracy:0,verticalAccuracy:0,timestamp:Date(timeIntervalSince1970:t)),speed)
+            }
+            var distance=0.0
+            for pair in zip(rows,rows.dropFirst()) { distance += pair.1.1.distance(from:pair.0.1) }
+            let duration=rows.first.flatMap { first in rows.last.map { max(0,$0.0.timeIntervalSince(first.0)) } } ?? 0
+            let speeds=rows.compactMap{$0.2}
+            let average=duration > 0 ? distance/duration : nil
+            return Summary(file:file,date:rows.first?.0,points:rows.count,coordinates:rows.map{$0.1.coordinate},distance:distance,duration:duration,average:average,maximum:speeds.max())
+        }.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(summaries) { s in
+                    let activeName=(try? String(contentsOf: FileManager.default.urls(for:.documentDirectory,in:.userDomainMask)[0].appendingPathComponent("active-track.txt"),encoding:.utf8))?.trimmingCharacters(in:.whitespacesAndNewlines)
+                    let active=activeName == s.file.lastPathComponent
+                    HStack(alignment:.top,spacing:10) {
+                        TrackThumbnail(points:s.coordinates).frame(width:76,height:82).clipShape(RoundedRectangle(cornerRadius:5))
+                        VStack(alignment:.leading,spacing:6) {
+                            HStack { Text(active ? "● 記録中" : (s.date.map{DateFormatter.localizedString(from:$0,dateStyle:.short,timeStyle:.short)} ?? s.file.deletingPathExtension().lastPathComponent)).font(.headline);if active { Spacer();Circle().fill(.green).frame(width:9,height:9) } }
+                            Text("\(CoordinateInput.distance(s.distance,metric:false))   \(durationText(s.duration))   \(s.points) 点").font(.subheadline)
+                            Text("平均 \(s.average.map{String(format:"%.1f",$0*1.943844)} ?? "--") kt   MAX \(s.maximum.map{String(format:"%.1f",$0*1.943844)} ?? "--") kt").font(.caption).foregroundStyle(.secondary)
+                            HStack {
+                                Button("地図") { onSelect(s.file);dismiss() }.buttonStyle(.bordered)
+                                Button("GPX") { onExport(s.file);dismiss() }.buttonStyle(.bordered)
+                                if !active { Button("削除",role:.destructive) { try? FileManager.default.removeItem(at:s.file);revision += 1 }.buttonStyle(.bordered) }
+                            }
+                        }
+                    }.padding(.vertical,5)
+                }
+            }.id(revision).navigationTitle("航跡一覧（\(summaries.count)件）").toolbar { ToolbarItem(placement: .cancellationAction) { Button("閉じる") { dismiss() } } }
+        }
+    }
+    private func durationText(_ value:TimeInterval)->String { let n=max(0,Int(value));return String(format:"%02d:%02d:%02d",n/3600,(n/60)%60,n%60) }
+}
+
+private struct TrackThumbnail: View {
+    let points:[CLLocationCoordinate2D]
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                Color(red:0.03,green:0.28,blue:0.38)
+                TrackPolyline(points:points).stroke(Color.pink,lineWidth:2.5)
+            }.frame(width:proxy.size.width,height:proxy.size.height)
+        }
+    }
+}
+private struct TrackPolyline: Shape {
+    let points:[CLLocationCoordinate2D]
+    func path(in rect:CGRect)->Path {
+        guard !points.isEmpty else{return Path()}
+        let minLat=points.map(\.latitude).min() ?? 0,maxLat=points.map(\.latitude).max() ?? 0
+        let minLon=points.map(\.longitude).min() ?? 0,maxLon=points.map(\.longitude).max() ?? 0
+        let dx=max(maxLon-minLon,0.000001),dy=max(maxLat-minLat,0.000001)
+        let scale=min((rect.width-10)/dx,(rect.height-10)/dy)
+        let usedW=dx*scale,usedH=dy*scale,ox=(rect.width-usedW)/2,oy=(rect.height-usedH)/2
+        var p=Path()
+        for (i,c) in points.enumerated(){let pt=CGPoint(x:ox+(c.longitude-minLon)*scale,y:rect.height-oy-(c.latitude-minLat)*scale);if i==0{p.move(to:pt)}else{p.addLine(to:pt)}}
+        return p
+    }
+}
+
 extension Waypoint {
     var archiveEntry: WaypointArchive.Entry {
         let ui = UIColor(waypointColor(colorName)); var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
@@ -46,6 +126,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var previousRecordedLocation: CLLocation?
     func elapsed(at date: Date) -> Double { elapsedBeforeStart + (recordingStartedAt.map { max(0, date.timeIntervalSince($0)) } ?? 0) }
     @Published var message = "記録を開始してください"
+    @Published var recordingRecoveryMessage: String?
     @Published var waypoints: [Waypoint] = []
     @Published var library = MapLibrary()
     var defaultWaypointFolder:String { DefaultWaypointFolder.resolve(requested:UserDefaults.standard.string(forKey:"mainWaypointFolder"),folders:library.groups,waypointFolders:waypoints.compactMap(\.group)) }
@@ -57,7 +138,15 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var pendingStart = false
     private var handle: FileHandle?
     private let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private var csv: URL { directory.appendingPathComponent("track.csv") }
+    private var activeSessionFile: URL { directory.appendingPathComponent("active-track.txt") }
+    private var tracksDirectory: URL { directory.appendingPathComponent("tracks", isDirectory: true) }
+    private var csv: URL {
+        if let name = try? String(contentsOf: activeSessionFile, encoding: .utf8), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return tracksDirectory.appendingPathComponent(name.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        let files = (try? FileManager.default.contentsOfDirectory(at: tracksDirectory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        return files.filter { $0.pathExtension == "csv" }.sorted { ($0.lastPathComponent) < ($1.lastPathComponent) }.last ?? directory.appendingPathComponent("track.csv")
+    }
     private var waypointFile: URL { directory.appendingPathComponent("waypoints.json") }
 
     private var libraryFile: URL { directory.appendingPathComponent("map-library-v2.json") }
@@ -72,6 +161,14 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
         if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(LibraryDocument.self, from: data) { waypoints = saved.waypoints; library = saved.library }
         waypoints=waypoints.map { item in var item=item;if (item.group ?? "").isEmpty { item.group="メインフォルダ" };return item }
+        if FileManager.default.fileExists(atPath: activeSessionFile.path) {
+            recordingRecoveryMessage = "前回の記録が未完了です。復旧を確認してください。"
+            pendingStart = true
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.pendingStart else { return }
+            self.pendingStart = false; self.start()
+        }
     }
 
     func preview(_ active: Bool) {
@@ -96,10 +193,22 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             message = "設定で位置情報の使用を許可してください"; return
         }
         do {
-            if !FileManager.default.fileExists(atPath: csv.path) { try Data().write(to: csv) }
+            try FileManager.default.createDirectory(at: tracksDirectory, withIntermediateDirectories: true)
+            let resumedName = !newTrack ? (try? String(contentsOf: activeSessionFile, encoding: .utf8))?.trimmingCharacters(in:.whitespacesAndNewlines) : nil
+            let name = resumedName.flatMap { $0.isEmpty ? nil : $0 } ?? "track-\(ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").replacingOccurrences(of: ".", with: "" )).csv"
+            let sessionURL = tracksDirectory.appendingPathComponent(name)
+            if !FileManager.default.fileExists(atPath: sessionURL.path) { try Data().write(to: sessionURL) }
+            try name.write(to: activeSessionFile, atomically: true, encoding: .utf8)
+            let csv = sessionURL
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: csv.path)
             handle = try FileHandle(forWritingTo: csv)
             try handle?.seekToEnd()
+            if let lastLine = (try? String(contentsOf: sessionURL, encoding: .utf8))?.split(whereSeparator: { $0.isNewline }).last(where: { $0 != "#session" }) {
+                let fields = lastLine.split(separator:",")
+                if fields.count >= 3, let timestamp=Double(fields[0]), let latitude=Double(fields[1]), let longitude=Double(fields[2]) {
+                    previousRecordedLocation = CLLocation(coordinate:.init(latitude:latitude,longitude:longitude),altitude:fields.count>3 ? (Double(fields[3]) ?? 0) : 0,horizontalAccuracy:0,verticalAccuracy:0,timestamp:Date(timeIntervalSince1970:timestamp))
+                }
+            }
             try handle?.write(contentsOf: Data("#session\n".utf8))
             if newTrack {
                 track.removeAll()
@@ -109,6 +218,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
             recording = true
+            if CLLocationManager.significantLocationChangeMonitoringAvailable() { manager.startMonitoringSignificantLocationChanges() }
             manager.startUpdatingLocation()
             if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
             message = "記録中（画面OFFでも継続）"
@@ -149,8 +259,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func stop() {
         pendingStart = false
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
+        manager.stopMonitoringSignificantLocationChanges()
         manager.allowsBackgroundLocationUpdates = false
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
+        try? FileManager.default.removeItem(at: activeSessionFile)
         elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
         handle = nil; recording = false; message = "記録停止"; log("Recording stopped")
         preview(foregroundActive)
@@ -178,6 +290,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             WatchNavigationBridge.shared.updateLocation(point)
             if savingCurrentWaypoint { finishCurrentWaypoint(point) }
             guard recording else { continue }
+            if let previous = previousRecordedLocation {
+                let gap = point.timestamp.timeIntervalSince(previous.timestamp)
+                if gap > 30 { recordingRecoveryMessage = "GPS欠落: \(Int(gap))秒。航跡に空白があります。"; log("GPS gap \(gap)s") }
+            }
             let row = "\(point.timestamp.timeIntervalSince1970),\(point.coordinate.latitude),\(point.coordinate.longitude),\(point.altitude),\(point.speed),\(point.course)\n"
             do { try handle?.write(contentsOf: Data(row.utf8)) } catch { stop(); fail(error); return }
             if let previous = previousRecordedLocation { recordedDistance += point.distance(from: previous) }
@@ -238,7 +354,15 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         return (result.added,result.skipped)
     }
     private func saveWaypoints() { do { try saveLibrary(waypoints,library) } catch { fail(error) } }
-    func export() -> URL? {
+    func loadTrack(_ file: URL) {
+        DispatchQueue.global(qos:.userInitiated).async {
+            let coords=((try? String(contentsOf:file,encoding:.utf8)) ?? "").split(whereSeparator:{$0.isNewline}).compactMap { line -> CLLocationCoordinate2D? in
+                let f=line.split(separator:",");guard f.count>=3,let lat=Double(f[1]),let lon=Double(f[2]),(-90...90).contains(lat),(-180...180).contains(lon) else{return nil};return .init(latitude:lat,longitude:lon)
+            }
+            DispatchQueue.main.async { self.track=Array(coords.suffix(10000));self.message="航跡を表示中：\(file.deletingPathExtension().lastPathComponent)" }
+        }
+    }
+    func export(source: URL? = nil) -> URL? {
         do {
             try handle?.synchronize()
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("Sailing-\(Int(Date().timeIntervalSince1970)).gpx")
@@ -249,8 +373,9 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             try write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><gpx version=\"1.1\" creator=\"SailingGPS\" xmlns=\"http://www.topografix.com/GPX/1/1\">")
             for wp in waypoints { try write("<wpt lat=\"\(wp.latitude)\" lon=\"\(wp.longitude)\"><name>\(escape(wp.name))</name><desc>\(escape(wp.note ?? ""))</desc></wpt>") }
             try write("<trk><name>Sailing track</name><trkseg>")
-            if FileManager.default.fileExists(atPath: csv.path) {
-                let input = try FileHandle(forReadingFrom: csv)
+            let source=source ?? csv
+            if FileManager.default.fileExists(atPath: source.path) {
+                let input = try FileHandle(forReadingFrom: source)
                 defer { try? input.close() }
                 var pending = Data()
                 let formatter = ISO8601DateFormatter()
@@ -319,6 +444,7 @@ struct ContentView: View {
     @State private var settings = false
     @State private var menuPresented = false
     @State private var waypointListPresented = false
+    @State private var trackListPresented = false
     @State private var waypointFolder = ""
     @AppStorage("mainWaypointFolder") private var savedMainWaypointFolder = ""
     private var waypointFolders: [String] { Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group))).filter{!$0.isEmpty}.sorted() }
@@ -628,6 +754,7 @@ struct ContentView: View {
                     menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
                     menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
+                    menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
                     menuTile("設定") { menuAction { settings = true } }
                     menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → スピードメーター"][max(0,min(2,mode))]) { menuAction { mode = (mode + 1) % 3 } }
                 }
@@ -823,6 +950,9 @@ struct ContentView: View {
         .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:exportLibrary,importFile:beginLibraryImport) }
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder=mainWaypointFolder } }
+        .sheet(isPresented: $trackListPresented) {
+            TrackListView(gps:gps,onSelect:{ file in gps.loadTrack(file);mode=1;following=false },onExport:{ file in exported=gps.export(source:file);sharing=exported != nil })
+        }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
             WaypointEntryView(waypoint: draft, folders: waypointFolders, defaultFolder: mainWaypointFolder) { waypoint, navigate in
                 gps.upsert(waypoint)
