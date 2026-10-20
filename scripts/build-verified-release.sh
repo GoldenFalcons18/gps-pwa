@@ -11,7 +11,7 @@ VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
 CODE=$(sed -n 's/^appVersionCode=//p' android/gradle.properties | tr -d '\r')
 test "$CODE" -gt 1
 # Verify migration from the actual published fixed-signature baseline.
-curl --fail --location --retry 3 'https://github.com/GoldenFalcons18/gps-pwa/releases/download/android-v1.6.0/SailingGpsLogger-1.6.0.apk' -o upgrade-fixture.apk
+curl --fail --location --retry 3 'https://github.com/GoldenFalcons18/gps-pwa/releases/download/android-v1.7.5/SailingGpsLogger-1.7.5.apk' -o upgrade-fixture.apk
 gradle -p android :app:testDebugUnitTest :app:assembleRelease --no-daemon
 mkdir -p dist
 APK="dist/SailingGpsLogger-$VERSION.apk"
