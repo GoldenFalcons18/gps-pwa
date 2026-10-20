@@ -13,8 +13,10 @@ class ZoneMonitor {
                 return radius-NavigationUtils.distanceMeters(center.lat,center.lon,point.lat,point.lon)
             }
             if(points.size<3) return null
+            val anchor=points.first().lon
+            val pointLongitude=((point.lon-anchor+540)%360)-180
             val xy=points.map{p->
-                val longitude=((p.lon-point.lon+540)%360)-180
+                val longitude=((p.lon-anchor+540)%360)-180-pointLongitude
                 Pair(Math.toRadians(longitude)*6371000*cos(Math.toRadians(point.lat)),Math.toRadians(p.lat-point.lat)*6371000)
             }
             var inside=false;var nearest=Double.POSITIVE_INFINITY

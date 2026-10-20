@@ -33,6 +33,7 @@ class ZoneMonitorTest {
     }
     @Test fun polygonAcrossDateLine() {
         val polygon=ZoneMonitor.Zone("area","港",points=listOf(MapCoordinate(-0.01,179.99),MapCoordinate(-0.01,-179.99),MapCoordinate(0.01,-179.99),MapCoordinate(0.01,179.99)))
+        assertTrue(polygon.clearance(MapCoordinate(0.0,0.0))!! < 0)
         assertTrue(polygon.clearance(MapCoordinate(0.0,180.0))!!>1000)
         assertTrue(polygon.clearance(MapCoordinate(0.02,180.0))!! < -1000)
         assertEquals(0.0,polygon.clearance(MapCoordinate(0.01,180.0))!!,0.001)

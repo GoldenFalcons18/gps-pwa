@@ -35,6 +35,7 @@ final class ZoneMonitorTests:XCTestCase {
     }
     func testPolygonAndDateLine() {
         let polygon=ZoneMonitor.Zone(id:"area",name:"港",points:[.init(latitude:-0.01,longitude:179.99),.init(latitude:-0.01,longitude:-179.99),.init(latitude:0.01,longitude:-179.99),.init(latitude:0.01,longitude:179.99)])
+        XCTAssertLessThan(polygon.clearance(.init(latitude:0,longitude:0))!,0)
         XCTAssertGreaterThan(polygon.clearance(.init(latitude:0,longitude:180))!,1000)
         XCTAssertLessThan(polygon.clearance(.init(latitude:0.02,longitude:180))!,-1000)
         XCTAssertEqual(polygon.clearance(.init(latitude:0.01,longitude:180))!,0,accuracy:0.001)

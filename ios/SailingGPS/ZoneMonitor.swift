@@ -15,8 +15,10 @@ struct ZoneMonitor {
             }
             guard points.count >= 3 else { return nil }
             // Project around the fix; wrap longitude to support the international date line.
+            let anchor=points[0].longitude
+            let pointLongitude=(point.longitude-anchor+540).truncatingRemainder(dividingBy:360)-180
             let xy = points.map { p -> (Double,Double) in
-                let lon = (p.longitude-point.longitude+540).truncatingRemainder(dividingBy:360)-180
+                let lon = (p.longitude-anchor+540).truncatingRemainder(dividingBy:360)-180-pointLongitude
                 return (lon * .pi/180 * 6371000 * cos(point.latitude * .pi/180), (p.latitude-point.latitude) * .pi/180 * 6371000)
             }
             var inside = false, nearest = Double.infinity
