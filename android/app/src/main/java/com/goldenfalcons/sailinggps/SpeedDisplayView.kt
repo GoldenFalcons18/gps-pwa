@@ -12,13 +12,15 @@ import java.util.Locale
 class SpeedDisplayView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     var speedValue: Double? = null
         set(value) { field = value; invalidate(); contentDescription = value?.let { "対地速度 %.1f".format(it) } ?: "対地速度 未取得" }
+    var largeDecimal=true
+        set(value) { field=value;invalidate() }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val masks = intArrayOf(0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val value = speedValue?.takeIf { it.isFinite() && it >= 0 }?.let { String.format(Locale.US, "%.1f", it) } ?: "--.-"
-        val slots = value.fold(0f) { total, char -> total + if (char == '.') 22f else 100f }
+        val slots = value.fold(0f) { total, char -> total + if (char == '.') 32f else 100f }
         val scale = minOf(width / slots, height / 180f)
         canvas.save()
         canvas.translate((width - slots * scale) / 2f, (height - 180f * scale) / 2f)
@@ -26,8 +28,8 @@ class SpeedDisplayView(context: Context, attrs: AttributeSet? = null) : View(con
         value.forEach { char ->
             if (char == '.') {
                 paint.color = Color.rgb(0, 255, 35)
-                canvas.drawCircle(9f, 164f, 7f, paint)
-                canvas.translate(22f, 0f)
+                canvas.drawCircle(16f, 166f, if(largeDecimal) 12f else 8f, paint)
+                canvas.translate(32f, 0f)
             } else {
                 val mask = if (char.isDigit()) masks[char.digitToInt()] else 0x40
                 val rects = arrayOf(

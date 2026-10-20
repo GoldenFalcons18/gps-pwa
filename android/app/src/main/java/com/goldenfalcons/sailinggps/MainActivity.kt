@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var quickLocationListener: android.location.LocationListener? = null
     private val clockTick = object : Runnable {
         override fun run() {
-            b.tvTime.text = "時間\n" + java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
             uiHandler.postDelayed(this, 1000)
         }
     }
@@ -253,6 +253,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onResume() {
         super.onResume()
         foregroundActive = true
+        if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         startPreview()
         uiHandler.removeCallbacks(clockTick)
         uiHandler.post(clockTick)
@@ -322,6 +323,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             override fun onLocationChanged(location: Location) {
                 val age = android.os.SystemClock.elapsedRealtime() - location.elapsedRealtimeNanos / 1_000_000L
                 if (age !in 0..30_000 || location.accuracy < 0) return
+                ZoneAlerts.check(this@MainActivity,location)
                 latestLat = location.latitude; latestLon = location.longitude
                 latestFixAt = location.elapsedRealtimeNanos / 1_000_000L
                 latestSpeedMps = if (location.hasSpeed()) location.speed.toDouble().coerceAtLeast(0.0) else null
@@ -461,14 +463,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateNavigationUi() {
-        val speed = latestSpeedMps?.takeIf { it >= 0 }?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
+        val threshold=(displayPrefs.getString("zeroSpeedThreshold","0")?.toDoubleOrNull() ?: 0.0)/NavigationUtils.MPS_TO_KT
+        val speed = latestSpeedMps?.takeIf { it.isFinite() && it >= 0 }?.let{if(it<threshold) 0.0 else it}?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
         val unit = if (metricUnits) "km/h" else "knot"
         b.tvSpeedUnit.text = "SOG · $unit"
         b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
-        b.tvLargeSpeed.speedValue = speed
+        b.tvLargeSpeed.largeDecimal=displayPrefs.getBoolean("largeDecimal",true)
+        b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getDoubleExtra("previewSpeed",0.0) else speed
         b.tvLargeSpeed.contentDescription = "対地速度 ${b.tvSog.text}"
         b.tvPosition.text = if (latestLat != null && latestLon != null)
-            "${NavigationUtils.formatDm(latestLat!!, true)}   ${NavigationUtils.formatDm(latestLon!!, false)}"
+            "${displayCoordinate(latestLat!!, true)}   ${displayCoordinate(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
         val reference = headingReference()
         val heading = reference?.heading
@@ -485,18 +489,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvDistanceSub.text = "-- m"
             b.tvClock.text = "--時方向"
             b.tvWpName.text = wp?.name ?: "未設定"
-            b.tvWpCoords.text = wp?.let { "${NavigationUtils.formatDm(it.lat, true)}\n${NavigationUtils.formatDm(it.lon, false)}" } ?: "--"
+            b.tvWpCoords.text = wp?.let { "${displayCoordinate(it.lat,true)}\n${displayCoordinate(it.lon,false)}" } ?: "--"
             b.instrumentView.update(null, null, heading, reference?.magnetic == true)
             return
         }
 
         val distanceM = NavigationUtils.distanceMeters(lat, lon, wp.lat, wp.lon)
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
-        b.tvEte.text = "ETE\n" + NavigationUtils.ete(distanceM, latestSpeedMps)
+        val estimateSpeed=if(displayPrefs.getBoolean("arrivalUsesAverage",false)) tripAverageSpeed() else latestSpeedMps
+        val eta=displayPrefs.getBoolean("showETA",false)
+        b.tvEte.text = (if(eta) "ETA\n" else "ETE\n")+InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false))
         b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
         b.tvDistanceSub.text = ""
         b.tvWpName.text = wp.name
-        b.tvWpCoords.text = "${NavigationUtils.formatDm(wp.lat, true)}\n${NavigationUtils.formatDm(wp.lon, false)}"
+        b.tvWpCoords.text = "${displayCoordinate(wp.lat,true)}\n${displayCoordinate(wp.lon,false)}"
 
         val trueHeading = reference?.trueHeading
         if (heading != null && trueHeading != null) {
@@ -632,7 +638,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 .setNegativeButton("キャンセル", null).show()
         }
     }
+    private fun displayCoordinate(value:Double,isLat:Boolean)=InstrumentSettings.coordinate(value,isLat,displayPrefs.getString("coordinateFormat","dm") ?: "dm")
+    private fun tripAverageSpeed():Double? {
+        val counter=getSharedPreferences("tripCounter",MODE_PRIVATE)
+        val duration=counter.getString("seconds","0")?.toDoubleOrNull() ?: 0.0
+        val distance=counter.getString("distance","0")?.toDoubleOrNull() ?: 0.0
+        return if(duration>0) distance/duration else null
+    }
     private fun showSettings() {
+        DetailedSettings(this,library,waypointFolders,mainWaypointFolder,b.tvGpsInfo.text.toString()) {
+            if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints",true),displayPrefs.getBoolean("showCourse",true))
+            updateDefaultFolderSetting();renderWaypointList();updateNavigationUi()
+        }.show()
+    }
+    private fun showWaypointInputs() {
         updateDefaultFolderSetting()
         b.settingsPanel.visibility = android.view.View.VISIBLE
         b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) }
@@ -677,7 +698,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
     private fun showNavigationOptions() {
         showActionPanel("ナビゲーションのオプション", listOf(
-            "新規ウェイポイント" to { pendingNavigation = true; showSettings(); b.etWpName.requestFocus() },
+            "新規ウェイポイント" to { pendingNavigation = true; showWaypointInputs(); b.etWpName.requestFocus() },
             "既存ウェイポイント（近い順）" to { showTargetList(true) },
             "既存ウェイポイント（最近）" to { showTargetList(false) },
             "目標なし" to { clearTarget() }
@@ -719,7 +740,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun showNavigationMenu() {
         showActionPanel("メニュー", listOf(
-            "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showSettings() },
+            "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
             "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
             "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
             "地点・グループ・エリア" to { showMapLibrary() },
@@ -853,7 +874,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setTextColor(Color.WHITE)
                 textSize = 17f
-                text = "${wp.mark} ${wp.name}\n${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
+                text = "${wp.mark} ${wp.name}\n${displayCoordinate(wp.lat,true)} / ${displayCoordinate(wp.lon,false)}"
             }
             val select = Button(this).apply {
                 this.text = if (activeWaypoint?.id == wp.id) "選択中" else "選択"
@@ -920,6 +941,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             return
         }
         GpsLoggingService.trackFile(this).delete()
+        getSharedPreferences("tripCounter",MODE_PRIVATE).edit().clear().apply()
         mapPanel?.clearTrack()
         pointCount = 0
         updateStatusUi()

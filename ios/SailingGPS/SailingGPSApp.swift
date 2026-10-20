@@ -172,6 +172,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
             location = point
+            if let alert=ZoneAlerts.shared.check(point,library:library,waypoints:waypoints) { message=alert }
             WatchNavigationBridge.shared.updateLocation(point)
             if savingCurrentWaypoint { finishCurrentWaypoint(point) }
             guard recording else { continue }
@@ -336,7 +337,26 @@ struct ContentView: View {
     private var heading: Double? { navigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
-    private var speedText: String { gps.location.flatMap { $0.speed >= 0 ? String(format: "%.1f", $0.speed * (metricUnits ? 3.6 : 1.943844)) : nil } ?? "—" }
+    @AppStorage("largeDecimal") private var largeDecimal=true
+    @AppStorage("coordinateFormat") private var coordinateFormat="dm"
+    @AppStorage("twelveHourClock") private var twelveHourClock=false
+    @AppStorage("keepScreenAwake") private var keepScreenAwake=false
+    @AppStorage("zeroSpeedThreshold") private var zeroSpeedThreshold=0.0
+    @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
+    @AppStorage("showETA") private var showETA=false
+    private var speedText:String {
+        #if DEBUG
+        if let index=ProcessInfo.processInfo.arguments.firstIndex(of:"--preview-speed-value"), ProcessInfo.processInfo.arguments.count>index+1 {
+            return ProcessInfo.processInfo.arguments[index+1]
+        }
+        #endif
+        return InstrumentSettings.speedText(gps.location?.speed,factor:metricUnits ? 3.6:1.943844,zeroThreshold:zeroSpeedThreshold)
+    }
+    private func displayCoordinate(_ value:Double,isLatitude:Bool)->String { InstrumentSettings.coordinate(value,isLatitude:isLatitude,format:coordinateFormat) }
+    private func clock(_ date:Date)->String {
+        let formatter=DateFormatter();formatter.locale=Locale(identifier:"en_US_POSIX");formatter.dateFormat=twelveHourClock ? "h:mm:ss a":"HH:mm:ss"
+        return formatter.string(from:date)
+    }
     private var target: Waypoint? { gps.waypoints.first { $0.id == selected } }
     private static let clockFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -347,7 +367,9 @@ struct ContentView: View {
     }()
     private var ete: String {
         guard let target, let point = gps.location else { return "--:--:--" }
-        return CoordinateInput.ete(distanceMeters: point.distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude)), speedMps: point.speed)
+        let elapsed=gps.elapsed(at:Date())
+        let speed=arrivalUsesAverage ? (elapsed>0 ? gps.recordedDistance/elapsed:nil):point.speed
+        return InstrumentSettings.arrival(distance:point.distance(from:CLLocation(latitude:target.latitude,longitude:target.longitude)),speed:speed,now:Date(),eta:showETA,twelveHour:twelveHourClock)
     }
     private func bearing(to waypoint: Waypoint, from point: CLLocation) -> Double {
         let a = point.coordinate.latitude * .pi / 180
@@ -416,7 +438,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("目標", systemImage: "ruler").font(.caption).foregroundStyle(.gray)
                     Text(targetDistance).font(.system(size: 25, weight: .bold)).minimumScaleFactor(0.45).lineLimit(1)
-                    Label("目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
+                    Label(showETA ? "目標, ETA":"目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
                     Text(ete).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.45).lineLimit(1)
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)
                 compass.scaleEffect(dial / 154).frame(width: dial, height: dial)
@@ -425,7 +447,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange))
                     Text(target?.name ?? "設定目標").font(.system(size: 23, weight: .bold)).foregroundStyle(target == nil ? .orange : .white).minimumScaleFactor(0.5).lineLimit(2)
                     if let target {
-                        Text(CoordinateInput.format(target.latitude, isLatitude: true) + "\n" + CoordinateInput.format(target.longitude, isLatitude: false))
+                        Text(displayCoordinate(target.latitude, isLatitude: true) + "\n" + displayCoordinate(target.longitude, isLatitude: false))
                             .font(.caption.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(2)
                     }
                 }.frame(maxWidth: .infinity)
@@ -477,6 +499,7 @@ struct ContentView: View {
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
+                DetailedSettingsView(gps:gps)
                 Section("ウェイポイント") {
                     Picker("デフォルトの保存先", selection: Binding(get: { mainWaypointFolder }, set: { savedMainWaypointFolder = $0 })) {
                         ForEach(waypointFolders, id: \.self) { folder in
@@ -668,7 +691,7 @@ struct ContentView: View {
                     instrument(gps.location.map { String(format: "%.0f", $0.altitude) } ?? "--", label: "高度 m")
                     instrument(pace, label: metricUnits ? "ペース / km" : "ペース / 海里", size: 19)
                     instrument(speedText, label: speedUnit)
-                    instrument(Self.clockFormatter.string(from: context.date), label: "時間", size: 23)
+                    instrument(clock(context.date), label: "時間", size: 23)
                 }
             }.padding(8).frame(maxHeight: .infinity)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(.gray))
@@ -696,8 +719,8 @@ struct ContentView: View {
             }.frame(maxWidth: .infinity)
             Rectangle().fill(.orange).frame(width: 1)
             VStack(alignment: .trailing, spacing: 2) {
-                Text(gps.location.map { CoordinateInput.format($0.coordinate.latitude, isLatitude: true) } ?? "---")
-                Text(gps.location.map { CoordinateInput.format($0.coordinate.longitude, isLatitude: false) } ?? "---")
+                Text(gps.location.map { displayCoordinate($0.coordinate.latitude, isLatitude:true) } ?? "---")
+                Text(gps.location.map { displayCoordinate($0.coordinate.longitude, isLatitude:false) } ?? "---")
             }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
         }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
     }
@@ -709,7 +732,7 @@ struct ContentView: View {
                     ZStack(alignment: .top) {
                         if mode == 1 { mapPanel }
                         else {
-                            SevenSegmentSpeed(text: speedText).padding(.horizontal, 12).padding(.top, 48).padding(.bottom, 12)
+                            SevenSegmentSpeed(text: speedText, largeDecimal:largeDecimal).padding(.horizontal, 12).padding(.top, 48).padding(.bottom, 12)
                         }
                         topControls
                     }.frame(height: height * 0.39)
@@ -803,6 +826,7 @@ struct ContentView: View {
             if ProcessInfo.processInfo.arguments.contains("--preview-library") || ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { libraryPresented=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-map-operations") { mapOperationsCoordinate = .init(latitude: 35.318, longitude: 139.467); mapOperationsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
+            if ProcessInfo.processInfo.arguments.contains("--preview-settings") { settings=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {
                 gps.library.groups=Array(Set(gps.library.groups+["港一覧","デモ海域"])).sorted()
@@ -822,6 +846,9 @@ struct ContentView: View {
         previewDashboard.onChange(of: gps.quickWaypointID) { _, value in
             if let value { selected = value; following = true }
         }
+        .onAppear { UIApplication.shared.isIdleTimerDisabled=keepScreenAwake }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled=false }
+        .onChange(of:keepScreenAwake) { _, value in UIApplication.shared.isIdleTimerDisabled=value }
         .onChange(of: selected) { _, value in
             savedTarget = value?.uuidString ?? "__none__"
             WatchNavigationBridge.shared.setTarget(target, metric: metricUnits)

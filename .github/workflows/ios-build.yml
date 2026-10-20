@@ -70,6 +70,16 @@ jobs:
           mkdir -p "$CONTAINER/Documents"
           printf '%s' '[{"id":"00000000-0000-0000-0000-000000000001","name":"TEST A","latitude":35.317433,"longitude":139.4661,"colorName":"#12ABCD","markSymbol":"marine.lighthouse"},{"id":"00000000-0000-0000-0000-000000000002","name":"TEST B","latitude":35.320,"longitude":139.470}]' > "$CONTAINER/Documents/waypoints.json"
           mkdir -p screenshots
+          for SPEED in 1.9 12.3 99.9 100.0; do
+            xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 0 --preview-speed-value "$SPEED"
+            sleep 2
+            xcrun simctl io "$DEVICE" screenshot "screenshots/iPhone-speed-$SPEED.png"
+            xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          done
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-settings
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-settings.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 0
           sleep 5
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-speed.png

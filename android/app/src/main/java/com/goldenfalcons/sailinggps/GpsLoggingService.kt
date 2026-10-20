@@ -89,6 +89,7 @@ class GpsLoggingService : Service(), LocationListener {
         try { locationManager.removeUpdates(this) } catch (_: Exception) {}
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
+        previous=null
         broadcastStatus(false)
         debug("GPS logging stopped")
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -96,6 +97,7 @@ class GpsLoggingService : Service(), LocationListener {
     }
 
     override fun onLocationChanged(location: Location) {
+        ZoneAlerts.check(this,location)
         var bearing = if (location.hasBearing()) location.bearing.toDouble() else Double.NaN
         if (!bearing.isFinite()) {
             previous?.let { prev ->
@@ -104,6 +106,15 @@ class GpsLoggingService : Service(), LocationListener {
             }
         }
 
+        previous?.let { previous ->
+            val seconds=(location.elapsedRealtimeNanos-previous.elapsedRealtimeNanos)/1e9
+            if(seconds in 0.001..30.0 && location.hasAccuracy() && location.accuracy>=0) {
+                val counter=getSharedPreferences("tripCounter",Context.MODE_PRIVATE)
+                val distance=(counter.getString("distance","0")?.toDoubleOrNull() ?: 0.0)+NavigationUtils.distanceMeters(previous.latitude,previous.longitude,location.latitude,location.longitude)
+                val duration=(counter.getString("seconds","0")?.toDoubleOrNull() ?: 0.0)+seconds
+                counter.edit().putString("distance",distance.toString()).putString("seconds",duration.toString()).apply()
+            }
+        }
         appendPoint(location, bearing)
         previous = Location(location)
         count++
