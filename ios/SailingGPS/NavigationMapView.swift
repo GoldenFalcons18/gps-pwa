@@ -214,9 +214,6 @@ struct NavigationMapView: UIViewRepresentable {
             defer { rendering = false }
             self.map = map
             let p = parent
-            for overlay in [trackOverlay, targetOverlay, courseOverlay] where !map.overlays.contains(where: { $0 === overlay }) {
-                map.addOverlay(overlay)
-            }
             if let previousScale, previousScale != p.metersPerCm, !p.following {
                 let camera = map.camera.copy() as! MKMapCamera
                 camera.altitude *= p.metersPerCm / previousScale
@@ -242,6 +239,10 @@ struct NavigationMapView: UIViewRepresentable {
                     if f.kind == "line" { let line=MKPolyline(coordinates:points,count:points.count);line.title="feature:"+f.color;map.addOverlay(line) }
                     else { let area=MKPolygon(coordinates:points,count:points.count);area.title="feature:"+f.color;map.addOverlay(area) }
                 }
+            }
+            // Keep the live lines above saved map features, matching their former order.
+            for overlay in [trackOverlay, targetOverlay, courseOverlay] where !map.overlays.contains(where: { $0 === overlay }) {
+                map.addOverlay(overlay)
             }
             let locationChanged = lastLocationTime != p.location?.timestamp
             if locationChanged || lastTrackCount != p.track.count {
