@@ -469,7 +469,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvSpeedUnit.text = "SOG · $unit"
         b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
         b.tvLargeSpeed.largeDecimal=displayPrefs.getBoolean("largeDecimal",true)
-        b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getDoubleExtra("previewSpeed",0.0) else speed
+        b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getStringExtra("previewSpeed")?.toDoubleOrNull() else speed
         b.tvLargeSpeed.contentDescription = "対地速度 ${b.tvSog.text}"
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${displayCoordinate(latestLat!!, true)}   ${displayCoordinate(latestLon!!, false)}"

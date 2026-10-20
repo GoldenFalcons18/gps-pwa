@@ -47,6 +47,7 @@ object ZoneAlerts {
             channel.enableVibration(haptic);manager.createNotificationChannel(channel)
             val intent=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val message=if(event.entered) "${event.name}に入りました" else "${event.name}から出ました"
+            android.util.Log.d("SailingZoneAlert","POST id=${event.id} entered=${event.entered}")
             manager.notify("zone-${event.id}",2001,NotificationCompat.Builder(context,channelId).setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setContentTitle("ゾーンアラート").setContentText(message).setContentIntent(intent).setAutoCancel(true).build())
         }

@@ -37,7 +37,7 @@ struct SevenSegmentSpeed: View {
             }
             .frame(width: slots, height: 180)
             .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: slots * scale, height: 180 * scale)
+            .frame(width: slots * scale, height: 180 * scale, alignment: .topLeading)
             .position(x: bounds.size.width/2, y: bounds.size.height/2)
         }.accessibilityElement(children: .ignore).accessibilityLabel("速度 " + text)
     }
