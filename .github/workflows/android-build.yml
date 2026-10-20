@@ -7,7 +7,7 @@ on:
         type: boolean
         default: false
   push:
-    paths: ['android/**', 'scripts/**', '.github/workflows/android-build.yml', 'release/android-signed-build.txt']
+    paths: ['android/**', 'scripts/**', '.github/workflows/android-build.yml']
 permissions:
   contents: read
 jobs:
@@ -32,7 +32,7 @@ jobs:
           name: Android-debug-test-only
           path: android/app/build/outputs/apk/debug/*.apk
       - name: Sign release APK
-        if: ${{ inputs.signed_release || (github.event_name == 'push' && contains(github.event.head_commit.modified, 'release/android-signed-build.txt')) }}
+        if: ${{ inputs.signed_release }}
         env:
           KEYSTORE_BASE64: ${{ secrets.SAILING_KEYSTORE_BASE64 }}
           SAILING_KEYSTORE_FILE: ${{ runner.temp }}/sailing-release.jks
@@ -48,13 +48,13 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk dist/SailingGpsLogger.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify dist/SailingGpsLogger.apk
           python3 scripts/release-metadata.py dist/SailingGpsLogger.apk
-      - name: Publish Android release after automated verification
-        if: ${{ inputs.signed_release || (github.event_name == 'push' && contains(github.event.head_commit.modified, 'release/android-signed-build.txt')) }}
+      - name: Create Android release draft
+        if: ${{ inputs.signed_release }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
-          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
 
   screenshots:
     needs: build
