@@ -30,7 +30,7 @@ if grep -q 'POST id=zone-test' screenshots/zone-baseline.log; then echo 'Unexpec
 for sample in 1 2 3 4 5 6 7 8; do adb emu geo fix 139.467 35.318; sleep 1; done
 adb logcat -d -s SailingZoneAlert > screenshots/zone-enter.log
 grep -q 'POST id=zone-test entered=true' screenshots/zone-enter.log
-adb shell am start-foreground-service -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.START
+adb shell run-as "$APP" am start-foreground-service --user 0 -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.START
 sleep 2
 adb shell input keyevent 3
 for sample in 1 2 3 4 5 6 7 8; do adb emu geo fix 139.477 35.318; sleep 1; done
@@ -38,5 +38,5 @@ adb logcat -d -s SailingZoneAlert > screenshots/zone-service-exit.log
 grep -q 'POST id=zone-test entered=false' screenshots/zone-service-exit.log
 adb shell dumpsys notification --noredact > screenshots/zone-notifications.txt
 grep -q 'zone-zone-test' screenshots/zone-notifications.txt
-adb shell am startservice -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.STOP
+adb shell run-as "$APP" am startservice --user 0 -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.STOP
 printf '%s\n' 'PASS: initial baseline is silent; foreground entry and background recording exit post notifications.' > screenshots/zone-result.txt
