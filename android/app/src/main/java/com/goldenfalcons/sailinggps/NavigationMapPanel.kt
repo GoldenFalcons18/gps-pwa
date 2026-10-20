@@ -252,6 +252,7 @@ class NavigationMapPanel(
 
     private var featureSnapshot: Pair<List<MapFeature>, List<Waypoint>>? = null
     private var waypointSnapshot: Pair<List<Waypoint>, String?>? = null
+    private var didInitialWaypointFit = false
     private val featureOverlays = mutableListOf<org.osmdroid.views.overlay.Overlay>()
     fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
         val snapshot = features.toList() to waypoints.toList()
@@ -291,6 +292,10 @@ class NavigationMapPanel(
         }
         map.overlays.addAll(waypointMarkers)
         map.invalidate()
+        if (!didInitialWaypointFit && waypointMarkers.isNotEmpty()) {
+            didInitialWaypointFit = true
+            showWaypoints()
+        }
         logWaypointTouchBounds()
     }
 

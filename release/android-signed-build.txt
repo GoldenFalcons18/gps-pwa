@@ -1,1 +1,1 @@
-1.7.8 versionCode 24 signed release retry with KVM acceleration
+1.7.9 versionCode 25 show all saved waypoints on map

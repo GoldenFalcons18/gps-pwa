@@ -50,6 +50,7 @@ struct NavigationMapView: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: NavigationMapView
         var lastShowAll = 0
+        private var didInitialWaypointFit = false
         private var rendering = false
         private var signature = ""
         private var courseHeading: Double?
@@ -163,7 +164,7 @@ struct NavigationMapView: UIViewRepresentable {
                 courseHeading = nil
                 map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" })
                 map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
-                for wp in p.showWaypoints ? p.waypoints.filter{!p.library.hiddenGroups.contains($0.group ?? "")} : [] {
+                for wp in p.showWaypoints ? p.waypoints : [] {
                     let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
                     map.addAnnotation(pin)
                 }
@@ -200,6 +201,13 @@ struct NavigationMapView: UIViewRepresentable {
                 updateCourse(map)
             }
             updateBoatRotation(map)
+            if !didInitialWaypointFit && p.showWaypoints && !p.waypoints.isEmpty {
+                let pins = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind != "course" }
+                if !pins.isEmpty {
+                    didInitialWaypointFit = true
+                    map.showAnnotations(pins, animated: false)
+                }
+            }
             if lastShowAll != p.showAllRequest {
                 lastShowAll = p.showAllRequest
                 let pins = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind != "course" }

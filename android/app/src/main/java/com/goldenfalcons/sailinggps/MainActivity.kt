@@ -338,7 +338,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
             mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
-            mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
+            mapPanel?.setWaypoints(waypoints, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
             updateMap()
             mapPanel?.resume()
@@ -964,7 +964,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val waypointFolders: List<String> get() = (library.groups+waypoints.map{it.group}).filter{it.isNotBlank()}.distinct().sorted()
     private val mainWaypointFolder: String get() = DefaultWaypointFolder.resolve(displayPrefs.getString("mainWaypointFolder",null),library.groups,waypoints.map{it.group})
     private fun renderWaypointList() {
-        mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
+        mapPanel?.setWaypoints(waypoints, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
         if(waypointFolder !in waypointFolders)waypointFolder=mainWaypointFolder
         b.waypointContainer.removeAllViews()
