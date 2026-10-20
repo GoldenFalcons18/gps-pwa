@@ -1,1 +1,1 @@
-1.7.8 versionCode 24 signed release
+1.7.8 versionCode 24 signed release retry with KVM acceleration
