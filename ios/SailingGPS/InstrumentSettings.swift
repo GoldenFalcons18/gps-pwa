@@ -1,6 +1,11 @@
 import Foundation
 
 enum InstrumentSettings {
+    static func course(_ course:Double?,speed:Double?,age:Double)->Double? {
+        guard age.isFinite,age>=0,age<=15,let speed,speed.isFinite,speed>=0.25,
+              let course,course.isFinite,course>=0,course<360 else { return nil }
+        return course
+    }
     static func coordinate(_ value:Double,isLatitude:Bool,format:String)->String {
         guard value.isFinite else { return "—" }
         if format=="dm" { return CoordinateInput.format(value,isLatitude:isLatitude) }

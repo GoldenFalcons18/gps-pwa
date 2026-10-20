@@ -4,6 +4,9 @@ import kotlin.math.*
 import java.util.Locale
 
 object InstrumentSettings {
+    fun course(course:Double?,speed:Double?,age:Double):Double? = course?.takeIf {
+        age.isFinite() && age in 0.0..15.0 && speed!=null && speed.isFinite() && speed>=0.25 && it.isFinite() && it>=0 && it<360
+    }
     fun coordinate(value:Double,isLat:Boolean,format:String):String {
         if(!value.isFinite()) return "—"
         if(format=="dm") return NavigationUtils.formatDm(value,isLat)

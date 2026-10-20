@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var haveAccel = false
     private var haveMagnetic = false
     private var magneticHeading: Double? = null
+    private var magneticSampleAt=0L
+    private var accelSampleAt=0L
+    private var compassAccuracy=SensorManager.SENSOR_STATUS_UNRELIABLE
 
     private var previewListener: android.location.LocationListener? = null
     private var foregroundActive = false
@@ -54,6 +57,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val clockTick = object : Runnable {
         override fun run() {
             b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            if(currentDisplayMode==2) updateNavigationUi()
             uiHandler.postDelayed(this, 1000)
         }
     }
@@ -65,6 +69,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var running = false
 
     private var navigatorMode = false
+    private var currentDisplayMode=0
+    private val focusHiddenVisibility=mutableMapOf<android.view.View,Int>()
+    private lateinit var focusSog:TextView
+    private lateinit var focusCog:TextView
+    private lateinit var focusBearing:TextView
     private var mapPanel: NavigationMapPanel? = null
     private val displayPrefs by lazy { getSharedPreferences("display", MODE_PRIVATE) }
 
@@ -280,16 +289,47 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupDisplayModes() {
-        b.btnSpeedMode.setOnClickListener { setDisplayMode(false) }
+        setupFocusPanel()
+        b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
+        b.btnFocusMenu.setOnClickListener { showNavigationMenu() }
+        b.btnFocusNorth.setOnClickListener { displayPrefs.edit().putBoolean("instrumentMagnetic",!displayPrefs.getBoolean("instrumentMagnetic",false)).apply();updateNavigationUi() }
+        b.btnSpeedMode.setOnClickListener { setDisplayMode(0) }
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
-        setDisplayMode(displayPrefs.getBoolean("navigator", false))
+        setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
     }
 
-    private fun setDisplayMode(navigator: Boolean) {
+    private fun setupFocusPanel() {
+        fun card(label:String,color:Int):Pair<LinearLayout,TextView> {
+            val column=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;gravity=android.view.Gravity.CENTER;setPadding(8,8,8,8)
+                layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) }
+                background=android.graphics.drawable.GradientDrawable().apply {setColor(Color.BLACK);setStroke(2,Color.GRAY);cornerRadius=10f} }
+            column.addView(TextView(this).apply{text=label;textSize=20f;setTextColor(Color.LTGRAY);gravity=android.view.Gravity.CENTER})
+            val value=TextView(this).apply {text="—";setTextColor(color);textSize=100f;typeface=android.graphics.Typeface.MONOSPACE;gravity=android.view.Gravity.CENTER;setSingleLine()
+                layoutParams=LinearLayout.LayoutParams(-1,0,1f);androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,24,112,1,android.util.TypedValue.COMPLEX_UNIT_SP) }
+            column.addView(value);b.focusPanel.addView(column);return column to value
+        }
+        focusSog=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN).second
+        focusCog=card("COG（真北）",Color.WHITE).second
+        val targetCard=card("目標方位（真北）",Color.rgb(255,170,0));focusBearing=targetCard.second
+        targetCard.first.setOnClickListener { showNavigationOptions() }
+        targetCard.first.contentDescription="目標方位。タップして目標地点を変更"
+        b.focusPanel.setOnLongClickListener {showNavigationMenu();true}
+    }
+    private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
+    private fun setDisplayMode(requestedMode:Int) {
+        val mode=requestedMode.coerceIn(0,2)
+        val content=b.focusPanel.parent as LinearLayout
+        if(mode==2 && currentDisplayMode!=2) {
+            focusHiddenVisibility.clear()
+            for(index in 1 until content.childCount) {val view=content.getChildAt(index);if(view!=b.focusPanel) focusHiddenVisibility[view]=view.visibility}
+        }
+        if(mode!=2 && currentDisplayMode==2) {focusHiddenVisibility.forEach{(view,visibility)->view.visibility=visibility};focusHiddenVisibility.clear()}
+        currentDisplayMode=mode
+        val navigator=mode==1
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
@@ -303,9 +343,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.speedPanel.visibility = if (navigator) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
         b.tvModeTitle.text = if (navigator) "ナビゲーター" else "スピードメーター"
-        b.btnSpeedMode.isEnabled = navigator
-        b.btnNavigatorMode.isEnabled = !navigator
-        displayPrefs.edit().putBoolean("navigator", navigator).apply()
+        if(mode==2) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
+        b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        if(mode==2) b.focusPanel.layoutParams=b.focusPanel.layoutParams.apply {height=maxOf((480*resources.displayMetrics.density).toInt(),resources.displayMetrics.heightPixels-(150*resources.displayMetrics.density).toInt())}
+        b.btnSpeedMode.isEnabled = mode!=0
+        b.btnNavigatorMode.isEnabled = mode!=1
+        b.btnFocusMode.isEnabled=mode!=2
+        b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnFocusMenu.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
+        updateNavigationUi()
         debug("Display mode=" + if (navigator) "NAVIGATOR" else "SPEEDOMETER")
     }
 
@@ -480,6 +527,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvCog.text = heading?.let { "${NavigationUtils.normalize360(it).roundToInt() % 360}°" } ?: "--°"
         b.tvHeadingSource.text = "方位ソース：$source"
 
+        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
+        val fresh=latestFixAt>0 && age in 0.0..15.0
+        val preview=BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)
+        if(::focusSog.isInitialized) {
+            val label=(focusSog.parent as LinearLayout).getChildAt(0) as TextView;label.text="SOG / $unit"
+            focusSog.text=if(preview) "12.3" else if(fresh) speed?.let{"%.1f".format(java.util.Locale.US,it)} ?: "—" else "—"
+            val useMagnetic=displayPrefs.getBoolean("instrumentMagnetic",false)
+            b.btnFocusNorth.text=if(useMagnetic) "磁北" else "真北"
+            val compassAge=(android.os.SystemClock.elapsedRealtime()-minOf(magneticSampleAt,accelSampleAt))/1000.0
+            val compass=if(preview) 218.0 else magneticHeading?.takeIf{magneticSampleAt>0 && accelSampleAt>0 && compassAge in 0.0..15.0 && compassAccuracy>SensorManager.SENSOR_STATUS_UNRELIABLE}
+            val correction=if(preview) -8.0 else if(latestLat!=null && latestLon!=null) GeomagneticField(latestLat!!.toFloat(),latestLon!!.toFloat(),0f,System.currentTimeMillis()).declination.toDouble() else null
+            val reading=InstrumentHeading.resolve(if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age),if(preview) 3.0 else if(fresh) latestSpeedMps else null,compass,correction,useMagnetic)
+            ((focusCog.parent as LinearLayout).getChildAt(0) as TextView).text=(if(reading?.compass==true) "コンパス方位" else "COG")+(if(useMagnetic) "（磁北）" else "（真北）")
+            focusCog.text=reading?.value?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val target=activeWaypoint
+            val targetBearing=if(preview) 144.0 else if(fresh && target!=null && latestLat!=null && latestLon!=null && NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)>1)
+                NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
+            ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
+            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,correction)?.let{"${it.roundToInt()%360}°"} ?: "—"
+        }
         val wp = activeWaypoint
         b.tvEte.text = "ETE\n--:--:--"
         val lat = latestLat
@@ -746,7 +813,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
-            "モード切替" to { setDisplayMode(!navigatorMode) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
+            "モード切替" to { setDisplayMode((currentDisplayMode+1)%3) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
     }
 
@@ -952,10 +1019,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
+                accelSampleAt=event.timestamp/1_000_000
                 accel = event.values.clone()
                 haveAccel = true
             }
             Sensor.TYPE_MAGNETIC_FIELD -> {
+                compassAccuracy=event.accuracy
+                magneticSampleAt=event.timestamp/1_000_000
                 magnetic = event.values.clone()
                 haveMagnetic = true
             }
@@ -990,6 +1060,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        if(sensor?.type==Sensor.TYPE_MAGNETIC_FIELD) compassAccuracy=accuracy
         debug("Sensor accuracy type=${sensor?.type} accuracy=$accuracy")
     }
 

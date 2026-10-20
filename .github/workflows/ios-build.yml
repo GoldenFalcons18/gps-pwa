@@ -50,6 +50,14 @@ jobs:
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-speed
           sleep 4
           xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-speed -watchMagnetic NO
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed-true.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-speed --preview-low-speed -watchMagnetic YES
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed-compass.png
           xcrun simctl shutdown "$DEVICE"
       - uses: actions/upload-artifact@v4
         with:
@@ -76,6 +84,14 @@ jobs:
             xcrun simctl io "$DEVICE" screenshot "screenshots/iPhone-speed-$SPEED.png"
             xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           done
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-focus
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-focus.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-focus -instrumentMagnetic YES
+          sleep 2
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-focus-magnetic.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-settings
           sleep 2
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-settings.png

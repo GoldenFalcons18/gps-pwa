@@ -112,6 +112,7 @@ struct WatchNavigationView: View {
     @StateObject private var sensors = WatchSensors()
     @Environment(\.scenePhase) private var phase
     @AppStorage("watchMode") private var mode = 0
+    @AppStorage("watchMagnetic") private var useMagnetic=true
     @State private var targetPicker = false
     private var metric: Bool { receiver.catalog?.metric ?? false }
     private var folders: [String] { Array(Set(receiver.catalog?.waypoints.map(\.folder) ?? [])).sorted() }
@@ -122,12 +123,13 @@ struct WatchNavigationView: View {
                     HStack {
                         Button("ナビ") { mode = 0 }.foregroundStyle(mode == 0 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button("速度") { mode = 1 }.foregroundStyle(mode == 1 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
+                        Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
-                    let fix = sensors.fix(at: timeline.date)
-                    let compass = sensors.compass(at: timeline.date)
+                    let fix = sensors.fix(at: Date())
+                    let compass = sensors.compass(at: Date())
                     if mode == 0 { navigation(fix: fix, compass: compass) }
-                    else { speed(fix: fix) }
+                    else { speed(fix: fix,compass:compass) }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
                     if !receiver.message.isEmpty { Text(receiver.message).font(.caption2).foregroundStyle(.orange) }
@@ -171,9 +173,10 @@ struct WatchNavigationView: View {
         #endif
         let trueHeading = compass.flatMap { $0.trueHeading >= 0 ? $0.trueHeading : nil } ?? (demo ? 218 : nil)
         let magneticHeading = compass?.magneticHeading ?? (demo ? 226 : nil)
-        let magnetic = trueHeading != nil && magneticHeading != nil
-        let shownBearing = trueBearing.map { value in magnetic ? WatchNavigationMath.magneticBearing(trueBearing: value, trueHeading: trueHeading!, magneticHeading: magneticHeading!) : value }
-        WatchCompass(heading: magnetic ? magneticHeading : (trueHeading ?? magneticHeading), bearing: shownBearing, magnetic: magnetic, canPoint: trueHeading != nil).frame(height: 96)
+        let correction=InstrumentHeading.declination(magnetic:magneticHeading,trueHeading:trueHeading)
+        let shownBearing=InstrumentHeading.bearing(trueBearing,magnetic:useMagnetic,declination:correction)
+        let shownHeading=useMagnetic ? magneticHeading:trueHeading
+        WatchCompass(heading:shownHeading,bearing:shownBearing,magnetic:useMagnetic,canPoint:shownHeading != nil).frame(height: 96)
         let meters = target.flatMap { point in fix.map { $0.distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude)) } }
         HStack {
             VStack(spacing: 1) {
@@ -181,19 +184,27 @@ struct WatchNavigationView: View {
                 Text("目標距離").font(.system(size: 9)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity)
             VStack(spacing: 1) {
-                Text(magneticHeading.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 20, weight: .bold))
-                Text("現在方位（磁北）").font(.system(size: 9)).foregroundStyle(.secondary)
+                Text(shownHeading.map { String(format: "%.0f°", $0) } ?? "—").font(.system(size: 20, weight: .bold))
+                Text(useMagnetic ? "現在方位（磁北）":"現在方位（真北）").font(.system(size: 9)).foregroundStyle(.secondary)
             }.frame(maxWidth: .infinity)
         }
         if compass == nil && !demo { Text("コンパス未取得／非対応").font(.system(size: 9)).foregroundStyle(.orange) }
     }
-    @ViewBuilder private func speed(fix: CLLocation?) -> some View {
+    @ViewBuilder private func speed(fix: CLLocation?,compass:CLHeading?) -> some View {
+        #if DEBUG
+        let demo=ProcessInfo.processInfo.arguments.contains("--preview-watch")
+        #else
+        let demo=false
+        #endif
+        let mag=compass?.magneticHeading ?? (demo ? 226:nil)
+        let trueHeading=compass.flatMap{$0.trueHeading>=0 ? $0.trueHeading:nil} ?? (demo ? 218:nil)
+        let reading=InstrumentHeading.resolve(course:fix?.course,speed:fix?.speed,magneticHeading:mag,trueHeading:trueHeading,magnetic:useMagnetic)
         Text("SOG").font(.caption).foregroundStyle(.orange)
         Text(WatchNavigationMath.speed(fix.map(\.speed), metric: metric)).font(.system(size: 32, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
         Text(metric ? "km/h" : "knot").font(.caption)
-        Text("COG・真北基準").font(.caption).foregroundStyle(.orange)
-        Text(fix.flatMap { $0.course >= 0 && $0.speed >= 0.5 ? String(format: "%.0f°", $0.course) : nil } ?? "—").font(.title3.bold())
-        Text("Watch GPS").font(.caption2).foregroundStyle(.secondary)
+        Text((reading?.compass==true ? "コンパス方位":"COG")+(useMagnetic ? "・磁北":"・真北")).font(.caption).foregroundStyle(.orange)
+        Text(reading.map{String(format:"%.0f°",$0.value.rounded().truncatingRemainder(dividingBy:360))} ?? "—").font(.title3.bold())
+        Text(reading?.compass==true ? "Watchコンパス":"Watch GPS").font(.caption2).foregroundStyle(.secondary)
     }
 }
 @main struct SailingGPSWatchApp: App { var body: some Scene { WindowGroup { WatchNavigationView() } } }

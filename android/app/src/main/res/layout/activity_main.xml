@@ -4,7 +4,11 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
             <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="速度" />
             <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="地図" />
+            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="3項目" />
+            <Button android:id="@+id/btnFocusNorth" android:layout_width="56dp" android:layout_height="wrap_content" android:text="真北" android:minWidth="0dp" android:visibility="gone" />
+            <Button android:id="@+id/btnFocusMenu" android:layout_width="48dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:visibility="gone" />
         </LinearLayout>
+        <LinearLayout android:id="@+id/focusPanel" android:layout_width="match_parent" android:layout_height="600dp" android:orientation="vertical" android:visibility="gone" />
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/tvSpeedUnit" android:text="SOG · knot" android:textColor="#FFAA00" android:textSize="24sp" />
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />

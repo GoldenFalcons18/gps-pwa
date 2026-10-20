@@ -45,7 +45,7 @@ final class WatchSensors: NSObject, ObservableObject, CLLocationManagerDelegate 
     func fix(at date: Date) -> CLLocation? {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--preview-watch") {
-            return CLLocation(coordinate: CLLocationCoordinate2D(latitude: 35.318, longitude: 139.467), altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, course: 230, speed: 3, timestamp: date)
+            return CLLocation(coordinate: CLLocationCoordinate2D(latitude: 35.318, longitude: 139.467), altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5, course: 230, speed: ProcessInfo.processInfo.arguments.contains("--preview-low-speed") ? 0.1:3, timestamp: date)
         }
         #endif
         guard let location, WatchNavigationMath.validFix(timestamp: location.timestamp, accuracy: location.horizontalAccuracy, now: date) else { return nil }

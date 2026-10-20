@@ -38,6 +38,13 @@ class ZoneMonitorTest {
         assertTrue(polygon.clearance(MapCoordinate(0.02,180.0))!! < -1000)
         assertEquals(0.0,polygon.clearance(MapCoordinate(0.01,180.0))!!,0.001)
     }
+    @Test fun courseUsesFreshMovingGpsOnly() {
+        assertEquals(359.9,InstrumentSettings.course(359.9,2.0,1.0)!!,0.0001)
+        assertEquals(0.0,InstrumentSettings.course(0.0,2.0,1.0)!!,0.0001)
+        for(course in listOf(null,-1.0,360.0,Double.NaN,Double.POSITIVE_INFINITY)) assertNull(InstrumentSettings.course(course,2.0,1.0))
+        assertNull(InstrumentSettings.course(82.0,0.1,1.0));assertNull(InstrumentSettings.course(82.0,null,1.0))
+        assertNull(InstrumentSettings.course(82.0,2.0,16.0));assertNull(InstrumentSettings.course(82.0,2.0,-1.0))
+    }
     @Test fun coordinateRoundingAndUnreliableEta() {
         assertEquals("35.500000°S",InstrumentSettings.coordinate(-35.5,true,"dd"))
         assertEquals("36°00′00.0″N",InstrumentSettings.coordinate(35.9999999,true,"dms"))

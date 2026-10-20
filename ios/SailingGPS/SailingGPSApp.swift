@@ -35,6 +35,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var location: CLLocation?
     @Published var magneticHeading: Double?
     @Published var trueHeading: Double?
+    @Published var headingUpdatedAt:Date?
     private var foregroundActive = false
     @Published var recording = false
     @Published var track: [CLLocationCoordinate2D] = []
@@ -167,7 +168,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if recording && ![.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { stop(); message = "位置情報の許可が解除されました" }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        if newHeading.headingAccuracy >= 0 { magneticHeading = newHeading.magneticHeading; trueHeading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : nil }
+        if newHeading.headingAccuracy >= 0 { headingUpdatedAt=newHeading.timestamp; magneticHeading = newHeading.magneticHeading; trueHeading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : nil }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
@@ -337,6 +338,7 @@ struct ContentView: View {
     private var heading: Double? { navigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
+    @AppStorage("instrumentMagnetic") private var instrumentMagnetic=false
     @AppStorage("largeDecimal") private var largeDecimal=true
     @AppStorage("coordinateFormat") private var coordinateFormat="dm"
     @AppStorage("twelveHourClock") private var twelveHourClock=false
@@ -495,7 +497,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
@@ -626,7 +628,7 @@ struct ContentView: View {
                     menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
                     menuTile("設定") { menuAction { settings = true } }
-                    menuTile("モード", detail: mode == 0 ? "スピードメーター → ナビゲーター" : "ナビゲーター → スピードメーター") { menuAction { mode = mode == 0 ? 1 : 0 } }
+                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → スピードメーター"][max(0,min(2,mode))]) { menuAction { mode = (mode + 1) % 3 } }
                 }
                 VStack(spacing: 5) {
                     menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
@@ -643,7 +645,7 @@ struct ContentView: View {
         HStack {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = mode == 0 ? 1 : 0 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
+            Button { mode = (mode + 1) % 3 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
                 .accessibilityLabel("表示モードを切替")
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
@@ -724,10 +726,35 @@ struct ContentView: View {
             }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
         }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
     }
+    private var focusTargetBearing:Double? {
+        guard let target,let point=gps.location,point.distance(from:CLLocation(latitude:target.latitude,longitude:target.longitude))>1 else {return nil}
+        return targetBearing
+    }
+    private var focusDashboard:some View {
+        TimelineView(.periodic(from:.now,by:1)) { _ in
+            let age=gps.location.map{Date().timeIntervalSince($0.timestamp)} ?? .infinity
+            let fresh=age>=0 && age<=15
+            #if DEBUG
+            let preview=ProcessInfo.processInfo.arguments.contains("--preview-focus")
+            #else
+            let preview=false
+            #endif
+            let compassFresh=gps.headingUpdatedAt.map{(-5...15).contains(Date().timeIntervalSince($0))} ?? false
+            let magHeading=preview ? 218:(compassFresh ? gps.magneticHeading:nil)
+            let trueHeading=preview ? 210:(compassFresh ? gps.trueHeading:nil)
+            let reading=InstrumentHeading.resolve(course:preview ? 82:InstrumentSettings.course(gps.location?.course,speed:gps.location?.speed,age:age),speed:preview ? 3:(fresh ? gps.location?.speed:nil),magneticHeading:magHeading,trueHeading:trueHeading,magnetic:instrumentMagnetic)
+            let targetValue=InstrumentHeading.bearing(preview ? 144:(fresh ? focusTargetBearing:nil),magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:magHeading,trueHeading:trueHeading))
+            FocusDashboardView(speed:preview ? "12.3":(fresh ? speedText:"—"),
+                course:reading?.value,isCompass:reading?.compass ?? false,
+                targetBearing:targetValue,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,
+                chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+        }
+    }
     private var dashboard: some View {
         GeometryReader { geometry in
             let height = max(620, geometry.size.height)
-            ScrollView {
+            if mode == 2 { focusDashboard }
+            else { ScrollView {
                 VStack(spacing: 6) {
                     ZStack(alignment: .top) {
                         if mode == 1 { mapPanel }
@@ -741,7 +768,7 @@ struct ContentView: View {
                     instruments.frame(height: height * 0.205).padding(.horizontal, 3)
                     positionReadings.frame(height: height * 0.11)
                 }.frame(minHeight: geometry.size.height)
-            }.scrollIndicators(.hidden)
+            }.scrollIndicators(.hidden) }
         }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private func reportTransfer(_ text: String) {
@@ -826,6 +853,7 @@ struct ContentView: View {
             if ProcessInfo.processInfo.arguments.contains("--preview-library") || ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { libraryPresented=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-map-operations") { mapOperationsCoordinate = .init(latitude: 35.318, longitude: 139.467); mapOperationsPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-navigation-options") { navigationOptionsPresented = true }
+            if ProcessInfo.processInfo.arguments.contains("--preview-focus") { mode=2 }
             if ProcessInfo.processInfo.arguments.contains("--preview-settings") { settings=true }
             if ProcessInfo.processInfo.arguments.contains("--preview-menu") { menuPresented = true }
             if ProcessInfo.processInfo.arguments.contains("--preview-waypoint") {

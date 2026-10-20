@@ -40,6 +40,15 @@ final class ZoneMonitorTests:XCTestCase {
         XCTAssertLessThan(polygon.clearance(.init(latitude:0.02,longitude:180))!,-1000)
         XCTAssertEqual(polygon.clearance(.init(latitude:0.01,longitude:180))!,0,accuracy:0.001)
     }
+    func testCourseUsesFreshMovingGpsOnly() {
+        XCTAssertEqual(InstrumentSettings.course(359.9,speed:2,age:1),359.9)
+        XCTAssertEqual(InstrumentSettings.course(0,speed:2,age:1),0)
+        for course in [nil,-1.0,360.0,Double.nan,Double.infinity] as [Double?] {XCTAssertNil(InstrumentSettings.course(course,speed:2,age:1))}
+        XCTAssertNil(InstrumentSettings.course(82,speed:0.1,age:1))
+        XCTAssertNil(InstrumentSettings.course(82,speed:nil,age:1))
+        XCTAssertNil(InstrumentSettings.course(82,speed:2,age:16))
+        XCTAssertNil(InstrumentSettings.course(82,speed:2,age:-1))
+    }
     func testDisplayFormatsAndTwoDigitSpeeds() {
         XCTAssertEqual(InstrumentSettings.speedText(12.3,factor:1),"12.3")
         XCTAssertEqual(InstrumentSettings.speedText(99.9,factor:1),"99.9")

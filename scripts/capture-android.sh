@@ -410,3 +410,30 @@ for SPEED in 1.9 12.3 99.9 100.0; do
 done
 
 # Notification callbacks are verified independently by zone-verification.yml.
+
+# The third mode keeps only SOG, true COG and true target bearing visible.
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity" --ez previewFocus true >/dev/null
+sleep 3
+adb exec-out screencap -p > screenshots/Android-focus.png
+adb logcat -d -s AndroidRuntime > screenshots/focus-runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/focus-runtime.log; then exit 1; fi
+adb shell run-as "$APP" cat shared_prefs/display.xml > screenshots/focus-preferences.xml
+python3 - <<'PYFOCUS'
+import xml.etree.ElementTree as E
+root=E.parse('screenshots/focus-preferences.xml').getroot()
+assert any(n.get('name')=='displayMode' and n.get('value')=='2' for n in root)
+PYFOCUS
+
+adb shell am force-stop "$APP"
+python3 - <<'PYNORTH'
+import xml.etree.ElementTree as E
+p='screenshots/focus-preferences.xml';root=E.parse(p).getroot()
+node=next((n for n in root if n.get('name')=='instrumentMagnetic'),None)
+if node is None: node=E.SubElement(root,'boolean',name='instrumentMagnetic')
+node.set('value','true');E.ElementTree(root).write('focus-magnetic.xml',encoding='utf-8',xml_declaration=True)
+PYNORTH
+adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < focus-magnetic.xml
+adb shell am start -W -n "$APP/.MainActivity" --ez previewFocus true >/dev/null
+sleep 2
+adb exec-out screencap -p > screenshots/Android-focus-magnetic.png
