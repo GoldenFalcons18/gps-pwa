@@ -12,7 +12,7 @@ final class WatchSensors: NSObject, ObservableObject, CLLocationManagerDelegate 
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         manager.distanceFilter = kCLDistanceFilterNone
-        manager.headingFilter = 1
+        manager.headingFilter = kCLHeadingFilterNone
         manager.activityType = .otherNavigation
     }
     func setActive(_ value: Bool) {

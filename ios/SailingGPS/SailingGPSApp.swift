@@ -66,6 +66,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        manager.headingFilter = kCLHeadingFilterNone
         manager.activityType = .otherNavigation
         manager.pausesLocationUpdatesAutomatically = false
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
