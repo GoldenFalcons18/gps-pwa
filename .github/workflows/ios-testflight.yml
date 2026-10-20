@@ -1,5 +1,7 @@
 name: iPhone TestFlight upload
 on:
+  push:
+    paths: ['release/ios-testflight-build-number.txt']
   workflow_dispatch:
     inputs:
       build_number:
@@ -44,7 +46,9 @@ jobs:
           names = ['APPLE_TEAM_ID', 'IOS_DISTRIBUTION_P12_BASE64', 'IOS_DISTRIBUTION_P12_PASSWORD', 'IOS_APPSTORE_PROFILE_BASE64', 'WATCH_APPSTORE_PROFILE_BASE64', 'APPSTORE_KEY_ID', 'APPSTORE_ISSUER_ID', 'APPSTORE_PRIVATE_KEY_BASE64']
           missing = [n for n in names if not os.environ.get(n)]
           if missing: raise SystemExit('Configure testflight environment secrets: ' + ', '.join(missing))
-          value = os.environ['BUILD_NUMBER']
+          value = os.environ.get('BUILD_NUMBER') or open('release/ios-testflight-build-number.txt').read().strip()
+          if not os.environ.get('BUILD_NUMBER'):
+              with open(os.environ['GITHUB_ENV'], 'a') as f: f.write(f'BUILD_NUMBER={value}\n')
           if not re.fullmatch(r'[1-9][0-9]{0,3}', value) or int(value) <= 18:
               raise SystemExit('Build number must be an integer from 19 through 9999.')
           PY
@@ -75,7 +79,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: TestFlight-build-logs-${{ inputs.build_number }}
+          name: TestFlight-build-logs-${{ inputs.build_number || '33' }}
           path: testflight-logs/*.log
           if-no-files-found: ignore
           retention-days: 14
