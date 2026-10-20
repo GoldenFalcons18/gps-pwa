@@ -409,39 +409,4 @@ for SPEED in 1.9 12.3 99.9 100.0; do
   adb exec-out screencap -p > "screenshots/Android-speed-$SPEED.png"
 done
 
-# Run real GPS callbacks and Android notifications, including screen-off/service monitoring.
-adb shell am force-stop "$APP"
-python3 - <<'PYZONE'
-import xml.etree.ElementTree as E,json
-root=E.Element('map')
-E.SubElement(root,'string',name='items').text='[]'
-E.SubElement(root,'string',name='library').text=json.dumps({'groups':[],'features':[{'id':'zone-test','name':'TEST ZONE','kind':'circle','radius':200,'coordinates':[[35.318,139.467]]}]})
-E.ElementTree(root).write('zone-waypoints.xml',encoding='utf-8',xml_declaration=True)
-root=E.Element('map')
-for key,value in [('zoneEnabled',True),('zoneEnter',True),('zoneExit',True)]: E.SubElement(root,'boolean',name=key,value=str(value).lower())
-E.SubElement(root,'string',name='zoneSelected').text='zone-test'
-E.ElementTree(root).write('zone-display.xml',encoding='utf-8',xml_declaration=True)
-PYZONE
-adb shell run-as "$APP" sh -c "'cat > shared_prefs/waypoints.xml'" < zone-waypoints.xml
-adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < zone-display.xml
-adb logcat -c
-adb emu geo fix 139.477 35.318
-adb shell am start -n "$APP/.MainActivity" >/dev/null
-for sample in 1 2 3 4 5 6; do adb emu geo fix 139.477 35.318; sleep 1; done
-adb logcat -d -s SailingZoneAlert > screenshots/zone-baseline.log
-if grep -q 'POST id=zone-test' screenshots/zone-baseline.log; then echo 'Unexpected initial alert'; exit 1; fi
-for sample in 1 2 3 4 5 6; do adb emu geo fix 139.467 35.318; sleep 1; done
-adb logcat -d -s SailingZoneAlert > screenshots/zone-enter.log
-grep -q 'POST id=zone-test entered=true' screenshots/zone-enter.log
-adb shell am start-foreground-service -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.START >/dev/null
-sleep 1
-adb shell input keyevent 3
-for sample in 1 2 3 4 5 6; do adb emu geo fix 139.477 35.318; sleep 1; done
-adb logcat -d -s SailingZoneAlert > screenshots/zone-service-exit.log
-grep -q 'POST id=zone-test entered=false' screenshots/zone-service-exit.log
-adb shell dumpsys notification --noredact > screenshots/zone-notifications.txt
-grep -q 'zone-zone-test' screenshots/zone-notifications.txt
-adb shell am startservice -n "$APP/.GpsLoggingService" -a com.goldenfalcons.sailinggps.STOP >/dev/null
-adb logcat -d -s AndroidRuntime > screenshots/runtime-final.log
-if grep -q 'FATAL EXCEPTION' screenshots/runtime-final.log; then exit 1; fi
-printf '%s\n' 'PASS: silent baseline, foreground zone entry, background recording zone exit and posted Android notification.' > screenshots/zone-result.txt
+# Notification callbacks are verified independently by zone-verification.yml.
