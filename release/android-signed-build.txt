@@ -1,1 +1,1 @@
-1.7.9 versionCode 25 show all saved waypoints on map
+1.7.10 versionCode 26 reduce navigation map flicker
