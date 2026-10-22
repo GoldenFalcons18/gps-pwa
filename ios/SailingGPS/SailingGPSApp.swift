@@ -462,6 +462,7 @@ struct ContentView: View {
     @State private var showTransferNotice = false
     @State private var importSummary = ""
     @State private var settings = false
+    @State private var modeSelectionPresented = false
     @State private var menuPresented = false
     @State private var waypointListPresented = false
     @State private var trackListPresented = false
@@ -644,7 +645,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2); Text("タイマー").tag(3) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
@@ -717,6 +718,12 @@ struct ContentView: View {
     private func proposeNavigation(_ waypoint: Waypoint) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { navigationCandidate = waypoint; confirmNavigation = true }
     }
+    private var modeSelection: some View {
+        ModeSelectionView(onSelect: { selectedMode in
+            mode = selectedMode
+            modeSelectionPresented = false
+        }, onCancel: { modeSelectionPresented = false })
+    }
     private func operationButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.subheadline.bold()).multilineTextAlignment(.center).frame(maxWidth: .infinity, minHeight: 62).padding(5)
             .foregroundStyle(.white).background(Color(white: 0.18)).overlay(RoundedRectangle(cornerRadius: 4).stroke(.orange)) }
@@ -776,7 +783,7 @@ struct ContentView: View {
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
                     menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
                     menuTile("設定") { menuAction { settings = true } }
-                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → タイマー","タイマー → スピードメーター"][max(0,min(3,mode))]) { menuAction { mode = (mode + 1) % 4 } }
+                    menuTile("モード", detail: "ナビゲーション／スピード") { menuAction { modeSelectionPresented = true } }
                 }
                 VStack(spacing: 5) {
                     menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
@@ -793,8 +800,10 @@ struct ContentView: View {
         HStack {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = (mode + 1) % 4 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
-                .accessibilityLabel("表示モードを切替")
+            Button { mode = (mode + 1) % 4 } label: {
+                Text(["スピードメーター", "ナビゲーション", "セーリング", "タイマー"][max(0, min(3, mode))])
+                    .font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.7)
+            }.accessibilityLabel("現在のモード。タップで次のモードに切替")
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
             Spacer()
@@ -902,7 +911,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             HStack(spacing: 4) {
                 ForEach(0..<4) { index in
-                    Button(["速度","地図","3項目","タイマー"][index]) { mode = index }
+                    Button(["速度","地図","セーリング","タイマー"][index]) { mode = index }
                         .frame(maxWidth: .infinity).buttonStyle(.bordered)
                         .tint(index == mode ? .green : .orange)
                 }
@@ -987,6 +996,7 @@ struct ContentView: View {
     private var presentedDashboard: some View {
         transferDashboard
         .sheet(isPresented: $sharing) { if let exported { ShareView(url: exported) } }
+        .sheet(isPresented: $modeSelectionPresented) { modeSelection.presentationDetents([.large]).presentationDragIndicator(.hidden) }
         .sheet(isPresented: $libraryPresented) { MapLibraryView(gps:gps,export:exportLibrary,importFile:beginLibraryImport) }
         .sheet(isPresented: $settings) { waypointEditor }
         .sheet(isPresented: $waypointListPresented) { waypointList.onAppear { waypointFolder=mainWaypointFolder } }
@@ -1072,6 +1082,53 @@ struct ContentView: View {
         }
     }
 }
+private struct ModeSelectionView: View {
+    let onSelect: (Int) -> Void
+    let onCancel: () -> Void
+    @State private var infoMode: Mode?
+    private struct Mode: Identifiable {
+        let id: Int
+        let title: String
+        let summary: String
+        let details: String
+    }
+    private let modes: [Mode] = [
+        Mode(id: 1, title: "陸上ナビゲーションモード", summary: "目標に向けられている矢印、コンパス、および座標。", details: "地図、ウェイポイント、目標方位、距離を表示します。"),
+        Mode(id: 0, title: "スピードメーター", summary: "スピードメーター", details: "GPS速度を大きく表示します。"),
+        Mode(id: 2, title: "セーリング", summary: "SOG・COG・目標方位を大きく表示します。", details: "SOG（対地速度）、COG（対地針路）、目標方位を大きく表示します。真北／磁北を切り替えられます。"),
+        Mode(id: 3, title: "スタートタイマー", summary: "スタートラインまでの距離とカウントダウンを表示します。", details: "アウターマークとシグナルボートを登録し、ラインまでの距離を確認できます.")
+    ]
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("希望のモードを選択して切り替えます。設定情報ボタンをタップすると、各モードの説明が表示されます。")
+                    .font(.body).multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.bottom, 2)
+                ForEach(modes) { mode in
+                    HStack(spacing: 12) {
+                        Button { onSelect(mode.id) } label: {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text(mode.title).font(.title3.bold()).foregroundStyle(.white)
+                                Text(mode.summary).font(.body).foregroundStyle(.white.opacity(0.78))
+                            }.frame(maxWidth: .infinity, minHeight: 86, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 12)
+                                .background(Color.black).overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.orange, lineWidth: 2))
+                        }.buttonStyle(.plain).accessibilityHint("この表示モードに切り替えます")
+                        Button { infoMode = mode } label: { Image(systemName: "info.circle.fill").font(.title2).foregroundStyle(.orange).frame(width: 34, height: 54) }
+                            .buttonStyle(.plain).accessibilityLabel("\(mode.title)の説明")
+                    }
+                }
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 16).padding(.top, 10).background(Color.black.ignoresSafeArea())
+                .navigationTitle("モード").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("キャンセル", action: onCancel).foregroundStyle(.orange) } }
+                .toolbarBackground(Color(white: 0.08), for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
+                .preferredColorScheme(.dark)
+                .alert(item: $infoMode) { info in
+                    Alert(title: Text(info.title), message: Text(info.details), dismissButton: .default(Text("OK")))
+                }
+        }
+    }
+}
+
 struct ShareView: UIViewControllerRepresentable {
     let url: URL
     func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: [url], applicationActivities: nil) }

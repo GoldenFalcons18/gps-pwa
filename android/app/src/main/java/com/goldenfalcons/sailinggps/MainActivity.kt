@@ -301,6 +301,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
+        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 4) }
+        b.tvModeTitle.isClickable = true
+        b.tvModeTitle.isFocusable = true
+        b.tvModeTitle.contentDescription = "現在のモード。タップで次のモードに切替"
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
         b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("1分","3分","5分","10分"))
         b.startTimerPreset.setSelection(2)
@@ -360,7 +364,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーター"; 2 -> "3項目"; 3 -> "スタートタイマー"; else -> "スピードメーター" }
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーター"; 2 -> "セーリング"; 3 -> "スタートタイマー"; else -> "スピードメーター" }
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
@@ -856,6 +860,59 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.setContentView(android.widget.ScrollView(this).apply { addView(column) }); dialog.show()
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
+
+    private fun showPrimaryModeSelection() {
+        val density = resources.displayMetrics.density
+        var modeDialog: androidx.appcompat.app.AlertDialog? = null
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt(), 0)
+        }
+        val intro = TextView(this).apply {
+            text = "希望のモードを選択して切り替えます。ⓘをタップすると、各モードの説明が表示されます。"
+            setTextColor(Color.WHITE); textSize = 15f; gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, (14 * density).toInt())
+        }
+        content.addView(intro)
+        fun modeCard(title: String, description: String, mode: Int, info: String) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, (3 * density).toInt(), 0, (3 * density).toInt())
+            }
+            val card = TextView(this).apply {
+                text = "$title\n\n$description"
+                setTextColor(Color.WHITE); textSize = 16f; setPadding((14 * density).toInt(), (12 * density).toInt(), (10 * density).toInt(), (12 * density).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.BLACK); setStroke((2 * density).toInt(), Color.rgb(255, 170, 0)); cornerRadius = 12 * density
+                }
+                isClickable = true; isFocusable = true
+                layoutParams = LinearLayout.LayoutParams(0, (96 * density).toInt(), 1f)
+                setOnClickListener { setDisplayMode(mode); modeDialog?.dismiss() }
+            }
+            val infoButton = TextView(this).apply {
+                text = "ⓘ"; textSize = 25f; setTextColor(Color.rgb(255, 170, 0)); gravity = android.view.Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams((42 * density).toInt(), (60 * density).toInt())
+                contentDescription = "$title の説明"
+                setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle(title).setMessage(info).setPositiveButton("OK", null).show() }
+            }
+            row.addView(card); row.addView(infoButton); content.addView(row)
+        }
+        modeCard("陸上ナビゲーションモード", "目標に向けられている矢印、コンパス、および座標。", 1,
+            "地図上のウェイポイントを選び、目標までの距離・方位と現在地を確認できます。")
+        modeCard("スピードメーター", "スピードメーター", 0,
+            "GPSで計測した対地速度（SOG）を大きく表示します。")
+        modeCard("セーリング", "SOG・COG・目標方位を大きく表示します。", 2,
+            "SOG（対地速度）、COG（対地針路）、目標方位を大きく表示します。真北／磁北を切り替えられます。")
+        modeCard("スタートタイマー", "スタートラインまでの距離とカウントダウンを表示します。", 3,
+            "アウターマークとシグナルボートを登録し、ラインまでの距離を確認できます。")
+        modeDialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("モード")
+            .setView(content)
+            .setNegativeButton("キャンセル", null)
+            .create()
+        modeDialog?.show()
+    }
     private fun showMapOperations(lat: Double, lon: Double) {
         val coords = NavigationUtils.formatDm(lat,true)+", "+NavigationUtils.formatDm(lon,false)
         val showWaypoints = displayPrefs.getBoolean("showWaypoints",true)
@@ -919,7 +976,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
             "航跡一覧" to { showTrackList() },
-            "モード切替" to { setDisplayMode((currentDisplayMode+1)%4) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
+            "モード選択" to { showPrimaryModeSelection() }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
     }
 
