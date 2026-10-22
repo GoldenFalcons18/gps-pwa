@@ -364,7 +364,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーター"; 2 -> "セーリング"; 3 -> "スタートタイマー"; else -> "スピードメーター" }
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "スタートタイマー"; else -> "スピードメーター" }
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
@@ -875,10 +875,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         content.addView(intro)
         fun modeCard(title: String, description: String, mode: Int, info: String) {
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, (3 * density).toInt(), 0, (3 * density).toInt())
+            }
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
-                setPadding(0, (3 * density).toInt(), 0, (3 * density).toInt())
             }
             val card = TextView(this).apply {
                 text = "$title\n\n$description"
@@ -894,11 +897,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 text = "ⓘ"; textSize = 25f; setTextColor(Color.rgb(255, 170, 0)); gravity = android.view.Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams((42 * density).toInt(), (60 * density).toInt())
                 contentDescription = "$title の説明"
-                setOnClickListener { androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle(title).setMessage(info).setPositiveButton("OK", null).show() }
+                isClickable = true; isFocusable = true
             }
-            row.addView(card); row.addView(infoButton); content.addView(row)
+            val details = TextView(this).apply {
+                text = info; setTextColor(Color.LTGRAY); textSize = 14f
+                setPadding((14 * density).toInt(), (4 * density).toInt(), (14 * density).toInt(), (10 * density).toInt())
+                visibility = android.view.View.GONE
+            }
+            infoButton.setOnClickListener {
+                details.visibility = if (details.visibility == android.view.View.VISIBLE) android.view.View.GONE else android.view.View.VISIBLE
+                infoButton.contentDescription = if (details.visibility == android.view.View.VISIBLE) "$title の説明を閉じる" else "$title の説明"
+            }
+            row.addView(card); row.addView(infoButton); item.addView(row); item.addView(details); content.addView(item)
         }
-        modeCard("陸上ナビゲーションモード", "目標に向けられている矢印、コンパス、および座標。", 1,
+        modeCard("ナビゲーション", "目標への方位・距離と現在地を確認します。", 1,
             "地図上のウェイポイントを選び、目標までの距離・方位と現在地を確認できます。")
         modeCard("スピードメーター", "スピードメーター", 0,
             "GPSで計測した対地速度（SOG）を大きく表示します。")
@@ -1279,3 +1291,4 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLog.text = logBuffer.joinToString("\n")
     }
 }
+
