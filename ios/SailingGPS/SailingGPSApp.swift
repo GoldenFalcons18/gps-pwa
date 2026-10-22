@@ -859,8 +859,16 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Text(mode == 0 ? "スピードメーター" : "ナビゲーター")
-                .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            Button {
+                mode = (mode + 1) % 4
+            } label: {
+                Text(["スピードメーター", "ナビゲーション", "セーリング", "スタートタイマー"][max(0, min(3, mode))])
+                    .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("現在のモード。タップで次のモードに切替")
             Button { gps.recording ? gps.stop() : gps.start() } label: {
                 HStack(spacing: 3) {
                     Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
@@ -1085,7 +1093,7 @@ struct ContentView: View {
 private struct ModeSelectionView: View {
     let onSelect: (Int) -> Void
     let onCancel: () -> Void
-    @State private var infoMode: Mode?
+    @State private var expandedInfoID: Int?
     private struct Mode: Identifiable {
         let id: Int
         let title: String
@@ -1093,7 +1101,7 @@ private struct ModeSelectionView: View {
         let details: String
     }
     private let modes: [Mode] = [
-        Mode(id: 1, title: "陸上ナビゲーションモード", summary: "目標に向けられている矢印、コンパス、および座標。", details: "地図、ウェイポイント、目標方位、距離を表示します。"),
+        Mode(id: 1, title: "ナビゲーション", summary: "目標への方位・距離と現在地を確認します。", details: "地図、ウェイポイント、目標方位、距離を表示します。"),
         Mode(id: 0, title: "スピードメーター", summary: "スピードメーター", details: "GPS速度を大きく表示します。"),
         Mode(id: 2, title: "セーリング", summary: "SOG・COG・目標方位を大きく表示します。", details: "SOG（対地速度）、COG（対地針路）、目標方位を大きく表示します。真北／磁北を切り替えられます。"),
         Mode(id: 3, title: "スタートタイマー", summary: "スタートラインまでの距離とカウントダウンを表示します。", details: "アウターマークとシグナルボートを登録し、ラインまでの距離を確認できます.")
@@ -1112,8 +1120,18 @@ private struct ModeSelectionView: View {
                             }.frame(maxWidth: .infinity, minHeight: 86, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 12)
                                 .background(Color.black).overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.orange, lineWidth: 2))
                         }.buttonStyle(.plain).accessibilityHint("この表示モードに切り替えます")
-                        Button { infoMode = mode } label: { Image(systemName: "info.circle.fill").font(.title2).foregroundStyle(.orange).frame(width: 34, height: 54) }
-                            .buttonStyle(.plain).accessibilityLabel("\(mode.title)の説明")
+                        Button { expandedInfoID = expandedInfoID == mode.id ? nil : mode.id } label: {
+                            Image(systemName: expandedInfoID == mode.id ? "info.circle.fill" : "info.circle")
+                                .font(.title2).foregroundStyle(.orange).frame(width: 38, height: 54)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(expandedInfoID == mode.id ? "\(mode.title)の説明を閉じる" : "\(mode.title)の説明")
+                    }
+                    if expandedInfoID == mode.id {
+                        Text(mode.details).font(.body).foregroundStyle(.white.opacity(0.78))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16).padding(.vertical, 10)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 Spacer(minLength: 0)
@@ -1122,9 +1140,6 @@ private struct ModeSelectionView: View {
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("キャンセル", action: onCancel).foregroundStyle(.orange) } }
                 .toolbarBackground(Color(white: 0.08), for: .navigationBar).toolbarBackground(.visible, for: .navigationBar)
                 .preferredColorScheme(.dark)
-                .alert(item: $infoMode) { info in
-                    Alert(title: Text(info.title), message: Text(info.details), dismissButton: .default(Text("OK")))
-                }
         }
     }
 }
@@ -1135,3 +1150,4 @@ struct ShareView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 @main struct SailingGPSApp: App { var body: some Scene { WindowGroup { ContentView() } } }
+
