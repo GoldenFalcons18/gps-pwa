@@ -386,8 +386,39 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
         displayPrefs.edit().putBoolean("${prefix}.set",true).putString("${prefix}.lat",lat.toString()).putString("${prefix}.lon",lon.toString()).apply()
         val label=if(kind=="outer") "アウターマーク" else "シグナルボート"
-        Toast.makeText(this,"${label}の位置を登録しました",Toast.LENGTH_SHORT).show()
+        saveStartLineWaypoint(kind, lat, lon)
+        Toast.makeText(this,"${label}をナビのウェイポイントに追加しました",Toast.LENGTH_SHORT).show()
         updateStartTimerUi()
+    }
+
+    private fun saveStartLineWaypoint(kind:String, lat:Double, lon:Double) {
+        val isOuter = kind == "outer"
+        val name = if(isOuter) "アウターマーク" else "シグナルボート"
+        val idKey = "startLine.${kind}.waypointId"
+        val id = displayPrefs.getString(idKey, null) ?: java.util.UUID.randomUUID().toString()
+        val group = mainWaypointFolder
+        val waypoint = Waypoint(
+            id = id,
+            name = name,
+            lat = lat,
+            lon = lon,
+            mark = if(isOuter) "ブイ" else "🚢",
+            color = if(isOuter) "#FFAA00" else "#00C8D7",
+            note = "スタートライン基準点",
+            archiveMark = if(isOuter) "symbol:marine.buoy" else "symbol:ferry.fill",
+            group = group
+        )
+        val index = waypoints.indexOfFirst { it.id == id }
+        if(index >= 0) {
+            waypoints[index] = waypoint
+            if(activeWaypoint?.id == id) activeWaypoint = waypoint
+        } else {
+            waypoints += waypoint
+        }
+        displayPrefs.edit().putString(idKey, id).apply()
+        waypointStore.saveAll(waypoints)
+        renderWaypointList()
+        updateNavigationUi()
     }
 
     private fun toggleStartTimer() {

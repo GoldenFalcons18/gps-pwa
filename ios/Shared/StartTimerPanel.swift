@@ -4,6 +4,7 @@ struct StartTimerPanel: View {
     let currentLocation: StartLineCoordinate?
     let metric: Bool
     var compact = false
+    var onRegisterWaypoint: (String, StartLineCoordinate) -> Void = { _, _ in }
 
     @AppStorage("startLineOuterSet") private var outerSet = false
     @AppStorage("startLineOuterLat") private var outerLatitude = 0.0
@@ -23,10 +24,11 @@ struct StartTimerPanel: View {
         let value = StartLineCoordinate(latitude: signalLatitude, longitude: signalLongitude)
         return signalSet && value.isValid ? value : nil
     }
-    private func assign(_ kind: String) {
-        guard let currentLocation, currentLocation.isValid else { return }
+    private func assign(_ kind: String) -> StartLineCoordinate? {
+        guard let currentLocation, currentLocation.isValid else { return nil }
         if kind == "outer" { outerLatitude = currentLocation.latitude; outerLongitude = currentLocation.longitude; outerSet = true }
         else { signalLatitude = currentLocation.latitude; signalLongitude = currentLocation.longitude; signalSet = true }
+        return currentLocation
     }
     private func toggle(at now: Date) {
         let timestamp = now.timeIntervalSince1970
@@ -68,11 +70,13 @@ struct StartTimerPanel: View {
                     .padding(.vertical, compact ? 2 : 8)
                 VStack(spacing: compact ? 3 : 6) {
                     Text("アウターマーク：\(endpointText(outer))").font(compact ? .caption2 : .subheadline).lineLimit(1).minimumScaleFactor(0.6)
-                    Button("現在地をアウターマークに登録") { assign("outer") }
+                    Button("現在地をアウターマークに登録") { if let point = assign("outer") { onRegisterWaypoint("outer", point) } }
                         .disabled(currentLocation?.isValid != true)
                     Text("シグナルボート：\(endpointText(signal))").font(compact ? .caption2 : .subheadline).lineLimit(1).minimumScaleFactor(0.6)
-                    Button("現在地をシグナルボートに登録") { assign("signal") }
+                    Button("現在地をシグナルボートに登録") { if let point = assign("signal") { onRegisterWaypoint("signal", point) } }
                         .disabled(currentLocation?.isValid != true)
+                    Text("登録地点は地図とウェイポイント一覧にも追加されます")
+                        .font(compact ? .caption2 : .caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.65)
                 }.buttonStyle(.bordered).tint(.orange)
                 HStack(spacing: compact ? 2 : 8) {
                     ForEach([1, 3, 5, 10], id: \.self) { minute in

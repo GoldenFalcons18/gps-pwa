@@ -30,6 +30,27 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         UserDefaults.standard.set(pendingTime!.timeIntervalSince1970, forKey: "watchSelectionTime")
         message = ""; sendSelection()
     }
+    func registerStartLineWaypoint(kind: String, coordinate: StartLineCoordinate) {
+        guard ["outer", "signal"].contains(kind), coordinate.isValid,
+              WCSession.isSupported(), WCSession.default.activationState == .activated,
+              WCSession.default.isReachable else {
+            DispatchQueue.main.async { self.message = "iPhoneに接続してから地点を登録してください" }
+            return
+        }
+        WCSession.default.sendMessage([
+            "registerStartLineWaypoint": kind,
+            "latitude": coordinate.latitude,
+            "longitude": coordinate.longitude
+        ], replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                self?.message = (reply["selectionAccepted"] as? Bool == false)
+                    ? "地点を登録できませんでした"
+                    : "ウェイポイントに追加しました"
+            }
+        }, errorHandler: { [weak self] _ in
+            DispatchQueue.main.async { self?.message = "iPhoneに接続してから地点を登録してください" }
+        })
+    }
     private func clearPending() {
         pendingTime = nil; selectionPending = false; UserDefaults.standard.removeObject(forKey: "watchSelectionTime")
     }
@@ -135,7 +156,8 @@ struct WatchNavigationView: View {
                         StartTimerPanel(
                             currentLocation: fix.map { StartLineCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) },
                             metric: metric,
-                            compact: true
+                            compact: true,
+                            onRegisterWaypoint: { kind, coordinate in receiver.registerStartLineWaypoint(kind: kind, coordinate: coordinate) }
                         )
                     }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }

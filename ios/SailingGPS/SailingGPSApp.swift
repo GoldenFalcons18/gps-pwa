@@ -316,6 +316,26 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if let index = waypoints.firstIndex(where: { $0.id == waypoint.id }) { waypoints[index] = waypoint; saveWaypoints(); log("Waypoint updated: " + waypoint.name) }
         else { add(waypoint) }
     }
+    func upsertStartLineWaypoint(kind: String, coordinate: StartLineCoordinate) {
+        guard coordinate.isValid, ["outer", "signal"].contains(kind) else { return }
+        let isOuter = kind == "outer"
+        let name = isOuter ? "アウターマーク" : "シグナルボート"
+        let key = "startLine.\(kind).waypointID"
+        let storedID = UserDefaults.standard.string(forKey: key).flatMap(UUID.init(uuidString:))
+        let id = storedID ?? UUID()
+        let waypoint = Waypoint(
+            id: id,
+            name: name,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            note: "スタートライン基準点",
+            colorName: isOuter ? "#FFAA00" : "#00C8D7",
+            markSymbol: isOuter ? "marine.buoy" : "sailboat.fill",
+            group: defaultWaypointFolder
+        )
+        upsert(waypoint)
+        UserDefaults.standard.set(id.uuidString, forKey: key)
+    }
     func resetCounter() {
         recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
         previousRecordedLocation = nil; recordingStartedAt = recording ? Date() : nil
@@ -892,7 +912,8 @@ struct ContentView: View {
             StartTimerPanel(
                 currentLocation: gps.location.flatMap { Date().timeIntervalSince($0.timestamp) <= 15 && $0.horizontalAccuracy >= 0
                     ? StartLineCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) : nil },
-                metric: metricUnits
+                metric: metricUnits,
+                onRegisterWaypoint: { kind, coordinate in gps.upsertStartLineWaypoint(kind: kind, coordinate: coordinate) }
             )
         }.padding(8).background(.black).preferredColorScheme(.dark)
     }
@@ -1039,6 +1060,12 @@ struct ContentView: View {
             guard let id = notification.userInfo?["targetID"] as? String else { return }
             selected = gps.waypoints.first { $0.id.uuidString == id }?.id
             savedTarget = selected?.uuidString ?? "__none__"
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchStartLineWaypointRequested)) { notification in
+            guard let kind = notification.userInfo?["kind"] as? String,
+                  let latitude = notification.userInfo?["latitude"] as? Double,
+                  let longitude = notification.userInfo?["longitude"] as? Double else { return }
+            gps.upsertStartLineWaypoint(kind: kind, coordinate: StartLineCoordinate(latitude: latitude, longitude: longitude))
         }
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
