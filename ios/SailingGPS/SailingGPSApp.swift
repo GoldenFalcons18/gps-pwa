@@ -858,8 +858,6 @@ struct ContentView: View {
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
             Spacer()
-            Text(gps.recording ? "● 記録中" : (gps.recordingPaused ? "Ⅱ 一時停止中" : "○ 停止中"))
-                .font(.caption.bold()).foregroundStyle(gps.recording ? .green : .orange).accessibilityLabel("航跡記録の状態")
             HStack(spacing:6) {
                 if !gps.recording { Button { gps.start() } label:{Image(systemName:gps.recordingPaused ? "play.fill":"record.circle.fill").foregroundStyle(.red)}.accessibilityLabel(gps.recordingPaused ? "航跡記録を再開":"航跡記録を開始") }
                 if gps.recording { Button { gps.pause() } label:{Image(systemName:"pause.fill").foregroundStyle(.orange)}.accessibilityLabel("航跡記録を一時停止") }
@@ -924,6 +922,11 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("現在のモード。タップで次のモードに切替")
+            Text(gps.recording ? "● 記録中" : (gps.recordingPaused ? "Ⅱ 一時停止中" : "○ 停止中"))
+                .font(.caption.bold()).foregroundStyle(gps.recording ? .green : .orange)
+                .lineLimit(1).minimumScaleFactor(0.65).fixedSize(horizontal: true, vertical: false)
+                .accessibilityLabel("航跡記録の状態")
+            Spacer(minLength: 0)
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
