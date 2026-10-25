@@ -1,1 +1,1 @@
-1.7.19 versionCode 35 Fix API-key-required map tiles
+1.7.20 versionCode 36 Waypoint name labels use waypoint color with contrast-aware text
