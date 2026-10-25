@@ -38,7 +38,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.7.17'
+        MARKETING_VERSION: '1.7.18'
         CURRENT_PROJECT_VERSION: 44
         TARGETED_DEVICE_FAMILY: '1,2'
       configs:
@@ -68,7 +68,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps.watchkitapp
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.7.17'
+        MARKETING_VERSION: '1.7.18'
         CURRENT_PROJECT_VERSION: 44
         SKIP_INSTALL: YES
       configs:
