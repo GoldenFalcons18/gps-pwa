@@ -55,6 +55,7 @@ struct StartTimerPanel: View {
         if deadline > timestamp {
             pausedSeconds = max(1, ceil(deadline - timestamp)); deadline = 0
         } else {
+            if pausedSeconds <= 0 { lastVoiceCue = "" }
             let remaining = pausedSeconds > 0 ? pausedSeconds : Double(selectedMinutes * 60)
             deadline = timestamp + remaining; pausedSeconds = 0
         }
@@ -81,6 +82,7 @@ struct StartTimerPanel: View {
                 guard running else { return "" }
                 if StartLineMath.isThirtySecondWarning(remain) { return "warning-30" }
                 if StartLineMath.isMinuteMarker(remain) { return "minute-\(wholeSeconds / 60)" }
+                if StartLineMath.isMinuteCountdown(remain) { return "countdown-\(wholeSeconds)" }
                 return ""
             }()
             VStack(spacing: compact ? 5 : 10) {
@@ -92,7 +94,9 @@ struct StartTimerPanel: View {
                     .minimumScaleFactor(0.5).lineLimit(1)
                     .foregroundStyle(finished || (running && StartLineMath.isMinuteCountdown(remain)) ? .orange : .green)
                     .accessibilityLabel(finished ? "スタート" : "残り " + StartLineMath.countdown(remain))
-                Text("各分の残り10秒をカウントダウン・0分30秒と各分の00秒を音声案内")
+                Text(running && StartLineMath.isMinuteCountdown(remain)
+                     ? "音声カウントダウン：\(wholeSeconds)秒"
+                     : "各分の残り10秒を音声案内・0分30秒と各分00秒も案内")
                     .font(compact ? .system(size: 8) : .caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -121,7 +125,7 @@ struct StartTimerPanel: View {
                 HStack {
                     Button(running ? "一時停止" : paused ? "再開" : "開始") { toggle(at: now) }
                         .buttonStyle(.borderedProminent).tint(.green)
-                    Button("残り時間を「:00」に合わせる") { alignToNearestMinute(at: now) }
+                    Button(compact ? "次の:00へ同期" : "残り時間を「:00」に合わせる") { alignToNearestMinute(at: now) }
                         .buttonStyle(.bordered).tint(.orange)
                         .disabled(!running && !paused)
                     Button("リセット") { deadline = 0; pausedSeconds = 0; lastVoiceCue = "" }
@@ -135,6 +139,8 @@ struct StartTimerPanel: View {
                     else if cue == "warning-30" { StartTimerVoice.speak("あと30秒") }
                     else if cue.hasPrefix("minute-"), let minutes = Int(cue.replacingOccurrences(of: "minute-", with: "")) {
                         StartTimerVoice.speak("あと\(minutes)分")
+                    } else if cue.hasPrefix("countdown-"), let seconds = Int(cue.replacingOccurrences(of: "countdown-", with: "")) {
+                        StartTimerVoice.speak(String(seconds))
                     }
                 }
             }
