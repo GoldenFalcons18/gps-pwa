@@ -41,6 +41,7 @@ object WaypointAppearanceDialog {
             slider
         }
         fun redraw() { preview.text = input.text.toString().ifBlank { "●" }; preview.setTextColor(selected) }
+        fun syncSliders() { sliders[0].progress=Color.red(selected);sliders[1].progress=Color.green(selected);sliders[2].progress=Color.blue(selected) }
         fun updateSliders() {
             sliders[0].progress = Color.red(selected); sliders[1].progress = Color.green(selected); sliders[2].progress = Color.blue(selected)
         }
@@ -49,6 +50,10 @@ object WaypointAppearanceDialog {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) { action() }
         }
+        val palette=GridLayout(context).apply{columnCount=4}
+        WaypointFolderColors.palette.forEach{(name,hexColor)->palette.addView(Button(context).apply{text=name;contentDescription="$name を選択";setOnClickListener{selected=Color.parseColor(hexColor);hex.setText(hexColor);syncSliders();redraw()}})}
+        column.addView(TextView(context).apply{text="色を選択";setPadding(4,12,4,2)})
+        column.addView(palette)
         updateSliders(); redraw()
         sliders.forEach { slider -> slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, value: Int, fromUser: Boolean) {
@@ -82,3 +87,4 @@ object WaypointAppearanceDialog {
         }
     }
 }
+

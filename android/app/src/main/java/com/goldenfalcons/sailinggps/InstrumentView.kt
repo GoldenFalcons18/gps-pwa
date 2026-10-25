@@ -27,21 +27,23 @@ class InstrumentView @JvmOverloads constructor(
     private var compassHeading = 0f
     private var centerText = "--"
     private var sideText = "--"
+    private var relativeDisplay = false
     var mode: Mode = Mode.RELATIVE
         set(value) {
             field = value
             invalidate()
         }
 
-    fun update(relativeDeg: Double?, absoluteBearing: Double?, heading: Double? = null, magnetic: Boolean = false) {
+    fun update(relativeDeg: Double?, absoluteBearing: Double?, heading: Double? = null, magnetic: Boolean = false, relativeDisplay:Boolean=false) {
         magneticReference = magnetic
+        this.relativeDisplay=relativeDisplay
         heading?.let { compassHeading = NavigationUtils.normalize360(it).toFloat() }
         hasTarget = relativeDeg != null && absoluteBearing != null
         if (hasTarget) {
             relativeAngle = relativeDeg!!.toFloat()
             targetAngle = NavigationUtils.normalize360(absoluteBearing!!).toFloat()
-            centerText = "${NavigationUtils.normalize360(absoluteBearing).roundToInt() % 360}°"
-            sideText = NavigationUtils.relativeText(relativeDeg)
+            centerText = if(relativeDisplay) NavigationUtils.relativeText(relativeDeg) else "${NavigationUtils.normalize360(absoluteBearing).roundToInt() % 360}°"
+            sideText = if(relativeDisplay) "" else NavigationUtils.relativeText(relativeDeg)
         } else { centerText = "--"; sideText = "--" }
         postInvalidateOnAnimation()
     }
@@ -128,14 +130,13 @@ class InstrumentView @JvmOverloads constructor(
 
         paint.textSize = 18f
         paint.color = Color.LTGRAY
-        canvas.drawText(if (magneticReference) "目標方位（磁北）" else "目標方位（真北）", cx, cy - 18f, paint)
+        canvas.drawText(if(relativeDisplay) "目標相対方位（前方0°）" else if (magneticReference) "目標方位（磁北）" else "目標方位（真北）", cx, cy - 18f, paint)
 
-        paint.textSize = 48f
+        paint.textSize = if(relativeDisplay) 30f else 48f
         paint.color = Color.GREEN
         canvas.drawText(centerText, cx, cy + 34f, paint)
 
-        paint.textSize = 17f
-        canvas.drawText(sideText, cx, cy + 62f, paint)
+        if(sideText.isNotEmpty()) { paint.textSize = 17f;canvas.drawText(sideText, cx, cy + 62f, paint) }
     }
 
     private fun normalize180f(v: Float): Float {
@@ -145,3 +146,4 @@ class InstrumentView @JvmOverloads constructor(
         return r
     }
 }
+

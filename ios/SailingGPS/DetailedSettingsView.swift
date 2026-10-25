@@ -10,6 +10,7 @@ struct DetailedSettingsView: View {
     @AppStorage("zeroSpeedThreshold") private var zeroSpeedThreshold=0.0
     @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
     @AppStorage("showETA") private var showETA=false
+    @AppStorage("relativeTargetBearing") private var relativeTargetBearing=false
     @AppStorage("showCourseLine") private var showCourse=true
     @AppStorage("zoneEnabled") private var zoneEnabled=false
     @AppStorage("zoneSelected") private var zoneSelected=""
@@ -50,6 +51,8 @@ struct DetailedSettingsView: View {
                 Form {
                     Picker("予想時間の計算",selection:$arrivalUsesAverage) { Text("現在の速度").tag(false);Text("記録中の平均速度").tag(true) }
                     Picker("時間の表示",selection:$showETA) { Text("所要時間（ETE）").tag(false);Text("到着時刻（ETA）").tag(true) }
+                    Toggle("目標方位を相対表示（前方0°）",isOn:$relativeTargetBearing)
+                    Text("有効にすると、進行方向を0°として右・左の角度で表示します。コンパス針の向きは変わりません。").font(.caption)
                     Text("目的地までの直線距離で計算します。平均速度は記録距離÷記録時間です。速度未取得・低速時は予想を表示しません。").font(.caption)
                 }.navigationTitle("ナビゲーション")
             }
@@ -90,3 +93,4 @@ struct DetailedSettingsView: View {
         }
     }
 }
+

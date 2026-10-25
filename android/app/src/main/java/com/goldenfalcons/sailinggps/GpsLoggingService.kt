@@ -20,6 +20,7 @@ class GpsLoggingService : Service(), LocationListener {
     companion object {
         const val ACTION_START = "com.goldenfalcons.sailinggps.START"
         const val ACTION_STOP = "com.goldenfalcons.sailinggps.STOP"
+        const val ACTION_PAUSE = "com.goldenfalcons.sailinggps.PAUSE"
         const val ACTION_LOCATION = "com.goldenfalcons.sailinggps.LOCATION_UPDATE"
         const val ACTION_STATUS = "com.goldenfalcons.sailinggps.STATUS_UPDATE"
         const val CHANNEL_ID = "gps_logging"
@@ -33,10 +34,12 @@ class GpsLoggingService : Service(), LocationListener {
         const val EXTRA_HAS_BEARING = "hasBearing"
         const val EXTRA_COUNT = "count"
         const val EXTRA_RUNNING = "running"
+        const val EXTRA_PAUSED = "paused"
         const val EXTRA_GAP_SECONDS = "gapSeconds"
 
         fun sessionsDir(context: Context) = File(context.filesDir, "tracks").apply { mkdirs() }
         fun activeSessionFile(context: Context) = File(context.filesDir, "active_track.txt")
+        fun pausedSessionFile(context: Context) = File(context.filesDir, "paused_track.txt")
         fun trackFile(context: Context): File {
             val active = activeSessionFile(context).takeIf { it.exists() }?.readText()?.trim()
             return if (!active.isNullOrEmpty()) File(sessionsDir(context), active)
@@ -55,6 +58,7 @@ class GpsLoggingService : Service(), LocationListener {
     private var count = 0
     private var previous: Location? = null
     private var largestGapSeconds = 0L
+    private var paused = false
 
     override fun onCreate() {
         super.onCreate()
@@ -67,9 +71,18 @@ class GpsLoggingService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> stopLogging()
+            ACTION_PAUSE -> pauseLogging()
+            null -> if (activeSessionFile(this).exists() && pausedSessionFile(this).exists()) restorePaused() else startLogging()
             else -> startLogging()
         }
         return START_STICKY
+    }
+
+    private fun restorePaused() {
+        paused=true
+        count=trackFile(this).takeIf{it.exists()}?.readLines()?.size ?: count
+        startForeground(1001,notification("GPS記録一時停止中 / $count 点"))
+        broadcastStatus(false,true)
     }
 
     private fun startLogging() {
@@ -81,6 +94,7 @@ class GpsLoggingService : Service(), LocationListener {
             count = 0
             largestGapSeconds = 0L
         }
+        pausedSessionFile(this).delete()
         if (previous == null) runCatching {
             val last = trackFile(this).useLines { it.filter { line -> line.isNotBlank() }.lastOrNull() }
             val fields = last?.split(',') ?: emptyList()
@@ -90,6 +104,7 @@ class GpsLoggingService : Service(), LocationListener {
             if (timestamp != null && lat != null && lon != null) previous = Location("recovered").apply { time=timestamp;latitude=lat;longitude=lon }
         }.onFailure { debug("Previous GPS fix recovery failed: ${it.message}") }
         startForeground(1001, notification("GPS記録中 / $count 点"))
+        paused = false
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             debug("ACCESS_FINE_LOCATION not granted")
@@ -108,11 +123,24 @@ class GpsLoggingService : Service(), LocationListener {
         try {
             locationManager.removeUpdates(this)
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500L, 0f, this)
-            broadcastStatus(true)
+            broadcastStatus(true, false)
             debug("GPS logging started")
         } catch (e: Exception) {
             debug("GPS start error: ${e.message}")
         }
+    }
+
+    private fun pauseLogging() {
+        if (!activeSessionFile(this).exists()) return
+        try { locationManager.removeUpdates(this) } catch (_: Exception) {}
+        if (wakeLock?.isHeld == true) wakeLock?.release()
+        wakeLock = null
+        previous = null
+        paused = true
+        pausedSessionFile(this).writeText("paused")
+        startForeground(1001, notification("GPS記録一時停止中 / $count 点"))
+        broadcastStatus(false, true)
+        debug("GPS logging paused")
     }
 
     private fun stopLogging() {
@@ -121,7 +149,9 @@ class GpsLoggingService : Service(), LocationListener {
         wakeLock = null
         previous=null
         activeSessionFile(this).delete()
-        broadcastStatus(false)
+        pausedSessionFile(this).delete()
+        paused = false
+        broadcastStatus(false, false)
         debug("GPS logging stopped")
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -189,9 +219,10 @@ class GpsLoggingService : Service(), LocationListener {
         )
     }
 
-    private fun broadcastStatus(running: Boolean) {
+    private fun broadcastStatus(running: Boolean, paused: Boolean = this.paused) {
         sendBroadcast(Intent(ACTION_STATUS).setPackage(packageName).apply {
             putExtra(EXTRA_RUNNING, running)
+            putExtra(EXTRA_PAUSED, paused)
             putExtra(EXTRA_COUNT, count)
             putExtra(EXTRA_GAP_SECONDS, largestGapSeconds)
         })
@@ -224,3 +255,4 @@ class GpsLoggingService : Service(), LocationListener {
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
+

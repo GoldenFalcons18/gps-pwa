@@ -29,7 +29,13 @@
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="220dp" />
+            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="220dp">
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="top|end" android:orientation="horizontal" android:background="#99000000">
+                    <Button android:id="@+id/btnStart" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:text="●" android:textSize="22sp" android:textColor="#FF3B4A" android:contentDescription="記録開始・再開" />
+                    <Button android:id="@+id/btnPause" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:text="Ⅱ" android:textSize="22sp" android:contentDescription="記録を一時停止" />
+                    <Button android:id="@+id/btnStop" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:text="■" android:textSize="20sp" android:textColor="#FF3B4A" android:contentDescription="記録終了" />
+                </LinearLayout>
+            </FrameLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                 <Button android:textAllCaps="false" android:id="@+id/btnFollow" android:layout_width="0dp" android:layout_height="wrap_content" android:text="追従 1cm≒200m" android:layout_weight="1" />
                 <Button android:id="@+id/btnShowWaypoints" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="全ウェイポイント" />
@@ -57,8 +63,7 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:layout_marginTop="4dp">
             <TextView android:id="@+id/tvModeTitle" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" android:clickable="true" android:focusable="true" android:contentDescription="現在のモード。タップで次のモードに切替" />
             <Button android:id="@+id/btnModeList" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:text="⌄" android:textSize="22sp" android:contentDescription="モード一覧から選択" />
-            <Button android:id="@+id/btnStart" android:layout_width="52dp" android:layout_height="48dp" android:minWidth="0dp" android:text="●" android:textSize="22sp" android:textColor="#FF3B4A" android:contentDescription="記録開始" />
-            <Button android:id="@+id/btnStop" android:layout_width="52dp" android:layout_height="48dp" android:minWidth="0dp" android:text="■" android:textSize="18sp" android:textColor="#FF3B4A" android:contentDescription="記録停止" android:visibility="gone" />
+            <TextView android:id="@+id/tvRecordingState" android:layout_width="wrap_content" android:layout_height="48dp" android:gravity="center" android:paddingHorizontal="8dp" android:text="● 停止中" android:textColor="#BBBBBB" android:textStyle="bold" android:contentDescription="航跡記録の状態" />
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/panel_bg" android:padding="8dp">
@@ -118,3 +123,4 @@
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
+

@@ -18,6 +18,7 @@ struct MapLibraryView: View {
     @State private var renamedGroup = ""
     @State private var confirmGroup: String?
     @State private var confirmFeature: MapFeature?
+    @State private var rgbGroup: String?
     private var groups: [String] { Array(Set(["メインフォルダ"] + gps.library.groups + gps.waypoints.compactMap(\.group) + gps.library.features.map(\.group))).filter{!$0.isEmpty}.sorted() }
     private func commit(_ items:[Waypoint],_ library:MapLibrary) {
         do { try gps.saveLibrary(items,library) } catch { self.error=error.localizedDescription;showingError=true }
@@ -39,6 +40,7 @@ struct MapLibraryView: View {
                 .navigationTitle("地点・グループ・エリア")
                 .toolbar { ToolbarItem(placement:.confirmationAction){Button("閉じる"){dismiss()}} }
                 .sheet(item:$featureDraft){f in MapFeatureEditor(feature:f,waypoints:gps.waypoints,groups:groups){updated in var l=gps.library;l.features.removeAll{$0.id==updated.id};l.features.append(updated);commit(gps.waypoints,l)} }
+                .sheet(isPresented:Binding(get:{rgbGroup != nil},set:{if !$0{rgbGroup=nil}})) { if let group=rgbGroup { FolderRGBColorEditor(group:group,initial:gps.library.groupColors[group] ?? WaypointFolderColors.fallback){hex in var l=gps.library;l.groupColors[group]=hex;commit(gps.waypoints,l);rgbGroup=nil} } }
                 .alert("処理できませんでした",isPresented:$showingError){Button("OK",role:.cancel){}}message:{Text(error)}
                 .alert("グループ名",isPresented:Binding(get:{renameGroup != nil},set:{if !$0{renameGroup=nil}})) {
                     TextField("名前",text:$renamedGroup)
@@ -64,7 +66,7 @@ struct MapLibraryView: View {
                         HStack {
                             Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { HStack { Circle().fill(waypointColor(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)).frame(width:12,height:12);Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") } }
                             Menu {
-                                Section("フォルダの既定色") { ForEach(WaypointFolderColors.palette){item in Button { var l=gps.library;l.groupColors[g]=item.hex;commit(gps.waypoints,l) } label:{Label(item.name,systemImage:(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)==item.hex ? "checkmark.circle.fill" : "circle.fill").tint(waypointColor(item.hex)) } } }
+                                Section("フォルダの既定色") { ForEach(WaypointFolderColors.palette){item in Button { var l=gps.library;l.groupColors[g]=item.hex;commit(gps.waypoints,l) } label:{Label(item.name,systemImage:(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)==item.hex ? "checkmark.circle.fill" : "circle.fill").tint(waypointColor(item.hex)) } };Button("RGBを指定…"){rgbGroup=g} }
                                 Button("名前を変更"){renameGroup=g;renamedGroup=g}
                                 Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g}
                             } label:{Image(systemName:"ellipsis.circle")}
@@ -93,6 +95,34 @@ struct MapLibraryView: View {
         let needed=Set(features.flatMap(\.waypointIDs));items += gps.waypoints.filter{needed.contains($0.id) && !ids.contains($0.id)}
         guard !items.isEmpty || !features.isEmpty else { error="出力する地点・図形を選んでください";showingError=true;return }
         export(items,features,format)
+    }
+}
+
+private struct FolderRGBColorEditor:View {
+    let group:String
+    let initial:String
+    let onSave:(String)->Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var red=""
+    @State private var green=""
+    @State private var blue=""
+    private func components(_ hex:String)->[String] {
+        let value=hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+        guard value.count==6,let number=UInt32(value,radix:16) else{return ["255","170","0"]}
+        return [String((number>>16)&255),String((number>>8)&255),String(number&255)]
+    }
+    var body:some View {
+        NavigationStack { Form {
+            Section("\(group) のRGB色") {
+                TextField("R（0〜255）",text:$red).keyboardType(.numberPad)
+                TextField("G（0〜255）",text:$green).keyboardType(.numberPad)
+                TextField("B（0〜255）",text:$blue).keyboardType(.numberPad)
+                HStack { Text("プレビュー");Spacer();RoundedRectangle(cornerRadius:6).fill(Color(red:Double(min(max(Int(red) ?? 0,0),255))/255,green:Double(min(max(Int(green) ?? 0,0),255))/255,blue:Double(min(max(Int(blue) ?? 0,0),255))/255)).frame(width:48,height:28) }
+            }
+        }.navigationTitle("RGB色を指定").toolbar {
+            ToolbarItem(placement:.cancellationAction){Button("キャンセル"){dismiss()}}
+            ToolbarItem(placement:.confirmationAction){Button("保存"){let values=[red,green,blue].compactMap(Int.init);guard values.count==3,values.allSatisfy({(0...255).contains($0)}) else{return};onSave(String(format:"#%02X%02X%02X",values[0],values[1],values[2]));dismiss()}.disabled(![red,green,blue].allSatisfy{Int($0).map{(0...255).contains($0)} ?? false)} }
+        }.onAppear{let c=components(initial);red=c[0];green=c[1];blue=c[2]} }
     }
 }
 

@@ -33,4 +33,10 @@ class HeadingReferenceTest {
         assertEquals(2.0, HeadingReference.relative(1.0, 359.0), 0.0001)
         assertEquals(-2.0, HeadingReference.relative(359.0, 1.0), 0.0001)
     }
+    @Test fun relativeBearingShowsSignedLeftAndRightOffsets() {
+        assertEquals(20.0,HeadingReference.relative(110.0,90.0),0.0001)
+        assertEquals(-20.0,HeadingReference.relative(70.0,90.0),0.0001)
+        assertEquals(0.0,HeadingReference.relative(0.0,360.0),0.0001)
+    }
 }
+

@@ -21,7 +21,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         return "$label：${if(bool(key,default)) "ON" else "OFF"}" to {
             val value=!bool(key,default);prefs.edit().putBoolean(key,value).apply()
             if(key=="zoneEnabled" && value && Build.VERSION.SDK_INT>=33) ActivityCompat.requestPermissions(activity,arrayOf(Manifest.permission.POST_NOTIFICATIONS),11)
-            refresh();when { key.startsWith("zone")->zones();key=="compassWhileMoving"->navigation();else->display() }
+            refresh();when { key.startsWith("zone")->zones();key=="compassWhileMoving" || key=="relativeTargetBearing"->navigation();else->display() }
         }
     }
     private fun choice(title:String,key:String,labels:List<String>,values:List<String>,default:String) {
@@ -50,6 +50,8 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             prefs.edit().putBoolean("preferGpsHeading",!bool("preferGpsHeading",false)).apply();refresh();navigation()
         },
         toggle("移動中も磁気コンパスを使用","compassWhileMoving",false),
+        toggle("目標方位を相対表示（前方0°）","relativeTargetBearing",false),
+        toggle("目標方位を相対表示（前方0°）","relativeTargetBearing",false),
         "予想時間の計算：${if(bool("arrivalUsesAverage",false)) "記録中の平均速度" else "現在の速度"}" to {
             prefs.edit().putBoolean("arrivalUsesAverage",!bool("arrivalUsesAverage",false)).apply();refresh();navigation()
         },
@@ -79,3 +81,4 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         }.setPositiveButton("保存"){_,_->prefs.edit().putString("zoneSelected",ids.sorted().joinToString(",")).apply();refresh()}.setNegativeButton("キャンセル",null).show()
     }
 }
+

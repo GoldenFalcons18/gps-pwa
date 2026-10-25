@@ -6,6 +6,7 @@ struct FocusDashboardView:View {
     let course:Double?
     let isCompass:Bool
     let targetBearing:Double?
+    let relativeTargetBearing:Bool
     let unit:String
     @Binding var mode:Int
     @Binding var magnetic:Bool
@@ -35,8 +36,11 @@ struct FocusDashboardView:View {
             card("SOG / "+unit,speed,.green)
             card((isCompass ? "コンパス方位":"COG") + (magnetic ? "（磁北）":"（真北）"),course.map{String(format:"%.0f°",$0.rounded().truncatingRemainder(dividingBy:360))} ?? "—",.white)
             Button(action:chooseTarget) {
-                card("目標方位" + (magnetic ? "（磁北）":"（真北）"),targetBearing.map{String(format:"%.0f°",$0.rounded().truncatingRemainder(dividingBy:360))} ?? "—",.orange)
+                let relative=targetBearing.flatMap{target in course.map{CoordinateInput.relativeBearing(target,heading:$0)}}
+                let value=relativeTargetBearing ? (relative.map(CoordinateInput.relativeBearingText) ?? "—") : (targetBearing.map{String(format:"%.0f°",$0.rounded().truncatingRemainder(dividingBy:360))} ?? "—")
+                card(relativeTargetBearing ? "目標相対方位（前方0°）" : "目標方位" + (magnetic ? "（磁北）":"（真北）"),value,.orange)
             }.buttonStyle(.plain).frame(maxWidth:.infinity,maxHeight:.infinity).accessibilityHint("タップして目標地点を変更")
         }.padding(8).background(.black).preferredColorScheme(.dark)
     }
 }
+

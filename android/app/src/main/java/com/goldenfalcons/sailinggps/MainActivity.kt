@@ -20,6 +20,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.goldenfalcons.sailinggps.databinding.ActivityMainBinding
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
     private var running = false
+    private var recordingPaused = false
     private var gpsGapSeconds = 0L
 
     private var navigatorMode = false
@@ -156,6 +158,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
                 GpsLoggingService.ACTION_STATUS -> {
                     running = intent.getBooleanExtra(GpsLoggingService.EXTRA_RUNNING, false)
+                    recordingPaused = intent.getBooleanExtra(GpsLoggingService.EXTRA_PAUSED, false)
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
                     gpsGapSeconds = intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS, gpsGapSeconds)
                     updateStatusUi()
@@ -169,6 +172,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        val hasActiveTrack=GpsLoggingService.activeSessionFile(this).exists()
+        recordingPaused=hasActiveTrack && GpsLoggingService.pausedSessionFile(this).exists()
+        running=hasActiveTrack && !recordingPaused
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(b.root) { view, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
@@ -302,6 +308,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
         b.btnModeList.setOnClickListener { showPrimaryModeSelection() }
+        b.btnPause.setOnClickListener { pauseGpsLogging() }
         b.btnModeList.contentDescription = "モード一覧から選択"
         b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 4) }
         b.tvModeTitle.isClickable = true
@@ -612,24 +619,48 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val intent = Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_START)
         ContextCompat.startForegroundService(this, intent)
         running = true
+        recordingPaused = false
         updateStatusUi()
         debug("Start GPS logging requested")
     }
 
     private fun stopGpsLogging() {
+        if(!running && !recordingPaused)return
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("航跡記録を終了しますか？")
+            .setMessage("ここまでの航跡を保存し、次回は別の航跡として記録します。")
+            .setNegativeButton("キャンセル",null).setPositiveButton("記録終了して保存"){_,_->finishGpsLogging()}.show()
+    }
+
+    private fun finishGpsLogging() {
         startService(Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_STOP))
         running = false
+        recordingPaused = false
         updateStatusUi()
         debug("Stop GPS logging requested")
     }
 
+    private fun pauseGpsLogging() {
+        if(!running)return
+        startService(Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_PAUSE))
+        running = false
+        recordingPaused = true
+        updateStatusUi()
+    }
+
     private fun updateStatusUi() {
-        b.tvStatus.text = "状態：${if (running) "記録中" else "停止中"} / 保存点数：$pointCount" + if(gpsGapSeconds>0) " / GPS欠落あり（最大${gpsGapSeconds}秒）" else ""
+        val state=if(running) "記録中" else if(recordingPaused) "一時停止中" else "停止中"
+        b.tvRecordingState.text="● $state"
+        b.tvRecordingState.setTextColor(if(gpsGapSeconds>0) Color.YELLOW else if(running) Color.rgb(0,255,56) else Color.LTGRAY)
+        b.tvStatus.text = "状態：$state / 保存点数：$pointCount" + if(gpsGapSeconds>0) " / GPS欠落あり（最大${gpsGapSeconds}秒）" else ""
         b.tvStatus.setTextColor(if (gpsGapSeconds>0) Color.YELLOW else if (running) Color.rgb(0, 255, 56) else Color.WHITE)
-        b.btnStart.visibility = if (running) android.view.View.GONE else android.view.View.VISIBLE
-        b.btnStop.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnStart.text=if(recordingPaused) "▶" else "●"
+        b.btnStart.contentDescription=if(recordingPaused) "記録を再開" else "記録を開始"
+        b.btnStart.visibility=if(!running) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnPause.visibility=if(running) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnStop.visibility=if(running||recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
         b.btnStart.isEnabled = !running
-        b.btnStop.isEnabled = running
+        b.btnPause.isEnabled = running
+        b.btnStop.isEnabled = running || recordingPaused
     }
 
     private fun updateNavigationUi() {
@@ -668,8 +699,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val target=activeWaypoint
             val targetBearing=if(preview) 144.0 else if(fresh && target!=null && latestLat!=null && latestLon!=null && NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)>1)
                 NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
-            ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
-            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,correction)?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val absolute=InstrumentHeading.bearing(targetBearing,useMagnetic,correction)
+            val relativeMode=displayPrefs.getBoolean("relativeTargetBearing",false)
+            ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text=if(relativeMode) "目標相対方位（前方0°）" else "目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
+            val displayed=if(relativeMode && absolute!=null && reading!=null) HeadingReference.relative(absolute,reading.value).let{if(it==0.0) "前方 0°" else if(it>0) "右 ${it.roundToInt()}°" else "左 ${-it.roundToInt()}°"} else absolute?.let{"${it.roundToInt()%360}°"}
+            focusBearing.text=displayed ?: "—"
         }
         val wp = activeWaypoint
         b.tvEte.text = "ETE\n--:--:--"
@@ -705,7 +739,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 debug("Nav heading=$heading true=$trueHeading target=$displayBearing relative=$relative source=$source")
             }
             b.tvClock.text = NavigationUtils.relativeClock(relative)
-            b.instrumentView.update(relative, displayBearing, heading, reference?.magnetic == true)
+        b.instrumentView.update(relative, displayBearing, heading, reference?.magnetic == true,displayPrefs.getBoolean("relativeTargetBearing",false))
         } else {
             b.tvClock.text = "方位待ち"
             b.instrumentView.update(null, null, heading, reference?.magnetic == true)
@@ -998,7 +1032,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         showActionPanel("メニュー", listOf(
             "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
             "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
-            "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
+            "● 記録開始" to { startGpsLogging() }, "Ⅱ 記録一時停止" to { pauseGpsLogging() },
+            "▶ 記録再開" to { startGpsLogging() }, "■ 記録終了・保存" to { stopGpsLogging() },
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
@@ -1027,7 +1062,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val isRecording=running && active==file.name
             val card=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.VERTICAL;setPadding(12,10,12,10);setBackgroundColor(Color.rgb(24,24,24)) }
             val info=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.VERTICAL;setPadding(8,0,0,0) }
-            info.addView(TextView(this).apply { text=(if(isRecording) "● 記録中  " else "")+date;setTextColor(if(isRecording) Color.GREEN else Color.WHITE);textSize=17f })
+            val displayName=if(file.nameWithoutExtension.startsWith("track-")) date else file.nameWithoutExtension
+            info.addView(TextView(this).apply { text=(if(isRecording) "● 記録中  " else if(recordingPaused && active==file.name) "Ⅱ 一時停止中  " else "")+displayName;setTextColor(if(isRecording) Color.GREEN else Color.WHITE);textSize=17f })
             info.addView(TextView(this).apply { text="${"%.2f".format(meters/1852.0)} nm   ${duration/3600}:${"%02d".format((duration/60)%60)}:${"%02d".format(duration%60)}   ${rows.size} 点\n平均 ${if(duration>0) "%.1f".format(meters/duration*NavigationUtils.MPS_TO_KT) else "--"} kt   MAX ${speeds.maxOrNull()?.let{"%.1f".format(it)} ?: "--"} kt";setTextColor(Color.LTGRAY);textSize=14f })
             val summary=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.HORIZONTAL }
             val coords=rows.map{it[1] to it[2]}
@@ -1043,12 +1079,30 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val actions=android.widget.LinearLayout(this).apply { orientation=android.widget.LinearLayout.HORIZONTAL }
             actions.addView(Button(this@MainActivity).apply { text="地図";setOnClickListener{setDisplayMode(1);mapPanel?.showTrackFile(file);Toast.makeText(this@MainActivity,date,Toast.LENGTH_SHORT).show()} })
             actions.addView(Button(this@MainActivity).apply { text="GPX";setOnClickListener{exportGpx(file)} })
+            actions.addView(Button(this@MainActivity).apply { text="名前変更";setOnClickListener{renameTrack(file)} })
+            actions.addView(Button(this@MainActivity).apply { text="名前変更";setOnClickListener{renameTrack(file)} })
             actions.addView(Button(this@MainActivity).apply { text="削除";isEnabled=!isRecording;setOnClickListener{androidx.appcompat.app.AlertDialog.Builder(this@MainActivity).setTitle("航跡を削除").setMessage("$date の航跡を削除しますか？").setNegativeButton("キャンセル",null).setPositiveButton("削除"){_,_->file.delete();showTrackList()}.show()} })
             card.addView(actions)
             list.addView(card,android.widget.LinearLayout.LayoutParams(-1,-2).apply{bottomMargin=10})
         }
         val scroll=android.widget.ScrollView(this).apply{addView(list)}
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle("航跡一覧（${files.size}件）").setView(scroll).setNegativeButton("閉じる",null).show()
+    }
+
+    private fun renameTrack(file:File) {
+        val input=android.widget.EditText(this).apply { setSingleLine(true);setText(file.nameWithoutExtension);selectAll() }
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("航跡名を変更").setMessage("一覧に表示する名前を入力してください").setView(input)
+            .setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
+                val clean=input.text.toString().trim().replace(Regex("[\\\\/:*?\"<>|]"),"_")
+                if(clean.isBlank()) { Toast.makeText(this,"名前を入力してください",Toast.LENGTH_SHORT).show();return@setPositiveButton }
+                val destination=File(file.parentFile,"$clean.csv")
+                if(destination.exists() && destination.absolutePath!=file.absolutePath) { Toast.makeText(this,"同じ名前の航跡があります",Toast.LENGTH_LONG).show();return@setPositiveButton }
+                if(file.renameTo(destination)) {
+                    val marker=GpsLoggingService.activeSessionFile(this)
+                    if(marker.exists() && marker.readText().trim()==file.name) marker.writeText(destination.name)
+                    showTrackList()
+                } else Toast.makeText(this,"名前を変更できませんでした",Toast.LENGTH_LONG).show()
+            }.show()
     }
 
     private fun createMapWaypoint(lat: Double, lon: Double) {
@@ -1307,4 +1361,5 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLog.text = logBuffer.joinToString("\n")
     }
 }
+
 

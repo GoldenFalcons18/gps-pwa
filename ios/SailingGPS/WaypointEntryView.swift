@@ -6,6 +6,9 @@ struct WaypointEntryView: View {
     @State var waypoint: Waypoint
     @State private var format = 1
     @State private var latitudeSelected = true
+    @State private var rgbRed="255"
+    @State private var rgbGreen="170"
+    @State private var rgbBlue="0"
     let folders: [String]
     let defaultFolder: String
     let folderColors: [String: String]
@@ -27,6 +30,16 @@ struct WaypointEntryView: View {
     }
     private var coordinate: Binding<Double> {
         latitudeSelected ? $waypoint.latitude : $waypoint.longitude
+    }
+    private func setColor(_ hex:String) {
+        waypoint.colorName=hex
+        let value=hex.hasPrefix("#") ? String(hex.dropFirst()):hex
+        if let number=UInt32(value,radix:16),value.count==6 { rgbRed=String((number>>16)&255);rgbGreen=String((number>>8)&255);rgbBlue=String(number&255) }
+    }
+    private func applyRGB() {
+        let values=[rgbRed,rgbGreen,rgbBlue].compactMap(Int.init)
+        guard values.count==3,values.allSatisfy({(0...255).contains($0)}) else{return}
+        setColor(String(format:"#%02X%02X%02X",values[0],values[1],values[2]))
     }
     private func formatted(_ value: Double, latitude: Bool) -> String {
         let suffix = latitude ? (value.sign == .minus ? "S" : "N") : (value.sign == .minus ? "W" : "E")
@@ -81,7 +94,19 @@ struct WaypointEntryView: View {
                                 .textFieldStyle(.roundedBorder).accessibilityLabel("自由なマーク")
                         }
                     }
-                    row("カラー") { ColorPicker("自由に選ぶ", selection: selectedColor, supportsOpacity: false) }
+                    row("カラー") {
+                        VStack(alignment:.leading,spacing:8) {
+                            ColorPicker("自由に選ぶ", selection: selectedColor, supportsOpacity: false)
+                            Menu("色を選択") { ForEach(WaypointFolderColors.palette){item in Button { setColor(item.hex) } label:{Label(item.name,systemImage:"circle.fill").tint(waypointColor(item.hex))} } }
+                            HStack(spacing:5) {
+                                TextField("R",text:$rgbRed).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+                                TextField("G",text:$rgbGreen).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+                                TextField("B",text:$rgbBlue).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
+                                Button("適用",action:applyRGB).buttonStyle(.bordered)
+                            }
+                            Text("RGB各0〜255").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     row("プレビュー") {
                         HStack {
                             if let text = waypoint.markText, !text.isEmpty { Text(text).font(.title) }
@@ -95,7 +120,7 @@ struct WaypointEntryView: View {
                     }
                 }
             }
-        }.onAppear { if (waypoint.group ?? "").isEmpty { waypoint.group=defaultFolder };if waypoint.colorName == nil { waypoint.colorName=folderColors[waypoint.group ?? defaultFolder] ?? WaypointFolderColors.fallback } }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
+        }.onAppear { if (waypoint.group ?? "").isEmpty { waypoint.group=defaultFolder };if waypoint.colorName == nil { waypoint.colorName=folderColors[waypoint.group ?? defaultFolder] ?? WaypointFolderColors.fallback };setColor(waypoint.colorName ?? WaypointFolderColors.fallback) }.onChange(of:waypoint.colorName){_,value in if let value{setColor(value)}}.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private func axisButton(_ latitude: Bool) -> some View {
         Button { latitudeSelected = latitude } label: {
@@ -165,3 +190,4 @@ struct CoordinateWheel: UIViewRepresentable {
         }
     }
 }
+

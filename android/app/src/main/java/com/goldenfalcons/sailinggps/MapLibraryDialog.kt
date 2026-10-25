@@ -47,12 +47,25 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
 
     private fun chooseFolderColor(group: String) {
         val palette=WaypointFolderColors.palette
-        val labels=palette.map{ "${it.first}  ${it.second}" }.toTypedArray()
+        val labels=(palette.map{ "${it.first}  ${it.second}" }+"RGBを指定…").toTypedArray()
         AlertDialog.Builder(context).setTitle("$group の既定色").setItems(labels){_,index->
-            val color=palette[index].second
-            save(points(),state().copy(groupColors=state().groupColors+(group to color)))
-            groupList()
+            if(index==palette.size) editFolderRgb(group) else {
+                val color=palette[index].second
+                save(points(),state().copy(groupColors=state().groupColors+(group to color)));groupList()
+            }
         }.setNegativeButton("キャンセル",null).show()
+    }
+    private fun editFolderRgb(group:String) {
+        val columns=LinearLayout(context).apply{orientation=LinearLayout.HORIZONTAL;setPadding(20,8,20,8)}
+        val original=runCatching{android.graphics.Color.parseColor(state().groupColors[group] ?: "#FFAA00")}.getOrDefault(android.graphics.Color.rgb(255,170,0))
+        val fields=listOf("R","G","B").mapIndexed{index,label->EditText(context).apply{hint=label;inputType=2;setText(listOf(android.graphics.Color.red(original),android.graphics.Color.green(original),android.graphics.Color.blue(original))[index].toString());layoutParams=LinearLayout.LayoutParams(0,-2,1f);filters=arrayOf(android.text.InputFilter.LengthFilter(3))}.also(columns::addView)}
+        AlertDialog.Builder(context).setTitle("$group のRGB色（0〜255）").setView(columns).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
+            val rgb=fields.map{it.text.toString().toIntOrNull()?.takeIf{v->v in 0..255}}
+            if(rgb.any{it==null}) Toast.makeText(context,"R・G・Bに0〜255を入力してください",Toast.LENGTH_LONG).show() else {
+                val color=String.format("#%06X",android.graphics.Color.rgb(rgb[0]!!,rgb[1]!!,rgb[2]!!) and 0xFFFFFF)
+                save(points(),state().copy(groupColors=state().groupColors+(group to color)));groupList()
+            }
+        }.show()
     }
     private fun featureList(): Unit = menu("エリア・直線",state().features.map{f->"${if(f.visible)"表示" else "非表示"} · ${f.name}" to {menu(f.name,listOf(
         "編集" to {editFeature(f,f.kind)},"表示 / 非表示" to {save(points(),state().copy(features=state().features.map{if(it.id==f.id)it.copy(visible=!it.visible)else it}));featureList()},
@@ -109,3 +122,4 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         }.onFailure{Toast.makeText(context,it.message,Toast.LENGTH_LONG).show()}}};d.setOnDismissListener{preview.onPause();preview.onDetach()};d.show();preview.onResume();drawPreview()
     }
 }
+

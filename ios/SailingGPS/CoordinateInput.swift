@@ -80,6 +80,15 @@ enum CoordinateInput {
     static func normalizeHeading(_ value: Double) -> Double {
         (value.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
     }
+    static func relativeBearing(_ target: Double, heading: Double) -> Double {
+        let value=(normalizeHeading(target-heading+180)-180)
+        return value == -180 ? 180 : value
+    }
+    static func relativeBearingText(_ value: Double) -> String {
+        let rounded=Int(value.rounded())
+        if rounded == 0 { return "前方 0°" }
+        return rounded > 0 ? "右 \(rounded)°" : "左 \(-rounded)°"
+    }
     // Unwrapped angles keep 359 -> 1 a two-degree animation, not a full reverse turn.
     static func unwrapHeading(from previous: Double, to target: Double) -> Double {
         previous + normalizeHeading(target - previous + 180) - 180
@@ -96,3 +105,4 @@ enum CoordinateInput {
         return gps.map { HeadingReading(heading: $0, trueHeading: $0, magnetic: false) }
     }
 }
+

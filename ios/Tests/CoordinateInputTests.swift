@@ -72,4 +72,13 @@ final class CoordinateInputTests: XCTestCase {
         XCTAssertEqual(CoordinateInput.unwrapHeading(from: 359, to: 1), 361)
         XCTAssertEqual(CoordinateInput.unwrapHeading(from: 1, to: 359), -1)
     }
+    func testRelativeBearingAndLabels() {
+        XCTAssertEqual(CoordinateInput.relativeBearing(110,heading:90),20,accuracy:0.0001)
+        XCTAssertEqual(CoordinateInput.relativeBearing(70,heading:90),-20,accuracy:0.0001)
+        XCTAssertEqual(CoordinateInput.relativeBearing(1,heading:359),2,accuracy:0.0001)
+        XCTAssertEqual(CoordinateInput.relativeBearingText(0),"前方 0°")
+        XCTAssertEqual(CoordinateInput.relativeBearingText(20),"右 20°")
+        XCTAssertEqual(CoordinateInput.relativeBearingText(-20),"左 20°")
+    }
 }
+

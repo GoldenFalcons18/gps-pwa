@@ -22,6 +22,8 @@ private struct TrackListView: View {
     var onExport: (URL) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var revision = 0
+    @State private var renameFile: URL?
+    @State private var renameText = ""
     private struct Summary: Identifiable {
         var id: URL { file }; let file: URL; let date: Date?; let points: Int; let coordinates:[CLLocationCoordinate2D]; let distance: Double; let duration: TimeInterval; let average: Double?; let maximum: Double?
     }
@@ -53,21 +55,28 @@ private struct TrackListView: View {
                     HStack(alignment:.top,spacing:10) {
                         TrackThumbnail(points:s.coordinates).frame(width:76,height:82).clipShape(RoundedRectangle(cornerRadius:5))
                         VStack(alignment:.leading,spacing:6) {
-                            HStack { Text(active ? "● 記録中" : (s.date.map{DateFormatter.localizedString(from:$0,dateStyle:.short,timeStyle:.short)} ?? s.file.deletingPathExtension().lastPathComponent)).font(.headline);if active { Spacer();Circle().fill(.green).frame(width:9,height:9) } }
+                            HStack { Text(active ? (gps.recording ? "● 記録中" : "Ⅱ 一時停止中") : trackTitle(s)).font(.headline);if active && gps.recording { Spacer();Circle().fill(.green).frame(width:9,height:9) } }
                             Text("\(CoordinateInput.distance(s.distance,metric:false))   \(durationText(s.duration))   \(s.points) 点").font(.subheadline)
                             Text("平均 \(s.average.map{String(format:"%.1f",$0*1.943844)} ?? "--") kt   MAX \(s.maximum.map{String(format:"%.1f",$0*1.943844)} ?? "--") kt").font(.caption).foregroundStyle(.secondary)
                             HStack {
                                 Button("地図") { onSelect(s.file);dismiss() }.buttonStyle(.bordered)
                                 Button("GPX") { onExport(s.file);dismiss() }.buttonStyle(.bordered)
+                                Button("名前変更") { renameText=s.file.deletingPathExtension().lastPathComponent;renameFile=s.file }.buttonStyle(.bordered)
                                 if !active { Button("削除",role:.destructive) { try? FileManager.default.removeItem(at:s.file);revision += 1 }.buttonStyle(.bordered) }
                             }
                         }
                     }.padding(.vertical,5)
                 }
             }.id(revision).navigationTitle("航跡一覧（\(summaries.count)件）").toolbar { ToolbarItem(placement: .cancellationAction) { Button("閉じる") { dismiss() } } }
+            .alert("航跡名を変更",isPresented:Binding(get:{renameFile != nil},set:{if !$0{renameFile=nil}})) {
+                TextField("航跡名",text:$renameText)
+                Button("保存") { if let file=renameFile,gps.renameTrack(file,name:renameText){revision += 1};renameFile=nil }
+                Button("キャンセル",role:.cancel){renameFile=nil}
+            } message:{Text("航跡一覧に表示する名前です。")}
         }
     }
     private func durationText(_ value:TimeInterval)->String { let n=max(0,Int(value));return String(format:"%02d:%02d:%02d",n/3600,(n/60)%60,n%60) }
+    private func trackTitle(_ s:Summary)->String { let name=s.file.deletingPathExtension().lastPathComponent;return name.hasPrefix("track-") ? (s.date.map{DateFormatter.localizedString(from:$0,dateStyle:.short,timeStyle:.short)} ?? name) : name }
 }
 
 private struct TrackThumbnail: View {
@@ -118,6 +127,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var headingUpdatedAt:Date?
     private var foregroundActive = false
     @Published var recording = false
+    @Published var recordingPaused = false
     @Published var track: [CLLocationCoordinate2D] = []
     @Published var recordedDistance = 0.0
     @Published var maximumSpeed = 0.0
@@ -139,6 +149,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var handle: FileHandle?
     private let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var activeSessionFile: URL { directory.appendingPathComponent("active-track.txt") }
+    private var pausedSessionFile: URL { directory.appendingPathComponent("paused-track.txt") }
     private var tracksDirectory: URL { directory.appendingPathComponent("tracks", isDirectory: true) }
     private var csv: URL {
         if let name = try? String(contentsOf: activeSessionFile, encoding: .utf8), !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -162,7 +173,10 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if let data = try? Data(contentsOf: waypointFile), let saved = try? JSONDecoder().decode([Waypoint].self, from: data) { waypoints = saved }
         if let data = try? Data(contentsOf: libraryFile), let saved = try? JSONDecoder().decode(LibraryDocument.self, from: data) { waypoints = saved.waypoints; library = saved.library }
         waypoints=waypoints.map { item in var item=item;if (item.group ?? "").isEmpty { item.group="メインフォルダ" };return item }
-        if FileManager.default.fileExists(atPath: activeSessionFile.path) {
+        if FileManager.default.fileExists(atPath: activeSessionFile.path) && FileManager.default.fileExists(atPath: pausedSessionFile.path) {
+            recordingPaused = true
+            recordingRecoveryMessage = "航跡記録は一時停止中です。再開または終了できます。"
+        } else if FileManager.default.fileExists(atPath: activeSessionFile.path) {
             recordingRecoveryMessage = "前回の記録が未完了です。復旧を確認してください。"
             pendingStart = true
         }
@@ -200,6 +214,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             let sessionURL = tracksDirectory.appendingPathComponent(name)
             if !FileManager.default.fileExists(atPath: sessionURL.path) { try Data().write(to: sessionURL) }
             try name.write(to: activeSessionFile, atomically: true, encoding: .utf8)
+            try? FileManager.default.removeItem(at: pausedSessionFile)
             let csv = sessionURL
             try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: csv.path)
             handle = try FileHandle(forWritingTo: csv)
@@ -218,7 +233,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             previousRecordedLocation = nil; recordingStartedAt = Date()
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
-            recording = true
+            recording = true; recordingPaused = false
             if CLLocationManager.significantLocationChangeMonitoringAvailable() { manager.startMonitoringSignificantLocationChanges() }
             manager.startUpdatingLocation()
             if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
@@ -264,9 +279,35 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.allowsBackgroundLocationUpdates = false
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
         try? FileManager.default.removeItem(at: activeSessionFile)
+        try? FileManager.default.removeItem(at: pausedSessionFile)
         elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
-        handle = nil; recording = false; message = "記録停止"; log("Recording stopped")
+        handle = nil; recording = false; recordingPaused = false; message = "記録終了・保存済み"; log("Recording stopped")
         preview(foregroundActive)
+    }
+
+    func pause() {
+        guard recording else { return }
+        manager.stopUpdatingLocation(); manager.stopUpdatingHeading(); manager.stopMonitoringSignificantLocationChanges()
+        manager.allowsBackgroundLocationUpdates = false
+        do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
+        handle=nil;elapsedBeforeStart=elapsed(at:Date());recordingStartedAt=nil;recording=false;recordingPaused=true
+        try? "paused".write(to:pausedSessionFile,atomically:true,encoding:.utf8)
+        message="記録一時停止中";log("Recording paused")
+        preview(foregroundActive)
+    }
+
+    func renameTrack(_ file:URL, name:String)->Bool {
+        let clean=name.trimmingCharacters(in:.whitespacesAndNewlines).replacingOccurrences(of:"/",with:"_").replacingOccurrences(of:":",with:"_")
+        guard !clean.isEmpty else{return false}
+        let destination=file.deletingLastPathComponent().appendingPathComponent(clean).appendingPathExtension("csv")
+        guard !FileManager.default.fileExists(atPath:destination.path) || destination==file else{return false}
+        do {
+            if recording && csv==file { try handle?.synchronize();try handle?.close();handle=nil }
+            try FileManager.default.moveItem(at:file,to:destination)
+            if let active=try? String(contentsOf:activeSessionFile,encoding:.utf8),active.trimmingCharacters(in:.whitespacesAndNewlines)==file.lastPathComponent { try destination.lastPathComponent.write(to:activeSessionFile,atomically:true,encoding:.utf8) }
+            if recording && csv==destination { handle=try FileHandle(forWritingTo:destination);try handle?.seekToEnd() }
+            return true
+        } catch { message="航跡名を変更できませんでした";return false }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -443,6 +484,7 @@ struct ContentView: View {
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
     @AppStorage("magneticHeadingMode") private var magnetic = true
+    @AppStorage("relativeTargetBearing") private var relativeTargetBearing = false
     @AppStorage("compassWhileMoving") private var compassWhileMoving = false
     @State private var compassDialAngle = 0.0
     @State private var selected: UUID?
@@ -466,6 +508,7 @@ struct ContentView: View {
     @State private var settings = false
     @State private var modeSelectionPresented = false
     @State private var menuPresented = false
+    @State private var confirmFinishRecording = false
     @State private var waypointListPresented = false
     @State private var trackListPresented = false
     @State private var waypointFolder = ""
@@ -567,8 +610,9 @@ struct ContentView: View {
                 Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
             VStack(spacing: 4) {
-                Text(navigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
-                Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
+                Text(relativeTargetBearing ? "目標相対方位（前方0°）" : (navigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）")).font(.caption2)
+                let relative = targetDisplayBearing.flatMap { value in compassReferenceHeading.map { CoordinateInput.relativeBearing(value,heading:$0) } }
+                Text(relativeTargetBearing ? (relative.map(CoordinateInput.relativeBearingText) ?? "—") : (targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—")).font(.title.bold()).foregroundStyle(.green)
             }
         }.frame(width: 154, height: 154)
         .animation(.linear(duration: 0.12), value: compassDialAngle)
@@ -779,8 +823,11 @@ struct ContentView: View {
         GeometryReader { proxy in
             HStack(spacing: proxy.size.width * 0.12) {
                 VStack(spacing: 5) {
-                    menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
-                    menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
+                    menuTile("新しい航跡を開始", detail: "現在の記録を保存して別航跡を作成") { menuAction { if gps.recording || gps.recordingPaused { gps.stop() }; gps.start(newTrack: true) } }
+                    if gps.recording { menuTile("Ⅱ 記録を一時停止") { menuAction { gps.pause() } } }
+                    if gps.recordingPaused { menuTile("▶ 記録を再開") { menuAction { gps.start() } } }
+                    if !gps.recording && !gps.recordingPaused { menuTile("● 記録開始") { menuAction { gps.start(newTrack:true) } } }
+                    if gps.recording || gps.recordingPaused { menuTile("■ 記録終了・保存") { menuAction { confirmFinishRecording=true } } }
                     menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
                     menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
                     menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
@@ -811,9 +858,13 @@ struct ContentView: View {
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
             Spacer()
-            Button { gps.recording ? gps.stop() : gps.start() } label: {
-                Image(systemName: "record.circle.fill").foregroundStyle(.red)
-            }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
+            Text(gps.recording ? "● 記録中" : (gps.recordingPaused ? "Ⅱ 一時停止中" : "○ 停止中"))
+                .font(.caption.bold()).foregroundStyle(gps.recording ? .green : .orange).accessibilityLabel("航跡記録の状態")
+            HStack(spacing:6) {
+                if !gps.recording { Button { gps.start() } label:{Image(systemName:gps.recordingPaused ? "play.fill":"record.circle.fill").foregroundStyle(.red)}.accessibilityLabel(gps.recordingPaused ? "航跡記録を再開":"航跡記録を開始") }
+                if gps.recording { Button { gps.pause() } label:{Image(systemName:"pause.fill").foregroundStyle(.orange)}.accessibilityLabel("航跡記録を一時停止") }
+                if gps.recording || gps.recordingPaused { Button { confirmFinishRecording=true } label:{Image(systemName:"stop.fill").foregroundStyle(.red)}.accessibilityLabel("航跡記録を終了") }
+            }
         }.font(.title2).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 6)
             .background(mode == 0 ? Color.black : Color.black.opacity(0.25))
     }
@@ -873,12 +924,6 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("現在のモード。タップで次のモードに切替")
-            Button { gps.recording ? gps.stop() : gps.start() } label: {
-                HStack(spacing: 3) {
-                    Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
-                    Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
-                }
-            }
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
@@ -915,7 +960,7 @@ struct ContentView: View {
             let targetValue=InstrumentHeading.bearing(preview ? 144:(fresh ? focusTargetBearing:nil),magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:magHeading,trueHeading:trueHeading))
             FocusDashboardView(speed:preview ? "12.3":(fresh ? speedText:"—"),
                 course:reading?.value,isCompass:reading?.compass ?? false,
-                targetBearing:targetValue,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,
+                targetBearing:targetValue,relativeTargetBearing:relativeTargetBearing,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,
                 chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
@@ -1089,6 +1134,10 @@ struct ContentView: View {
             WatchNavigationBridge.shared.setRecording(gps.recording, message: gps.message)
         }
         .onAppear { consumePendingWatchRecordingCommand() }
+        .confirmationDialog("航跡記録を終了しますか？",isPresented:$confirmFinishRecording,titleVisibility:.visible) {
+            Button("記録終了して保存",role:.destructive){gps.stop()}
+            Button("キャンセル",role:.cancel){}
+        } message:{Text("ここまでの航跡を保存し、次回は別の航跡として記録します。")}
         .onReceive(gps.$waypoints) { points in
             WatchNavigationBridge.shared.setWaypoints(points)
         }
@@ -1175,4 +1224,5 @@ struct ShareView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 @main struct SailingGPSApp: App { var body: some Scene { WindowGroup { ContentView() } } }
+
 
