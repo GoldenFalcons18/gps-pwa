@@ -39,6 +39,40 @@ struct MapLibrary: Codable, Equatable {
     var groups: [String] = []
     var hiddenGroups: [String] = []
     var features: [MapFeature] = []
+    var groupColors: [String: String] = [:]
+
+    private enum CodingKeys: String, CodingKey { case groups, hiddenGroups, features, groupColors }
+    init(groups: [String] = [], hiddenGroups: [String] = [], features: [MapFeature] = [], groupColors: [String: String] = [:]) {
+        self.groups = groups
+        self.hiddenGroups = hiddenGroups
+        self.features = features
+        self.groupColors = groupColors
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        groups = try values.decodeIfPresent([String].self, forKey: .groups) ?? []
+        hiddenGroups = try values.decodeIfPresent([String].self, forKey: .hiddenGroups) ?? []
+        features = try values.decodeIfPresent([MapFeature].self, forKey: .features) ?? []
+        groupColors = try values.decodeIfPresent([String: String].self, forKey: .groupColors) ?? [:]
+    }
+}
+
+struct WaypointFolderColor: Identifiable {
+    let name: String
+    let hex: String
+    var id: String { hex }
+}
+
+enum WaypointFolderColors {
+    static let fallback = "#FFAA00"
+    static let palette: [WaypointFolderColor] = [
+        .init(name: "オレンジ", hex: "#FFAA00"), .init(name: "赤", hex: "#FF3333"), .init(name: "ピンク", hex: "#FF00D4"),
+        .init(name: "紫", hex: "#9900AA"), .init(name: "水色", hex: "#00C8D7"), .init(name: "青", hex: "#2233FF"),
+        .init(name: "緑", hex: "#00C820"), .init(name: "白", hex: "#FFFFFF")
+    ]
+    static func color(for folder: String, in library: MapLibrary) -> String {
+        library.groupColors[folder] ?? fallback
+    }
 }
 
 

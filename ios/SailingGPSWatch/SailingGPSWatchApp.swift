@@ -7,11 +7,17 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
     @Published var selectedID: String? = UserDefaults.standard.string(forKey: "watchSelectedID")
     @Published var reachable = false
     @Published var selectionPending = UserDefaults.standard.object(forKey: "watchSelectionTime") != nil
+    @Published var recording = false
+    @Published var recordingRequestPending = false
+    @Published var recordingMessage = ""
     @Published var message = ""
     private var pendingTime: Date? = (UserDefaults.standard.object(forKey: "watchSelectionTime") as? Double).map(Date.init(timeIntervalSince1970:))
+    private var requestedRecordingState: Bool?
     override init() {
         super.init()
-        if let data = UserDefaults.standard.data(forKey: "watchCatalog") { catalog = try? JSONDecoder().decode(WatchWaypointCatalog.self, from: data) }
+        if let data = UserDefaults.standard.data(forKey: "watchCatalog"), let saved = try? JSONDecoder().decode(WatchWaypointCatalog.self, from: data) {
+            catalog = saved; recording = saved.recording ?? false; recordingMessage = saved.statusMessage ?? ""
+        }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--preview-watch") {
             catalog = WatchWaypointCatalog(waypoints: [WatchWaypoint(id: "demo", name: "江の島灯台", latitude: 35.30, longitude: 139.48, folder: "目標")], targetID: "demo", metric: false, selectionChangedAt: Date(), sentAt: Date())
@@ -29,6 +35,37 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         pendingTime = Date(); selectionPending = true
         UserDefaults.standard.set(pendingTime!.timeIntervalSince1970, forKey: "watchSelectionTime")
         message = ""; sendSelection()
+    }
+    func requestRecordingToggle() {
+        let session = WCSession.default
+        guard WCSession.isSupported(), session.activationState == .activated, session.isReachable else {
+            message = "iPhoneに接続してから記録を操作してください"; return
+        }
+        let shouldStart = !recording
+        requestedRecordingState = shouldStart
+        recordingRequestPending = true
+        message = "iPhoneへ記録操作を送信中"
+        session.sendMessage(["recordingAction": shouldStart ? "start" : "stop"], replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                guard let self, self.requestedRecordingState == shouldStart else { return }
+                guard reply["recordingRequestAccepted"] as? Bool == true else {
+                    self.requestedRecordingState = nil; self.recordingRequestPending = false
+                    self.message = "iPhoneで記録操作を受け付けられませんでした"; return
+                }
+                self.message = shouldStart ? "記録開始を依頼しました" : "記録停止を依頼しました"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+                    guard self.requestedRecordingState == shouldStart else { return }
+                    self.requestedRecordingState = nil; self.recordingRequestPending = false
+                    self.message = "記録状態が変わりません。iPhoneの位置情報許可を確認してください"
+                }
+                self.receive(reply)
+            }
+        }, errorHandler: { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.requestedRecordingState = nil; self?.recordingRequestPending = false
+                self?.message = "iPhoneに接続してから記録を操作してください"
+            }
+        })
     }
     func registerStartLineWaypoint(kind: String, coordinate: StartLineCoordinate) {
         guard ["outer", "signal"].contains(kind), coordinate.isValid,
@@ -59,6 +96,11 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         DispatchQueue.main.async {
             guard self.catalog == nil || value.sentAt >= self.catalog!.sentAt else { return }
             self.catalog = value
+            self.recording = value.recording ?? self.recording
+            self.recordingMessage = value.statusMessage ?? self.recordingMessage
+            if let requested = self.requestedRecordingState, self.recording == requested {
+                self.requestedRecordingState = nil; self.recordingRequestPending = false; self.message = ""
+            }
             UserDefaults.standard.set(data, forKey: "watchCatalog")
             if self.pendingTime == nil || value.selectionChangedAt >= self.pendingTime! {
                 self.selectedID = value.targetID; self.clearPending()
@@ -147,6 +189,13 @@ struct WatchNavigationView: View {
                         Button("タイマー") { mode = 2 }.foregroundStyle(mode == 2 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
+                    Button { receiver.requestRecordingToggle() } label: {
+                        Label(receiver.recording ? "記録停止" : "記録開始", systemImage: receiver.recording ? "stop.circle.fill" : "record.circle")
+                            .font(.system(size: 14, weight: .semibold)).foregroundStyle(receiver.recording ? .red : .orange)
+                            .frame(maxWidth: .infinity, minHeight: 30).overlay(RoundedRectangle(cornerRadius: 8).stroke(receiver.recording ? .red : .orange, lineWidth: 1))
+                    }.buttonStyle(.plain).disabled(!receiver.reachable || receiver.recordingRequestPending)
+                    Text(receiver.recordingRequestPending ? "iPhoneへ送信中" : receiver.recording ? "iPhoneで航跡を記録中" : receiver.reachable ? "iPhoneの航跡記録は停止中" : "iPhoneと接続してください")
+                        .font(.system(size: 9)).foregroundStyle(.secondary)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     let fix = sensors.fix(at: Date())
                     let compass = sensors.compass(at: Date())
@@ -162,6 +211,7 @@ struct WatchNavigationView: View {
                     }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
+                    if !receiver.recordingMessage.isEmpty { Text(receiver.recordingMessage).font(.system(size: 9)).foregroundStyle(.secondary) }
                     if !receiver.message.isEmpty { Text(receiver.message).font(.caption2).foregroundStyle(.orange) }
                 }.padding(.horizontal, 3)
             }

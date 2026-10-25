@@ -40,4 +40,16 @@ final class WatchNavigationTests: XCTestCase {
         let c = WatchWaypointCatalog(waypoints: [p], targetID: nil, metric: false, selectionChangedAt: Date(), sentAt: Date())
         XCTAssertEqual(try JSONDecoder().decode(WatchWaypointCatalog.self, from: JSONEncoder().encode(c)), c)
     }
+    func testCatalogSyncsRecordingStateAndReadsOlderCatalogs() throws {
+        let point = WatchWaypoint(id: "point-a", name: "灯台", latitude: 35, longitude: 139, folder: "港")
+        let catalog = WatchWaypointCatalog(waypoints: [point], targetID: nil, metric: false, selectionChangedAt: Date(), sentAt: Date(), recording: true, statusMessage: "記録中")
+        let decoded = try JSONDecoder().decode(WatchWaypointCatalog.self, from: JSONEncoder().encode(catalog))
+        XCTAssertEqual(decoded.recording, true)
+        XCTAssertEqual(decoded.statusMessage, "記録中")
+
+        let legacy = Data("{\"waypoints\":[],\"targetID\":null,\"metric\":false,\"selectionChangedAt\":0,\"sentAt\":0}".utf8)
+        let oldCatalog = try JSONDecoder().decode(WatchWaypointCatalog.self, from: legacy)
+        XCTAssertNil(oldCatalog.recording)
+        XCTAssertNil(oldCatalog.statusMessage)
+    }
 }

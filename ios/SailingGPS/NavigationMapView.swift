@@ -130,7 +130,7 @@ struct NavigationMapView: UIViewRepresentable {
         private func startAnimation() {
             guard displayLink == nil else { return }
             let link = CADisplayLink(target: self, selector: #selector(animateHeading(_:)))
-            link.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
+            link.preferredFrameRateRange = CAFrameRateRange(minimum: 10, maximum: 15, preferred: 12)
             link.add(to: .main, forMode: .common)
             displayLink = link
         }
@@ -227,12 +227,34 @@ struct NavigationMapView: UIViewRepresentable {
             if staticChanged {
                 signature = key
                 courseHeading = nil
-                map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" })
-                map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
-                for wp in p.showWaypoints ? p.waypoints : [] {
-                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
-                    map.addAnnotation(pin)
+                let visibleWaypoints = p.showWaypoints ? p.waypoints.filter {
+                    let group = ($0.group ?? "").isEmpty ? "メインフォルダ" : $0.group!
+                    return !p.library.hiddenGroups.contains(group)
+                } : []
+                var existing = Dictionary(uniqueKeysWithValues: map.annotations.compactMap { annotation -> (UUID, Pin)? in
+                    guard let pin = annotation as? Pin, pin.kind == "waypoint", let id = pin.id else { return nil }
+                    return (id, pin)
+                })
+                let desiredIDs = Set(visibleWaypoints.map(\.id))
+                let stale = existing.filter { !desiredIDs.contains($0.key) }.map(\.value)
+                if !stale.isEmpty { map.removeAnnotations(stale) }
+                for waypoint in visibleWaypoints {
+                    let pin: Pin
+                    if let current = existing.removeValue(forKey: waypoint.id) {
+                        pin = current
+                        pin.title = waypoint.name
+                        pin.coordinate = waypoint.coordinate
+                        pin.colorName = waypoint.colorName
+                        pin.markSymbol = waypoint.markSymbol
+                        pin.markText = waypoint.markText
+                        map.view(for: pin)?.image = CompactWaypointMarker.image(name: waypoint.name, color: UIColor(waypointColor(waypoint.colorName)), markText: waypoint.markText, markSymbol: waypoint.markSymbol)
+                    } else {
+                        pin = Pin(); pin.id = waypoint.id; pin.title = waypoint.name; pin.coordinate = waypoint.coordinate
+                        pin.colorName = waypoint.colorName; pin.markSymbol = waypoint.markSymbol; pin.markText = waypoint.markText
+                        map.addAnnotation(pin)
+                    }
                 }
+                map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
                 for f in p.library.features where f.visible && !p.library.hiddenGroups.contains(f.group) {
                     let points = f.boundary(p.waypoints.map(\.archiveEntry)).map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
                     guard points.count >= 2 else { continue }
@@ -261,7 +283,13 @@ struct NavigationMapView: UIViewRepresentable {
                 } else { targetOverlay.update([]) }
                 map.renderer(for: targetOverlay)?.setNeedsDisplay()
             }
-            if staticChanged || locationChanged || courseHeading != p.heading || (p.showCourse && !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" })) {
+            let courseHeadingChanged: Bool
+            if let heading = p.heading, let previous = courseHeading {
+                courseHeadingChanged = abs(CoordinateInput.unwrapHeading(from: previous, to: heading) - previous) >= 2
+            } else {
+                courseHeadingChanged = p.heading != courseHeading
+            }
+            if staticChanged || locationChanged || courseHeadingChanged || (p.showCourse && !map.overlays.contains(where: { ($0 as? MKPolyline)?.title == "course" })) {
                 updateCourse(map)
             }
             updateBoatRotation(map)

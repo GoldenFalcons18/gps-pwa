@@ -250,7 +250,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private func finishCurrentWaypoint(_ point: CLLocation) {
         waypointTimeout?.invalidate(); waypointTimeout = nil
         savingCurrentWaypoint = false
-        let waypoint = Waypoint(name: "現在地 \(waypoints.count + 1)", latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, group: defaultWaypointFolder)
+        let waypoint = Waypoint(name: "現在地 \(waypoints.count + 1)", latitude: point.coordinate.latitude, longitude: point.coordinate.longitude, colorName: WaypointFolderColors.color(for: defaultWaypointFolder, in: library), group: defaultWaypointFolder)
         add(waypoint)
         quickWaypointID = waypoint.id
         message = "\(waypoint.name) を「\(waypoint.group ?? defaultWaypointFolder)」に保存しました"
@@ -1012,7 +1012,7 @@ struct ContentView: View {
             TrackListView(gps:gps,onSelect:{ file in gps.loadTrack(file);mode=1;following=false },onExport:{ file in exported=gps.export(source:file);sharing=exported != nil })
         }
         .sheet(item: $editorDraft, onDismiss: { pendingNavigationEditor = false }) { draft in
-            WaypointEntryView(waypoint: draft, folders: waypointFolders, defaultFolder: mainWaypointFolder) { waypoint, navigate in
+            WaypointEntryView(waypoint: draft, folders: waypointFolders, defaultFolder: mainWaypointFolder, folderColors: gps.library.groupColors) { waypoint, navigate in
                 gps.upsert(waypoint)
                 if navigate || pendingNavigationEditor { proposeNavigation(waypoint) }
             }
@@ -1071,6 +1071,20 @@ struct ContentView: View {
             WatchNavigationBridge.shared.setTarget(target, metric: metricUnits)
         }
         .onChange(of: metricUnits) { _, _ in WatchNavigationBridge.shared.setTarget(target, metric: metricUnits) }
+        .onReceive(gps.$recording) { recording in
+            WatchNavigationBridge.shared.setRecording(recording, message: gps.message)
+        }
+        .onReceive(gps.$message) { message in
+            WatchNavigationBridge.shared.setRecording(gps.recording, message: message)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchRecordingRequested)) { notification in
+            guard let shouldStart = notification.userInfo?["start"] as? Bool else { return }
+            UserDefaults.standard.removeObject(forKey: "watchPendingRecordingStart")
+            if shouldStart && !gps.recording { gps.start() }
+            if !shouldStart && gps.recording { gps.stop() }
+            WatchNavigationBridge.shared.setRecording(gps.recording, message: gps.message)
+        }
+        .onAppear { consumePendingWatchRecordingCommand() }
         .onReceive(gps.$waypoints) { points in
             WatchNavigationBridge.shared.setWaypoints(points)
         }
@@ -1088,6 +1102,13 @@ struct ContentView: View {
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
         }
+    }
+    private func consumePendingWatchRecordingCommand() {
+        guard let shouldStart = UserDefaults.standard.object(forKey: "watchPendingRecordingStart") as? Bool else { return }
+        UserDefaults.standard.removeObject(forKey: "watchPendingRecordingStart")
+        if shouldStart && !gps.recording { gps.start() }
+        if !shouldStart && gps.recording { gps.stop() }
+        WatchNavigationBridge.shared.setRecording(gps.recording, message: gps.message)
     }
 }
 private struct ModeSelectionView: View {

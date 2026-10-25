@@ -2,10 +2,10 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="#000000">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="6dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="速度" />
-            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="地図" />
-            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="セーリング" />
-            <Button android:id="@+id/btnTimerMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="タイマー" />
+            <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" android:text="速度" />
+            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" android:text="地図" />
+            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" android:text="セーリング" />
+            <Button android:id="@+id/btnTimerMode" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" android:text="タイマー" />
             <Button android:id="@+id/btnFocusNorth" android:layout_width="56dp" android:layout_height="wrap_content" android:text="真北" android:minWidth="0dp" android:visibility="gone" />
             <Button android:id="@+id/btnFocusMenu" android:layout_width="48dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:visibility="gone" />
         </LinearLayout>
@@ -54,7 +54,12 @@
                 <TextView android:id="@+id/tvWpCoords" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="--" android:textColor="@color/white" android:textSize="11sp" android:gravity="center" />
             </LinearLayout>
         </LinearLayout>
-        <TextView android:id="@+id/tvModeTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:layout_marginTop="4dp">
+            <TextView android:id="@+id/tvModeTitle" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" android:clickable="true" android:focusable="true" android:contentDescription="現在のモード。タップで次のモードに切替" />
+            <Button android:id="@+id/btnModeList" android:layout_width="48dp" android:layout_height="48dp" android:minWidth="0dp" android:text="⌄" android:textSize="22sp" android:contentDescription="モード一覧から選択" />
+            <Button android:id="@+id/btnStart" android:layout_width="52dp" android:layout_height="48dp" android:minWidth="0dp" android:text="●" android:textSize="22sp" android:textColor="#FF3B4A" android:contentDescription="記録開始" />
+            <Button android:id="@+id/btnStop" android:layout_width="52dp" android:layout_height="48dp" android:minWidth="0dp" android:text="■" android:textSize="18sp" android:textColor="#FF3B4A" android:contentDescription="記録停止" android:visibility="gone" />
+        </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/panel_bg" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOG" android:textColor="@color/gray_text" android:textSize="12sp" android:textStyle="bold" />
@@ -64,8 +69,6 @@
         </LinearLayout>
         <TextView android:id="@+id/tvStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/panel_bg" android:padding="4dp" android:text="状態：停止中" android:textColor="@color/white" android:textSize="12sp" android:textStyle="bold" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/btnStart" android:layout_width="0dp" android:layout_height="wrap_content" android:text="記録開始" android:textSize="14sp" android:layout_weight="1" />
-            <Button android:id="@+id/btnStop" android:layout_width="0dp" android:layout_height="wrap_content" android:text="記録停止" android:textSize="14sp" android:layout_weight="1" />
             <Button android:id="@+id/btnExport" android:layout_width="0dp" android:layout_height="wrap_content" android:text="GPX共有" android:textSize="14sp" android:layout_weight="1" />
             <Button android:id="@+id/btnCurrentWp" android:layout_width="0dp" android:layout_height="wrap_content" android:text="現在地WP" android:layout_weight="1" android:textSize="12sp" android:contentDescription="現在地をウェイポイント保存" />
             <Button android:id="@+id/btnMenu" android:layout_width="48dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="ウェイポイント・設定メニュー" android:textColor="#FFAA00" />

@@ -301,6 +301,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
+        b.btnModeList.setOnClickListener { showPrimaryModeSelection() }
+        b.btnModeList.contentDescription = "モード一覧から選択"
         b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 4) }
         b.tvModeTitle.isClickable = true
         b.tvModeTitle.isFocusable = true
@@ -357,7 +359,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
             mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
-            mapPanel?.setWaypoints(waypoints, activeWaypoint)
+            mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
             mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
             updateMap()
             mapPanel?.resume()
@@ -713,7 +715,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             return
         }
         val name = b.etWpName.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = library.groupColors[mainWaypointFolder] ?: draftColor, group = mainWaypointFolder)
         waypoints += wp
         val shouldConfirm = pendingNavigation
         pendingNavigation = false
@@ -1047,7 +1049,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setMessage("${NavigationUtils.formatDm(lat, true)} / ${NavigationUtils.formatDm(lon, false)}")
             .setView(content).setNegativeButton("キャンセル", null)
             .setPositiveButton("保存") { _, _ ->
-                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
+                val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = library.groupColors[mainWaypointFolder] ?: draftColor, group = mainWaypointFolder)
                 waypoints += wp
                 waypointStore.saveAll(waypoints)
                 renderWaypointList(); updateNavigationUi()
@@ -1068,7 +1070,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun saveCurrentLocationWaypoint(lat: Double, lon: Double) {
         val name = b.etWpName.text.toString().trim().ifEmpty { "現在地 ${waypoints.size + 1}" }
-        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
+        val wp = Waypoint(name = name, lat = lat, lon = lon, mark = draftMark, color = library.groupColors[mainWaypointFolder] ?: draftColor, group = mainWaypointFolder)
         waypoints += wp
         activeWaypoint = wp
         waypointStore.saveAll(waypoints)
@@ -1117,7 +1119,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 val latitude = lat.text.toString().toDoubleOrNull(); val longitude = lon.text.toString().toDoubleOrNull()
                 if (latitude == null || !latitude.isFinite() || latitude !in -90.0..90.0) { lat.error = "-90〜90で入力"; return@setOnClickListener }
                 if (longitude == null || !longitude.isFinite() || longitude !in -180.0..180.0) { lon.error = "-180〜180で入力"; return@setOnClickListener }
-                val changed = original.copy(name = name.text.toString().trim().ifEmpty { original.name }, lat = latitude, lon = longitude, mark = mark, color = color, group = folders[folder.selectedItemPosition])
+                val selectedFolder = folders[folder.selectedItemPosition]
+                val changed = original.copy(name = name.text.toString().trim().ifEmpty { original.name }, lat = latitude, lon = longitude, mark = mark, color = if (selectedFolder != original.group) library.groupColors[selectedFolder] ?: color else color, group = selectedFolder)
                 val index = waypoints.indexOfFirst { it.id == original.id }
                 if (index >= 0) waypoints[index] = changed
                 if (activeWaypoint?.id == original.id) activeWaypoint = changed
@@ -1135,7 +1138,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val waypointFolders: List<String> get() = (library.groups+waypoints.map{it.group}).filter{it.isNotBlank()}.distinct().sorted()
     private val mainWaypointFolder: String get() = DefaultWaypointFolder.resolve(displayPrefs.getString("mainWaypointFolder",null),library.groups,waypoints.map{it.group})
     private fun renderWaypointList() {
-        mapPanel?.setWaypoints(waypoints, activeWaypoint)
+        mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
         mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
         if(waypointFolder !in waypointFolders)waypointFolder=mainWaypointFolder
         b.waypointContainer.removeAllViews()

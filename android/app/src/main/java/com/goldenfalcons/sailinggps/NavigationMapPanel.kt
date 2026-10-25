@@ -30,6 +30,7 @@ class NavigationMapPanel(
     private val trail: Polyline
     private val points = mutableListOf<GeoPoint>()
     private val waypointMarkers = mutableListOf<Marker>()
+    private val waypointMarkersById = mutableMapOf<String, Marker>()
     private var waypointData = emptyList<Waypoint>()
     private val targetLine = Polyline()
     private var target: GeoPoint? = null
@@ -275,10 +276,16 @@ class NavigationMapPanel(
         waypointData = waypoints.toList()
         target = active?.let { GeoPoint(it.lat, it.lon) }
         updateTargetLine()
-        map.overlays.removeAll(waypointMarkers.toSet())
+        val desiredIds = waypoints.map { it.id }.toSet()
+        val removedIds = waypointMarkersById.keys.filter { it !in desiredIds }
+        if (removedIds.isNotEmpty()) {
+            val removed = removedIds.mapNotNull(waypointMarkersById::remove)
+            map.overlays.removeAll(removed.toSet())
+        }
         waypointMarkers.clear()
         waypoints.forEach { wp ->
-            waypointMarkers.add(Marker(map).apply {
+            val marker = waypointMarkersById[wp.id] ?: Marker(map).also { waypointMarkersById[wp.id] = it;map.overlays.add(it) }
+            marker.apply {
                 icon = waypointIcon(wp.name, wp.id == active?.id, wp.mark, wp.color)
                 position = GeoPoint(wp.lat, wp.lon)
                 title = (if (wp.id == active?.id) "★ " else "") + wp.name
@@ -288,9 +295,9 @@ class NavigationMapPanel(
                 setOnMarkerClickListener { _, _ -> true }
                 setInfoWindow(null)
                 alpha = if (wp.id == active?.id) 1f else 0.6f
-            })
+            }
+            waypointMarkers.add(marker)
         }
-        map.overlays.addAll(waypointMarkers)
         map.invalidate()
         if (!didInitialWaypointFit && waypointMarkers.isNotEmpty()) {
             didInitialWaypointFit = true

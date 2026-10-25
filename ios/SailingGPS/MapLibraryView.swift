@@ -18,7 +18,7 @@ struct MapLibraryView: View {
     @State private var renamedGroup = ""
     @State private var confirmGroup: String?
     @State private var confirmFeature: MapFeature?
-    private var groups: [String] { Array(Set(gps.library.groups + gps.waypoints.compactMap(\.group) + gps.library.features.map(\.group))).filter{!$0.isEmpty}.sorted() }
+    private var groups: [String] { Array(Set(["メインフォルダ"] + gps.library.groups + gps.waypoints.compactMap(\.group) + gps.library.features.map(\.group))).filter{!$0.isEmpty}.sorted() }
     private func commit(_ items:[Waypoint],_ library:MapLibrary) {
         do { try gps.saveLibrary(items,library) } catch { self.error=error.localizedDescription;showingError=true }
     }
@@ -35,11 +35,15 @@ struct MapLibraryView: View {
                     HStack { Button("KMZ"){output("kmz")};Spacer();Button("KML"){output("kml")};Spacer();Button("JSON・地点のみ"){output("json")} }
                 }
                 Section("グループ") {
-                    HStack { TextField("新しいグループ名",text:$groupName);Button("追加") { let g=groupName.trimmingCharacters(in:.whitespacesAndNewlines);guard !g.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups+[g])).sorted();commit(gps.waypoints,l);groupName="" } }
+                    HStack { TextField("新しいグループ名",text:$groupName);Button("追加") { let g=groupName.trimmingCharacters(in:.whitespacesAndNewlines);guard !g.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups+[g])).sorted();if l.groupColors[g] == nil { l.groupColors[g]=WaypointFolderColors.fallback };commit(gps.waypoints,l);groupName="" } }
                     ForEach(groups,id:\.self){g in
                         HStack {
-                            Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") }
-                            Menu { Button("名前を変更"){renameGroup=g;renamedGroup=g};Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g} } label:{Image(systemName:"ellipsis.circle")}
+                            Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { HStack { Circle().fill(waypointColor(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)).frame(width:12,height:12);Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") } }
+                            Menu {
+                                Section("フォルダの既定色") { ForEach(WaypointFolderColors.palette){item in Button { var l=gps.library;l.groupColors[g]=item.hex;commit(gps.waypoints,l) } label:{Label(item.name,systemImage:(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)==item.hex ? "checkmark.circle.fill" : "circle.fill").tint(waypointColor(item.hex)) } } }
+                                Button("名前を変更"){renameGroup=g;renamedGroup=g}
+                                Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g}
+                            } label:{Image(systemName:"ellipsis.circle")}
                         }
                     }
                     Picker("選択した地点の移動先",selection:$destinationGroup){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
@@ -70,10 +74,10 @@ struct MapLibraryView: View {
                 .alert("処理できませんでした",isPresented:$showingError){Button("OK",role:.cancel){}}message:{Text(error)}
                 .alert("グループ名",isPresented:Binding(get:{renameGroup != nil},set:{if !$0{renameGroup=nil}})) {
                     TextField("名前",text:$renamedGroup)
-                    Button("保存"){guard let old=renameGroup else{return};let n=renamedGroup.trimmingCharacters(in:.whitespacesAndNewlines);guard !n.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups.filter{$0 != old}+[n])).sorted();l.hiddenGroups=l.hiddenGroups.map{$0==old ? n : $0};l.features=l.features.map{f in var f=f;if f.group==old{f.group=n};return f};commit(gps.waypoints.map{w in var w=w;if w.group==old{w.group=n};return w},l);renameGroup=nil}
+                    Button("保存"){guard let old=renameGroup else{return};let n=renamedGroup.trimmingCharacters(in:.whitespacesAndNewlines);guard !n.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups.filter{$0 != old}+[n])).sorted();l.hiddenGroups=l.hiddenGroups.map{$0==old ? n : $0};if let color=l.groupColors.removeValue(forKey:old){l.groupColors[n]=color};l.features=l.features.map{f in var f=f;if f.group==old{f.group=n};return f};commit(gps.waypoints.map{w in var w=w;if w.group==old{w.group=n};return w},l);renameGroup=nil}
                     Button("キャンセル",role:.cancel){renameGroup=nil}
                 }
-                .confirmationDialog("グループを削除しますか？地点と図形はメインフォルダへ移します。",isPresented:Binding(get:{confirmGroup != nil},set:{if !$0{confirmGroup=nil}}),titleVisibility:.visible){Button("グループを削除",role:.destructive){guard let g=confirmGroup else{return};var l=gps.library;l.groups=groups.filter{$0 != g};l.hiddenGroups.removeAll{$0==g};l.features=l.features.map{f in var f=f;if f.group==g{f.group=""};return f};commit(gps.waypoints.map{w in var w=w;if w.group==g{w.group="メインフォルダ"};return w},l);confirmGroup=nil}}
+                .confirmationDialog("グループを削除しますか？地点と図形はメインフォルダへ移します。",isPresented:Binding(get:{confirmGroup != nil},set:{if !$0{confirmGroup=nil}}),titleVisibility:.visible){Button("グループを削除",role:.destructive){guard let g=confirmGroup else{return};var l=gps.library;l.groups=groups.filter{$0 != g};l.hiddenGroups.removeAll{$0==g};l.groupColors.removeValue(forKey:g);l.features=l.features.map{f in var f=f;if f.group==g{f.group=""};return f};commit(gps.waypoints.map{w in var w=w;if w.group==g{w.group="メインフォルダ"};return w},l);confirmGroup=nil}}
                 .confirmationDialog("図形を削除しますか？",isPresented:Binding(get:{confirmFeature != nil},set:{if !$0{confirmFeature=nil}}),titleVisibility:.visible){Button("削除",role:.destructive){var l=gps.library;l.features.removeAll{$0.id==confirmFeature?.id};commit(gps.waypoints,l);confirmFeature=nil}}
         }.preferredColorScheme(.dark).tint(.orange)
     }

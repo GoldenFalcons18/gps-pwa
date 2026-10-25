@@ -5,6 +5,7 @@ import WatchConnectivity
 extension Notification.Name {
     static let watchTargetChanged = Notification.Name("SailingGPSWatchTargetChanged")
     static let watchStartLineWaypointRequested = Notification.Name("SailingGPSWatchStartLineWaypointRequested")
+    static let watchRecordingRequested = Notification.Name("SailingGPSWatchRecordingRequested")
 }
 
 /// Syncs saved waypoints and target selection; Watch navigation uses its own sensors.
@@ -17,6 +18,8 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     private var lastSelectedID = UserDefaults.standard.string(forKey: "activeWaypointID")
     private var location: CLLocation?
     private var metric = false
+    private var isRecording = false
+    private var recordingMessage = ""
     private var latest: [String: Any] = [:]
     private override init() {
         super.init()
@@ -39,6 +42,11 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         publish()
     }
     func updateLocation(_ point: CLLocation) { location = point }
+    func setRecording(_ value: Bool, message: String) {
+        isRecording = value
+        recordingMessage = message
+        publish()
+    }
     private func selectFromWatch(_ message: [String: Any]) -> Bool {
         guard let id = message["selectTarget"] as? String,
               let time = message["selectionTime"] as? Double,
@@ -62,7 +70,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             distanceMeters: target.flatMap { wp in point.map { $0.distance(from: CLLocation(latitude: wp.latitude, longitude: wp.longitude)) } },
             metric: metric, locationTime: point?.timestamp, sentAt: Date())
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date())
+        let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date(), recording: isRecording, statusMessage: recordingMessage)
         guard let catalogData = try? JSONEncoder().encode(catalog) else { return }
         latest = ["navigation": data, "waypoints": catalogData]
         let session = WCSession.default
@@ -78,8 +86,14 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     func sessionReachabilityDidChange(_ session: WCSession) { DispatchQueue.main.async { self.publish() } }
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         DispatchQueue.main.async {
-            guard self.waypointsReady else { replyHandler(["deferred": true]); return }
             var accepted = true
+            if let action = message["recordingAction"] as? String {
+                guard action == "start" || action == "stop" else { replyHandler(["recordingRequestAccepted": false]); return }
+                let shouldStart = action == "start"
+                UserDefaults.standard.set(shouldStart, forKey: "watchPendingRecordingStart")
+                NotificationCenter.default.post(name: .watchRecordingRequested, object: nil, userInfo: ["start": shouldStart])
+            }
+            if !self.waypointsReady, message["selectTarget"] != nil { replyHandler(["deferred": true]); return }
             if message["selectTarget"] != nil { accepted = self.selectFromWatch(message) }
             if let kind = message["registerStartLineWaypoint"] as? String,
                let latitude = message["latitude"] as? Double,
@@ -92,6 +106,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             }
             self.publish()
             var reply = self.latest; reply["selectionAccepted"] = accepted
+            if message["recordingAction"] != nil { reply["recordingRequestAccepted"] = true }
             replyHandler(reply)
         }
     }

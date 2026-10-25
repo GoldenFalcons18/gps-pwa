@@ -8,11 +8,12 @@ struct WaypointEntryView: View {
     @State private var latitudeSelected = true
     let folders: [String]
     let defaultFolder: String
+    let folderColors: [String: String]
     private var folderOptions:[String] { let values=Array(Set(folders + [waypoint.group ?? "",defaultFolder])).filter{!$0.isEmpty}.sorted();return values.isEmpty ? ["メインフォルダ"] : values }
     let save: (Waypoint, Bool) -> Void
     private let symbols = MarineMarks.choices
     private var folderSelection:some View {
-        Picker("保存フォルダ",selection:Binding(get:{DefaultWaypointFolder.destination(explicit:waypoint.group,defaultFolder:defaultFolder)},set:{waypoint.group=$0})) {
+        Picker("保存フォルダ",selection:Binding(get:{DefaultWaypointFolder.destination(explicit:waypoint.group,defaultFolder:defaultFolder)},set:{waypoint.group=$0;waypoint.colorName=folderColors[$0] ?? WaypointFolderColors.fallback})) {
             ForEach(folderOptions,id:\.self){Text($0 + ($0==defaultFolder ? " ★デフォルト" : "")).tag($0)}
         }.labelsHidden().accessibilityIdentifier("waypointFolder")
     }
@@ -94,7 +95,7 @@ struct WaypointEntryView: View {
                     }
                 }
             }
-        }.onAppear { if (waypoint.group ?? "").isEmpty { waypoint.group=defaultFolder } }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
+        }.onAppear { if (waypoint.group ?? "").isEmpty { waypoint.group=defaultFolder };if waypoint.colorName == nil { waypoint.colorName=folderColors[waypoint.group ?? defaultFolder] ?? WaypointFolderColors.fallback } }.background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
     }
     private func axisButton(_ latitude: Bool) -> some View {
         Button { latitudeSelected = latitude } label: {

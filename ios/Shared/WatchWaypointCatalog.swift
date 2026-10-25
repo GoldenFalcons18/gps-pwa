@@ -13,6 +13,8 @@ struct WatchWaypointCatalog: Codable, Equatable {
     var metric: Bool
     var selectionChangedAt: Date
     var sentAt: Date
+    var recording: Bool? = nil
+    var statusMessage: String? = nil
 }
 
 enum WatchNavigationMath {

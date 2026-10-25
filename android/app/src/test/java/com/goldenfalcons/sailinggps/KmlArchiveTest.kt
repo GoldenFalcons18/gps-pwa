@@ -26,6 +26,11 @@ class KmlArchiveTest {
         }
         val library=MapLibrary(listOf("Group A"),setOf("Group A"),features);assertEquals(library,MapLibrary.from(library.json().toString()))
     }
+    @Test fun folderDefaultColorsRoundTripAndLegacyLibrariesStillLoad() {
+        val library=MapLibrary(groups=listOf("Group A"),groupColors=mapOf("Group A" to "#12ABCD"))
+        assertEquals("#12ABCD",MapLibrary.from(library.json().toString()).groupColors["Group A"])
+        assertTrue(MapLibrary.from("{\"groups\":[\"Old\"]}").groupColors.isEmpty())
+    }
     @Test fun rejectsInvalidXmlAndCoordinates() {
         for(bad in listOf(source.replace("10,20,0","10,200,0"),"<!DOCTYPE kml [<!ENTITY x SYSTEM 'file:///etc/passwd'>]><kml>&x;</kml>")) { assertThrows(IllegalArgumentException::class.java){KmlArchive.decode(bad.toByteArray())} }
     }

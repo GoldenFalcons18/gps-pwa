@@ -32,12 +32,17 @@ data class MapFeature(val id: String = UUID.randomUUID().toString(), val name: S
             o.optDouble("radius",200.0),o.optString("color","#00AAFF"),o.optString("group",""),o.optBoolean("visible",true)).also { it.validate() }
     }
 }
-data class MapLibrary(val groups: List<String> = emptyList(), val hiddenGroups: Set<String> = emptySet(), val features: List<MapFeature> = emptyList()) {
-    fun json() = JSONObject().put("groups",JSONArray(groups)).put("hiddenGroups",JSONArray(hiddenGroups.toList())).put("features",JSONArray(features.map { it.json() }))
+data class MapLibrary(val groups: List<String> = emptyList(), val hiddenGroups: Set<String> = emptySet(), val features: List<MapFeature> = emptyList(), val groupColors: Map<String, String> = emptyMap()) {
+    fun json() = JSONObject().put("groups",JSONArray(groups)).put("hiddenGroups",JSONArray(hiddenGroups.toList())).put("features",JSONArray(features.map { it.json() })).put("groupColors",JSONObject(groupColors))
     companion object {
         fun from(raw: String): MapLibrary { val o=JSONObject(raw);fun strings(key: String): List<String> = o.optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
-            val a=o.optJSONArray("features");return MapLibrary(strings("groups"),strings("hiddenGroups").toSet(),a?.let { (0 until it.length()).map { i -> MapFeature.from(it.getJSONObject(i)) } } ?: emptyList()) }
+            val a=o.optJSONArray("features");val colors=o.optJSONObject("groupColors")?.let { values -> values.keys().asSequence().mapNotNull { key -> values.optString(key).takeIf { it.matches(Regex("#[0-9A-Fa-f]{6}")) }?.let { key to it } }.toMap() } ?: emptyMap();return MapLibrary(strings("groups"),strings("hiddenGroups").toSet(),a?.let { (0 until it.length()).map { i -> MapFeature.from(it.getJSONObject(i)) } } ?: emptyList(),colors) }
     }
+}
+
+object WaypointFolderColors {
+    val palette = listOf("オレンジ" to "#FFAA00", "赤" to "#FF3333", "ピンク" to "#FF00D4", "紫" to "#9900AA", "水色" to "#00C8D7", "青" to "#2233FF", "緑" to "#00C820", "白" to "#FFFFFF")
+    fun color(folder: String, library: MapLibrary): String = library.groupColors[folder] ?: "#FFAA00"
 }
 
 
