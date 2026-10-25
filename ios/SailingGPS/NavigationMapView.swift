@@ -1,8 +1,10 @@
 import SwiftUI
 import MapKit
+import CoreImage
 
 /// OpenStreetMap raster tiles using an identifiable client and the system HTTP cache.
 private final class OpenStreetMapOverlay: MKTileOverlay {
+    private static let imageContext = CIContext(options: [.cacheIntermediates: false])
     private static let tileSession: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .useProtocolCachePolicy
@@ -17,10 +19,8 @@ private final class OpenStreetMapOverlay: MKTileOverlay {
     let daylight: Bool
     init(daylight: Bool) {
         self.daylight = daylight
-        let template = daylight
-            ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            : "https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png"
-        super.init(urlTemplate: template)
+        // OSM is the sole tile source so the map never depends on a third-party API key.
+        super.init(urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
         tileSize = CGSize(width: 256, height: 256)
         minimumZ = 0
         maximumZ = 19
@@ -36,7 +36,23 @@ private final class OpenStreetMapOverlay: MKTileOverlay {
             guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), let data else {
                 result(nil, URLError(.badServerResponse)); return
             }
-            result(data, nil)
+            guard !self.daylight,
+                  let input = CIImage(data: data),
+                  let filter = CIFilter(name: "CIColorControls") else {
+                result(data, nil)
+                return
+            }
+            filter.setValue(input, forKey: kCIInputImageKey)
+            filter.setValue(0.35, forKey: kCIInputSaturationKey)
+            filter.setValue(-0.38, forKey: kCIInputBrightnessKey)
+            filter.setValue(1.12, forKey: kCIInputContrastKey)
+            if let output = filter.outputImage,
+               let cgImage = Self.imageContext.createCGImage(output, from: output.extent),
+               let darkened = UIImage(cgImage: cgImage).pngData() {
+                result(darkened, nil)
+            } else {
+                result(data, nil)
+            }
         }.resume()
     }
 }
@@ -126,7 +142,7 @@ struct NavigationMapView: UIViewRepresentable {
         let tiles = OpenStreetMapOverlay(daylight: daylight)
         map.addOverlay(tiles, level: .aboveLabels)
         let attribution = UILabel()
-        attribution.text = daylight ? "© OpenStreetMap contributors" : "© OpenStreetMap contributors © CARTO"
+        attribution.text = "© OpenStreetMap contributors"
         attribution.tag = 971
         attribution.font = .systemFont(ofSize: 9)
         attribution.textColor = .white
