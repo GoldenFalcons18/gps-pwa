@@ -43,7 +43,12 @@ enum StartLineMath {
 
     static func isThirtySecondWarning(_ seconds: TimeInterval) -> Bool {
         let value = max(0, Int(seconds.rounded(.up)))
-        return value > 0 && value % 60 == 30
+        return value == 30
+    }
+
+    static func isMinuteMarker(_ seconds: TimeInterval) -> Bool {
+        let value = max(0, Int(seconds.rounded(.up)))
+        return value > 0 && value % 60 == 0
     }
 
     static func nearestMinute(_ seconds: TimeInterval) -> TimeInterval {
