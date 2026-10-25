@@ -1,6 +1,41 @@
 import SwiftUI
 import MapKit
 
+/// OpenStreetMap raster tiles using an identifiable client and the system HTTP cache.
+private final class OpenStreetMapOverlay: MKTileOverlay {
+    private static let tileSession: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.requestCachePolicy = .useProtocolCachePolicy
+        configuration.urlCache = URLCache(
+            memoryCapacity: 32 * 1024 * 1024,
+            diskCapacity: 256 * 1024 * 1024,
+            diskPath: "SailingGPS-OpenStreetMapTiles"
+        )
+        return URLSession(configuration: configuration)
+    }()
+
+    init() {
+        super.init(urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
+        tileSize = CGSize(width: 256, height: 256)
+        minimumZ = 0
+        maximumZ = 19
+        canReplaceMapContent = true
+    }
+
+    override func loadTile(at path: MKTileOverlayPath, result: @escaping (Data?, Error?) -> Void) {
+        var request = URLRequest(url: url(forTilePath: path), cachePolicy: .useProtocolCachePolicy, timeoutInterval: 20)
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.7"
+        request.setValue("SailingGPS/\(version) (+https://github.com/GoldenFalcons18/gps-pwa)", forHTTPHeaderField: "User-Agent")
+        Self.tileSession.dataTask(with: request) { data, response, error in
+            if let error { result(nil, error); return }
+            guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode), let data else {
+                result(nil, URLError(.badServerResponse)); return
+            }
+            result(data, nil)
+        }.resume()
+    }
+}
+
 /// A persistent overlay whose points can change without removing the overlay from MapKit.
 /// Replacing MKPolyline on every GPS/compass sample briefly clears the old line and
 /// causes a visible blink while MapKit builds a new renderer.
@@ -81,6 +116,23 @@ struct NavigationMapView: UIViewRepresentable {
         map.delegate = context.coordinator
         map.isPitchEnabled = false
         map.showsCompass = true
+        let tiles = OpenStreetMapOverlay()
+        map.addOverlay(tiles, level: .aboveLabels)
+        let attribution = UILabel()
+        attribution.text = "© OpenStreetMap contributors"
+        attribution.font = .systemFont(ofSize: 9)
+        attribution.textColor = .white
+        attribution.backgroundColor = UIColor.black.withAlphaComponent(0.62)
+        attribution.textAlignment = .right
+        attribution.layer.cornerRadius = 3
+        attribution.clipsToBounds = true
+        attribution.isUserInteractionEnabled = false
+        attribution.translatesAutoresizingMaskIntoConstraints = false
+        map.addSubview(attribution)
+        NSLayoutConstraint.activate([
+            attribution.trailingAnchor.constraint(equalTo: map.trailingAnchor, constant: -8),
+            attribution.bottomAnchor.constraint(equalTo: map.bottomAnchor, constant: -8)
+        ])
         let press = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.longPress(_:)))
         map.addGestureRecognizer(press)
         map.setRegion(MKCoordinateRegion(center: .init(latitude: 35.30, longitude: 139.48), latitudinalMeters: 3000, longitudinalMeters: 3000), animated: false)
@@ -321,6 +373,7 @@ struct NavigationMapView: UIViewRepresentable {
             if interacting && parent.following { DispatchQueue.main.async { self.parent.following = false } }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let tiles = overlay as? OpenStreetMapOverlay { return MKTileOverlayRenderer(tileOverlay: tiles) }
             if let line = overlay as? LiveLineOverlay {
                 if line === courseOverlay { return LiveLineRenderer(overlay: line, color: .black, width: 2) }
                 if line === targetOverlay { return LiveLineRenderer(overlay: line, color: .green, width: 3) }
@@ -393,3 +446,4 @@ enum CompactWaypointMarker {
         }
     }
 }
+
