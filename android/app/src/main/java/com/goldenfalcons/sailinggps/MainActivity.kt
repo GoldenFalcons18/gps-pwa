@@ -180,8 +180,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setContentView(b.root)
         timerSpeech = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                timerSpeechReady = timerSpeech?.setLanguage(java.util.Locale.JAPAN) != TextToSpeech.LANG_MISSING_DATA
-                    && timerSpeech?.language != null
+                val languageStatus = timerSpeech?.setLanguage(java.util.Locale.JAPAN) ?: TextToSpeech.LANG_NOT_SUPPORTED
+                timerSpeechReady = languageStatus >= TextToSpeech.LANG_AVAILABLE
                 timerSpeech?.setSpeechRate(0.48f)
                 pendingTimerSpeech?.let { phrase ->
                     if (timerSpeechReady) timerSpeech?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "start-timer")
