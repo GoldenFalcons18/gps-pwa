@@ -1,6 +1,21 @@
 import Foundation
 
 enum CoordinateInput {
+    static func isDaylight(latitude: Double, longitude: Double, date: Date) -> Bool {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let parts = calendar.dateComponents([.day, .hour, .minute, .second], from: date)
+        let hour = Double(parts.hour ?? 0) + Double(parts.minute ?? 0) / 60 + Double(parts.second ?? 0) / 3600
+        let gamma = 2 * .pi / 365 * (Double(parts.day ?? 1) - 1 + (hour - 12) / 24)
+        let equation = 229.18 * (0.000075 + 0.001868*cos(gamma) - 0.032077*sin(gamma) - 0.014615*cos(2*gamma) - 0.040849*sin(2*gamma))
+        let declination = 0.006918 - 0.399912*cos(gamma) + 0.070257*sin(gamma) - 0.006758*cos(2*gamma) + 0.000907*sin(2*gamma) - 0.002697*cos(3*gamma) + 0.00148*sin(3*gamma)
+        let solarMinutes = hour * 60 + equation + 4 * longitude
+        let hourAngle = (solarMinutes / 4 - 180) * .pi / 180
+        let lat = latitude * .pi / 180
+        let elevation = asin(sin(lat)*sin(declination) + cos(lat)*cos(declination)*cos(hourAngle)) * 180 / .pi
+        return elevation > -0.833
+    }
+
     static func decimal(degrees: String, minutes: String, direction: String, isLatitude: Bool) -> Double? {
         let degreeText = degrees.trimmingCharacters(in: .whitespacesAndNewlines)
         let minuteText = minutes.trimmingCharacters(in: .whitespacesAndNewlines)
