@@ -344,15 +344,23 @@ class NavigationMapPanel(
         val width = (paint.measureText(label) + 16f * density).toInt().coerceAtLeast((60 * density).toInt())
         val bitmap = Bitmap.createBitmap(width, (54 * density).toInt(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        paint.color = Color.rgb(15, 15, 15)
+        val selectedColor = runCatching { Color.parseColor(color) }.getOrDefault(Color.rgb(255, 170, 0))
+        fun linear(channel: Int): Double {
+            val value = channel / 255.0
+            return if (value <= 0.04045) value / 12.92 else Math.pow((value + 0.055) / 1.055, 2.4)
+        }
+        val luminance = 0.2126 * linear(Color.red(selectedColor)) +
+            0.7152 * linear(Color.green(selectedColor)) +
+            0.0722 * linear(Color.blue(selectedColor))
+        val labelTextColor = if (luminance > 0.179) Color.BLACK else Color.WHITE
+        paint.color = selectedColor
         canvas.drawRoundRect(0f, 0f, width.toFloat(), 26f * density, 4f * density, 4f * density, paint)
-        paint.color = if (active) Color.rgb(255, 170, 0) else Color.WHITE
+        paint.color = labelTextColor
         paint.textAlign = Paint.Align.CENTER
         canvas.drawText(label, width / 2f, 18f * density, paint)
-        val selectedColor = runCatching { Color.parseColor(color) }.getOrDefault(Color.rgb(255, 170, 0))
         paint.color = selectedColor
         canvas.drawCircle(width / 2f, 40f * density, 12f * density, paint)
-        paint.color = if (Color.red(selectedColor) * 0.299 + Color.green(selectedColor) * 0.587 + Color.blue(selectedColor) * 0.114 > 160) Color.BLACK else Color.WHITE
+        paint.color = labelTextColor
         paint.textSize = 17f * density
         val glyph = mark.ifEmpty { "●" }
         val available = 23f * density
