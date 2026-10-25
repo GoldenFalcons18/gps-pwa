@@ -1,1 +1,1 @@
-1.7.20 versionCode 36 Waypoint name labels use waypoint color with contrast-aware text
+1.8.0 versionCode 37 Signal mode NICT and manual zero alignment
