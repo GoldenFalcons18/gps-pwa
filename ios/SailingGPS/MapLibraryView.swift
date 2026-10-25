@@ -121,8 +121,21 @@ private struct FolderRGBColorEditor:View {
             }
         }.navigationTitle("RGB色を指定").toolbar {
             ToolbarItem(placement:.cancellationAction){Button("キャンセル"){dismiss()}}
-            ToolbarItem(placement:.confirmationAction){Button("保存"){let values=[red,green,blue].compactMap(Int.init);guard values.count==3,values.allSatisfy({(0...255).contains($0)}) else{return};onSave(String(format:"#%02X%02X%02X",values[0],values[1],values[2]));dismiss()}.disabled(![red,green,blue].allSatisfy{Int($0).map{(0...255).contains($0)} ?? false)} }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("保存", action: save)
+                    .disabled(![red, green, blue].allSatisfy { value in
+                        guard let number = Int(value) else { return false }
+                        return (0...255).contains(number)
+                    })
+            }
         }.onAppear{let c=components(initial);red=c[0];green=c[1];blue=c[2]} }
+    }
+
+    private func save() {
+        let values = [red, green, blue].compactMap(Int.init)
+        guard values.count == 3, values.allSatisfy({ (0...255).contains($0) }) else { return }
+        onSave(String(format: "#%02X%02X%02X", values[0], values[1], values[2]))
+        dismiss()
     }
 }
 
