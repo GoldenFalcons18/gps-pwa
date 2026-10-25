@@ -7,6 +7,22 @@ object NavigationUtils {
     const val M_TO_NM = 1.0 / 1852.0
     private const val EARTH_RADIUS_M = 6371000.0
 
+    fun isDaylight(latitude: Double, longitude: Double, epochMillis: Long): Boolean {
+        if (!latitude.isFinite() || !longitude.isFinite()) return true
+        val utc = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+        utc.timeInMillis = epochMillis
+        val hour = utc.get(java.util.Calendar.HOUR_OF_DAY) + utc.get(java.util.Calendar.MINUTE) / 60.0 + utc.get(java.util.Calendar.SECOND) / 3600.0
+        val day = utc.get(java.util.Calendar.DAY_OF_YEAR)
+        val gamma = 2 * Math.PI / 365 * (day - 1 + (hour - 12) / 24)
+        val equation = 229.18 * (0.000075 + 0.001868*cos(gamma) - 0.032077*sin(gamma) - 0.014615*cos(2*gamma) - 0.040849*sin(2*gamma))
+        val declination = 0.006918 - 0.399912*cos(gamma) + 0.070257*sin(gamma) - 0.006758*cos(2*gamma) + 0.000907*sin(2*gamma) - 0.002697*cos(3*gamma) + 0.00148*sin(3*gamma)
+        val solarMinutes = hour * 60 + equation + 4 * longitude
+        val hourAngle = Math.toRadians(solarMinutes / 4 - 180)
+        val lat = Math.toRadians(latitude)
+        val elevation = Math.toDegrees(asin(sin(lat)*sin(declination) + cos(lat)*cos(declination)*cos(hourAngle)))
+        return elevation > -0.833
+    }
+
     fun normalize360(deg: Double): Double {
         val r = deg % 360.0
         return if (r < 0) r + 360.0 else r
