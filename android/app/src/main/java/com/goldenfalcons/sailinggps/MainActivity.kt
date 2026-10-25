@@ -8,6 +8,7 @@ import android.hardware.*
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.Surface
 import android.widget.ArrayAdapter
@@ -22,6 +23,7 @@ import androidx.core.content.FileProvider
 import com.goldenfalcons.sailinggps.databinding.ActivityMainBinding
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
@@ -54,6 +56,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestHeadingLogAt = 0L
     private var latestFixAt = 0L
     private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var timerSpeech: TextToSpeech? = null
+    private var timerSpeechReady = false
+    private var pendingTimerSpeech: String? = null
+    private var lastTimerVoiceCue = ""
     private var quickLocationListener: android.location.LocationListener? = null
     private val clockTick = object : Runnable {
         override fun run() {
@@ -172,6 +178,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        timerSpeech = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                timerSpeechReady = timerSpeech?.setLanguage(java.util.Locale.JAPAN) != TextToSpeech.LANG_MISSING_DATA
+                    && timerSpeech?.language != null
+                timerSpeech?.setSpeechRate(0.48f)
+                pendingTimerSpeech?.let { phrase ->
+                    if (timerSpeechReady) timerSpeech?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "start-timer")
+                    pendingTimerSpeech = null
+                }
+            }
+        }
         val hasActiveTrack=GpsLoggingService.activeSessionFile(this).exists()
         recordingPaused=hasActiveTrack && GpsLoggingService.pausedSessionFile(this).exists()
         running=hasActiveTrack && !recordingPaused
@@ -326,7 +343,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCaptureOuterMark.setOnClickListener { captureStartLineEndpoint("outer") }
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
-        b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
+        b.btnSyncTimer.setOnClickListener { alignStartTimerToMinute() }
+        b.btnResetTimer.setOnClickListener {
+            displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply()
+            lastTimerVoiceCue = ""
+            updateStartTimerUi()
+        }
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
     }
@@ -454,10 +476,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(end>now) {
             displayPrefs.edit().putLong("startTimerPausedSeconds",((end-now+999)/1000).coerceAtLeast(1)).remove("startTimerEndAt").apply()
         } else {
+            if (paused <= 0L) lastTimerVoiceCue = ""
             val duration=if(paused>0) paused else (b.startTimerPreset.selectedItemPosition+1).coerceIn(1,60)*60L
             displayPrefs.edit().putLong("startTimerEndAt",now+duration*1000).remove("startTimerPausedSeconds").apply()
         }
         updateStartTimerUi()
+    }
+
+    private fun alignStartTimerToMinute() {
+        val now = System.currentTimeMillis()
+        val end = displayPrefs.getLong("startTimerEndAt", 0L)
+        val paused = displayPrefs.getLong("startTimerPausedSeconds", 0L)
+        val remaining = if (end > now) (end - now) / 1000.0 else paused.toDouble()
+        if (end > now) displayPrefs.edit().putLong("startTimerEndAt", now + StartLineMath.nearestMinute(remaining) * 1000L).apply()
+        else if (paused > 0) displayPrefs.edit().putLong("startTimerPausedSeconds", StartLineMath.nearestMinute(remaining)).apply()
+        updateStartTimerUi()
+    }
+
+    private fun announceTimerCue(cue: String, phrase: String) {
+        if (cue.isEmpty() || cue == lastTimerVoiceCue) return
+        lastTimerVoiceCue = cue
+        if (timerSpeechReady) timerSpeech?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "timer-$cue")
+        else pendingTimerSpeech = phrase
     }
 
     private fun updateStartTimerUi() {
@@ -468,9 +508,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val remaining=if(end>now) (end-now)/1000.0 else paused.toDouble()
         val running=end>now
         val finished=end>0L && !running && paused<=0L
+        val wholeSeconds = ceil(remaining.coerceAtLeast(0.0)).toLong()
+        val cue = when {
+            finished -> "start"
+            running && StartLineMath.isThirtySecondWarning(remaining) -> "warning-30"
+            running && StartLineMath.isMinuteMarker(remaining) -> "minute-${wholeSeconds / 60}"
+            running && StartLineMath.isMinuteCountdown(remaining) -> "countdown-${wholeSeconds}"
+            else -> ""
+        }
+        val phrase = when {
+            cue == "start" -> "スタート"
+            cue == "warning-30" -> "あと30秒"
+            cue.startsWith("minute-") -> "あと${wholeSeconds / 60}分"
+            cue.startsWith("countdown-") -> wholeSeconds.toString()
+            else -> ""
+        }
+        announceTimerCue(cue, phrase)
         b.tvStartCountdown.text=if(finished) "START" else StartLineMath.countdown(remaining)
-        b.tvStartCountdown.setTextColor(if(finished) Color.rgb(255,170,0) else Color.GREEN)
+        b.tvStartCountdown.setTextColor(if(finished || (running && StartLineMath.isMinuteCountdown(remaining))) Color.rgb(255,170,0) else Color.GREEN)
+        b.tvTimerCue.text=if(running && StartLineMath.isMinuteCountdown(remaining)) "音声カウントダウン：${wholeSeconds}秒" else "各分の残り10秒を音声案内・0分30秒と各分00秒も案内"
         b.btnStartTimer.text=if(running) "一時停止" else if(paused>0) "再開" else "開始"
+        b.btnSyncTimer.isEnabled = running || paused > 0
         fun endpoint(prefix:String):StartLineCoordinate? {
             if(!displayPrefs.getBoolean("${prefix}.set",false)) return null
             val lat=displayPrefs.getString("${prefix}.lat",null)?.toDoubleOrNull() ?: return null
@@ -540,6 +598,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onDestroy() {
         if (::updateChecker.isInitialized) updateChecker.close()
         mapPanel?.destroy()
+        timerSpeech?.stop()
+        timerSpeech?.shutdown()
+        timerSpeech = null
         super.onDestroy()
     }
 
