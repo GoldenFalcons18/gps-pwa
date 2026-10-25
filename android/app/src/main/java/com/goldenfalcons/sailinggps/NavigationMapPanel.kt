@@ -36,7 +36,7 @@ class NavigationMapPanel(
     private val nightDimOverlay = object : org.osmdroid.views.overlay.Overlay() {
         private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(105, 0, 0, 0) }
         var darkMode = false
-        override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean): Boolean {
+        override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
             if (!shadow && darkMode) canvas.drawColor(dimPaint.color)
         }
     }
