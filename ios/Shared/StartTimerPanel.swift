@@ -1,4 +1,15 @@
 import SwiftUI
+import AVFoundation
+
+private enum StartTimerVoice {
+    static let synthesizer = AVSpeechSynthesizer()
+    static func speak(_ text: String) {
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
+        utterance.rate = 0.48
+        synthesizer.speak(utterance)
+    }
+}
 
 struct StartTimerPanel: View {
     let currentLocation: StartLineCoordinate?
@@ -15,6 +26,7 @@ struct StartTimerPanel: View {
     @AppStorage("startTimerDeadline") private var deadline = 0.0
     @AppStorage("startTimerPaused") private var pausedSeconds = 0.0
     @AppStorage("startTimerMinutes") private var selectedMinutes = 5
+    @State private var lastVoiceCue = ""
 
     private var outer: StartLineCoordinate? {
         let value = StartLineCoordinate(latitude: outerLatitude, longitude: outerLongitude)
@@ -29,6 +41,14 @@ struct StartTimerPanel: View {
         if kind == "outer" { outerLatitude = currentLocation.latitude; outerLongitude = currentLocation.longitude; outerSet = true }
         else { signalLatitude = currentLocation.latitude; signalLongitude = currentLocation.longitude; signalSet = true }
         return currentLocation
+    }
+    private func alignToNearestMinute(at now: Date) {
+        let isRunning = deadline > now.timeIntervalSince1970
+        let seconds = isRunning ? deadline - now.timeIntervalSince1970 : pausedSeconds
+        guard isRunning || pausedSeconds > 0 else { return }
+        let aligned = StartLineMath.nearestMinute(seconds)
+        if isRunning { deadline = now.timeIntervalSince1970 + aligned }
+        else { pausedSeconds = aligned }
     }
     private func toggle(at now: Date) {
         let timestamp = now.timeIntervalSince1970
@@ -55,6 +75,14 @@ struct StartTimerPanel: View {
             let paused = !running && pausedSeconds > 0
             let finished = deadline > 0 && !running && !paused
             let remain = running ? deadline - now.timeIntervalSince1970 : pausedSeconds
+            let wholeSeconds = max(0, Int(remain.rounded(.up)))
+            let voiceCue: String = {
+                if finished { return "start" }
+                guard running else { return "" }
+                if StartLineMath.isThirtySecondWarning(remain) { return "warning-30" }
+                if StartLineMath.isMinuteMarker(remain) { return "minute-\(wholeSeconds / 60)" }
+                return ""
+            }()
             VStack(spacing: compact ? 5 : 10) {
                 Text("スタートタイマー")
                     .font(compact ? .headline : .largeTitle)
@@ -62,8 +90,12 @@ struct StartTimerPanel: View {
                 Text(finished ? "START!" : StartLineMath.countdown(remain))
                     .font(.system(size: compact ? 38 : 78, weight: .bold, design: .monospaced))
                     .minimumScaleFactor(0.5).lineLimit(1)
-                    .foregroundStyle(finished ? .orange : .green)
+                    .foregroundStyle(finished || (running && StartLineMath.isMinuteCountdown(remain)) ? .orange : .green)
                     .accessibilityLabel(finished ? "スタート" : "残り " + StartLineMath.countdown(remain))
+                Text("各分の残り10秒をカウントダウン・0分30秒と各分の00秒を音声案内")
+                    .font(compact ? .system(size: 8) : .caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
                 Text("スタートラインまで  " + distanceText())
                     .font(compact ? .caption : .title2.bold())
                     .minimumScaleFactor(0.6).lineLimit(1)
@@ -89,8 +121,21 @@ struct StartTimerPanel: View {
                 HStack {
                     Button(running ? "一時停止" : paused ? "再開" : "開始") { toggle(at: now) }
                         .buttonStyle(.borderedProminent).tint(.green)
-                    Button("リセット") { deadline = 0; pausedSeconds = 0 }
+                    Button("残り時間を「:00」に合わせる") { alignToNearestMinute(at: now) }
                         .buttonStyle(.bordered).tint(.orange)
+                        .disabled(!running && !paused)
+                    Button("リセット") { deadline = 0; pausedSeconds = 0; lastVoiceCue = "" }
+                        .buttonStyle(.bordered).tint(.orange)
+                }
+                .font(compact ? .system(size: 9) : .body)
+                .onChange(of: voiceCue) { _, cue in
+                    guard !cue.isEmpty, cue != lastVoiceCue else { return }
+                    lastVoiceCue = cue
+                    if cue == "start" { StartTimerVoice.speak("スタート") }
+                    else if cue == "warning-30" { StartTimerVoice.speak("あと30秒") }
+                    else if cue.hasPrefix("minute-"), let minutes = Int(cue.replacingOccurrences(of: "minute-", with: "")) {
+                        StartTimerVoice.speak("あと\(minutes)分")
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
