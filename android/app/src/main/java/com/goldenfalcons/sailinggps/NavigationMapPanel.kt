@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.widget.FrameLayout
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.MapView
@@ -32,6 +33,8 @@ class NavigationMapPanel(
     private val waypointMarkers = mutableListOf<Marker>()
     private val waypointMarkersById = mutableMapOf<String, Marker>()
     private var waypointData = emptyList<Waypoint>()
+    private var tileDaylight: Boolean? = true
+    private val nightTileSource = XYTileSource("CARTO Dark Matter", 0, 20, 256, ".png", arrayOf("https://basemaps.cartocdn.com/rastertiles/dark_all/"), "© OpenStreetMap contributors © CARTO")
     private val targetLine = Polyline()
     private var target: GeoPoint? = null
     private val course = Polyline()
@@ -218,6 +221,11 @@ class NavigationMapPanel(
     fun updateLocation(lat: Double, lon: Double, bearing: Double?, recordTrack: Boolean = true) {
         val point = GeoPoint(lat, lon)
         current = point
+        val daylightNow = NavigationUtils.isDaylight(lat, lon, System.currentTimeMillis())
+        if (daylightNow != tileDaylight) {
+            tileDaylight = daylightNow
+            map.setTileSource(if (daylightNow) TileSourceFactory.MAPNIK else nightTileSource)
+        }
         lastHeading = bearing
         boat.position = point
         boat.isEnabled = true
