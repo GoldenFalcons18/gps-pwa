@@ -13,6 +13,7 @@
         <LinearLayout android:id="@+id/timerPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center" android:padding="16dp" android:visibility="gone">
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="スタートタイマー" android:textColor="#FFAA00" android:textSize="28sp" android:gravity="center" />
             <TextView android:id="@+id/tvStartCountdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="05:00" android:textColor="#00FF38" android:textSize="84sp" android:fontFamily="monospace" android:textStyle="bold" android:gravity="center" />
+            <TextView android:id="@+id/tvTimerCue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="各分の残り10秒を音声案内・0分30秒と各分00秒も案内" android:textColor="#BBBBBB" android:textSize="13sp" android:gravity="center" android:padding="4dp" />
             <TextView android:id="@+id/tvStartLineDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="スタートラインまで --" android:textColor="#FFFFFF" android:textSize="26sp" android:gravity="center" android:padding="12dp" />
             <TextView android:id="@+id/tvOuterMark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="アウターマーク：未設定" android:textColor="#BBBBBB" android:textSize="16sp" android:gravity="center" />
             <Button android:id="@+id/btnCaptureOuterMark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地をアウターマークに登録" />
@@ -21,6 +22,7 @@
             <Spinner android:id="@+id/startTimerPreset" android:layout_width="match_parent" android:layout_height="48dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
                 <Button android:id="@+id/btnStartTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="開始／一時停止" />
+                <Button android:id="@+id/btnSyncTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="残り時間を:00に合わせる" />
                 <Button android:id="@+id/btnResetTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
             </LinearLayout>
         </LinearLayout>
