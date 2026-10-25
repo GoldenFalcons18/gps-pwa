@@ -68,7 +68,7 @@ struct WaypointEntryView: View {
             }.foregroundStyle(.orange).padding().background(Color(white: 0.09))
             ScrollView {
                 VStack(spacing: 1) {
-                    row("名前") { TextField("名前", text: $waypoint.name).accessibilityIdentifier("waypointName") }
+                    row("名前") { TextField("名前（改行可）", text: $waypoint.name, axis: .vertical).lineLimit(1...4).accessibilityIdentifier("waypointName") }
                     row("注記") { TextField("注記", text: Binding(get: { waypoint.note ?? "" }, set: { waypoint.note = $0 })) }
                     row("保存フォルダ") { folderSelection }
                     row("緯度/経度") { Text(formatted(waypoint.latitude, latitude: true) + ", " + formatted(waypoint.longitude, latitude: false)).font(.caption.monospacedDigit()).minimumScaleFactor(0.5).lineLimit(1) }
