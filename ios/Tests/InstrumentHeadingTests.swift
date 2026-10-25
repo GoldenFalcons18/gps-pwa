@@ -10,6 +10,11 @@ final class InstrumentHeadingTests:XCTestCase {
         XCTAssertEqual(value,.init(value:238,compass:false))
         XCTAssertEqual(InstrumentHeading.resolve(course:230,speed:3,magneticHeading:226,trueHeading:218,magnetic:false),.init(value:230,compass:false))
     }
+    func testMagneticCompassCanBeForcedWhileMovingAndFallsBackToGPS() {
+        XCTAssertEqual(InstrumentHeading.resolve(course:230,speed:3,magneticHeading:226,trueHeading:218,magnetic:true,compassWhileMoving:true),.init(value:226,compass:true))
+        XCTAssertEqual(InstrumentHeading.resolve(course:230,speed:3,magneticHeading:226,trueHeading:218,magnetic:false,compassWhileMoving:true),.init(value:218,compass:true))
+        XCTAssertEqual(InstrumentHeading.resolve(course:230,speed:3,magneticHeading:nil,trueHeading:nil,magnetic:false,compassWhileMoving:true),.init(value:230,compass:false))
+    }
     func testLowSpeedAndMissingCourseUseCompass() {
         for speed in [0.0,0.24,nil] as [Double?] {
             XCTAssertEqual(InstrumentHeading.resolve(course:82,speed:speed,magneticHeading:226,trueHeading:218,magnetic:true),.init(value:226,compass:true))

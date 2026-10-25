@@ -23,6 +23,12 @@ class HeadingReferenceTest {
         assertNull(HeadingReference.resolve(true, null, null, -1.0, 3.0))
         assertNull(HeadingReference.resolve(true, null, null, Double.NaN, 3.0))
     }
+    @Test fun compassCanOverrideGpsCourseWhileMoving() {
+        val result=HeadingReference.resolve(true,26.0,-7.9,200.0,3.0,compassWhileMoving=true)!!
+        assertTrue(result.magnetic)
+        assertEquals(18.1,result.trueHeading!!,0.0001)
+        assertFalse(HeadingReference.resolve(true,null,null,200.0,3.0,compassWhileMoving=true)!!.magnetic)
+    }
     @Test fun northCrossingUsesTheShortArc() {
         assertEquals(2.0, HeadingReference.relative(1.0, 359.0), 0.0001)
         assertEquals(-2.0, HeadingReference.relative(359.0, 1.0), 0.0001)

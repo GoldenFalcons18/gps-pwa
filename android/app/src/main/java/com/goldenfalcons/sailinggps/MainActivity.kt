@@ -525,7 +525,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val declination = latestLat?.let { lat -> latestLon?.let { lon ->
             GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis()).declination.toDouble()
         } }
-        return HeadingReference.resolve(preferGpsHeading, magneticHeading, declination, latestGpsBearing, latestSpeedMps)
+        return HeadingReference.resolve(preferGpsHeading, magneticHeading, declination, latestGpsBearing, latestSpeedMps, displayPrefs.getBoolean("compassWhileMoving",false))
     }
 
     private fun mapHeading(): Double? = headingReference()?.trueHeading
@@ -662,7 +662,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val compassAge=(android.os.SystemClock.elapsedRealtime()-minOf(magneticSampleAt,accelSampleAt))/1000.0
             val compass=if(preview) 218.0 else magneticHeading?.takeIf{magneticSampleAt>0 && accelSampleAt>0 && compassAge in 0.0..15.0 && compassAccuracy>SensorManager.SENSOR_STATUS_UNRELIABLE}
             val correction=if(preview) -8.0 else if(latestLat!=null && latestLon!=null) GeomagneticField(latestLat!!.toFloat(),latestLon!!.toFloat(),0f,System.currentTimeMillis()).declination.toDouble() else null
-            val reading=InstrumentHeading.resolve(if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age),if(preview) 3.0 else if(fresh) latestSpeedMps else null,compass,correction,useMagnetic)
+            val reading=InstrumentHeading.resolve(if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age),if(preview) 3.0 else if(fresh) latestSpeedMps else null,compass,correction,useMagnetic,displayPrefs.getBoolean("compassWhileMoving",false))
             ((focusCog.parent as LinearLayout).getChildAt(0) as TextView).text=(if(reading?.compass==true) "コンパス方位" else "COG")+(if(useMagnetic) "（磁北）" else "（真北）")
             focusCog.text=reading?.value?.let{"${it.roundToInt()%360}°"} ?: "—"
             val target=activeWaypoint

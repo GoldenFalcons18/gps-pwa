@@ -443,6 +443,7 @@ struct ContentView: View {
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
     @AppStorage("magneticHeadingMode") private var magnetic = true
+    @AppStorage("compassWhileMoving") private var compassWhileMoving = false
     @State private var compassDialAngle = 0.0
     @State private var selected: UUID?
     @AppStorage("activeWaypointID") private var savedTarget = ""
@@ -482,7 +483,7 @@ struct ContentView: View {
     @AppStorage("showMapWaypoints") private var showMapWaypoints = true
     @AppStorage("showCourseLine") private var showCourseLine = true
     private var navigationReference: CoordinateInput.HeadingReading? {
-        CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
+        CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed, compassWhileMoving: compassWhileMoving)
     }
     private var heading: Double? { navigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
@@ -649,6 +650,8 @@ struct ContentView: View {
                     Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
+                    Toggle("移動中も磁気コンパスを使用",isOn:$compassWhileMoving)
+                    Text("ONでは移動中も磁気コンパスを優先します。磁気コンパスを取得できない場合はGPS進行方位を使います。").font(.caption)
                 }
                 DetailedSettingsView(gps:gps)
                 Section("ウェイポイント") {
@@ -908,7 +911,7 @@ struct ContentView: View {
             let compassFresh=gps.headingUpdatedAt.map{(-5...15).contains(Date().timeIntervalSince($0))} ?? false
             let magHeading=preview ? 218:(compassFresh ? gps.magneticHeading:nil)
             let trueHeading=preview ? 210:(compassFresh ? gps.trueHeading:nil)
-            let reading=InstrumentHeading.resolve(course:preview ? 82:InstrumentSettings.course(gps.location?.course,speed:gps.location?.speed,age:age),speed:preview ? 3:(fresh ? gps.location?.speed:nil),magneticHeading:magHeading,trueHeading:trueHeading,magnetic:instrumentMagnetic)
+            let reading=InstrumentHeading.resolve(course:preview ? 82:InstrumentSettings.course(gps.location?.course,speed:gps.location?.speed,age:age),speed:preview ? 3:(fresh ? gps.location?.speed:nil),magneticHeading:magHeading,trueHeading:trueHeading,magnetic:instrumentMagnetic,compassWhileMoving:compassWhileMoving)
             let targetValue=InstrumentHeading.bearing(preview ? 144:(fresh ? focusTargetBearing:nil),magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:magHeading,trueHeading:trueHeading))
             FocusDashboardView(speed:preview ? "12.3":(fresh ? speedText:"—"),
                 course:reading?.value,isCompass:reading?.compass ?? false,

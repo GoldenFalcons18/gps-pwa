@@ -84,14 +84,14 @@ enum CoordinateInput {
     static func unwrapHeading(from previous: Double, to target: Double) -> Double {
         previous + normalizeHeading(target - previous + 180) - 180
     }
-    static func headingReference(preferGps: Bool, magnetic: Double?, trueHeading: Double?, course: Double?, speed: Double?) -> HeadingReading? {
+    static func headingReference(preferGps: Bool, magnetic: Double?, trueHeading: Double?, course: Double?, speed: Double?, compassWhileMoving:Bool=false) -> HeadingReading? {
         let mag = magnetic.flatMap { $0.isFinite && $0 >= 0 ? normalizeHeading($0) : nil }
         let trueNorth = trueHeading.flatMap { $0.isFinite && $0 >= 0 ? normalizeHeading($0) : nil }
         let gps = course.flatMap { value -> Double? in
             guard value.isFinite, value >= 0, let speed, speed.isFinite, speed >= 0.25 else { return nil }
             return normalizeHeading(value)
         }
-        if preferGps, let gps { return HeadingReading(heading: gps, trueHeading: gps, magnetic: false) }
+        if preferGps, !compassWhileMoving, let gps { return HeadingReading(heading: gps, trueHeading: gps, magnetic: false) }
         if let mag { return HeadingReading(heading: mag, trueHeading: trueNorth, magnetic: true) }
         return gps.map { HeadingReading(heading: $0, trueHeading: $0, magnetic: false) }
     }

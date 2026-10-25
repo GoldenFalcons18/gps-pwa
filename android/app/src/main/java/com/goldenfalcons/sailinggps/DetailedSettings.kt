@@ -21,7 +21,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         return "$label：${if(bool(key,default)) "ON" else "OFF"}" to {
             val value=!bool(key,default);prefs.edit().putBoolean(key,value).apply()
             if(key=="zoneEnabled" && value && Build.VERSION.SDK_INT>=33) ActivityCompat.requestPermissions(activity,arrayOf(Manifest.permission.POST_NOTIFICATIONS),11)
-            refresh();if(key.startsWith("zone")) zones() else display()
+            refresh();when { key.startsWith("zone")->zones();key=="compassWhileMoving"->navigation();else->display() }
         }
     }
     private fun choice(title:String,key:String,labels:List<String>,values:List<String>,default:String) {
@@ -49,6 +49,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "方位ソース：${if(bool("preferGpsHeading",false)) "GPS進行方位を優先" else "磁気コンパスを優先"}" to {
             prefs.edit().putBoolean("preferGpsHeading",!bool("preferGpsHeading",false)).apply();refresh();navigation()
         },
+        toggle("移動中も磁気コンパスを使用","compassWhileMoving",false),
         "予想時間の計算：${if(bool("arrivalUsesAverage",false)) "記録中の平均速度" else "現在の速度"}" to {
             prefs.edit().putBoolean("arrivalUsesAverage",!bool("arrivalUsesAverage",false)).apply();refresh();navigation()
         },

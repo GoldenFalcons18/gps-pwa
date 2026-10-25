@@ -7,6 +7,11 @@ class InstrumentHeadingTest {
         assertEquals(InstrumentHeading.Reading(238.0,false),InstrumentHeading.resolve(230.0,3.0,226.0,-8.0,true))
         assertEquals(InstrumentHeading.Reading(230.0,false),InstrumentHeading.resolve(230.0,3.0,226.0,-8.0,false))
     }
+    @Test fun magneticCompassCanBeForcedWhileMovingAndFallsBackToGps() {
+        assertEquals(InstrumentHeading.Reading(226.0,true),InstrumentHeading.resolve(230.0,3.0,226.0,-8.0,true,true))
+        assertEquals(InstrumentHeading.Reading(218.0,true),InstrumentHeading.resolve(230.0,3.0,226.0,-8.0,false,true))
+        assertEquals(InstrumentHeading.Reading(238.0,false),InstrumentHeading.resolve(230.0,3.0,null,-8.0,true,true))
+    }
     @Test fun lowSpeedAndMissingCourseUseCompass() {
         for(speed in listOf(0.0,0.24,null)) {
             assertEquals(InstrumentHeading.Reading(226.0,true),InstrumentHeading.resolve(82.0,speed,226.0,-8.0,true))

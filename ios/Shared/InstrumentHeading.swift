@@ -15,11 +15,13 @@ enum InstrumentHeading {
         guard let declination,declination.isFinite else {return nil}
         return normalize(value-declination)
     }
-    static func resolve(course:Double?,speed:Double?,magneticHeading:Double?,trueHeading:Double?,magnetic:Bool)->Reading? {
+    static func resolve(course:Double?,speed:Double?,magneticHeading:Double?,trueHeading:Double?,magnetic:Bool,compassWhileMoving:Bool=false)->Reading? {
         let correction=declination(magnetic:magneticHeading,trueHeading:trueHeading)
+        let compassHeading=valid(magnetic ? magneticHeading:trueHeading)
+        if compassWhileMoving,let compassHeading { return Reading(value:compassHeading,compass:true) }
         if let speed,speed.isFinite,speed>=0.25,let course=valid(course) {
             return bearing(course,magnetic:magnetic,declination:correction).map{Reading(value:$0,compass:false)}
         }
-        return valid(magnetic ? magneticHeading:trueHeading).map{Reading(value:$0,compass:true)}
+        return compassHeading.map{Reading(value:$0,compass:true)}
     }
 }

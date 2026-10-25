@@ -176,6 +176,7 @@ struct WatchNavigationView: View {
     @Environment(\.scenePhase) private var phase
     @AppStorage("watchMode") private var mode = 0
     @AppStorage("watchMagnetic") private var useMagnetic=true
+    @AppStorage("watchCompassWhileMoving") private var compassWhileMoving=false
     @State private var targetPicker = false
     private var metric: Bool { receiver.catalog?.metric ?? false }
     private var folders: [String] { Array(Set(receiver.catalog?.waypoints.map(\.folder) ?? [])).sorted() }
@@ -189,6 +190,8 @@ struct WatchNavigationView: View {
                         Button("タイマー") { mode = 2 }.foregroundStyle(mode == 2 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
+                    Button("移動中もコンパス：\(compassWhileMoving ? "ON" : "OFF")") { compassWhileMoving.toggle() }
+                        .buttonStyle(.plain).font(.system(size: 9)).foregroundStyle(.orange)
                     Button { receiver.requestRecordingToggle() } label: {
                         Label(receiver.recording ? "記録停止" : "記録開始", systemImage: receiver.recording ? "stop.circle.fill" : "record.circle")
                             .font(.system(size: 14, weight: .semibold)).foregroundStyle(receiver.recording ? .red : .orange)
@@ -278,7 +281,7 @@ struct WatchNavigationView: View {
         #endif
         let mag=compass?.magneticHeading ?? (demo ? 226:nil)
         let trueHeading=compass.flatMap{$0.trueHeading>=0 ? $0.trueHeading:nil} ?? (demo ? 218:nil)
-        let reading=InstrumentHeading.resolve(course:fix?.course,speed:fix?.speed,magneticHeading:mag,trueHeading:trueHeading,magnetic:useMagnetic)
+        let reading=InstrumentHeading.resolve(course:fix?.course,speed:fix?.speed,magneticHeading:mag,trueHeading:trueHeading,magnetic:useMagnetic,compassWhileMoving:compassWhileMoving)
         Text("SOG").font(.caption).foregroundStyle(.orange)
         Text(WatchNavigationMath.speed(fix.map(\.speed), metric: metric)).font(.system(size: 32, weight: .bold, design: .rounded)).minimumScaleFactor(0.5).lineLimit(1)
         Text(metric ? "km/h" : "knot").font(.caption)
