@@ -40,7 +40,12 @@ object StartLineMath {
 
     fun isThirtySecondWarning(seconds: Double): Boolean {
         val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
-        return value > 0 && value % 60 == 30
+        return value == 30
+    }
+
+    fun isMinuteMarker(seconds: Double): Boolean {
+        val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
+        return value > 0 && value % 60 == 0
     }
 
     fun nearestMinute(seconds: Double): Long =
