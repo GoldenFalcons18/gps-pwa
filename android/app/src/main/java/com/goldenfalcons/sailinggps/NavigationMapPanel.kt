@@ -339,10 +339,32 @@ class NavigationMapPanel(
 
     private fun waypointIcon(name: String, active: Boolean, mark: String, color: String): BitmapDrawable {
         val density = map.resources.displayMetrics.density * 0.65f
-        val label = name.take(24)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 9f * map.resources.displayMetrics.density }
-        val width = (paint.measureText(label) + 16f * density).toInt().coerceAtLeast((60 * density).toInt())
-        val bitmap = Bitmap.createBitmap(width, (54 * density).toInt(), Bitmap.Config.ARGB_8888)
+        val textScale = map.resources.displayMetrics.density
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 9f * textScale }
+        val maxTextWidth = 120f * textScale
+        fun wrapLine(source: String): List<String> {
+            if (source.isEmpty()) return listOf("")
+            val lines = mutableListOf<String>()
+            val line = StringBuilder()
+            source.codePoints().forEach { codePoint ->
+                val character = String(Character.toChars(codePoint))
+                if (line.isNotEmpty() && paint.measureText(line.toString() + character) > maxTextWidth) {
+                    lines += line.toString()
+                    line.setLength(0)
+                }
+                line.append(character)
+            }
+            if (line.isNotEmpty()) lines += line.toString()
+            return lines
+        }
+        val labelLines = name.split('\n').flatMap(::wrapLine)
+        val lineHeight = 12f * textScale
+        val labelPadding = 4f * textScale
+        val labelHeight = (labelLines.size * lineHeight + labelPadding * 2).coerceAtLeast(26f * textScale)
+        val width = ((labelLines.maxOfOrNull { paint.measureText(it) } ?: 0f) + 16f * density)
+            .toInt().coerceAtLeast((60 * density).toInt())
+        val circleY = labelHeight + 14f * density
+        val bitmap = Bitmap.createBitmap(width, (circleY + 14f * density).toInt(), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val selectedColor = runCatching { Color.parseColor(color) }.getOrDefault(Color.rgb(255, 170, 0))
         fun linear(channel: Int): Double {
@@ -354,19 +376,21 @@ class NavigationMapPanel(
             0.0722 * linear(Color.blue(selectedColor))
         val labelTextColor = if (luminance > 0.179) Color.BLACK else Color.WHITE
         paint.color = selectedColor
-        canvas.drawRoundRect(0f, 0f, width.toFloat(), 26f * density, 4f * density, 4f * density, paint)
+        canvas.drawRoundRect(0f, 0f, width.toFloat(), labelHeight, 4f * density, 4f * density, paint)
         paint.color = labelTextColor
         paint.textAlign = Paint.Align.CENTER
-        canvas.drawText(label, width / 2f, 18f * density, paint)
+        labelLines.forEachIndexed { index, line ->
+            canvas.drawText(line, width / 2f, labelPadding + paint.textSize + index * lineHeight, paint)
+        }
         paint.color = selectedColor
-        canvas.drawCircle(width / 2f, 40f * density, 12f * density, paint)
+        canvas.drawCircle(width / 2f, circleY, 12f * density, paint)
         paint.color = labelTextColor
         paint.textSize = 17f * density
         val glyph = mark.ifEmpty { "●" }
         val available = 23f * density
         if (paint.measureText(glyph) > available) paint.textSize *= available / paint.measureText(glyph)
-        if (!MarineMarks.draw(canvas, glyph, width / 2f, 40f * density, 21f * density, paint.color)) {
-            canvas.drawText(glyph, width / 2f, 40f * density - (paint.ascent() + paint.descent()) / 2, paint)
+        if (!MarineMarks.draw(canvas, glyph, width / 2f, circleY, 21f * density, paint.color)) {
+            canvas.drawText(glyph, width / 2f, circleY - (paint.ascent() + paint.descent()) / 2, paint)
         }
         return BitmapDrawable(map.resources, bitmap)
     }
