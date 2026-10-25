@@ -459,11 +459,20 @@ struct NavigationMapView: UIViewRepresentable {
 enum CompactWaypointMarker {
     static func image(name:String,color:UIColor,markText:String?,markSymbol:String?)->UIImage {
         let font=UIFont.systemFont(ofSize:9,weight:.medium)
-        let attrs:[NSAttributedString.Key:Any]=[.font:font,.foregroundColor:UIColor.white,.strokeColor:UIColor.black.withAlphaComponent(0.85),.strokeWidth:-2]
+        var red:CGFloat=0, green:CGFloat=0, blue:CGFloat=0, alpha:CGFloat=0
+        color.getRed(&red,green:&green,blue:&blue,alpha:&alpha)
+        func linear(_ value:CGFloat)->CGFloat {
+            value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        let luminance=0.2126*linear(red)+0.7152*linear(green)+0.0722*linear(blue)
+        let labelTextColor:UIColor=luminance > 0.179 ? .black : .white
+        let attrs:[NSAttributedString.Key:Any]=[.font:font,.foregroundColor:labelTextColor]
         let labelSize=(name as NSString).size(withAttributes:attrs)
         let width=ceil(max(22,labelSize.width+8));let height:CGFloat=38
         return UIGraphicsImageRenderer(size:CGSize(width:width,height:height)).image { _ in
-            (name as NSString).draw(at:CGPoint(x:(width-labelSize.width)/2,y:0),withAttributes:attrs)
+            color.setFill()
+            UIBezierPath(roundedRect:CGRect(x:0,y:0,width:width,height:labelSize.height+3),cornerRadius:4).fill()
+            (name as NSString).draw(at:CGPoint(x:(width-labelSize.width)/2,y:1),withAttributes:attrs)
             let x=width/2
             color.setFill()
             let tail=UIBezierPath();tail.move(to:CGPoint(x:x-6,y:27));tail.addLine(to:CGPoint(x:x,y:38));tail.addLine(to:CGPoint(x:x+6,y:27));tail.close();tail.fill()
