@@ -25,43 +25,11 @@ struct MapLibraryView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("インポート") {
-                    Button("KMZ / KML / JSONを取り込む",action:importFile)
-                    Text("コンパス55のKMZを選べます。既存の地点は残して追加し、同じ内容の地点は重複を省きます。").font(.caption)
-                }
-                Section("エクスポート") {
-                    Picker("対象",selection:$scope) { Text("全件").tag("all");Text("グループ").tag("group");Text("選択した地点").tag("selected") }
-                    if scope == "group" { Picker("グループ",selection:$exportGroup) { Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)} } }
-                    HStack { Button("KMZ"){output("kmz")};Spacer();Button("KML"){output("kml")};Spacer();Button("JSON・地点のみ"){output("json")} }
-                }
-                Section("グループ") {
-                    HStack { TextField("新しいグループ名",text:$groupName);Button("追加") { let g=groupName.trimmingCharacters(in:.whitespacesAndNewlines);guard !g.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups+[g])).sorted();if l.groupColors[g] == nil { l.groupColors[g]=WaypointFolderColors.fallback };commit(gps.waypoints,l);groupName="" } }
-                    ForEach(groups,id:\.self){g in
-                        HStack {
-                            Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { HStack { Circle().fill(waypointColor(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)).frame(width:12,height:12);Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") } }
-                            Menu {
-                                Section("フォルダの既定色") { ForEach(WaypointFolderColors.palette){item in Button { var l=gps.library;l.groupColors[g]=item.hex;commit(gps.waypoints,l) } label:{Label(item.name,systemImage:(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)==item.hex ? "checkmark.circle.fill" : "circle.fill").tint(waypointColor(item.hex)) } } }
-                                Button("名前を変更"){renameGroup=g;renamedGroup=g}
-                                Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g}
-                            } label:{Image(systemName:"ellipsis.circle")}
-                        }
-                    }
-                    Picker("選択した地点の移動先",selection:$destinationGroup){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
-                    Button("選択した\(selected.count)地点を移動") { commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup.isEmpty ? "メインフォルダ" : destinationGroup};return w},gps.library) }.disabled(selected.isEmpty)
-                }
-                Section("エリア・直線") {
-                    HStack { Button("円"){featureDraft=MapFeature(name:"円エリア",kind:"circle")};Spacer();Button("囲み"){featureDraft=MapFeature(name:"囲みエリア",kind:"area")};Spacer();Button("直線"){featureDraft=MapFeature(name:"直線",kind:"line")} }
-                    ForEach(gps.library.features){f in HStack {
-                        Button(f.name){featureDraft=f};Spacer()
-                        Toggle("表示",isOn:Binding(get:{f.visible},set:{value in var l=gps.library;if let i=l.features.firstIndex(where:{$0.id==f.id}){l.features[i].visible=value};commit(gps.waypoints,l)})).labelsHidden()
-                        Button(role:.destructive){confirmFeature=f} label:{Image(systemName:"trash")}
-                    } }
-                }
-                Section("地点を選択（出力・所属変更用）") {
-                    ForEach(gps.waypoints){w in Button {
-                        if selected.contains(w.id){selected.removeAll{$0==w.id}}else{selected.append(w.id)}
-                    } label:{HStack{Image(systemName:selected.contains(w.id) ? "checkmark.circle.fill" : "circle");Text(w.name);Spacer();Text((w.group ?? "").isEmpty ? "メインフォルダ" : w.group!).font(.caption)}} }
-                }
+                importSection
+                exportSection
+                groupsSection
+                featuresSection
+                waypointSelectionSection
             }.buttonStyle(.borderless)
                 .onAppear {
                     #if DEBUG
@@ -81,6 +49,43 @@ struct MapLibraryView: View {
                 .confirmationDialog("図形を削除しますか？",isPresented:Binding(get:{confirmFeature != nil},set:{if !$0{confirmFeature=nil}}),titleVisibility:.visible){Button("削除",role:.destructive){var l=gps.library;l.features.removeAll{$0.id==confirmFeature?.id};commit(gps.waypoints,l);confirmFeature=nil}}
         }.preferredColorScheme(.dark).tint(.orange)
     }
+    private var importSection: some View { Section("インポート") {
+                    Button("KMZ / KML / JSONを取り込む",action:importFile)
+                    Text("コンパス55のKMZを選べます。既存の地点は残して追加し、同じ内容の地点は重複を省きます。").font(.caption)
+                } }
+    private var exportSection: some View { Section("エクスポート") {
+                    Picker("対象",selection:$scope) { Text("全件").tag("all");Text("グループ").tag("group");Text("選択した地点").tag("selected") }
+                    if scope == "group" { Picker("グループ",selection:$exportGroup) { Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)} } }
+                    HStack { Button("KMZ"){output("kmz")};Spacer();Button("KML"){output("kml")};Spacer();Button("JSON・地点のみ"){output("json")} }
+                } }
+    private var groupsSection: some View { Section("グループ") {
+                    HStack { TextField("新しいグループ名",text:$groupName);Button("追加") { let g=groupName.trimmingCharacters(in:.whitespacesAndNewlines);guard !g.isEmpty else{return};var l=gps.library;l.groups=Array(Set(groups+[g])).sorted();if l.groupColors[g] == nil { l.groupColors[g]=WaypointFolderColors.fallback };commit(gps.waypoints,l);groupName="" } }
+                    ForEach(groups,id:\.self){g in
+                        HStack {
+                            Toggle(isOn:Binding(get:{!gps.library.hiddenGroups.contains(g)},set:{shown in var l=gps.library;l.hiddenGroups.removeAll{$0==g};if !shown{l.hiddenGroups.append(g)};commit(gps.waypoints,l)})) { HStack { Circle().fill(waypointColor(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)).frame(width:12,height:12);Text("\(g) (\(gps.waypoints.filter{($0.group ?? "")==g}.count))") } }
+                            Menu {
+                                Section("フォルダの既定色") { ForEach(WaypointFolderColors.palette){item in Button { var l=gps.library;l.groupColors[g]=item.hex;commit(gps.waypoints,l) } label:{Label(item.name,systemImage:(gps.library.groupColors[g] ?? WaypointFolderColors.fallback)==item.hex ? "checkmark.circle.fill" : "circle.fill").tint(waypointColor(item.hex)) } } }
+                                Button("名前を変更"){renameGroup=g;renamedGroup=g}
+                                Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g}
+                            } label:{Image(systemName:"ellipsis.circle")}
+                        }
+                    }
+                    Picker("選択した地点の移動先",selection:$destinationGroup){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
+                    Button("選択した\(selected.count)地点を移動") { commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup.isEmpty ? "メインフォルダ" : destinationGroup};return w},gps.library) }.disabled(selected.isEmpty)
+                } }
+    private var featuresSection: some View { Section("エリア・直線") {
+                    HStack { Button("円"){featureDraft=MapFeature(name:"円エリア",kind:"circle")};Spacer();Button("囲み"){featureDraft=MapFeature(name:"囲みエリア",kind:"area")};Spacer();Button("直線"){featureDraft=MapFeature(name:"直線",kind:"line")} }
+                    ForEach(gps.library.features){f in HStack {
+                        Button(f.name){featureDraft=f};Spacer()
+                        Toggle("表示",isOn:Binding(get:{f.visible},set:{value in var l=gps.library;if let i=l.features.firstIndex(where:{$0.id==f.id}){l.features[i].visible=value};commit(gps.waypoints,l)})).labelsHidden()
+                        Button(role:.destructive){confirmFeature=f} label:{Image(systemName:"trash")}
+                    } }
+                } }
+    private var waypointSelectionSection: some View { Section("地点を選択（出力・所属変更用）") {
+                    ForEach(gps.waypoints){w in Button {
+                        if selected.contains(w.id){selected.removeAll{$0==w.id}}else{selected.append(w.id)}
+                    } label:{HStack{Image(systemName:selected.contains(w.id) ? "checkmark.circle.fill" : "circle");Text(w.name);Spacer();Text((w.group ?? "").isEmpty ? "メインフォルダ" : w.group!).font(.caption)}} }
+                } }
     private func output(_ format:String) {
         var items = gps.waypoints.filter{scope=="all" || (scope=="group" ? ($0.group ?? "")==exportGroup : selected.contains($0.id))}
         let ids=Set(items.map(\.id))
@@ -174,3 +179,4 @@ struct FeatureDraftMap: UIViewRepresentable {
         }
     }
 }
+
