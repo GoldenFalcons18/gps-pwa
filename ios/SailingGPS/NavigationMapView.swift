@@ -346,8 +346,8 @@ struct NavigationMapView: UIViewRepresentable {
                 for f in p.library.features where f.visible && !p.library.hiddenGroups.contains(f.group) {
                     let points = f.boundary(p.waypoints.map(\.archiveEntry)).map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
                     guard points.count >= 2 else { continue }
-                    if f.kind == "line" { let line=MKPolyline(coordinates:points,count:points.count);line.title="feature:"+f.color;map.addOverlay(line) }
-                    else { let area=MKPolygon(coordinates:points,count:points.count);area.title="feature:"+f.color;map.addOverlay(area) }
+                    if f.kind == "line" { let line=MKPolyline(coordinates:points,count:points.count);line.title="feature:"+f.color;map.addOverlay(line, level:.aboveLabels) }
+                    else { let area=MKPolygon(coordinates:points,count:points.count);area.title="feature:"+f.color;map.addOverlay(area, level:.aboveLabels) }
                 }
             }
             // Keep the live lines above saved map features, matching their former order.
