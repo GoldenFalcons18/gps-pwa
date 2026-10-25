@@ -10,7 +10,6 @@ import android.view.MotionEvent
 import android.widget.FrameLayout
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.views.MapView
@@ -34,7 +33,14 @@ class NavigationMapPanel(
     private val waypointMarkersById = mutableMapOf<String, Marker>()
     private var waypointData = emptyList<Waypoint>()
     private var tileDaylight: Boolean? = true
-    private val nightTileSource = XYTileSource("CARTO Dark Matter", 0, 20, 256, ".png", arrayOf("https://basemaps.cartocdn.com/rastertiles/dark_all/"), "© OpenStreetMap contributors © CARTO")
+    private val nightDimOverlay = object : org.osmdroid.views.overlay.Overlay() {
+        private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(105, 0, 0, 0) }
+        var darkMode = false
+        override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean): Boolean {
+            if (!shadow && darkMode) canvas.drawColor(dimPaint.color)
+            return false
+        }
+    }
     private val targetLine = Polyline()
     private var target: GeoPoint? = null
     private val course = Polyline()
@@ -145,6 +151,7 @@ class NavigationMapPanel(
                 return true
             }
         }))
+        map.overlays.add(0, nightDimOverlay)
         container.addView(map, FrameLayout.LayoutParams(-1, -1))
         val zoomControls = android.widget.LinearLayout(context).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -224,7 +231,8 @@ class NavigationMapPanel(
         val daylightNow = NavigationUtils.isDaylight(lat, lon, System.currentTimeMillis())
         if (daylightNow != tileDaylight) {
             tileDaylight = daylightNow
-            map.setTileSource(if (daylightNow) TileSourceFactory.MAPNIK else nightTileSource)
+            nightDimOverlay.darkMode = !daylightNow
+            map.invalidate()
         }
         lastHeading = bearing
         boat.position = point
