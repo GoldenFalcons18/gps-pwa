@@ -125,7 +125,7 @@ struct StartTimerPanel: View {
                 HStack {
                     Button(running ? "一時停止" : paused ? "再開" : "開始") { toggle(at: now) }
                         .buttonStyle(.borderedProminent).tint(.green)
-                    Button(compact ? "次の:00へ同期" : "残り時間を「:00」に合わせる") { alignToNearestMinute(at: now) }
+                    Button(compact ? "近い:00へ同期" : "残り時間を近い「:00」に合わせる") { alignToNearestMinute(at: now) }
                         .buttonStyle(.bordered).tint(.orange)
                         .disabled(!running && !paused)
                     Button("リセット") { deadline = 0; pausedSeconds = 0; lastVoiceCue = "" }
