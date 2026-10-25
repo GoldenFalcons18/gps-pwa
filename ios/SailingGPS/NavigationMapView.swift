@@ -331,7 +331,11 @@ struct NavigationMapView: UIViewRepresentable {
                         pin.colorName = waypoint.colorName
                         pin.markSymbol = waypoint.markSymbol
                         pin.markText = waypoint.markText
-                        map.view(for: pin)?.image = CompactWaypointMarker.image(name: waypoint.name, color: UIColor(waypointColor(waypoint.colorName)), markText: waypoint.markText, markSymbol: waypoint.markSymbol)
+                        if let annotationView = map.view(for: pin) {
+                            let image = CompactWaypointMarker.image(name: waypoint.name, color: UIColor(waypointColor(waypoint.colorName)), markText: waypoint.markText, markSymbol: waypoint.markSymbol)
+                            annotationView.image = image
+                            annotationView.centerOffset = CGPoint(x: 0, y: -image.size.height / 2)
+                        }
                     } else {
                         pin = Pin(); pin.id = waypoint.id; pin.title = waypoint.name; pin.coordinate = waypoint.coordinate
                         pin.colorName = waypoint.colorName; pin.markSymbol = waypoint.markSymbol; pin.markText = waypoint.markText
@@ -440,8 +444,9 @@ struct NavigationMapView: UIViewRepresentable {
                 return view
             }
             let view = MKAnnotationView(annotation:pin,reuseIdentifier:nil)
-            view.image=CompactWaypointMarker.image(name:pin.title ?? "",color:UIColor(waypointColor(pin.colorName)),markText:pin.markText,markSymbol:pin.markSymbol)
-            view.centerOffset=CGPoint(x:0,y:-19)
+            let image=CompactWaypointMarker.image(name:pin.title ?? "",color:UIColor(waypointColor(pin.colorName)),markText:pin.markText,markSymbol:pin.markSymbol)
+            view.image=image
+            view.centerOffset=CGPoint(x:0,y:-image.size.height/2)
             view.displayPriority = .required;view.collisionMode = .rectangle
             view.canShowCallout=false;view.isEnabled=false
             view.accessibilityLabel=pin.title
@@ -466,17 +471,31 @@ enum CompactWaypointMarker {
         }
         let luminance=0.2126*linear(red)+0.7152*linear(green)+0.0722*linear(blue)
         let labelTextColor:UIColor=luminance > 0.179 ? .black : .white
-        let attrs:[NSAttributedString.Key:Any]=[.font:font,.foregroundColor:labelTextColor]
-        let labelSize=(name as NSString).size(withAttributes:attrs)
-        let width=ceil(max(22,labelSize.width+8));let height:CGFloat=38
+        let paragraph=NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineBreakMode = .byCharWrapping
+        let attrs:[NSAttributedString.Key:Any]=[.font:font,.foregroundColor:labelTextColor,.paragraphStyle:paragraph]
+        let maxLabelWidth:CGFloat=120
+        let labelBounds=(name as NSString).boundingRect(
+            with:CGSize(width:maxLabelWidth,height:CGFloat.greatestFiniteMagnitude),
+            options:[.usesLineFragmentOrigin,.usesFontLeading],attributes:attrs,context:nil
+        )
+        let labelHeight=max(14,ceil(labelBounds.height)+4)
+        let width=ceil(max(22,min(maxLabelWidth+8,labelBounds.width+8)))
+        let markerTop=labelHeight+2
+        let circleY=markerTop+9
+        let height=markerTop+24
         return UIGraphicsImageRenderer(size:CGSize(width:width,height:height)).image { _ in
             color.setFill()
-            UIBezierPath(roundedRect:CGRect(x:0,y:0,width:width,height:labelSize.height+3),cornerRadius:4).fill()
-            (name as NSString).draw(at:CGPoint(x:(width-labelSize.width)/2,y:1),withAttributes:attrs)
+            UIBezierPath(roundedRect:CGRect(x:0,y:0,width:width,height:labelHeight),cornerRadius:4).fill()
+            (name as NSString).draw(
+                in:CGRect(x:4,y:2,width:width-8,height:labelHeight-4),
+                withAttributes:attrs
+            )
             let x=width/2
             color.setFill()
-            let tail=UIBezierPath();tail.move(to:CGPoint(x:x-6,y:27));tail.addLine(to:CGPoint(x:x,y:38));tail.addLine(to:CGPoint(x:x+6,y:27));tail.close();tail.fill()
-            UIBezierPath(ovalIn:CGRect(x:x-9,y:14,width:18,height:18)).fill()
+            let tail=UIBezierPath();tail.move(to:CGPoint(x:x-6,y:circleY+4));tail.addLine(to:CGPoint(x:x,y:height));tail.addLine(to:CGPoint(x:x+6,y:circleY+4));tail.close();tail.fill()
+            UIBezierPath(ovalIn:CGRect(x:x-9,y:markerTop,width:18,height:18)).fill()
             if let text=markText,!text.isEmpty {
                 let glyph:[NSAttributedString.Key:Any]=[.font:UIFont.systemFont(ofSize:10,weight:.semibold),.foregroundColor:UIColor.white]
                 let size=(text as NSString).size(withAttributes:glyph)
