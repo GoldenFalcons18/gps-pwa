@@ -86,6 +86,12 @@ class GpsLoggingService : Service(), LocationListener {
     }
 
     private fun startLogging() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            debug("ACCESS_FINE_LOCATION not granted")
+            broadcastStatus(false, pausedSessionFile(this).exists())
+            stopSelf()
+            return
+        }
         val active = activeSessionFile(this)
         if (!active.exists()) {
             val name = "track-${java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US).format(java.util.Date())}.csv"
@@ -94,7 +100,6 @@ class GpsLoggingService : Service(), LocationListener {
             count = 0
             largestGapSeconds = 0L
         }
-        pausedSessionFile(this).delete()
         if (previous == null) runCatching {
             val last = trackFile(this).useLines { it.filter { line -> line.isNotBlank() }.lastOrNull() }
             val fields = last?.split(',') ?: emptyList()
@@ -105,12 +110,7 @@ class GpsLoggingService : Service(), LocationListener {
         }.onFailure { debug("Previous GPS fix recovery failed: ${it.message}") }
         startForeground(1001, notification("GPS記録中 / $count 点"))
         paused = false
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            debug("ACCESS_FINE_LOCATION not granted")
-            stopSelf()
-            return
-        }
+        pausedSessionFile(this).delete()
 
         if (wakeLock?.isHeld != true) {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
