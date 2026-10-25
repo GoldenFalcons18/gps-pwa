@@ -691,7 +691,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                     Toggle("移動中も磁気コンパスを使用",isOn:$compassWhileMoving)
@@ -851,8 +851,8 @@ struct ContentView: View {
         HStack {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = (mode + 1) % 4 } label: {
-                Text(["スピードメーター", "ナビゲーション", "セーリング", "タイマー"][max(0, min(3, mode))])
+            Button { mode = (mode + 1) % 5 } label: {
+                Text(["スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル"][max(0, min(4, mode))])
                     .font(.caption.bold()).lineLimit(1).minimumScaleFactor(0.7)
             }.accessibilityLabel("現在のモード。タップで次のモードに切替")
             Spacer()
@@ -913,9 +913,9 @@ struct ContentView: View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
             Button {
-                mode = (mode + 1) % 4
+                mode = (mode + 1) % 5
             } label: {
-                Text(["スピードメーター", "ナビゲーション", "セーリング", "スタートタイマー"][max(0, min(3, mode))])
+                Text(["スピードメーター", "ナビゲーション", "セーリング", "スタートタイマー", "シグナル"][max(0, min(4, mode))])
                     .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
                     .frame(minHeight: 44)
                     .contentShape(Rectangle())
@@ -970,8 +970,8 @@ struct ContentView: View {
     private var startTimerDashboard: some View {
         VStack(spacing: 8) {
             HStack(spacing: 4) {
-                ForEach(0..<4) { index in
-                    Button(["速度","地図","セーリング","タイマー"][index]) { mode = index }
+                ForEach(0..<5) { index in
+                    Button(["速度","地図","セーリング","タイマー","シグナル"][index]) { mode = index }
                         .frame(maxWidth: .infinity).buttonStyle(.bordered)
                         .tint(index == mode ? .green : .orange)
                 }
@@ -986,11 +986,19 @@ struct ContentView: View {
             )
         }.padding(8).background(.black).preferredColorScheme(.dark)
     }
+    private var signalDashboard: some View {
+        VStack(spacing: 4) {
+            modeTitle.frame(height: 38)
+            SignalTimerPanel(compact: false).padding(.horizontal, 8)
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.black).foregroundStyle(.white).preferredColorScheme(.dark)
+    }
     private var dashboard: some View {
         GeometryReader { geometry in
             let height = max(620, geometry.size.height)
             if mode == 2 { focusDashboard }
             else if mode == 3 { startTimerDashboard }
+            else if mode == 4 { signalDashboard }
             else { ScrollView {
                 VStack(spacing: 6) {
                     ZStack(alignment: .top) {
@@ -1181,7 +1189,8 @@ private struct ModeSelectionView: View {
         Mode(id: 1, title: "ナビゲーション", summary: "目標への方位・距離と現在地を確認します。", details: "地図、ウェイポイント、目標方位、距離を表示します。"),
         Mode(id: 0, title: "スピードメーター", summary: "スピードメーター", details: "GPS速度を大きく表示します。"),
         Mode(id: 2, title: "セーリング", summary: "SOG・COG・目標方位を大きく表示します。", details: "SOG（対地速度）、COG（対地針路）、目標方位を大きく表示します。真北／磁北を切り替えられます。"),
-        Mode(id: 3, title: "スタートタイマー", summary: "スタートラインまでの距離とカウントダウンを表示します。", details: "アウターマークとシグナルボートを登録し、ラインまでの距離を確認できます.")
+        Mode(id: 3, title: "スタートタイマー", summary: "スタートラインまでの距離とカウントダウンを表示します。", details: "アウターマークとシグナルボートを登録し、ラインまでの距離を確認できます."),
+        Mode(id: 4, title: "シグナル", summary: "旗のアニメーションとスタートまでの時間を表示します。", details: "ntp.nict.jpの時刻と同期するか、手動ゼロ合わせで開始できます。")
     ]
     var body: some View {
         NavigationStack {

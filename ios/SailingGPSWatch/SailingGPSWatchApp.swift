@@ -188,6 +188,7 @@ struct WatchNavigationView: View {
                         Button("ナビ") { mode = 0 }.foregroundStyle(mode == 0 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button("速度") { mode = 1 }.foregroundStyle(mode == 1 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button("タイマー") { mode = 2 }.foregroundStyle(mode == 2 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
+                        Button("シグナル") { mode = 3 }.foregroundStyle(mode == 3 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22).minimumScaleFactor(0.6)
                         Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button("移動中もコンパス：\(compassWhileMoving ? "ON" : "OFF")") { compassWhileMoving.toggle() }
@@ -204,13 +205,15 @@ struct WatchNavigationView: View {
                     let compass = sensors.compass(at: Date())
                     if mode == 0 { navigation(fix: fix, compass: compass) }
                     else if mode == 1 { speed(fix: fix,compass:compass) }
-                    else {
+                    else if mode == 2 {
                         StartTimerPanel(
                             currentLocation: fix.map { StartLineCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) },
                             metric: metric,
                             compact: true,
                             onRegisterWaypoint: { kind, coordinate in receiver.registerStartLineWaypoint(kind: kind, coordinate: coordinate) }
                         )
+                    } else {
+                        SignalTimerPanel(compact: true)
                     }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
