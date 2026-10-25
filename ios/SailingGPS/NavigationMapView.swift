@@ -14,8 +14,13 @@ private final class OpenStreetMapOverlay: MKTileOverlay {
         return URLSession(configuration: configuration)
     }()
 
-    init() {
-        super.init(urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
+    let daylight: Bool
+    init(daylight: Bool) {
+        self.daylight = daylight
+        let template = daylight
+            ? "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            : "https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png"
+        super.init(urlTemplate: template)
         tileSize = CGSize(width: 256, height: 256)
         minimumZ = 0
         maximumZ = 19
@@ -116,10 +121,13 @@ struct NavigationMapView: UIViewRepresentable {
         map.delegate = context.coordinator
         map.isPitchEnabled = false
         map.showsCompass = true
-        let tiles = OpenStreetMapOverlay()
+        let daylight = location.map { CoordinateInput.isDaylight(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude, date: Date()) } ?? true
+        context.coordinator.tileDaylight = daylight
+        let tiles = OpenStreetMapOverlay(daylight: daylight)
         map.addOverlay(tiles, level: .aboveLabels)
         let attribution = UILabel()
-        attribution.text = "© OpenStreetMap contributors"
+        attribution.text = daylight ? "© OpenStreetMap contributors" : "© OpenStreetMap contributors © CARTO"
+        attribution.tag = 971
         attribution.font = .systemFont(ofSize: 9)
         attribution.textColor = .white
         attribution.backgroundColor = UIColor.black.withAlphaComponent(0.62)
@@ -162,6 +170,7 @@ struct NavigationMapView: UIViewRepresentable {
         var lastShowAll = 0
         private var didInitialWaypointFit = false
         private var rendering = false
+        var tileDaylight: Bool?
         private var signature = ""
         private var courseHeading: Double?
         private var lastLocationTime: Date?
@@ -266,6 +275,13 @@ struct NavigationMapView: UIViewRepresentable {
             defer { rendering = false }
             self.map = map
             let p = parent
+            let daylight = p.location.map { CoordinateInput.isDaylight(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude, date: Date()) } ?? true
+            if tileDaylight != daylight {
+                tileDaylight = daylight
+                map.removeOverlays(map.overlays.filter { $0 is OpenStreetMapOverlay })
+                map.addOverlay(OpenStreetMapOverlay(daylight: daylight), level: .aboveLabels)
+                (map.viewWithTag(971) as? UILabel)?.text = daylight ? "© OpenStreetMap contributors" : "© OpenStreetMap contributors © CARTO"
+            }
             if let previousScale, previousScale != p.metersPerCm, !p.following {
                 let camera = map.camera.copy() as! MKMapCamera
                 camera.altitude *= p.metersPerCm / previousScale
