@@ -16,6 +16,7 @@ struct DetailedSettingsView: View {
     @AppStorage("zoneEnter") private var zoneEnter=true
     @AppStorage("zoneExit") private var zoneExit=true
     @AppStorage("zoneSound") private var zoneSound=true
+    @AppStorage("zoneVoice") private var zoneVoice=true
     @AppStorage("zoneHaptic") private var zoneHaptic=true
     @AppStorage("zoneAccuracy") private var zoneAccuracy=50.0
     @AppStorage("zoneMargin") private var zoneMargin=10.0
@@ -65,6 +66,7 @@ struct DetailedSettingsView: View {
                         Text("画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。最初の位置は基準として登録し、通知しません。").font(.caption)
                         Toggle("エリアに入ったら通知",isOn:$zoneEnter)
                         Toggle("エリアから出たら通知",isOn:$zoneExit)
+                        Toggle("音声案内（通知とは別）",isOn:$zoneVoice)
                         Toggle("通知音",isOn:$zoneSound)
                         Toggle("画面表示中の触覚通知",isOn:$zoneHaptic)
                         Text("通知の許可："+notificationStatus).font(.caption)

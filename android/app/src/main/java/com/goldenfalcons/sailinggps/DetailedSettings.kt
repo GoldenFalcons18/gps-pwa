@@ -61,7 +61,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "縮尺・地点表示について" to {AlertDialog.Builder(activity).setMessage("地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。").setPositiveButton("閉じる",null).show()}))
     private fun zones():Unit=menu("ゾーンアラート",listOf(
         toggle("有効","zoneEnabled",false),"監視するエリアを選択" to ::selectZones,
-        toggle("エリアに入ったら通知","zoneEnter"),toggle("エリアから出たら通知","zoneExit"),toggle("通知音","zoneSound"),toggle("振動","zoneHaptic"),
+        toggle("エリアに入ったら通知","zoneEnter"),toggle("エリアから出たら通知","zoneExit"),toggle("音声案内（通知とは別）","zoneVoice",true),toggle("通知音","zoneSound"),toggle("振動","zoneHaptic"),
         "使用するGPS精度：±${prefs.getInt("zoneAccuracy",50)}m" to {number("使用するGPS精度","zoneAccuracy",listOf(20,50,100),50,"m以内")},
         "境界からの余裕：${prefs.getInt("zoneMargin",10)}m" to {number("境界からの余裕","zoneMargin",listOf(5,10,20),10,"m")},
         "連続確認回数：${prefs.getInt("zoneConfirmations",3)}回" to {number("連続確認回数","zoneConfirmations",listOf(2,3,5),3,"回")},

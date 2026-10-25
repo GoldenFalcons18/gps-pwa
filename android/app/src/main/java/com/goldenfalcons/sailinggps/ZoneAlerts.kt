@@ -6,8 +6,10 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
+import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import java.util.Locale
 
 /** Shared by foreground preview and logging service so the same fix cannot alert twice. */
 object ZoneAlerts {
@@ -16,6 +18,24 @@ object ZoneAlerts {
     private var libraryRaw=""
     private var itemsRaw=""
     private var zones=emptyList<ZoneMonitor.Zone>()
+    private var speech:TextToSpeech?=null
+    private var speechReady=false
+    private var pendingSpeech:String?=null
+
+    private fun announce(context:Context,message:String) {
+        if(speech==null) {
+            pendingSpeech=message
+            speech=TextToSpeech(context.applicationContext) { status ->
+                speechReady=status==TextToSpeech.SUCCESS
+                if(speechReady) {
+                    speech?.language=Locale.JAPAN
+                    pendingSpeech?.let { speech?.speak(it,TextToSpeech.QUEUE_FLUSH,null,"zone-alert") }
+                    pendingSpeech=null
+                }
+            }
+        } else if(speechReady) speech?.speak(message,TextToSpeech.QUEUE_FLUSH,null,"zone-alert")
+        else pendingSpeech=message
+    }
     @Synchronized fun check(context:Context,point:Location) {
         val prefs=context.getSharedPreferences("display",Context.MODE_PRIVATE)
         if(!prefs.getBoolean("zoneEnabled",false)) {monitor.reset();configuration="";return}
@@ -38,15 +58,16 @@ object ZoneAlerts {
         val events=monitor.update(zones,MapCoordinate(point.latitude,point.longitude),if(point.hasAccuracy()) point.accuracy.toDouble() else Double.NaN,
             point.elapsedRealtimeNanos/1e9,elapsed,prefs.getInt("zoneAccuracy",50).toDouble(),prefs.getInt("zoneMargin",10).toDouble(),prefs.getInt("zoneConfirmations",3))
         events.filter{prefs.getBoolean(if(it.entered) "zoneEnter" else "zoneExit",true)}.forEach { event ->
+            val message=if(event.entered) "${event.name}に入りました" else "${event.name}から出ました"
+            if(prefs.getBoolean("zoneVoice",true)) announce(context,message)
             if(Build.VERSION.SDK_INT>=33 && ContextCompat.checkSelfPermission(context,Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) return@forEach
             val manager=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val sound=prefs.getBoolean("zoneSound",true);val haptic=prefs.getBoolean("zoneHaptic",true)
             val channelId="zone-alert-${if(sound) 1 else 0}-${if(haptic) 1 else 0}"
-            val channel=NotificationChannel(channelId,"ゾーンアラート（音${if(sound) "あり" else "なし"}・振動${if(haptic) "あり" else "なし"}）",NotificationManager.IMPORTANCE_HIGH)
+            val channel=NotificationChannel(channelId,"ゾーンアラート（通知音${if(sound) "あり" else "なし"}・振動${if(haptic) "あり" else "なし"}）",NotificationManager.IMPORTANCE_HIGH)
             if(!sound) channel.setSound(null,null)
             channel.enableVibration(haptic);manager.createNotificationChannel(channel)
             val intent=PendingIntent.getActivity(context,0,Intent(context,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val message=if(event.entered) "${event.name}に入りました" else "${event.name}から出ました"
             android.util.Log.d("SailingZoneAlert","POST id=${event.id} entered=${event.entered}")
             manager.notify("zone-${event.id}",2001,NotificationCompat.Builder(context,channelId).setSmallIcon(android.R.drawable.ic_dialog_alert)
                 .setContentTitle("ゾーンアラート").setContentText(message).setContentIntent(intent).setAutoCancel(true).build())

@@ -308,8 +308,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvModeTitle.isFocusable = true
         b.tvModeTitle.contentDescription = "現在のモード。タップで次のモードに切替"
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
-        b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("1分","3分","5分","10分"))
-        b.startTimerPreset.setSelection(2)
+        b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, (1..60).map { "${it}分" })
+        b.startTimerPreset.setSelection((displayPrefs.getInt("startTimerMinutes",5).coerceIn(1,60))-1)
+        b.startTimerPreset.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                displayPrefs.edit().putInt("startTimerMinutes",position+1).apply()
+            }
+        }
         b.btnCaptureOuterMark.setOnClickListener { captureStartLineEndpoint("outer") }
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
@@ -441,7 +447,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(end>now) {
             displayPrefs.edit().putLong("startTimerPausedSeconds",((end-now+999)/1000).coerceAtLeast(1)).remove("startTimerEndAt").apply()
         } else {
-            val duration=if(paused>0) paused else listOf(1,3,5,10).getOrElse(b.startTimerPreset.selectedItemPosition){5}*60L
+            val duration=if(paused>0) paused else (b.startTimerPreset.selectedItemPosition+1).coerceIn(1,60)*60L
             displayPrefs.edit().putLong("startTimerEndAt",now+duration*1000).remove("startTimerPausedSeconds").apply()
         }
         updateStartTimerUi()

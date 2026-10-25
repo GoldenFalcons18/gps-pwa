@@ -78,12 +78,13 @@ struct StartTimerPanel: View {
                     Text("登録地点は地図とウェイポイント一覧にも追加されます")
                         .font(compact ? .caption2 : .caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.65)
                 }.buttonStyle(.bordered).tint(.orange)
-                HStack(spacing: compact ? 2 : 8) {
-                    ForEach([1, 3, 5, 10], id: \.self) { minute in
-                        Button("\(minute)分") { selectedMinutes = minute; if !running { pausedSeconds = 0; deadline = 0 } }
-                            .buttonStyle(.bordered).tint(selectedMinutes == minute ? .green : .gray)
-                            .font(compact ? .caption2 : .body)
-                    }
+                HStack(spacing: compact ? 8 : 14) {
+                    Text("時間").font(compact ? .caption2 : .body).foregroundStyle(.secondary)
+                    Button("−") { selectedMinutes = max(1, selectedMinutes - 1); if !running { pausedSeconds = 0; deadline = 0 } }
+                        .accessibilityLabel("タイマー時間を1分短く").buttonStyle(.bordered).tint(.orange)
+                    Text("\(selectedMinutes)分").font(compact ? .caption : .headline).monospacedDigit().frame(minWidth: compact ? 38 : 52)
+                    Button("＋") { selectedMinutes = min(60, selectedMinutes + 1); if !running { pausedSeconds = 0; deadline = 0 } }
+                        .accessibilityLabel("タイマー時間を1分長く").buttonStyle(.bordered).tint(.orange)
                 }
                 HStack {
                     Button(running ? "一時停止" : paused ? "再開" : "開始") { toggle(at: now) }

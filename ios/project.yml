@@ -28,7 +28,7 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        UIBackgroundModes: [location]
+        UIBackgroundModes: [location, audio]
         NSLocationWhenInUseUsageDescription: 航行位置と航跡を表示・記録します。
         NSLocationAlwaysAndWhenInUseUsageDescription: 画面を消した状態でも、開始した航跡記録を続けます。
         UILaunchScreen: {}

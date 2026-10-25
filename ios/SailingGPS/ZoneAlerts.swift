@@ -1,11 +1,13 @@
 import CoreLocation
 import UserNotifications
 import UIKit
+import AVFoundation
 
 final class ZoneAlerts: NSObject, UNUserNotificationCenterDelegate {
     static let shared = ZoneAlerts()
     private var monitor=ZoneMonitor()
     private var configuration=""
+    private let speechSynthesizer=AVSpeechSynthesizer()
     private override init() { super.init();UNUserNotificationCenter.current().delegate=self }
     func requestPermission() { UNUserNotificationCenter.current().requestAuthorization(options:[.alert,.sound,.badge]) { _,_ in } }
     func check(_ point:CLLocation, library:MapLibrary, waypoints:[Waypoint]) -> String? {
@@ -28,6 +30,16 @@ final class ZoneAlerts: NSObject, UNUserNotificationCenterDelegate {
         for event in events where prefs.object(forKey:event.entered ? "zoneEnter":"zoneExit") as? Bool ?? true {
             let text="\(event.name)：\(event.entered ? "進入":"退出")を検知"
             let body=event.entered ? "\(event.name)に入りました":"\(event.name)から出ました"
+            if prefs.object(forKey:"zoneVoice") as? Bool ?? true {
+                DispatchQueue.main.async {
+                    let session=AVAudioSession.sharedInstance()
+                    try? session.setCategory(.playback,mode:.spokenAudio,options:[.duckOthers])
+                    try? session.setActive(true)
+                    let utterance=AVSpeechUtterance(string:body)
+                    utterance.voice=AVSpeechSynthesisVoice(language:"ja-JP")
+                    self.speechSynthesizer.speak(utterance)
+                }
+            }
             let content=UNMutableNotificationContent();content.title="ゾーンアラート";content.body=body
             if prefs.object(forKey:"zoneSound") as? Bool ?? true { content.sound = .default }
             UNUserNotificationCenter.current().add(.init(identifier:"zone-"+event.id,content:content,trigger:nil))
