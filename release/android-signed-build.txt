@@ -1,1 +1,1 @@
-1.7.17 versionCode 33 Recording controls, relative bearing, and RGB colors
+1.7.18 versionCode 34 Day and night map tiles; recording status beside mode
