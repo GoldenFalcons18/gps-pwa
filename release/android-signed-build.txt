@@ -1,1 +1,1 @@
-1.7.14 versionCode 30 Android and iPhone UI alignment, folder colors, hidden waypoint filtering, map stability, Watch recording control
+1.7.16 versionCode 32 Compass while moving, spoken zone alerts, minute timer settings, 500ms GPS update request
