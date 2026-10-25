@@ -32,4 +32,17 @@ object StartLineMath {
         val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
         return "%02d:%02d".format(value / 60, value % 60)
     }
+
+    fun isMinuteCountdown(seconds: Double): Boolean {
+        val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
+        return value > 0 && value % 60 in 1..10
+    }
+
+    fun isThirtySecondWarning(seconds: Double): Boolean {
+        val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
+        return value > 0 && value % 60 == 30
+    }
+
+    fun nearestMinute(seconds: Double): Long =
+        (seconds.coerceAtLeast(0.0) / 60.0).roundToInt().coerceAtLeast(1) * 60L
 }
