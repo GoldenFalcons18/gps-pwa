@@ -1,1 +1,1 @@
-1.7.18 versionCode 34 Day and night map tiles; recording status beside mode
+1.7.19 versionCode 35 Fix API-key-required map tiles
