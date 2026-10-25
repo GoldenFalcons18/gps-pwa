@@ -24,8 +24,11 @@ final class StartLineTests: XCTestCase {
         XCTAssertTrue(StartLineMath.isMinuteCountdown(60 + 1))
         XCTAssertFalse(StartLineMath.isMinuteCountdown(11))
         XCTAssertTrue(StartLineMath.isThirtySecondWarning(30))
-        XCTAssertTrue(StartLineMath.isThirtySecondWarning(90))
+        XCTAssertFalse(StartLineMath.isThirtySecondWarning(90))
         XCTAssertFalse(StartLineMath.isThirtySecondWarning(29))
+        XCTAssertTrue(StartLineMath.isMinuteMarker(60))
+        XCTAssertTrue(StartLineMath.isMinuteMarker(180))
+        XCTAssertFalse(StartLineMath.isMinuteMarker(59))
         XCTAssertEqual(StartLineMath.nearestMinute(89), 60)
         XCTAssertEqual(StartLineMath.nearestMinute(91), 120)
     }
