@@ -107,7 +107,7 @@ class GpsLoggingService : Service(), LocationListener {
 
         try {
             locationManager.removeUpdates(this)
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this)
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 500L, 0f, this)
             broadcastStatus(true)
             debug("GPS logging started")
         } catch (e: Exception) {
