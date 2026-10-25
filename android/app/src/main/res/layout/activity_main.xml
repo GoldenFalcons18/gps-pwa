@@ -103,7 +103,7 @@
             <Button android:id="@+id/btnClearTrack" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="記録データ削除" android:textSize="18sp" />
             <Button android:id="@+id/btnCheckUpdate" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="更新を確認" android:textSize="18sp" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="ウェイポイント追加（度分式）" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" />
-            <EditText android:id="@+id/etWpName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="名称" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
+            <EditText android:id="@+id/etWpName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="名称（改行可）" android:inputType="textCapSentences|textMultiLine" android:minLines="2" android:maxLines="4" android:gravity="top|start" android:textColor="@color/white" android:textColorHint="@color/gray_text" />
             <Button android:id="@+id/btnWpAppearance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="● マーク・色を選ぶ" />
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="緯度" android:textColor="@color/white" android:textSize="18sp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
