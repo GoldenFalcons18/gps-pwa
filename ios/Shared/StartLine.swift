@@ -35,4 +35,18 @@ enum StartLineMath {
         let value = max(0, Int(seconds.rounded(.up)))
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
+
+    static func isMinuteCountdown(_ seconds: TimeInterval) -> Bool {
+        let value = max(0, Int(seconds.rounded(.up)))
+        return value > 0 && (1...10).contains(value % 60)
+    }
+
+    static func isThirtySecondWarning(_ seconds: TimeInterval) -> Bool {
+        let value = max(0, Int(seconds.rounded(.up)))
+        return value > 0 && value % 60 == 30
+    }
+
+    static func nearestMinute(_ seconds: TimeInterval) -> TimeInterval {
+        max(60, (seconds / 60).rounded() * 60)
+    }
 }
