@@ -1,1 +1,1 @@
-1.7.16 versionCode 32 Compass while moving, spoken zone alerts, minute timer settings, 500ms GPS update request
+1.7.17 versionCode 33 Recording controls, relative bearing, and RGB colors
