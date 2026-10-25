@@ -357,7 +357,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
-            mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
+            mapPanel?.onFollowingChanged = { following ->
+                b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置"
+                b.btnFollow.contentDescription = if (following) "地図の現在地追従中" else "地図を再中心に配置して追従"
+                if (BuildConfig.DEBUG) b.btnFollow.post {
+                    val xy = IntArray(2); b.btnFollow.getLocationOnScreen(xy)
+                    android.util.Log.d("SailingUiBounds", "FOLLOW_BUTTON=${xy[0]},${xy[1]},${xy[0]+b.btnFollow.width},${xy[1]+b.btnFollow.height}")
+                }
+            }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
             mapPanel?.setWaypoints(waypoints.filter { it.group !in library.hiddenGroups }, activeWaypoint)
             mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)

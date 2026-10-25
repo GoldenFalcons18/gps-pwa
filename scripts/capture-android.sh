@@ -160,14 +160,12 @@ adb emu geo fix 139.467 35.318
 sleep 3
 # Initial waypoint framing intentionally pauses follow mode. Enable follow explicitly
 # before validating heading rotation, using the live control bounds rather than a fixed tap.
-adb shell uiautomator dump /sdcard/follow-window.xml >/dev/null
-adb pull /sdcard/follow-window.xml screenshots/follow-window.xml >/dev/null
+adb logcat -d -s SailingUiBounds > screenshots/follow-bounds.log
 read -r FOLLOW_X FOLLOW_Y < <(python3 - <<'PYFOLLOW'
-import pathlib,xml.etree.ElementTree as E
-root=E.parse('screenshots/follow-window.xml').getroot()
-node=next((n for n in root.iter('node') if n.get('resource-id','').endswith('/btnFollow') and n.get('visible-to-user')=='true'),None)
-assert node is not None,'Follow control is not visible'
-a,b,c,d=map(int,node.get('bounds').replace('][',',').strip('[]').split(','))
+import pathlib,re
+rows=re.findall(r'FOLLOW_BUTTON=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/follow-bounds.log').read_text())
+assert rows,'Follow control is not visible'
+a,b,c,d=map(int,rows[-1])
 print((a+c)//2,(b+d)//2)
 PYFOLLOW
 )
