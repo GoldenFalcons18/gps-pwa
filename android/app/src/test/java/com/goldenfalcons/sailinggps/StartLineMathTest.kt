@@ -20,5 +20,14 @@ class StartLineMathTest {
         assertNull(StartLineMath.distanceMeters(boat, boat, StartLineCoordinate(91.0, 0.0)))
         assertEquals("05:00", StartLineMath.countdown(300.0))
         assertEquals("00:01", StartLineMath.countdown(0.1))
+        org.junit.Assert.assertTrue(StartLineMath.isMinuteCountdown(10.0))
+        org.junit.Assert.assertTrue(StartLineMath.isMinuteCountdown(61.0))
+        org.junit.Assert.assertFalse(StartLineMath.isMinuteCountdown(11.0))
+        org.junit.Assert.assertTrue(StartLineMath.isThirtySecondWarning(30.0))
+        org.junit.Assert.assertFalse(StartLineMath.isThirtySecondWarning(90.0))
+        org.junit.Assert.assertTrue(StartLineMath.isMinuteMarker(60.0))
+        org.junit.Assert.assertTrue(StartLineMath.isMinuteMarker(180.0))
+        org.junit.Assert.assertEquals(60L, StartLineMath.nearestMinute(89.0))
+        org.junit.Assert.assertEquals(120L, StartLineMath.nearestMinute(91.0))
     }
 }
