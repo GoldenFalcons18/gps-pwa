@@ -2,6 +2,14 @@ import XCTest
 @testable import CoordinateInput
 
 final class CoordinateInputTests: XCTestCase {
+    func testDaylightUsesSolarPosition() {
+        let formatter = ISO8601DateFormatter()
+        let noon = formatter.date(from: "2026-06-21T03:00:00Z")!
+        let night = formatter.date(from: "2026-06-21T15:00:00Z")!
+        XCTAssertTrue(CoordinateInput.isDaylight(latitude: 35.3, longitude: 139.5, date: noon))
+        XCTAssertFalse(CoordinateInput.isDaylight(latitude: 35.3, longitude: 139.5, date: night))
+    }
+
     func testLowerBoatAnchorLooksAhead() {
         let north = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 0, mapHeight: 600, pointsPerCm: 100)
         let south = CoordinateInput.followCenter(latitude: 0, longitude: 0, heading: 180, mapHeight: 600, pointsPerCm: 100)
