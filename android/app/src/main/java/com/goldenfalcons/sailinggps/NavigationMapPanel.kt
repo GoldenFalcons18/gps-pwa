@@ -38,7 +38,6 @@ class NavigationMapPanel(
         var darkMode = false
         override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean): Boolean {
             if (!shadow && darkMode) canvas.drawColor(dimPaint.color)
-            return false
         }
     }
     private val targetLine = Polyline()
