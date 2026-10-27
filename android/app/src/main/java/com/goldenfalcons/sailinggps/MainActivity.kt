@@ -325,12 +325,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();buildSignalRows();updateSignalUi() }
         }
-        b.signalHornCount.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("ホーン 1回","ホーン 2回","ホーン 3回"))
-        b.signalHornCount.setSelection((displayPrefs.getInt("signalHornCount",1)-1).coerceIn(0,2))
-        b.signalHornCount.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalHornCount",position+1).apply() }
-        }
         b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalDurationIndex",position).apply();buildSignalRows();updateSignalUi() }
@@ -338,16 +332,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         buildSignalRows()
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
         b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").apply();updateSignalUi() }
-        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").apply();playSignalHorn();updateSignalUi() }
+        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").apply();playSignalHorn(signalHornPattern(currentSignalEvents().last()));updateSignalUi() }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         b.signalHornLength.max=29
         b.signalHornLength.progress=(displayPrefs.getInt("signalHornMs",700)/100-1).coerceIn(0,29)
-        b.tvHornLength.text="ホーン ${"%.1f".format(java.util.Locale.US,displayPrefs.getInt("signalHornMs",700)/1000.0)}秒"
+        b.tvHornLength.text="長音の長さ ${"%.1f".format(java.util.Locale.US,displayPrefs.getInt("signalHornMs",700)/1000.0)}秒"
         b.signalHornLength.setOnSeekBarChangeListener(object:android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar:android.widget.SeekBar?,progress:Int,fromUser:Boolean) {
                 val millis=(progress+1)*100
                 displayPrefs.edit().putInt("signalHornMs",millis).apply()
-                b.tvHornLength.text="ホーン ${"%.1f".format(java.util.Locale.US,millis/1000.0)}秒"
+                b.tvHornLength.text="長音の長さ ${"%.1f".format(java.util.Locale.US,millis/1000.0)}秒"
             }
             override fun onStartTrackingTouch(seekBar:android.widget.SeekBar?) {}
             override fun onStopTrackingTouch(seekBar:android.widget.SeekBar?) {}
@@ -393,8 +387,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             })
             row.addView(TextView(this).apply {text=event.title;textSize=14f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,-1,1f)})
             row.addView(TextView(this).apply {text=if(event.secondsBeforeStart==0) "00:00" else "%02d:%02d".format(event.secondsBeforeStart/60,event.secondsBeforeStart%60);textSize=12f;setTextColor(Color.LTGRAY);typeface=android.graphics.Typeface.MONOSPACE})
+            row.addView(android.widget.Spinner(this).apply {
+                adapter=ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,listOf("短音","長音","連発"))
+                setSelection(signalHornPattern(event))
+                onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+                    override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { val profile=SignalSequence.profiles.getOrElse(profileIndex){SignalSequence.profiles[0]};displayPrefs.edit().putInt("signalHornPattern.${profile.id}.${event.id}",position).apply() }
+                }
+                layoutParams=LinearLayout.LayoutParams(82,-1)
+            })
             b.signalSequenceContainer.addView(row);signalRows+=row
         }
+    }
+    private fun currentSignalEvents():List<SignalEvent> {
+        val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+        val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        return SignalSequence.events(minutes,profile)
+    }
+    private fun signalHornPattern(event:SignalEvent):Int {
+        val profile=SignalSequence.profiles.getOrElse(displayPrefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}
+        return displayPrefs.getInt("signalHornPattern.${profile.id}.${event.id}",1).coerceIn(0,2)
     }
     private fun toggleSignalSequence() {
         val now=signalNow();val end=displayPrefs.getLong("signalEndAt",0L);val paused=displayPrefs.getLong("signalPausedSeconds",0L)
@@ -403,18 +415,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
             val seconds=if(paused>0) paused else minutes*60L
             displayPrefs.edit().putLong("signalEndAt",now+seconds*1000).remove("signalPausedSeconds").apply()
-            if(paused<=0) playSignalHorn()
+            if(paused<=0) playSignalHorn(signalHornPattern(currentSignalEvents().first()))
         }
         lastSignalEventIndex=-1;updateSignalUi()
     }
     private var lastSignalEventIndex=-1
     private var signalTone:android.media.ToneGenerator?=null
-    private fun playSignalHorn() {
+    private fun playSignalHorn(pattern:Int) {
         if(signalTone==null) signalTone=android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC,75)
-        val count=displayPrefs.getInt("signalHornCount",1).coerceIn(1,3)
         val duration=displayPrefs.getInt("signalHornMs",700).coerceIn(100,3000)
+        val pulse=if(pattern==0) minOf(duration,220) else if(pattern==1) duration else minOf(duration,250)
+        val count=if(pattern==2) 3 else 1
         val handler=android.os.Handler(mainLooper)
-        repeat(count) { index -> handler.postDelayed({ signalTone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP,duration) },index*(duration+180L)) }
+        repeat(count) { index -> handler.postDelayed({ signalTone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP,pulse) },index*(pulse+180L)) }
     }
     private fun syncNictClock() {
         b.btnNictSync.isEnabled=false;b.tvNictStatus.text="ntp.nict.jp に接続中…"
@@ -454,7 +467,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 row.animate().alpha(1f).setDuration(220).start()
             }
             if(running && signalActiveIndex>=0) {
-                playSignalHorn()
+                playSignalHorn(signalHornPattern(event))
             }
             signalActiveIndex=active
         }
