@@ -316,6 +316,26 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if let index = waypoints.firstIndex(where: { $0.id == waypoint.id }) { waypoints[index] = waypoint; saveWaypoints(); log("Waypoint updated: " + waypoint.name) }
         else { add(waypoint) }
     }
+    func upsertStartLineWaypoint(kind: String, coordinate: StartLineCoordinate) {
+        guard coordinate.isValid, ["outer", "signal"].contains(kind) else { return }
+        let isOuter = kind == "outer"
+        let name = isOuter ? "アウターマーク" : "シグナルボート"
+        let key = "startLine.\(kind).waypointID"
+        let storedID = UserDefaults.standard.string(forKey: key).flatMap(UUID.init(uuidString:))
+        let id = storedID ?? UUID()
+        let waypoint = Waypoint(
+            id: id,
+            name: name,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            note: "スタートライン基準点",
+            colorName: isOuter ? "#FFAA00" : "#00C8D7",
+            markSymbol: isOuter ? "marine.buoy" : "sailboat.fill",
+            group: defaultWaypointFolder
+        )
+        upsert(waypoint)
+        UserDefaults.standard.set(id.uuidString, forKey: key)
+    }
     func resetCounter() {
         recordedDistance = 0; maximumSpeed = 0; elapsedBeforeStart = 0
         previousRecordedLocation = nil; recordingStartedAt = recording ? Date() : nil
@@ -443,6 +463,7 @@ struct ContentView: View {
     @State private var importSummary = ""
     @State private var settings = false
     @State private var menuPresented = false
+    @State private var modeSelectorPresented = false
     @State private var waypointListPresented = false
     @State private var trackListPresented = false
     @State private var waypointFolder = ""
@@ -624,7 +645,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーション").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
@@ -746,34 +767,54 @@ struct ContentView: View {
     }
     private var navigationMenu: some View {
         GeometryReader { proxy in
-            HStack(spacing: proxy.size.width * 0.12) {
-                VStack(spacing: 5) {
-                    menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
-                    menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
-                    menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
-                    menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
-                    menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
-                    menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
-                    menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
-                    menuTile("設定") { menuAction { settings = true } }
-                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → スピードメーター"][max(0,min(2,mode))]) { menuAction { mode = (mode + 1) % 3 } }
-                }
-                VStack(spacing: 5) {
-                    menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
-                    menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
-                    menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
-                    menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
-                    menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
-                    menuTile("完了", done: true) { menuPresented = false }
-                }
-            }.padding(4)
+            if modeSelectorPresented {
+                VStack(spacing: 7) {
+                    HStack {
+                        Text("モード選択").font(.title2.bold()).foregroundStyle(.white)
+                        Spacer()
+                        Button("キャンセル") { modeSelectorPresented = false }.foregroundStyle(.orange)
+                    }
+                    let names = ["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"]
+                    let descriptions = ["SOG速度を大きく表示","地図・目標方位・距離","SOG・COG・目標方位を大きく表示","スタートまでの時間を計測","旗の順序と合図音を表示"]
+                    ForEach(0..<names.count, id: \.self) { index in
+                        menuTile(names[index], detail: descriptions[index], done: mode == index) {
+                            mode = index
+                            modeSelectorPresented = false
+                            menuPresented = false
+                        }
+                    }
+                    menuTile("戻る", done: true) { modeSelectorPresented = false }
+                }.padding(8)
+            } else {
+                HStack(spacing: proxy.size.width * 0.12) {
+                    VStack(spacing: 5) {
+                        menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
+                        menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
+                        menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
+                        menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
+                        menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
+                        menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
+                        menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
+                        menuTile("設定") { menuAction { settings = true } }
+                        menuTile("モード", detail: "現在のモード・一覧から選択") { modeSelectorPresented = true }
+                    }
+                    VStack(spacing: 5) {
+                        menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
+                        menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
+                        menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
+                        menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
+                        menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
+                        menuTile("完了", done: true) { menuPresented = false }
+                    }
+                }.padding(4)
+            }
         }.background(.black.opacity(0.45))
     }
     private var topControls: some View {
         HStack {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = (mode + 1) % 3 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
+            Button { mode = (mode + 1) % 5 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
                 .accessibilityLabel("表示モードを切替")
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
@@ -830,8 +871,9 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Text(mode == 0 ? "スピードメーター" : "ナビゲーター")
-                .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
+                 .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+                .onTapGesture { mode = (mode + 1) % 5 }
             Button { gps.recording ? gps.stop() : gps.start() } label: {
                 HStack(spacing: 3) {
                     Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
@@ -878,10 +920,45 @@ struct ContentView: View {
                 chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
+    private var startTimerDashboard: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach(0..<5) { index in
+                    Button(["スピード","ナビ","セーリング","タイマー","シグナル"][index]) { mode = index }
+                        .frame(maxWidth: .infinity).buttonStyle(.bordered)
+                        .tint(index == mode ? .green : .orange)
+                }
+                Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal") }
+                    .buttonStyle(.bordered).tint(.orange).accessibilityLabel("メニュー")
+            }.font(.caption)
+            StartTimerPanel(
+                currentLocation: gps.location.flatMap { Date().timeIntervalSince($0.timestamp) <= 15 && $0.horizontalAccuracy >= 0
+                    ? StartLineCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) : nil },
+                metric: metricUnits,
+                onRegisterWaypoint: { kind, coordinate in gps.upsertStartLineWaypoint(kind: kind, coordinate: coordinate) }
+            )
+        }.padding(8).background(.black).preferredColorScheme(.dark)
+    }
+    private var signalDashboard: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(0..<5) { index in
+                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode = index }
+                        .frame(maxWidth: .infinity).buttonStyle(.bordered)
+                        .tint(index == mode ? .green : .orange)
+                }
+                Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal") }
+                    .buttonStyle(.bordered).tint(.orange).accessibilityLabel("メニュー")
+            }.font(.caption)
+            SignalTimerPanel()
+        }.padding(8).background(.black).preferredColorScheme(.dark)
+    }
     private var dashboard: some View {
         GeometryReader { geometry in
             let height = max(620, geometry.size.height)
             if mode == 2 { focusDashboard }
+            else if mode == 3 { startTimerDashboard }
+            else if mode == 4 { signalDashboard }
             else { ScrollView {
                 VStack(spacing: 6) {
                     ZStack(alignment: .top) {
@@ -1020,6 +1097,12 @@ struct ContentView: View {
             guard let id = notification.userInfo?["targetID"] as? String else { return }
             selected = gps.waypoints.first { $0.id.uuidString == id }?.id
             savedTarget = selected?.uuidString ?? "__none__"
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .watchStartLineWaypointRequested)) { notification in
+            guard let kind = notification.userInfo?["kind"] as? String,
+                  let latitude = notification.userInfo?["latitude"] as? Double,
+                  let longitude = notification.userInfo?["longitude"] as? Double else { return }
+            gps.upsertStartLineWaypoint(kind: kind, coordinate: StartLineCoordinate(latitude: latitude, longitude: longitude))
         }
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }

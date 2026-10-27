@@ -1,1 +1,1 @@
-1.7.10 versionCode 26 reduce navigation map flicker
+1.8.1 versionCode 29 sailing signal mode

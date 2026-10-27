@@ -2,7 +2,10 @@ import Foundation
 import CoreLocation
 import WatchConnectivity
 
-extension Notification.Name { static let watchTargetChanged = Notification.Name("SailingGPSWatchTargetChanged") }
+extension Notification.Name {
+    static let watchTargetChanged = Notification.Name("SailingGPSWatchTargetChanged")
+    static let watchStartLineWaypointRequested = Notification.Name("SailingGPSWatchStartLineWaypointRequested")
+}
 
 /// Syncs saved waypoints and target selection; Watch navigation uses its own sensors.
 final class WatchNavigationBridge: NSObject, WCSessionDelegate {
@@ -78,6 +81,15 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             guard self.waypointsReady else { replyHandler(["deferred": true]); return }
             var accepted = true
             if message["selectTarget"] != nil { accepted = self.selectFromWatch(message) }
+            if let kind = message["registerStartLineWaypoint"] as? String,
+               let latitude = message["latitude"] as? Double,
+               let longitude = message["longitude"] as? Double,
+               ["outer", "signal"].contains(kind),
+               StartLineCoordinate(latitude: latitude, longitude: longitude).isValid {
+                NotificationCenter.default.post(name: .watchStartLineWaypointRequested, object: nil, userInfo: ["kind": kind, "latitude": latitude, "longitude": longitude])
+            } else if message["registerStartLineWaypoint"] != nil {
+                accepted = false
+            }
             self.publish()
             var reply = self.latest; reply["selectionAccepted"] = accepted
             replyHandler(reply)

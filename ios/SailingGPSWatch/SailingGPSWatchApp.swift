@@ -30,6 +30,27 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         UserDefaults.standard.set(pendingTime!.timeIntervalSince1970, forKey: "watchSelectionTime")
         message = ""; sendSelection()
     }
+    func registerStartLineWaypoint(kind: String, coordinate: StartLineCoordinate) {
+        guard ["outer", "signal"].contains(kind), coordinate.isValid,
+              WCSession.isSupported(), WCSession.default.activationState == .activated,
+              WCSession.default.isReachable else {
+            DispatchQueue.main.async { self.message = "iPhoneに接続してから地点を登録してください" }
+            return
+        }
+        WCSession.default.sendMessage([
+            "registerStartLineWaypoint": kind,
+            "latitude": coordinate.latitude,
+            "longitude": coordinate.longitude
+        ], replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                self?.message = (reply["selectionAccepted"] as? Bool == false)
+                    ? "地点を登録できませんでした"
+                    : "ウェイポイントに追加しました"
+            }
+        }, errorHandler: { [weak self] _ in
+            DispatchQueue.main.async { self?.message = "iPhoneに接続してから地点を登録してください" }
+        })
+    }
     private func clearPending() {
         pendingTime = nil; selectionPending = false; UserDefaults.standard.removeObject(forKey: "watchSelectionTime")
     }
@@ -123,13 +144,17 @@ struct WatchNavigationView: View {
                     HStack {
                         Button("ナビ") { mode = 0 }.foregroundStyle(mode == 0 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button("速度") { mode = 1 }.foregroundStyle(mode == 1 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
+                        Button("タイマー") { mode = 2 }.foregroundStyle(mode == 2 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
                         Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     let fix = sensors.fix(at: Date())
                     let compass = sensors.compass(at: Date())
                     if mode == 0 { navigation(fix: fix, compass: compass) }
-                    else { speed(fix: fix,compass:compass) }
+                    else if mode == 1 { speed(fix: fix,compass:compass) }
+                    else {
+                        SignalTimerPanel(compact: true)
+                    }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
                     if !receiver.message.isEmpty { Text(receiver.message).font(.caption2).foregroundStyle(.orange) }

@@ -2,13 +2,57 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="#000000">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="6dp">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="速度" />
-            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="地図" />
-            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="3項目" />
-            <Button android:id="@+id/btnFocusNorth" android:layout_width="56dp" android:layout_height="wrap_content" android:text="真北" android:minWidth="0dp" android:visibility="gone" />
-            <Button android:id="@+id/btnFocusMenu" android:layout_width="48dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:visibility="gone" />
+            <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="速度" />
+            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="地図" />
+            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="3項目" />
+            <Button android:id="@+id/btnTimerMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="タイマー" />
+            <Button android:id="@+id/btnSignalMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="シグナル" />
+            <Button android:id="@+id/btnFocusNorth" android:layout_width="46dp" android:layout_height="wrap_content" android:text="真北" android:textSize="11sp" android:minWidth="0dp" android:paddingLeft="1dp" android:paddingRight="1dp" android:visibility="gone" />
+            <Button android:id="@+id/btnFocusMenu" android:layout_width="38dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:paddingLeft="0dp" android:paddingRight="0dp" android:visibility="gone" />
         </LinearLayout>
         <LinearLayout android:id="@+id/focusPanel" android:layout_width="match_parent" android:layout_height="600dp" android:orientation="vertical" android:visibility="gone" />
+        <LinearLayout android:id="@+id/timerPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center" android:padding="16dp" android:visibility="gone">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="スタートタイマー" android:textColor="#FFAA00" android:textSize="28sp" android:gravity="center" />
+            <TextView android:id="@+id/tvStartCountdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="05:00" android:textColor="#00FF38" android:textSize="84sp" android:fontFamily="monospace" android:textStyle="bold" android:gravity="center" />
+            <TextView android:id="@+id/tvStartLineDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="スタートラインまで --" android:textColor="#FFFFFF" android:textSize="26sp" android:gravity="center" android:padding="12dp" />
+            <TextView android:id="@+id/tvOuterMark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="アウターマーク：未設定" android:textColor="#BBBBBB" android:textSize="16sp" android:gravity="center" />
+            <Button android:id="@+id/btnCaptureOuterMark" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地をアウターマークに登録" />
+            <TextView android:id="@+id/tvSignalBoat" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="シグナルボート：未設定" android:textColor="#BBBBBB" android:textSize="16sp" android:gravity="center" />
+            <Button android:id="@+id/btnCaptureSignalBoat" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地をシグナルボートに登録" />
+            <Spinner android:id="@+id/startTimerPreset" android:layout_width="match_parent" android:layout_height="48dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnStartTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="開始／一時停止" />
+                <Button android:id="@+id/btnResetTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/signalPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center_horizontal" android:padding="10dp" android:visibility="gone" android:background="#000000">
+            <TextView android:id="@+id/tvSignalClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--:--:--" android:gravity="center" android:textColor="#FFFFFF" android:textSize="18sp" android:fontFamily="monospace" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="180dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="6dp">
+                <com.goldenfalcons.sailinggps.SignalMastView android:id="@+id/signalMast" android:layout_width="110dp" android:layout_height="170dp" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+                    <TextView android:id="@+id/tvSignalTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="クラス旗を降下" android:textColor="#111111" android:textSize="20sp" android:gravity="center" android:background="#F58A00" android:padding="4dp" />
+                    <TextView android:id="@+id/tvSignalCountdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="−05" android:gravity="center" android:textColor="#FFFFFF" android:textSize="76sp" android:fontFamily="sans-serif-light" />
+                    <TextView android:id="@+id/tvSignalNextLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="次の信号まで" android:gravity="center" android:textColor="#AAAAAA" android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/signalSequenceContainer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="●短音　—長音　複数記号は連発。旗の順序は大会の帆走指示書に合わせてください" android:gravity="center" android:textColor="#888888" android:textSize="10sp" />
+            <TextView android:id="@+id/tvNictStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="端末時刻を使用中" android:gravity="center" android:textColor="#BBBBBB" android:textSize="12sp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/tvHornLength" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="長音 0.7秒" android:textColor="#FFFFFF" android:textSize="12sp" />
+                <SeekBar android:id="@+id/signalHornLength" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:max="29" android:progress="6" />
+            </LinearLayout>
+            <Spinner android:id="@+id/signalFlagProfile" android:layout_width="match_parent" android:layout_height="48dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
+                <Spinner android:id="@+id/signalDuration" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" />
+                <Button android:id="@+id/btnNictSync" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NTP同期" />
+                <Button android:id="@+id/btnSignalZero" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0秒合わせ" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnSignalStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="開始" />
+                <Button android:id="@+id/btnSignalReset" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
+            </LinearLayout>
+        </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/tvSpeedUnit" android:text="SOG · knot" android:textColor="#FFAA00" android:textSize="24sp" />
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />

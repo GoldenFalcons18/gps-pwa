@@ -57,7 +57,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private val clockTick = object : Runnable {
         override fun run() {
             b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
-            if(currentDisplayMode==2) updateNavigationUi()
+            if(currentDisplayMode>=2) updateNavigationUi()
+            if(currentDisplayMode==4) updateSignalUi()
             uiHandler.postDelayed(this, 1000)
         }
     }
@@ -72,6 +73,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var navigatorMode = false
     private var currentDisplayMode=0
     private val focusHiddenVisibility=mutableMapOf<android.view.View,Int>()
+    private val signalRows=mutableListOf<LinearLayout>()
+    private var signalActiveIndex=-1
+    private var signalClockOffsetMs:Long
+        get()=displayPrefs.getLong("signalClockOffsetMs",0L)
+        set(value){displayPrefs.edit().putLong("signalClockOffsetMs",value).apply()}
     private lateinit var focusSog:TextView
     private lateinit var focusCog:TextView
     private lateinit var focusBearing:TextView
@@ -293,7 +299,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupDisplayModes() {
         setupFocusPanel()
+        b.btnFocusMode.text="セーリング"
+        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode+1)%5) }
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
+        b.btnTimerMode.setOnClickListener { setDisplayMode(3) }
+        b.btnSignalMode.setOnClickListener { setDisplayMode(4) }
         b.btnFocusMenu.setOnClickListener { showNavigationMenu() }
         b.btnFocusNorth.setOnClickListener { displayPrefs.edit().putBoolean("instrumentMagnetic",!displayPrefs.getBoolean("instrumentMagnetic",false)).apply();updateNavigationUi() }
         b.btnSpeedMode.setOnClickListener { setDisplayMode(0) }
@@ -301,6 +311,41 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
+        b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("1分","3分","5分","10分"))
+        b.startTimerPreset.setSelection(2)
+        b.btnCaptureOuterMark.setOnClickListener { captureStartLineEndpoint("outer") }
+        b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
+        b.btnStartTimer.setOnClickListener { toggleStartTimer() }
+        b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
+        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス"))
+        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndex",2).coerceIn(0,3))
+        b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
+        b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
+        b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();buildSignalRows();updateSignalUi() }
+        }
+        b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalDurationIndex",position).apply();buildSignalRows();updateSignalUi() }
+        }
+        buildSignalRows()
+        b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
+        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").apply();updateSignalUi() }
+        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").apply();playSignalHorn(currentSignalEvents().last().hornPulses);updateSignalUi() }
+        b.btnNictSync.setOnClickListener { syncNictClock() }
+        b.signalHornLength.max=29
+        b.signalHornLength.progress=(displayPrefs.getInt("signalHornMs",700)/100-1).coerceIn(0,29)
+        b.tvHornLength.text="長音 ${"%.1f".format(java.util.Locale.US,displayPrefs.getInt("signalHornMs",700)/1000.0)}秒"
+        b.signalHornLength.setOnSeekBarChangeListener(object:android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar:android.widget.SeekBar?,progress:Int,fromUser:Boolean) {
+                val millis=(progress+1)*100
+                displayPrefs.edit().putInt("signalHornMs",millis).apply()
+                b.tvHornLength.text="長音 ${"%.1f".format(java.util.Locale.US,millis/1000.0)}秒"
+            }
+            override fun onStartTrackingTouch(seekBar:android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar:android.widget.SeekBar?) {}
+        })
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
     }
@@ -322,15 +367,118 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         targetCard.first.contentDescription="目標方位。タップして目標地点を変更"
         b.focusPanel.setOnLongClickListener {showNavigationMenu();true}
     }
+
+    private fun signalNow():Long=System.currentTimeMillis()+signalClockOffsetMs
+    private fun buildSignalRows() {
+        b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
+        val duration=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+        val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        SignalSequence.events(duration,profileIndex).forEach { event ->
+            val row=LinearLayout(this).apply {
+                orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
+                layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
+                background=android.graphics.drawable.GradientDrawable().apply {setColor(0x22111111);cornerRadius=5f}
+            }
+            row.addView(TextView(this).apply {text=if(event.raised) "↑" else "↓";textSize=19f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(32,-1)})
+            row.addView(TextView(this).apply {
+                text=event.flag;gravity=android.view.Gravity.CENTER;textSize=14f;setTextColor(Color.WHITE)
+                background=android.graphics.drawable.GradientDrawable().apply {setColor(event.color);cornerRadius=4f}
+                layoutParams=LinearLayout.LayoutParams(42,-1).apply {setMargins(2,0,8,0)}
+            })
+            row.addView(TextView(this).apply {text=event.title;textSize=14f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,-1,1f)})
+            row.addView(TextView(this).apply {text=if(event.secondsBeforeStart==0) "00:00" else "%02d:%02d".format(event.secondsBeforeStart/60,event.secondsBeforeStart%60);textSize=12f;setTextColor(Color.LTGRAY);typeface=android.graphics.Typeface.MONOSPACE})
+            row.addView(TextView(this).apply { text=event.hornPulses.joinToString(""){if(it==0)"●" else "—"};textSize=12f;setTextColor(Color.LTGRAY);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(42,-1) })
+            b.signalSequenceContainer.addView(row);signalRows+=row
+        }
+    }
+    private fun currentSignalEvents():List<SignalEvent> {
+        val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+        val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        return SignalSequence.events(minutes,profile)
+    }
+    private fun toggleSignalSequence() {
+        val now=signalNow();val end=displayPrefs.getLong("signalEndAt",0L);val paused=displayPrefs.getLong("signalPausedSeconds",0L)
+        if(end>now) displayPrefs.edit().putLong("signalPausedSeconds",((end-now+999)/1000).coerceAtLeast(1)).remove("signalEndAt").apply()
+        else {
+            val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+            val seconds=if(paused>0) paused else minutes*60L
+            displayPrefs.edit().putLong("signalEndAt",now+seconds*1000).remove("signalPausedSeconds").apply()
+            if(paused<=0) playSignalHorn(currentSignalEvents().first().hornPulses)
+        }
+        lastSignalEventIndex=-1;updateSignalUi()
+    }
+    private var lastSignalEventIndex=-1
+    private var signalTone:android.media.ToneGenerator?=null
+    private fun playSignalHorn(pulses:List<Int>) {
+        if(signalTone==null) signalTone=android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC,75)
+        val duration=displayPrefs.getInt("signalHornMs",700).coerceIn(100,3000)
+        val handler=android.os.Handler(mainLooper);var delay=0L
+        pulses.forEach { kind ->
+            val pulse=if(kind==0) minOf(duration,220) else duration
+            handler.postDelayed({ signalTone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP,pulse) },delay)
+            delay+=pulse+180L
+        }
+    }
+    private fun syncNictClock() {
+        b.btnNictSync.isEnabled=false;b.tvNictStatus.text="ntp.nict.jp に接続中…"
+        NictClock.query { result -> runOnUiThread {
+            b.btnNictSync.isEnabled=true
+            result.onSuccess { offset -> signalClockOffsetMs=offset;b.tvNictStatus.text="ntp.nict.jp 同期済み（差 ${if(offset>=0) "+" else ""}${offset} ms）";updateSignalUi() }
+                .onFailure { b.tvNictStatus.text="NTP同期失敗・端末時刻を使用中";Toast.makeText(this,"NTP同期に失敗しました",Toast.LENGTH_LONG).show() }
+        } }
+    }
+    private fun updateSignalUi() {
+        if(!::b.isInitialized) return
+        val now=signalNow()
+        val end=displayPrefs.getLong("signalEndAt",0L)
+        val paused=displayPrefs.getLong("signalPausedSeconds",0L)
+        val selectedMinutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+        val running=end>now
+        val remaining=when {end>0L->(end-now)/1000.0;paused>0L->paused.toDouble();else->selectedMinutes*60.0}
+        val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        val events=SignalSequence.events(selectedMinutes,profileIndex)
+        val active=SignalSequence.nextIndex(remaining,selectedMinutes,profileIndex)
+        val event=events[active]
+        val toEvent=SignalSequence.untilNext(remaining,active,selectedMinutes,profileIndex)
+        val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
+        b.tvSignalClock.text=clock
+        b.tvSignalTitle.text=event.title
+        b.tvSignalTitle.setBackgroundColor(event.color)
+        b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
+        b.tvSignalCountdown.text=if(toEvent<0) "+%02d".format(kotlin.math.abs(toEvent)) else "−%02d".format(toEvent)
+        b.tvSignalNextLabel.text=if(end>0L && !running && paused<=0L) "スタート信号" else if(!running && paused>0L) "一時停止中 · 次の信号まで" else "次の信号まで"
+        b.signalMast.show(event,running)
+        b.btnSignalStart.text=if(running) "一時停止" else if(paused>0L) "再開" else "開始"
+        if(active!=signalActiveIndex) {
+            signalRows.forEachIndexed { index,row ->
+                row.setBackgroundColor(if(index==active) 0x9939C45A.toInt() else 0x22111111)
+                row.animate().cancel()
+                if(index==active && running && signalActiveIndex>=0) row.alpha=0.75f
+                row.animate().alpha(1f).setDuration(220).start()
+            }
+            if(running && signalActiveIndex>=0) {
+                playSignalHorn(event.hornPulses)
+            }
+            signalActiveIndex=active
+        }
+    }
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
     private fun setDisplayMode(requestedMode:Int) {
-        val mode=requestedMode.coerceIn(0,2)
+        val mode=requestedMode.coerceIn(0,4)
+        val immersive=mode>=2
+        val wasImmersive=currentDisplayMode>=2
         val content=b.focusPanel.parent as LinearLayout
-        if(mode==2 && currentDisplayMode!=2) {
+        if(immersive && !wasImmersive) {
             focusHiddenVisibility.clear()
-            for(index in 1 until content.childCount) {val view=content.getChildAt(index);if(view!=b.focusPanel) focusHiddenVisibility[view]=view.visibility}
+            for(index in 1 until content.childCount) {
+                val view=content.getChildAt(index)
+                if(view!=b.focusPanel && view!=b.timerPanel) focusHiddenVisibility[view]=view.visibility
+            }
         }
-        if(mode!=2 && currentDisplayMode==2) {focusHiddenVisibility.forEach{(view,visibility)->view.visibility=visibility};focusHiddenVisibility.clear()}
+        if(!immersive && wasImmersive) {
+            focusHiddenVisibility.forEach{(view,visibility)->view.visibility=visibility}
+            focusHiddenVisibility.clear()
+        }
         currentDisplayMode=mode
         val navigator=mode==1
         navigatorMode = navigator
@@ -339,24 +487,113 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
             mapPanel?.setWaypoints(waypoints, activeWaypoint)
-        mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
+            mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
             updateMap()
             mapPanel?.resume()
         }
-        b.speedPanel.visibility = if (navigator) android.view.View.GONE else android.view.View.VISIBLE
+        b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = if (navigator) "ナビゲーター" else "スピードメーター"
-        if(mode==2) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
+        b.signalPanel.visibility=if(mode==4) android.view.View.VISIBLE else android.view.View.GONE
         if(mode==2) b.focusPanel.layoutParams=b.focusPanel.layoutParams.apply {height=maxOf((480*resources.displayMetrics.density).toInt(),resources.displayMetrics.heightPixels-(150*resources.displayMetrics.density).toInt())}
         b.btnSpeedMode.isEnabled = mode!=0
         b.btnNavigatorMode.isEnabled = mode!=1
         b.btnFocusMode.isEnabled=mode!=2
+        b.btnTimerMode.isEnabled=mode!=3
+        b.btnSignalMode.isEnabled=mode!=4
         b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
-        b.btnFocusMenu.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnFocusMenu.visibility=if(immersive) android.view.View.VISIBLE else android.view.View.GONE
         displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
         updateNavigationUi()
-        debug("Display mode=" + if (navigator) "NAVIGATOR" else "SPEEDOMETER")
+        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
+        if(mode==4) updateSignalUi()
+    }
+
+    private fun captureStartLineEndpoint(kind:String) {
+        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
+        val lat=latestLat; val lon=latestLon
+        if(lat==null || lon==null || age !in 0.0..15.0) {
+            Toast.makeText(this,"現在地GPSを取得してから登録してください",Toast.LENGTH_LONG).show()
+            return
+        }
+        val prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
+        displayPrefs.edit().putBoolean("${prefix}.set",true).putString("${prefix}.lat",lat.toString()).putString("${prefix}.lon",lon.toString()).apply()
+        val label=if(kind=="outer") "アウターマーク" else "シグナルボート"
+        saveStartLineWaypoint(kind, lat, lon)
+        Toast.makeText(this,"${label}をナビのウェイポイントに追加しました",Toast.LENGTH_SHORT).show()
+        updateStartTimerUi()
+    }
+
+    private fun saveStartLineWaypoint(kind:String, lat:Double, lon:Double) {
+        val isOuter = kind == "outer"
+        val name = if(isOuter) "アウターマーク" else "シグナルボート"
+        val idKey = "startLine.${kind}.waypointId"
+        val id = displayPrefs.getString(idKey, null) ?: java.util.UUID.randomUUID().toString()
+        val group = mainWaypointFolder
+        val waypoint = Waypoint(
+            id = id,
+            name = name,
+            lat = lat,
+            lon = lon,
+            mark = if(isOuter) "ブイ" else "🚢",
+            color = if(isOuter) "#FFAA00" else "#00C8D7",
+            note = "スタートライン基準点",
+            archiveMark = if(isOuter) "symbol:marine.buoy" else "symbol:ferry.fill",
+            group = group
+        )
+        val index = waypoints.indexOfFirst { it.id == id }
+        if(index >= 0) {
+            waypoints[index] = waypoint
+            if(activeWaypoint?.id == id) activeWaypoint = waypoint
+        } else {
+            waypoints += waypoint
+        }
+        displayPrefs.edit().putString(idKey, id).apply()
+        waypointStore.saveAll(waypoints)
+        renderWaypointList()
+        updateNavigationUi()
+    }
+
+    private fun toggleStartTimer() {
+        val now=System.currentTimeMillis()
+        val end=displayPrefs.getLong("startTimerEndAt",0L)
+        val paused=displayPrefs.getLong("startTimerPausedSeconds",0L)
+        if(end>now) {
+            displayPrefs.edit().putLong("startTimerPausedSeconds",((end-now+999)/1000).coerceAtLeast(1)).remove("startTimerEndAt").apply()
+        } else {
+            val duration=if(paused>0) paused else listOf(1,3,5,10).getOrElse(b.startTimerPreset.selectedItemPosition){5}*60L
+            displayPrefs.edit().putLong("startTimerEndAt",now+duration*1000).remove("startTimerPausedSeconds").apply()
+        }
+        updateStartTimerUi()
+    }
+
+    private fun updateStartTimerUi() {
+        if(!::b.isInitialized) return
+        val now=System.currentTimeMillis()
+        val end=displayPrefs.getLong("startTimerEndAt",0L)
+        val paused=displayPrefs.getLong("startTimerPausedSeconds",0L)
+        val remaining=if(end>now) (end-now)/1000.0 else paused.toDouble()
+        val running=end>now
+        val finished=end>0L && !running && paused<=0L
+        b.tvStartCountdown.text=if(finished) "START" else StartLineMath.countdown(remaining)
+        b.tvStartCountdown.setTextColor(if(finished) Color.rgb(255,170,0) else Color.GREEN)
+        b.btnStartTimer.text=if(running) "一時停止" else if(paused>0) "再開" else "開始"
+        fun endpoint(prefix:String):StartLineCoordinate? {
+            if(!displayPrefs.getBoolean("${prefix}.set",false)) return null
+            val lat=displayPrefs.getString("${prefix}.lat",null)?.toDoubleOrNull() ?: return null
+            val lon=displayPrefs.getString("${prefix}.lon",null)?.toDoubleOrNull() ?: return null
+            return StartLineCoordinate(lat,lon)
+        }
+        val outer=endpoint("startLine.outer"); val signal=endpoint("startLine.signal")
+        b.tvOuterMark.text=if(outer==null) "アウターマーク：未設定" else "アウターマーク：%.5f, %.5f".format(outer.latitude,outer.longitude)
+        b.tvSignalBoat.text=if(signal==null) "シグナルボート：未設定" else "シグナルボート：%.5f, %.5f".format(signal.latitude,signal.longitude)
+        val distance=if(latestLat!=null && latestLon!=null) StartLineMath.distanceMeters(StartLineCoordinate(latestLat!!,latestLon!!),outer,signal) else null
+        b.tvStartLineDistance.text=distance?.let {
+            if(metricUnits) "スタートラインまで %.0f m".format(it) else "スタートラインまで %.2f nm  ·  %.0f m".format(it/1852.0,it)
+        } ?: "スタートラインまで --"
     }
 
     private fun updateMap() {
@@ -513,6 +750,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateNavigationUi() {
+        if(currentDisplayMode==3) updateStartTimerUi()
         val threshold=(displayPrefs.getString("zeroSpeedThreshold","0")?.toDoubleOrNull() ?: 0.0)/NavigationUtils.MPS_TO_KT
         val speed = latestSpeedMps?.takeIf { it.isFinite() && it >= 0 }?.let{if(it<threshold) 0.0 else it}?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
         val unit = if (metricUnits) "km/h" else "knot"
@@ -808,6 +1046,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }.onFailure(::transferError) },{importWaypointsDocument.launch(arrayOf("*/*"))}).show()
     }
 
+    private fun showDisplayModePicker() {
+        val names=listOf("スピードメーター","ナビゲーション","セーリング","タイマー","シグナル")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("モード選択")
+            .setSingleChoiceItems(names.toTypedArray(),currentDisplayMode) { dialog, which ->
+                setDisplayMode(which)
+                dialog.dismiss()
+            }
+            .setNegativeButton("キャンセル",null)
+            .show()
+    }
+
     private fun showNavigationMenu() {
         showActionPanel("メニュー", listOf(
             "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
@@ -817,7 +1067,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
             "航跡一覧" to { showTrackList() },
-            "モード切替" to { setDisplayMode((currentDisplayMode+1)%3) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
+            "モード" to { showDisplayModePicker() }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
     }
 
