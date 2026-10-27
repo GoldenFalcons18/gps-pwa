@@ -463,6 +463,7 @@ struct ContentView: View {
     @State private var importSummary = ""
     @State private var settings = false
     @State private var menuPresented = false
+    @State private var modeSelectorPresented = false
     @State private var waypointListPresented = false
     @State private var trackListPresented = false
     @State private var waypointFolder = ""
@@ -766,27 +767,47 @@ struct ContentView: View {
     }
     private var navigationMenu: some View {
         GeometryReader { proxy in
-            HStack(spacing: proxy.size.width * 0.12) {
-                VStack(spacing: 5) {
-                    menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
-                    menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
-                    menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
-                    menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
-                    menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
-                    menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
-                    menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
-                    menuTile("設定") { menuAction { settings = true } }
-                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → タイマー","タイマー → シグナル","シグナル → スピードメーター"][max(0,min(4,mode))]) { menuAction { mode = (mode + 1) % 5 } }
-                }
-                VStack(spacing: 5) {
-                    menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
-                    menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
-                    menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
-                    menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
-                    menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
-                    menuTile("完了", done: true) { menuPresented = false }
-                }
-            }.padding(4)
+            if modeSelectorPresented {
+                VStack(spacing: 7) {
+                    HStack {
+                        Text("モード選択").font(.title2.bold()).foregroundStyle(.white)
+                        Spacer()
+                        Button("キャンセル") { modeSelectorPresented = false }.foregroundStyle(.orange)
+                    }
+                    let names = ["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"]
+                    let descriptions = ["SOG速度を大きく表示","地図・目標方位・距離","SOG・COG・目標方位を大きく表示","スタートまでの時間を計測","旗の順序と合図音を表示"]
+                    ForEach(0..<names.count, id: \.self) { index in
+                        menuTile(names[index], detail: descriptions[index], done: mode == index) {
+                            mode = index
+                            modeSelectorPresented = false
+                            menuPresented = false
+                        }
+                    }
+                    menuTile("戻る", done: true) { modeSelectorPresented = false }
+                }.padding(8)
+            } else {
+                HStack(spacing: proxy.size.width * 0.12) {
+                    VStack(spacing: 5) {
+                        menuTile("新規追跡", detail: "新しいカウンターで記録") { menuAction { if gps.recording { gps.stop() }; gps.start(newTrack: true) } }
+                        menuTile(gps.recording ? "カウンターを一時停止" : "カウンターを再開") { menuAction { gps.recording ? gps.stop() : gps.start() } }
+                        menuTile("カウンターをリセット", detail: "保存した航跡は保持") { menuAction { gps.resetCounter() } }
+                        menuTile("地点・グループ・エリア", detail: "入出力・円・囲み・直線") { menuAction { libraryPresented = true } }
+                        menuTile("WPインポート", detail: "既存の地点を残して追加") { menuAction { importingWaypoints = true } }
+                        menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
+                        menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
+                        menuTile("設定") { menuAction { settings = true } }
+                        menuTile("モード", detail: "現在：\\(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode,0),4)])・一覧から選択") { modeSelectorPresented = true }
+                    }
+                    VStack(spacing: 5) {
+                        menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
+                        menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
+                        menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
+                        menuTile("現在地に打つ", detail:"保存先：\\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
+                        menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
+                        menuTile("完了", done: true) { menuPresented = false }
+                    }
+                }.padding(4)
+            }
         }.background(.black.opacity(0.45))
     }
     private var topControls: some View {
