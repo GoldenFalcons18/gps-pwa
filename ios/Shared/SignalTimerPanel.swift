@@ -10,7 +10,6 @@ struct SignalTimerPanel: View {
     @AppStorage("signalDurationMinutes") private var durationMinutes = 5
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
-    @State private var hornPatternRefresh = 0
     @AppStorage("signalFlagProfile") private var flagProfile = "class-p"
     @State private var syncing = false
     @State private var syncMessage = ""
@@ -29,14 +28,14 @@ struct SignalTimerPanel: View {
             let resuming = pausedSeconds > 0
             startAt = timestamp + (pausedSeconds > 0 ? pausedSeconds : duration)
             pausedSeconds = 0
-            if !resuming { playHorn(pattern: hornPattern(for: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).first!)) }
+            if !resuming { playHorn(pulses: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).first!.hornPulses) }
         }
     }
     private func zero(at date: Date) {
         // Manual zero alignment: the operator taps exactly when the start signal is given.
         startAt = date.timeIntervalSince1970 + clockOffset
         pausedSeconds = 0
-        playHorn(pattern: hornPattern(for: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).last!))
+        playHorn(pulses: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).last!.hornPulses)
     }
     private func reset() { startAt = 0; pausedSeconds = 0 }
     private func flagColor(_ hex: UInt32) -> Color {
@@ -91,7 +90,7 @@ struct SignalTimerPanel: View {
                                 .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                             Text(event.secondsBeforeStart == 0 ? "00:00" : String(format: "%02d:%02d", event.secondsBeforeStart / 60, event.secondsBeforeStart % 60))
                                 .font(.system(size: compact ? 9 : 12, weight: .medium, design: .monospaced))
-                            if !compact { Picker("ホーン", selection: hornPatternBinding(for: event)) { Text("短音").tag(0); Text("長音").tag(1); Text("連発").tag(2) }.labelsHidden().pickerStyle(.menu).tint(.orange).frame(width: 62) }
+                            Text(event.hornPulses.map { $0 == 0 ? "●" : "—" }.joined()).font(.caption).foregroundStyle(.secondary)
                         }
                         .padding(.horizontal, compact ? 4 : 9).padding(.vertical, compact ? 2 : 5)
                         .background(isActive ? Color.green.opacity(0.58) : Color.white.opacity(0.10))
@@ -99,14 +98,15 @@ struct SignalTimerPanel: View {
                         .animation(.easeInOut(duration: 0.25), value: isActive)
                     }
                 }
-                if !compact { Text("旗の順序は大会の帆走指示書に合わせてください").font(.system(size: 10)).foregroundStyle(.secondary) }
+                if !compact { Text("●短音　—長音　複数記号は連発。旗の順序は大会の帆走指示書に合わせてください").font(.system(size: 10)).foregroundStyle(.secondary) }
                 if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
+                #if os(iOS)
                 if !compact { Picker("旗シーケンス", selection: $flagProfile) { ForEach(SignalSequence.profiles) { profile in Text(profile.name).tag(profile.id) } }.pickerStyle(.menu).tint(.orange)
                 HStack(spacing: 6) {
                     Text("長音 \(String(format: "%.1f", hornSeconds))秒").font(.caption)
                     Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).tint(.orange)
-                }.frame(maxWidth: 340)
-                }
+                }.frame(maxWidth: 340) }
+                #endif
                 HStack(spacing: compact ? 3 : 7) {
                     ForEach([1, 3, 5, 10], id: \.self) { minute in
                         Button("\(minute)分") { durationMinutes = minute; reset() }
@@ -124,7 +124,7 @@ struct SignalTimerPanel: View {
             }
             .padding(compact ? 4 : 10).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black).foregroundStyle(.white).preferredColorScheme(.dark)
-            .onChange(of: active) { oldValue, newValue in if oldValue != newValue && running { playHorn(pattern: hornPattern(for: next)) } }
+            .onChange(of: active) { oldValue, newValue in if oldValue != newValue && running { playHorn(pulses: next.hornPulses) } }
         }
     }
 
@@ -154,21 +154,16 @@ struct SignalTimerPanel: View {
             .overlay(Rectangle().stroke(.black.opacity(0.45), lineWidth: 1))
     }
 
-    private func hornKey(for event: SignalSequence.Event) -> String { "signalHornPattern.\(flagProfile).\(event.id)" }
-    private func hornPattern(for event: SignalSequence.Event) -> Int { UserDefaults.standard.object(forKey: hornKey(for: event)) as? Int ?? 1 }
-    private func hornPatternBinding(for event: SignalSequence.Event) -> Binding<Int> {
-        Binding(get: { self.hornPattern(for: event) }, set: { value in UserDefaults.standard.set(value, forKey: self.hornKey(for: event)); self.hornPatternRefresh += 1 })
-    }
-    private func playHorn(pattern: Int) {
+    private func playHorn(pulses: [Int]) {
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
         let rate = 22_050.0
-        let pulses = pattern == 0 ? [0.22] : (pattern == 1 ? [hornSeconds] : Array(repeating: min(hornSeconds, 0.25), count: 3))
+        let pulseDurations = pulses.map { $0 == 0 ? 0.22 : hornSeconds }
         let gapSamples = Int(rate * 0.18)
-        var samples = Data(capacity: (pulses.reduce(0) { $0 + Int(rate * $1) } + gapSamples * max(0, pulses.count - 1)) * 2)
-        for (burst, pulseDuration) in pulses.enumerated() {
+        var samples = Data(capacity: (pulseDurations.reduce(0) { $0 + Int(rate * $1) } + gapSamples * max(0, pulseDurations.count - 1)) * 2)
+        for (burst, pulseDuration) in pulseDurations.enumerated() {
             let burstSamples = max(1, Int(rate * pulseDuration))
             for index in 0..<burstSamples {
                 let fade = min(1, Double(index) / 160) * min(1, Double(burstSamples - index) / 1200)
@@ -176,7 +171,7 @@ struct SignalTimerPanel: View {
                 var little = sample.littleEndian
                 withUnsafeBytes(of: &little) { samples.append(contentsOf: $0) }
             }
-            if burst < pulses.count - 1 { samples.append(Data(repeating: 0, count: gapSamples * 2)) }
+            if burst < pulseDurations.count - 1 { samples.append(Data(repeating: 0, count: gapSamples * 2)) }
         }
         var wav = Data("RIFF".utf8)
         func append32(_ value: UInt32) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
