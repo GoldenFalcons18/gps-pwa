@@ -299,6 +299,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupDisplayModes() {
         setupFocusPanel()
+        b.btnFocusMode.text="セーリング"
+        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode+1)%5) }
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
         b.btnTimerMode.setOnClickListener { setDisplayMode(3) }
         b.btnSignalMode.setOnClickListener { setDisplayMode(4) }
@@ -317,6 +319,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
         b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス"))
         b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndex",2).coerceIn(0,3))
+        b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
+        b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
+        b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();buildSignalRows();updateSignalUi() }
+        }
+        b.signalHornCount.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("ホーン 1回","ホーン 2回","ホーン 3回"))
+        b.signalHornCount.setSelection((displayPrefs.getInt("signalHornCount",1)-1).coerceIn(0,2))
+        b.signalHornCount.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalHornCount",position+1).apply() }
+        }
         b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalDurationIndex",position).apply();buildSignalRows();updateSignalUi() }
@@ -364,7 +378,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun buildSignalRows() {
         b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
         val duration=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
-        SignalSequence.events(duration).forEach { event ->
+        val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        SignalSequence.events(duration,profileIndex).forEach { event ->
             val row=LinearLayout(this).apply {
                 orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
                 layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
@@ -396,7 +411,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var signalTone:android.media.ToneGenerator?=null
     private fun playSignalHorn() {
         if(signalTone==null) signalTone=android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC,75)
-        signalTone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP,displayPrefs.getInt("signalHornMs",700).coerceIn(100,3000))
+        val count=displayPrefs.getInt("signalHornCount",1).coerceIn(1,3)
+        val duration=displayPrefs.getInt("signalHornMs",700).coerceIn(100,3000)
+        val handler=android.os.Handler(mainLooper)
+        repeat(count) { index -> handler.postDelayed({ signalTone?.startTone(android.media.ToneGenerator.TONE_PROP_BEEP,duration) },index*(duration+180L)) }
     }
     private fun syncNictClock() {
         b.btnNictSync.isEnabled=false;b.tvNictStatus.text="ntp.nict.jp に接続中…"
@@ -414,10 +432,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val selectedMinutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
         val running=end>now
         val remaining=when {end>0L->(end-now)/1000.0;paused>0L->paused.toDouble();else->selectedMinutes*60.0}
-        val events=SignalSequence.events(selectedMinutes)
-        val active=SignalSequence.nextIndex(remaining,selectedMinutes)
+        val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        val events=SignalSequence.events(selectedMinutes,profileIndex)
+        val active=SignalSequence.nextIndex(remaining,selectedMinutes,profileIndex)
         val event=events[active]
-        val toEvent=SignalSequence.untilNext(remaining,active,selectedMinutes)
+        val toEvent=SignalSequence.untilNext(remaining,active,selectedMinutes,profileIndex)
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
         b.tvSignalClock.text=clock
         b.tvSignalTitle.text=event.title
@@ -471,7 +490,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーター"; 2 -> "3項目"; 3 -> "スタートタイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE

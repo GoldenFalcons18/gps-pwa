@@ -26,7 +26,7 @@ struct FocusDashboardView:View {
         VStack(spacing:8) {
             HStack {
                 ForEach(0..<5) { index in
-                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode=index }
+                    Button(["スピード","ナビ","セーリング","タイマー","シグナル"][index]) { mode=index }
                         .frame(maxWidth:.infinity).buttonStyle(.bordered).tint(index==mode ? .green:.orange)
                 }
                 Button(magnetic ? "磁北":"真北") {magnetic.toggle()}.tint(.orange)

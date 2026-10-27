@@ -644,7 +644,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーション").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
@@ -850,8 +850,9 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Text(mode == 0 ? "スピードメーター" : "ナビゲーター")
-                .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
+                 .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+                .onTapGesture { mode = (mode + 1) % 5 }
             Button { gps.recording ? gps.stop() : gps.start() } label: {
                 HStack(spacing: 3) {
                     Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
@@ -902,7 +903,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             HStack(spacing: 4) {
                 ForEach(0..<5) { index in
-                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode = index }
+                    Button(["スピード","ナビ","セーリング","タイマー","シグナル"][index]) { mode = index }
                         .frame(maxWidth: .infinity).buttonStyle(.bordered)
                         .tint(index == mode ? .green : .orange)
                 }

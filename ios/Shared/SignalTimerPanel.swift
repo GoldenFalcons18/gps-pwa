@@ -10,6 +10,8 @@ struct SignalTimerPanel: View {
     @AppStorage("signalDurationMinutes") private var durationMinutes = 5
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
+    @AppStorage("signalHornCount") private var hornCount = 1
+    @AppStorage("signalFlagProfile") private var flagProfile = "class-p"
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
@@ -50,10 +52,10 @@ struct SignalTimerPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let left = remaining(at: now)
-            let events = SignalSequence.events(durationMinutes: durationMinutes)
-            let active = SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes)
+            let events = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile)
+            let active = SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes, profileID: flagProfile)
             let next = events[active]
-            let phaseSeconds = SignalSequence.secondsUntilNextEvent(secondsUntilStart: left, index: active, durationMinutes: durationMinutes)
+            let phaseSeconds = SignalSequence.secondsUntilNextEvent(secondsUntilStart: left, index: active, durationMinutes: durationMinutes, profileID: flagProfile)
             let running = startAt > now.timeIntervalSince1970 + clockOffset
             let completed = startAt > 0 && !running
             VStack(spacing: compact ? 5 : 9) {
@@ -98,10 +100,12 @@ struct SignalTimerPanel: View {
                 }
                 if !compact { Text("旗の順序は大会の帆走指示書に合わせてください").font(.system(size: 10)).foregroundStyle(.secondary) }
                 if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
-                if !compact { HStack(spacing: 6) {
-                    Text("ホーン \(String(format: "%.1f", hornSeconds))秒").font(compact ? .system(size: 9) : .caption)
+                if !compact { Picker("旗シーケンス", selection: $flagProfile) { ForEach(SignalSequence.profiles) { profile in Text(profile.name).tag(profile.id) } }.pickerStyle(.menu).tint(.orange)
+                HStack(spacing: 6) {
+                    Text("ホーン \(String(format: "%.1f", hornSeconds))秒").font(.caption)
                     Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).tint(.orange)
-                }.frame(maxWidth: 340) }
+                }.frame(maxWidth: 340)
+                Picker("ホーン回数", selection: $hornCount) { Text("1回").tag(1); Text("2回").tag(2); Text("3回").tag(3) }.pickerStyle(.segmented).tint(.orange) }
                 HStack(spacing: compact ? 3 : 7) {
                     ForEach([1, 3, 5, 10], id: \.self) { minute in
                         Button("\(minute)分") { durationMinutes = minute; reset() }
@@ -155,13 +159,16 @@ struct SignalTimerPanel: View {
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
         let rate = 22_050.0
-        let count = max(1, Int(rate * hornSeconds))
-        var samples = Data(capacity: count * 2)
-        for index in 0..<count {
-            let fade = min(1, Double(index) / 160) * min(1, Double(count - index) / 1200)
-            let sample = Int16(sin(2 * Double.pi * 660 * Double(index) / rate) * 0.42 * fade * Double(Int16.max))
-            var little = sample.littleEndian
-            withUnsafeBytes(of: &little) { samples.append(contentsOf: $0) }
+        let burstSamples = max(1, Int(rate * hornSeconds)), gapSamples = Int(rate * 0.18)
+        var samples = Data(capacity: (burstSamples * max(1, hornCount) + gapSamples * max(0, hornCount - 1)) * 2)
+        for burst in 0..<max(1, hornCount) {
+            for index in 0..<burstSamples {
+                let fade = min(1, Double(index) / 160) * min(1, Double(burstSamples - index) / 1200)
+                let sample = Int16(sin(2 * Double.pi * 660 * Double(index) / rate) * 0.42 * fade * Double(Int16.max))
+                var little = sample.littleEndian
+                withUnsafeBytes(of: &little) { samples.append(contentsOf: $0) }
+            }
+            if burst < hornCount - 1 { samples.append(Data(repeating: 0, count: gapSamples * 2)) }
         }
         var wav = Data("RIFF".utf8)
         func append32(_ value: UInt32) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
