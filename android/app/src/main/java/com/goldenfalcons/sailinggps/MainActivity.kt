@@ -1046,6 +1046,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }.onFailure(::transferError) },{importWaypointsDocument.launch(arrayOf("*/*"))}).show()
     }
 
+    private fun showDisplayModePicker() {
+        val names=listOf("スピードメーター","ナビゲーション","セーリング","タイマー","シグナル")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("モード選択")
+            .setSingleChoiceItems(names.toTypedArray(),currentDisplayMode) { dialog, which ->
+                setDisplayMode(which)
+                dialog.dismiss()
+            }
+            .setNegativeButton("キャンセル",null)
+            .show()
+    }
+
     private fun showNavigationMenu() {
         showActionPanel("メニュー", listOf(
             "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
@@ -1055,7 +1067,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
             "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
             "航跡一覧" to { showTrackList() },
-            "モード切替" to { setDisplayMode((currentDisplayMode+1)%5) }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
+            "モード" to { showDisplayModePicker() }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
         ))
     }
 
