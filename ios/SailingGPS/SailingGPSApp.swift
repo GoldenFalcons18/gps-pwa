@@ -796,13 +796,13 @@ struct ContentView: View {
                         menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
                         menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
                         menuTile("設定") { menuAction { settings = true } }
-                        menuTile("モード", detail: "現在：\\(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode,0),4)])・一覧から選択") { modeSelectorPresented = true }
+                        menuTile("モード", detail: "現在のモード・一覧から選択") { modeSelectorPresented = true }
                     }
                     VStack(spacing: 5) {
                         menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
                         menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
                         menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
-                        menuTile("現在地に打つ", detail:"保存先：\\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
+                        menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
                         menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
                         menuTile("完了", done: true) { menuPresented = false }
                     }
