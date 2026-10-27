@@ -2,7 +2,7 @@ import Foundation
 /// Visual start templates inspired by the supplied Start Timer reference. Follow the event's sailing instructions.
 struct SignalSequence {
     struct Event: Identifiable, Equatable { let id:Int; let secondsBeforeStart:Int; let title:String; let flag:String; let colorHex:UInt32; let raised:Bool; let hornPulses:[Int] }
-    struct Profile: Identifiable { let id:String; let name:String; let events:[Event]; let baseDurationMinutes:Int = 5 }
+    struct Profile: Identifiable { let id:String; let name:String; let events:[Event]; var baseDurationMinutes:Int = 5 }
     private static func e(_ id:Int,_ sec:Int,_ title:String,_ flag:String,_ color:UInt32,_ up:Bool,_ pulses:[Int])->Event { Event(id:id,secondsBeforeStart:sec,title:title,flag:flag,colorHex:color,raised:up,hornPulses:pulses) }
     static let profiles:[Profile] = [
         Profile(id:"class-p",name:"Rule 26参考（クラス旗＋P旗）",events:[e(0,300,"クラス旗を掲揚","級",0xF58A00,true,[0]),e(1,240,"P旗を掲揚","P",0x1769FF,true,[0]),e(2,60,"P旗を降下","P",0x1769FF,false,[1]),e(3,0,"クラス旗を降下","級",0xF58A00,false,[0])]),
