@@ -644,7 +644,7 @@ struct ContentView: View {
             Form {
                 Section("表示") {
                     Picker("単位", selection: $metricUnits) { Text("knot / nm").tag(false); Text("km/h / m・km").tag(true) }
-                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2); Text("タイマー").tag(3) }
+                    Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーター").tag(1); Text("3項目表示").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
                 }
@@ -776,7 +776,7 @@ struct ContentView: View {
                     menuTile("追跡・GPX出力") { menuAction { exported = gps.export(); sharing = exported != nil } }
                     menuTile("航跡一覧", detail: "保存済み記録を確認") { menuAction { trackListPresented = true } }
                     menuTile("設定") { menuAction { settings = true } }
-                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → タイマー","タイマー → スピードメーター"][max(0,min(3,mode))]) { menuAction { mode = (mode + 1) % 4 } }
+                    menuTile("モード", detail: ["スピードメーター → ナビゲーター","ナビゲーター → 3項目表示","3項目表示 → タイマー","タイマー → シグナル","シグナル → スピードメーター"][max(0,min(4,mode))]) { menuAction { mode = (mode + 1) % 5 } }
                 }
                 VStack(spacing: 5) {
                     menuTile("新規ウェイポイント") { menuAction { editorDraft = makeDraft() } }
@@ -793,7 +793,7 @@ struct ContentView: View {
         HStack {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = (mode + 1) % 4 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
+            Button { mode = (mode + 1) % 5 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
                 .accessibilityLabel("表示モードを切替")
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
@@ -901,8 +901,8 @@ struct ContentView: View {
     private var startTimerDashboard: some View {
         VStack(spacing: 8) {
             HStack(spacing: 4) {
-                ForEach(0..<4) { index in
-                    Button(["速度","地図","3項目","タイマー"][index]) { mode = index }
+                ForEach(0..<5) { index in
+                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode = index }
                         .frame(maxWidth: .infinity).buttonStyle(.bordered)
                         .tint(index == mode ? .green : .orange)
                 }
@@ -917,11 +917,26 @@ struct ContentView: View {
             )
         }.padding(8).background(.black).preferredColorScheme(.dark)
     }
+    private var signalDashboard: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(0..<5) { index in
+                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode = index }
+                        .frame(maxWidth: .infinity).buttonStyle(.bordered)
+                        .tint(index == mode ? .green : .orange)
+                }
+                Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal") }
+                    .buttonStyle(.bordered).tint(.orange).accessibilityLabel("メニュー")
+            }.font(.caption)
+            SignalTimerPanel()
+        }.padding(8).background(.black).preferredColorScheme(.dark)
+    }
     private var dashboard: some View {
         GeometryReader { geometry in
             let height = max(620, geometry.size.height)
             if mode == 2 { focusDashboard }
             else if mode == 3 { startTimerDashboard }
+            else if mode == 4 { signalDashboard }
             else { ScrollView {
                 VStack(spacing: 6) {
                     ZStack(alignment: .top) {

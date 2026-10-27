@@ -153,12 +153,7 @@ struct WatchNavigationView: View {
                     if mode == 0 { navigation(fix: fix, compass: compass) }
                     else if mode == 1 { speed(fix: fix,compass:compass) }
                     else {
-                        StartTimerPanel(
-                            currentLocation: fix.map { StartLineCoordinate(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) },
-                            metric: metric,
-                            compact: true,
-                            onRegisterWaypoint: { kind, coordinate in receiver.registerStartLineWaypoint(kind: kind, coordinate: coordinate) }
-                        )
+                        SignalTimerPanel(compact: true)
                     }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
