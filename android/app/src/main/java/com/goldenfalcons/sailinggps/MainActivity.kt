@@ -319,6 +319,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
+        if(displayPrefs.getInt("signalProfileSchemaVersion",0)<1) {
+            val oldProfile=displayPrefs.getInt("signalFlagProfileIndex",0)
+            val newProfile=if(oldProfile<=0) 0 else (oldProfile+1).coerceAtMost(SignalSequence.profiles.lastIndex)
+            val newDuration=if(displayPrefs.contains("signalDurationIndexV2")) (displayPrefs.getInt("signalDurationIndexV2",4)+1).coerceIn(0,5) else 0
+            displayPrefs.edit().putInt("signalFlagProfileIndex",newProfile).putInt("signalDurationIndexV2",newDuration).putInt("signalProfileSchemaVersion",1).apply()
+        }
         b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス"))
         b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,5))
         b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
@@ -347,7 +353,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
         b.btnSignalReset.setOnClickListener { resetSignalSequence() }
         b.btnSignalZero.setOnClickListener {
-            val events=currentSignalEvents()
+            val events=SignalSequence.events(currentSignalDurationMinutes(),displayPrefs.getInt("signalFlagProfileIndex",0),displayPrefs.getString("signalPrepFlag","P") ?: "P")
             displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
                 .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
                 .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
@@ -395,7 +401,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun buildSignalRows() {
         b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
-        SignalSequence.events(currentSignalDurationMinutes(),displayPrefs.getInt("signalFlagProfileIndex",0),displayPrefs.getString("signalPrepFlag","P") ?: "P").forEach { event ->
+        currentSignalEvents().forEach { event ->
             val row=LinearLayout(this).apply {
                 orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
                 layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
