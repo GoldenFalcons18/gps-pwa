@@ -27,6 +27,7 @@
         </LinearLayout>
         <LinearLayout android:id="@+id/signalPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center_horizontal" android:padding="10dp" android:visibility="gone" android:background="#000000">
             <TextView android:id="@+id/tvSignalClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--:--:--" android:gravity="center" android:textColor="#FFFFFF" android:textSize="18sp" android:fontFamily="monospace" />
+            <TextView android:id="@+id/tvSignalStartAt" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start at  TBD" android:gravity="center" android:textColor="#AAAAAA" android:textSize="14sp" android:fontFamily="monospace" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="180dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="6dp">
                 <com.goldenfalcons.sailinggps.SignalMastView android:id="@+id/signalMast" android:layout_width="110dp" android:layout_height="170dp" />
                 <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
