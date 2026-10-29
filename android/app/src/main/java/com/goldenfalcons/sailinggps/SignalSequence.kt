@@ -12,6 +12,7 @@ object SignalSequence {
         SignalFlagProfile("appendix-v","Appendix V参考（音声のみ）",listOf(e(0,180,"3分前・長音×3","♪",android.graphics.Color.DKGRAY,true,1,1,1),e(1,120,"2分前・長音×2","♪",android.graphics.Color.DKGRAY,true,1,1),e(2,90,"1分30秒前・長音＋短音×3","♪",android.graphics.Color.DKGRAY,true,1,0,0,0),e(3,60,"1分前・長音","♪",android.graphics.Color.DKGRAY,true,1),e(4,30,"30秒前・短音×3","♪",android.graphics.Color.DKGRAY,true,0,0,0),e(5,20,"20秒前・短音×2","♪",android.graphics.Color.DKGRAY,true,0,0),e(6,10,"10秒前・短音","♪",android.graphics.Color.DKGRAY,true,0),e(7,5,"5秒前・短音","♪",android.graphics.Color.DKGRAY,true,0),e(8,4,"4秒前・短音","♪",android.graphics.Color.DKGRAY,true,0),e(9,0,"スタート・短音","♪",android.graphics.Color.DKGRAY,true,0)),baseDurationMinutes=3)
     )
     fun events(minutes:Int,profileIndex:Int=0):List<SignalEvent>{val p=profiles.getOrElse(profileIndex){profiles[0]};val d=minutes.coerceAtLeast(1);return p.events.map{it.copy(secondsBeforeStart=(it.secondsBeforeStart*d.toDouble()/p.baseDurationMinutes).toInt())}}
-    fun nextIndex(left:Double,minutes:Int,profileIndex:Int=0):Int{val es=events(minutes,profileIndex);return es.indexOfFirst{left>=it.secondsBeforeStart}.let{if(it<0)es.lastIndex else it}}
+    // Advance exactly at a signal boundary; the row being left is the signal fired there.
+    fun nextIndex(left:Double,minutes:Int,profileIndex:Int=0):Int{val es=events(minutes,profileIndex);return SignalTiming.nextEventIndex(left,es.map{it.secondsBeforeStart})}
     fun untilNext(left:Double,index:Int,minutes:Int,profileIndex:Int=0)=kotlin.math.ceil(left-events(minutes,profileIndex)[index].secondsBeforeStart).toInt()
 }

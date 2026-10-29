@@ -331,8 +331,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         buildSignalRows()
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
-        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").apply();updateSignalUi() }
-        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").apply();playSignalHorn(currentSignalEvents().last().hornPulses);updateSignalUi() }
+        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").remove("signalZeroAnnounced").apply();signalActiveIndex=-1;updateSignalUi() }
+        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").putBoolean("signalZeroAnnounced",true).apply();playSignalHorn(currentSignalEvents().last().hornPulses);updateSignalUi() }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         b.signalHornLength.max=29
         b.signalHornLength.progress=(displayPrefs.getInt("signalHornMs",700)/100-1).coerceIn(0,29)
@@ -400,10 +400,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val now=signalNow();val end=displayPrefs.getLong("signalEndAt",0L);val paused=displayPrefs.getLong("signalPausedSeconds",0L)
         if(end>now) displayPrefs.edit().putLong("signalPausedSeconds",((end-now+999)/1000).coerceAtLeast(1)).remove("signalEndAt").apply()
         else {
-            val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
-            val seconds=if(paused>0) paused else minutes*60L
-            displayPrefs.edit().putLong("signalEndAt",now+seconds*1000).remove("signalPausedSeconds").apply()
-            if(paused<=0) playSignalHorn(currentSignalEvents().first().hornPulses)
+            if(paused>0) {
+                displayPrefs.edit().putLong("signalEndAt",now+paused*1000).remove("signalPausedSeconds").apply()
+            } else {
+                val minutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
+                // Begin the sequence at the next whole minute, then reach the start signal
+                // after the selected sequence duration.
+                val sequenceStart=((now/60_000L)+1)*60_000L
+                displayPrefs.edit().putLong("signalEndAt",sequenceStart+minutes*60_000L).remove("signalPausedSeconds").putBoolean("signalZeroAnnounced",false).apply()
+            }
         }
         lastSignalEventIndex=-1;updateSignalUi()
     }
@@ -434,6 +439,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val paused=displayPrefs.getLong("signalPausedSeconds",0L)
         val selectedMinutes=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("signalDurationIndex",2)){5}
         val running=end>now
+        val scheduled=end>0L || paused>0L
         val remaining=when {end>0L->(end-now)/1000.0;paused>0L->paused.toDouble();else->selectedMinutes*60.0}
         val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
         val events=SignalSequence.events(selectedMinutes,profileIndex)
@@ -441,12 +447,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val event=events[active]
         val toEvent=SignalSequence.untilNext(remaining,active,selectedMinutes,profileIndex)
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
+        val sequenceStart=if(end>0L) end-selectedMinutes*60_000L else if(paused>0L) now+paused*1000L-selectedMinutes*60_000L else 0L
         b.tvSignalClock.text=clock
+        b.tvSignalStartAt.text="Start at  " + if(scheduled) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(sequenceStart)) else "TBD"
         b.tvSignalTitle.text=event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
-        b.tvSignalCountdown.text=if(toEvent<0) "+%02d".format(kotlin.math.abs(toEvent)) else "−%02d".format(toEvent)
-        b.tvSignalNextLabel.text=if(end>0L && !running && paused<=0L) "スタート信号" else if(!running && paused>0L) "一時停止中 · 次の信号まで" else "次の信号まで"
+        b.tvSignalCountdown.text=if(!scheduled) "--:--" else if(toEvent<0) "+%02d:%02d".format(kotlin.math.abs(toEvent)/60,kotlin.math.abs(toEvent)%60) else "%02d:%02d".format(toEvent/60,toEvent%60)
+        b.tvSignalNextLabel.text=if(!scheduled) "開始時刻未設定" else if(end>0L && !running && paused<=0L) "スタート信号" else if(!running && paused>0L) "一時停止中 · 次の信号まで" else "次の信号まで"
         b.signalMast.show(event,running)
         b.btnSignalStart.text=if(running) "一時停止" else if(paused>0L) "再開" else "開始"
         if(active!=signalActiveIndex) {
@@ -456,10 +464,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 if(index==active && running && signalActiveIndex>=0) row.alpha=0.75f
                 row.animate().alpha(1f).setDuration(220).start()
             }
-            if(running && signalActiveIndex>=0) {
-                playSignalHorn(event.hornPulses)
+            if(running && signalActiveIndex>=0 && active>signalActiveIndex) {
+                // The event just passed is the one whose horn sounds now.
+                playSignalHorn(events[signalActiveIndex].hornPulses)
             }
             signalActiveIndex=active
+        }
+        val completed=end>0L && now>=end && paused<=0L
+        if(completed && !displayPrefs.getBoolean("signalZeroAnnounced",false)) {
+            playSignalHorn(events.last().hornPulses)
+            displayPrefs.edit().putBoolean("signalZeroAnnounced",true).apply()
         }
     }
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)

@@ -16,7 +16,7 @@ struct SignalSequence {
         let profile=profiles.first{$0.id==profileID} ?? profiles[0], scale=Double(max(1,durationMinutes))/Double(max(1,profile.baseDurationMinutes))
         return profile.events.map { Event(id:$0.id,secondsBeforeStart:Int((Double($0.secondsBeforeStart)*scale).rounded()),title:$0.title,flag:$0.flag,colorHex:$0.colorHex,raised:$0.raised,hornPulses:$0.hornPulses) }
     }
-    static func nextEventIndex(secondsUntilStart:Double,durationMinutes:Int=5,profileID:String="class-p")->Int { let es=events(durationMinutes:durationMinutes,profileID:profileID);guard secondsUntilStart>0 else{return es.count-1};return es.firstIndex{secondsUntilStart>=Double($0.secondsBeforeStart)} ?? 0 }
+    static func nextEventIndex(secondsUntilStart:Double,durationMinutes:Int=5,profileID:String="class-p")->Int { let es=events(durationMinutes:durationMinutes,profileID:profileID);guard secondsUntilStart>0 else{return es.count-1};return es.firstIndex{secondsUntilStart>Double($0.secondsBeforeStart)} ?? es.count-1 }
     static func secondsUntilNextEvent(secondsUntilStart:Double,index:Int,durationMinutes:Int=5,profileID:String="class-p")->Int { let es=events(durationMinutes:durationMinutes,profileID:profileID);guard es.indices.contains(index) else{return 0};return Int(ceil(secondsUntilStart-Double(es[index].secondsBeforeStart))) }
     static func clockText(_ date:Date,offset:Double=0)->String { let f=DateFormatter();f.locale=Locale(identifier:"ja_JP");f.dateFormat="HH:mm:ss";return f.string(from:date.addingTimeInterval(offset)) }
 }

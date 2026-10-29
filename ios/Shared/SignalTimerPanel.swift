@@ -11,6 +11,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalFlagProfile") private var flagProfile = "class-p"
+    @AppStorage("signalZeroAnnounced") private var zeroAnnounced = false
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
@@ -24,20 +25,25 @@ struct SignalTimerPanel: View {
         if startAt > timestamp {
             pausedSeconds = max(1, startAt - timestamp)
             startAt = 0
-        } else {
-            let resuming = pausedSeconds > 0
-            startAt = timestamp + (pausedSeconds > 0 ? pausedSeconds : duration)
+        } else if pausedSeconds > 0 {
+            startAt = timestamp + pausedSeconds
             pausedSeconds = 0
-            if !resuming { playHorn(pulses: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).first!.hornPulses) }
+        } else {
+            // Start the sequence on the next whole minute; the selected sequence
+            // duration then ends exactly on its start signal.
+            let nextMinute = (floor(timestamp / 60.0) + 1) * 60.0
+            startAt = nextMinute + duration
+            zeroAnnounced = false
         }
     }
     private func zero(at date: Date) {
         // Manual zero alignment: the operator taps exactly when the start signal is given.
         startAt = date.timeIntervalSince1970 + clockOffset
         pausedSeconds = 0
+        zeroAnnounced = true
         playHorn(pulses: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).last!.hornPulses)
     }
-    private func reset() { startAt = 0; pausedSeconds = 0 }
+    private func reset() { startAt = 0; pausedSeconds = 0; zeroAnnounced = false }
     private func flagColor(_ hex: UInt32) -> Color {
         Color(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
     }
@@ -52,15 +58,22 @@ struct SignalTimerPanel: View {
             let now = context.date
             let left = remaining(at: now)
             let events = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile)
-            let active = SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes, profileID: flagProfile)
+            let active = (startAt > 0 || pausedSeconds > 0) ? SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes, profileID: flagProfile) : 0
             let next = events[active]
             let phaseSeconds = SignalSequence.secondsUntilNextEvent(secondsUntilStart: left, index: active, durationMinutes: durationMinutes, profileID: flagProfile)
             let running = startAt > now.timeIntervalSince1970 + clockOffset
             let completed = startAt > 0 && !running
             VStack(spacing: compact ? 5 : 9) {
-                HStack {
-                    Text(SignalSequence.clockText(now, offset: clockOffset))
-                        .font(.system(size: compact ? 12 : 18, weight: .semibold, design: .monospaced))
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(SignalSequence.clockText(now, offset: clockOffset))
+                            .font(.system(size: compact ? 12 : 18, weight: .semibold, design: .monospaced))
+                        Text("Start at  " + (startAt > 0 || pausedSeconds > 0
+                             ? SignalSequence.clockText(Date(timeIntervalSince1970: (startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset + pausedSeconds) - duration), offset: 0)
+                             : "TBD"))
+                            .font(.system(size: compact ? 10 : 14, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer()
                     if !compact {
                         Button(syncing ? "同期中…" : "NTP同期") { Task { await syncClock() } }
@@ -72,10 +85,10 @@ struct SignalTimerPanel: View {
                         .frame(width: compact ? 58 : 118, height: compact ? 84 : 168)
                     VStack(alignment: .leading, spacing: compact ? 1 : 4) {
                         Text(next.title).font(compact ? .caption.bold() : .title2.bold()).lineLimit(1).minimumScaleFactor(0.55)
-                        Text(countdown(Double(phaseSeconds)))
+                        Text(startAt > 0 || pausedSeconds > 0 ? countdown(Double(phaseSeconds)) : "--:--")
                             .font(.system(size: compact ? 34 : 76, weight: .bold, design: .rounded))
                             .monospacedDigit().minimumScaleFactor(0.45).lineLimit(1)
-                        Text(completed ? "スタート信号" : "次の信号まで")
+                        Text(completed ? "スタート信号" : (startAt > 0 || pausedSeconds > 0 ? "次の信号まで" : "開始時刻未設定"))
                             .font(compact ? .system(size: 9) : .subheadline).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .center)
                 }
@@ -117,14 +130,25 @@ struct SignalTimerPanel: View {
                         .font(compact ? .system(size: 9) : .caption).buttonStyle(.bordered).tint(.orange)
                 }
                 HStack(spacing: 8) {
-                    Button(running ? "一時停止" : "開始／再開") { begin(at: now) }
+                    Button(running ? "一時停止" : (pausedSeconds > 0 ? "再開" : "開始")) { begin(at: now) }
                         .buttonStyle(.borderedProminent).tint(running ? .orange : .green)
                     Button("リセット") { reset() }.buttonStyle(.bordered).tint(.gray)
                 }
             }
             .padding(compact ? 4 : 10).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black).foregroundStyle(.white).preferredColorScheme(.dark)
-            .onChange(of: active) { oldValue, newValue in if oldValue != newValue && running { playHorn(pulses: next.hornPulses) } }
+            .onChange(of: active) { oldValue, newValue in
+                if oldValue != newValue && running && events.indices.contains(oldValue) {
+                    // The row being left is the signal that has just reached its mark.
+                    playHorn(pulses: events[oldValue].hornPulses)
+                }
+            }
+            .onChange(of: completed) { oldValue, newValue in
+                if !oldValue && newValue && !zeroAnnounced {
+                    playHorn(pulses: events.last?.hornPulses ?? [])
+                    zeroAnnounced = true
+                }
+            }
         }
     }
 
