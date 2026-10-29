@@ -80,6 +80,12 @@ object SignalSequence {
         ), baseDurationMinutes = 3)
     )
 
+    val individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", "X", 0xFFFFFFFF.toInt(), true, 0)
+    val generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", "第一代表", 0xFF1769FF.toInt(), true, 0, 0)
+    val generalRecallLower = e(-3, 0, "第一代表旗を降下", "第一代表", 0xFF1769FF.toInt(), false, 0)
+    val postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", "AP", 0xFFD71920.toInt(), true, 0, 0)
+    val postponementLower = e(-5, 0, "回答旗（AP）を降下", "AP", 0xFFD71920.toInt(), false, 0)
+
     fun restartEvents(): List<SignalEvent> = listOf(
         e(0, 0, "クラス旗を掲揚（再予告信号）", "級", 0xFF7A35A8.toInt(), true, 0),
         e(1, 60, "準備信号を掲揚", "P", 0xFF1769FF.toInt(), true, 0),
@@ -106,8 +112,10 @@ object SignalSequence {
     }
 
     /** Flag state at a point in the elapsed sequence, with one mast per distinct flag. */
-    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalFlagState> {
-        val list = events(durationMinutes, profileIndex)
+    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalFlagState> =
+        flagsAtEvents(events(durationMinutes, profileIndex), elapsedSeconds)
+
+    fun flagsAtEvents(list: List<SignalEvent>, elapsedSeconds: Double): List<SignalFlagState> {
         return list.groupBy { it.flag }.map { (flag, actions) ->
             val latest = actions.lastOrNull { it.secondsAfterStart <= elapsedSeconds }
             val exemplar = actions.first()
