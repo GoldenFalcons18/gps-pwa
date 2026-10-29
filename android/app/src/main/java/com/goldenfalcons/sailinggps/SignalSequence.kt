@@ -96,24 +96,26 @@ object SignalSequence {
 
     fun events(durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): List<SignalEvent> {
         val profile = profiles.getOrElse(profileIndex) { profiles[0] }
-        if (profile.id == "standard-start") return if (prepFlag == "I") profile.events.map { event ->\n            if (event.flag == "P") event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗")) else event\n        } else profile.events
+        if (profile.id == "standard-start") return if (prepFlag == "I") profile.events.map { event ->
+            if (event.flag == "P") event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗")) else event
+        } else profile.events
         val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
         return profile.events.map { it.copy(secondsAfterStart = (it.secondsAfterStart * scale).toInt()) }
     }
 
     /** The most recent elapsed-time signal, or -1 before the first action. */
-    fun nextIndex(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): Int =
-        SignalTiming.activeEventIndex(elapsedSeconds, events(durationMinutes, profileIndex).map { it.secondsAfterStart })
+    fun nextIndex(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): Int =
+        SignalTiming.activeEventIndex(elapsedSeconds, events(durationMinutes, profileIndex, prepFlag).map { it.secondsAfterStart })
 
-    fun untilNext(elapsedSeconds: Double, index: Int, durationMinutes: Int = 14, profileIndex: Int = 0): Int {
-        val list = events(durationMinutes, profileIndex)
+    fun untilNext(elapsedSeconds: Double, index: Int, durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): Int {
+        val list = events(durationMinutes, profileIndex, prepFlag)
         if (index !in list.indices) return 0
         return kotlin.math.ceil(list[index].secondsAfterStart - elapsedSeconds).toInt()
     }
 
     /** Flag state at a point in the elapsed sequence, with one mast per distinct flag. */
-    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalFlagState> =
-        flagsAtEvents(events(durationMinutes, profileIndex), elapsedSeconds)
+    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): List<SignalFlagState> =
+        flagsAtEvents(events(durationMinutes, profileIndex, prepFlag), elapsedSeconds)
 
     fun flagsAtEvents(list: List<SignalEvent>, elapsedSeconds: Double): List<SignalFlagState> {
         return list.groupBy { it.flag }.map { (flag, actions) ->
