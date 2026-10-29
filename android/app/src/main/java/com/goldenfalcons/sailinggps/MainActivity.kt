@@ -339,8 +339,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalReset.setOnClickListener { resetSignalSequence() }
         b.btnSignalZero.setOnClickListener {
             val events=currentSignalEvents()
-            displayPrefs.edit().putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0).apply()
-            playSignalHorn(events.first().hornPulses);signalActiveIndex=-1;updateSignalUi()
+            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
+                .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
+                .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
+                .putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0).apply()
+            playSignalHorn(events.first().hornPulses);signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         b.signalHornLength.max=29
