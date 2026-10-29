@@ -25,33 +25,34 @@
                 <Button android:id="@+id/btnResetTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
             </LinearLayout>
         </LinearLayout>
-        <LinearLayout android:id="@+id/signalPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center_horizontal" android:padding="10dp" android:visibility="gone" android:background="#000000">
-            <TextView android:id="@+id/tvSignalClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="--:--:--" android:gravity="center" android:textColor="#FFFFFF" android:textSize="18sp" android:fontFamily="monospace" />
-            <TextView android:id="@+id/tvSignalStartAt" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start at  TBD" android:gravity="center" android:textColor="#AAAAAA" android:textSize="14sp" android:fontFamily="monospace" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="180dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="6dp">
-                <com.goldenfalcons.sailinggps.SignalMastView android:id="@+id/signalMast" android:layout_width="110dp" android:layout_height="170dp" />
-                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
-                    <TextView android:id="@+id/tvSignalTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="クラス旗を降下" android:textColor="#111111" android:textSize="20sp" android:gravity="center" android:background="#F58A00" android:padding="4dp" />
-                    <TextView android:id="@+id/tvSignalCountdown" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="−05" android:gravity="center" android:textColor="#FFFFFF" android:textSize="76sp" android:fontFamily="sans-serif-light" />
-                    <TextView android:id="@+id/tvSignalNextLabel" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="次の信号まで" android:gravity="center" android:textColor="#AAAAAA" android:textSize="13sp" />
-                </LinearLayout>
+        <LinearLayout android:id="@+id/signalPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center_horizontal" android:padding="10dp" android:visibility="gone" android:background="#FFFFFF">
+            <TextView android:id="@+id/tvSignalClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="15:01:46" android:gravity="center" android:textColor="#111111" android:textSize="20sp" android:fontFamily="monospace" />
+            <com.goldenfalcons.sailinggps.SignalMastView android:id="@+id/signalMast" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="4dp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="5dp" android:paddingBottom="5dp">
+                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Start at" android:textColor="#111111" android:textSize="14sp" />
+                <TextView android:id="@+id/tvSignalStartAt" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TBD" android:gravity="end" android:textColor="#111111" android:textSize="14sp" android:fontFamily="monospace" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/tvSignalTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:visibility="gone" android:textColor="#111111" android:textSize="12sp" />
+                <TextView android:id="@+id/tvSignalCountdown" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="--:--" android:gravity="center" android:textColor="#111111" android:textSize="42sp" android:fontFamily="monospace" />
+                <TextView android:id="@+id/tvSignalNextLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
+                <ImageView android:layout_width="42dp" android:layout_height="42dp" android:src="@android:drawable/ic_lock_idle_alarm" android:tint="#999999" android:contentDescription="経過タイマー" />
             </LinearLayout>
             <LinearLayout android:id="@+id/signalSequenceContainer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="●短音　—長音　複数記号は連発。旗の順序は大会の帆走指示書に合わせてください" android:gravity="center" android:textColor="#888888" android:textSize="10sp" />
-            <TextView android:id="@+id/tvNictStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="端末時刻を使用中" android:gravity="center" android:textColor="#BBBBBB" android:textSize="12sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="● 短音　━ 長音" android:gravity="center" android:textColor="#666666" android:textSize="10sp" />
+            <TextView android:id="@+id/tvNictStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="端末時刻を使用中" android:gravity="center" android:textColor="#666666" android:textSize="11sp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/tvHornLength" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="長音 0.7秒" android:textColor="#FFFFFF" android:textSize="12sp" />
-                <SeekBar android:id="@+id/signalHornLength" android:layout_width="0dp" android:layout_height="36dp" android:layout_weight="1" android:max="29" android:progress="6" />
+                <TextView android:id="@+id/tvHornLength" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="長音 0.7秒" android:textColor="#333333" android:textSize="11sp" />
+                <SeekBar android:id="@+id/signalHornLength" android:layout_width="0dp" android:layout_height="30dp" android:layout_weight="1" android:max="29" android:progress="6" />
+                <Button android:id="@+id/btnNictSync" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NTP" />
             </LinearLayout>
-            <Spinner android:id="@+id/signalFlagProfile" android:layout_width="match_parent" android:layout_height="48dp" />
+            <Spinner android:id="@+id/signalFlagProfile" android:layout_width="match_parent" android:layout_height="42dp" android:visibility="gone" />
+            <Spinner android:id="@+id/signalDuration" android:layout_width="match_parent" android:layout_height="1dp" android:visibility="gone" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
-                <Spinner android:id="@+id/signalDuration" android:layout_width="0dp" android:layout_height="48dp" android:layout_weight="1" />
-                <Button android:id="@+id/btnNictSync" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NTP同期" />
-                <Button android:id="@+id/btnSignalZero" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0秒合わせ" />
-            </LinearLayout>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <Button android:id="@+id/btnSignalStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="開始" />
-                <Button android:id="@+id/btnSignalReset" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
+                <Button android:id="@+id/btnSignalInterrupt" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Interrupt…" android:enabled="false" />
+                <Button android:id="@+id/btnSignalStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Start" />
+                <Button android:id="@+id/btnSignalZero" android:layout_width="48dp" android:layout_height="wrap_content" android:text="◴" />
+                <Button android:id="@+id/btnSignalReset" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" android:text="リセット" />
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
