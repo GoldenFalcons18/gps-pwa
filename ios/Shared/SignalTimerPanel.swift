@@ -11,6 +11,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalFlagProfile") private var flagProfile = "class-p"
+    @AppStorage("signalZeroAnnounced") private var zeroAnnounced = false
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
@@ -32,15 +33,17 @@ struct SignalTimerPanel: View {
             // duration then ends exactly on its start signal.
             let nextMinute = (floor(timestamp / 60.0) + 1) * 60.0
             startAt = nextMinute + duration
+            zeroAnnounced = false
         }
     }
     private func zero(at date: Date) {
         // Manual zero alignment: the operator taps exactly when the start signal is given.
         startAt = date.timeIntervalSince1970 + clockOffset
         pausedSeconds = 0
+        zeroAnnounced = true
         playHorn(pulses: SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile).last!.hornPulses)
     }
-    private func reset() { startAt = 0; pausedSeconds = 0 }
+    private func reset() { startAt = 0; pausedSeconds = 0; zeroAnnounced = false }
     private func flagColor(_ hex: UInt32) -> Color {
         Color(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
     }
@@ -141,7 +144,10 @@ struct SignalTimerPanel: View {
                 }
             }
             .onChange(of: completed) { oldValue, newValue in
-                if !oldValue && newValue { playHorn(pulses: events.last?.hornPulses ?? []) }
+                if !oldValue && newValue && !zeroAnnounced {
+                    playHorn(pulses: events.last?.hornPulses ?? [])
+                    zeroAnnounced = true
+                }
             }
         }
     }
