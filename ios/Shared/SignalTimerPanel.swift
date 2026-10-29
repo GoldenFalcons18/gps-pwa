@@ -118,7 +118,37 @@ struct SignalTimerPanel: View {
         let offset = event.secondsAfterStart - startOffset
         let time = String(format: "%02d:%02d", abs(offset) / 60, abs(offset) % 60)
         if offset == 0 { return "T+00:00" }
-        return offset < 0 ? "T−\\(time)" : "T+\\(time)"
+        return offset < 0 ? "T−\(time)" : "T+\(time)"
+    }
+
+    private func activeEventIndex(retryPending: Bool, useRetrySequence: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double, spent: Double) -> Int {
+        if retryPending { return 0 }
+        if useRetrySequence {
+            return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
+        }
+        if hasStarted {
+            return SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+        }
+        return SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
+    }
+
+    private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
+        var visible = retryPending
+            ? [SignalSequence.flag("orange")]
+            : SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
+        if useRetrySequence && sequenceElapsed < 540 {
+            visible.append(SignalSequence.flag("orange"))
+        }
+        if generalRecallFlagUp {
+            visible = [SignalSequence.flag("orange"), SignalSequence.flag("first-sub")]
+        } else if postponementFlagUp {
+            visible = [SignalSequence.flag("orange"), SignalSequence.flag("AP")]
+        } else if individualRecallFlagUp {
+            visible.append(SignalSequence.flag("X"))
+        }
+        var unique: [String: SignalSequence.Flag] = [:]
+        for flag in visible { unique[flag.id] = flag }
+        return unique.values.sorted { $0.id < $1.id }
     }
 
     var body: some View {
@@ -161,6 +191,13 @@ struct SignalTimerPanel: View {
             var uniqueFlags: [String: SignalSequence.Flag] = [:]
             for flag in visibleFlags { uniqueFlags[flag.id] = flag }
             let raisedFlags = uniqueFlags.values.sorted { $0.id < $1.id }
+            let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
+            let current = sequenceEvents[active]
+            let isRunning = useRetrySequence
+                ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
+                : running(at: now)
+            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : sequenceElapsed
+            let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
