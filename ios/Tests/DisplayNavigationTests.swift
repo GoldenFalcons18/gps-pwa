@@ -1,5 +1,6 @@
 import XCTest
 @testable import CoordinateInput
+@testable import WatchNavigation
 final class DisplayNavigationTests: XCTestCase {
     func testGeodesicMarksAndDateline() {
         for distance in stride(from: 100, through: 500, by: 100) {
@@ -20,4 +21,16 @@ final class DisplayNavigationTests: XCTestCase {
         XCTAssertEqual(CoordinateInput.distance(1000, metric: true), "1.00 km")
         XCTAssertEqual(CoordinateInput.distance(1852, metric: false), "1.00 nm")
     }
+    func testInitialSignalRowSupportsLegacyFourEventProfiles() {
+        let legacyEvents = SignalSequence.events(durationMinutes: 20, profileID: "class-p")
+        let legacyIndex = SignalSequence.initialEventIndex(durationMinutes: 20, profileID: "class-p")
+        XCTAssertEqual(legacyEvents.count, 4)
+        XCTAssertTrue(legacyEvents.indices.contains(legacyIndex))
+        XCTAssertEqual(legacyIndex, legacyEvents.count - 1)
+
+        let videoEvents = SignalSequence.events(durationMinutes: 20, profileID: "video-20")
+        let videoIndex = SignalSequence.initialEventIndex(durationMinutes: 20, profileID: "video-20")
+        XCTAssertEqual(videoEvents[videoIndex].secondsAfterStart, 600)
+    }
+
 }

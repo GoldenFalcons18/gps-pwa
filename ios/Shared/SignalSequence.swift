@@ -56,6 +56,13 @@ struct SignalSequence {
         }
     }
 
+    /// Safe pre-start highlighted row: choose 10:00 when present, otherwise the last available event.
+    static func initialEventIndex(durationMinutes: Int = 20, profileID: String = "video-20") -> Int {
+        let list = events(durationMinutes: durationMinutes, profileID: profileID)
+        guard !list.isEmpty else { return 0 }
+        return list.firstIndex { $0.secondsAfterStart == 600 } ?? (list.count - 1)
+    }
+
     static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID)
         guard !list.isEmpty else { return 0 }
