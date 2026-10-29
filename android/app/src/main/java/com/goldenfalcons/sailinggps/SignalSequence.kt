@@ -16,8 +16,16 @@ object SignalSequence {
     private fun e(id: Int, seconds: Int, title: String, flag: String, color: Int, raised: Boolean, vararg pulses: Int) =
         SignalEvent(id, seconds, title, color, raised, flag, pulses.toList())
 
-    // The video sequence is an elapsed-time program: 0, 5, 6, 9, 10, and 20 minutes.
+    // Standard race sequence, measured from the orange flag raise at T-10 minutes.
     val profiles = listOf(
+        SignalFlagProfile("standard-start", "帆走スタート（オレンジ旗から14分）", listOf(
+            e(0, 0, "オレンジ旗を掲揚（予告信号の5分前）", "橙", 0xFFF58A00.toInt(), true, 0),
+            e(1, 300, "クラス旗を掲揚（スタート5分前）", "級", 0xFF7A35A8.toInt(), true, 0),
+            e(2, 360, "準備信号を掲揚（スタート4分前）", "P", 0xFF1769FF.toInt(), true, 0),
+            e(3, 540, "準備信号を降下（スタート1分前）", "P", 0xFF1769FF.toInt(), false, 1),
+            e(4, 600, "クラス旗を降下（スタート）", "級", 0xFF7A35A8.toInt(), false, 0),
+            e(5, 840, "オレンジ旗を降下（スタート約4分後）", "橙", 0xFFF58A00.toInt(), false)
+        ), baseDurationMinutes = 14),
         SignalFlagProfile("video-20", "動画の信号（20分）", listOf(
             e(0, 0, "橙旗を掲揚", "橙", 0xFFF58A00.toInt(), true, 0),
             e(1, 300, "緑旗を掲揚", "緑", 0xFF00D228.toInt(), true, 0),
@@ -72,24 +80,33 @@ object SignalSequence {
         ), baseDurationMinutes = 3)
     )
 
-    fun events(durationMinutes: Int = 20, profileIndex: Int = 0): List<SignalEvent> {
+    fun restartEvents(): List<SignalEvent> = listOf(
+        e(0, 0, "クラス旗を掲揚（再予告信号）", "級", 0xFF7A35A8.toInt(), true, 0),
+        e(1, 60, "準備信号を掲揚", "P", 0xFF1769FF.toInt(), true, 0),
+        e(2, 240, "準備信号を降下（スタート1分前）", "P", 0xFF1769FF.toInt(), false, 1),
+        e(3, 300, "クラス旗を降下（スタート）", "級", 0xFF7A35A8.toInt(), false, 0),
+        e(4, 540, "オレンジ旗を降下（スタート約4分後）", "橙", 0xFFF58A00.toInt(), false)
+    )
+
+    fun events(durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalEvent> {
         val profile = profiles.getOrElse(profileIndex) { profiles[0] }
+        if (profile.id == "standard-start") return profile.events
         val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
         return profile.events.map { it.copy(secondsAfterStart = (it.secondsAfterStart * scale).toInt()) }
     }
 
     /** The most recent elapsed-time signal, or -1 before the first action. */
-    fun nextIndex(elapsedSeconds: Double, durationMinutes: Int = 20, profileIndex: Int = 0): Int =
+    fun nextIndex(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): Int =
         SignalTiming.activeEventIndex(elapsedSeconds, events(durationMinutes, profileIndex).map { it.secondsAfterStart })
 
-    fun untilNext(elapsedSeconds: Double, index: Int, durationMinutes: Int = 20, profileIndex: Int = 0): Int {
+    fun untilNext(elapsedSeconds: Double, index: Int, durationMinutes: Int = 14, profileIndex: Int = 0): Int {
         val list = events(durationMinutes, profileIndex)
         if (index !in list.indices) return 0
         return kotlin.math.ceil(list[index].secondsAfterStart - elapsedSeconds).toInt()
     }
 
     /** Flag state at a point in the elapsed sequence, with one mast per distinct flag. */
-    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 20, profileIndex: Int = 0): List<SignalFlagState> {
+    fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalFlagState> {
         val list = events(durationMinutes, profileIndex)
         return list.groupBy { it.flag }.map { (flag, actions) ->
             val latest = actions.lastOrNull { it.secondsAfterStart <= elapsedSeconds }
