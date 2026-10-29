@@ -13,6 +13,10 @@ struct SignalTimerPanel: View {
     @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
+    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
+    @AppStorage("signalGeneralRecallFlagUp") private var generalRecallFlagUp = false
+    @AppStorage("signalPostponementFlagUp") private var postponementFlagUp = false
+    @AppStorage("signalRestartWarningAt") private var restartWarningAt = 0.0
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
@@ -20,6 +24,53 @@ struct SignalTimerPanel: View {
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
         SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+    }
+    private var recallRestartEvents: [SignalSequence.Event] {
+        SignalSequence.recallRestartEvents(classFlagID: classFlagID, prepFlagID: prepFlagID)
+    }
+    private func pauseForManualSignal(at date: Date) {
+        if startAt > 0 {
+            pausedSeconds = elapsed(at: date)
+            startAt = 0
+        }
+        hasStarted = true
+    }
+    private func toggleIndividualRecall(at date: Date) {
+        if individualRecallFlagUp {
+            individualRecallFlagUp = false
+        } else {
+            pauseForManualSignal(at: date)
+            individualRecallFlagUp = true
+            playHorn(pulses: [0])
+        }
+    }
+    private func toggleGeneralRecall(at date: Date) {
+        if generalRecallFlagUp {
+            generalRecallFlagUp = false
+            playHorn(pulses: [0])
+            restartWarningAt = date.timeIntervalSince1970 + 60
+        } else {
+            pauseForManualSignal(at: date)
+            individualRecallFlagUp = false
+            postponementFlagUp = false
+            restartWarningAt = 0
+            generalRecallFlagUp = true
+            playHorn(pulses: [0, 0])
+        }
+    }
+    private func togglePostponement(at date: Date) {
+        if postponementFlagUp {
+            postponementFlagUp = false
+            playHorn(pulses: [0])
+            restartWarningAt = date.timeIntervalSince1970 + 60
+        } else {
+            pauseForManualSignal(at: date)
+            individualRecallFlagUp = false
+            generalRecallFlagUp = false
+            restartWarningAt = 0
+            postponementFlagUp = true
+            playHorn(pulses: [0, 0])
+        }
     }
     private func elapsed(at date: Date) -> Double {
         if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
@@ -50,31 +101,66 @@ struct SignalTimerPanel: View {
         startAt = 0
         pausedSeconds = 0
         hasStarted = false
+        individualRecallFlagUp = false
+        generalRecallFlagUp = false
+        postponementFlagUp = false
+        restartWarningAt = 0
     }
     private func elapsedText(_ seconds: Double) -> String {
         let value = max(0, Int(seconds))
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
 
-    private func eventTimeText(_ event: SignalSequence.Event) -> String {
-        guard flagProfile == "standard-start" else {
+    private func eventTimeText(_ event: SignalSequence.Event, restart: Bool = false) -> String {
+        guard flagProfile == "standard-start" || restart else {
             return String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60)
         }
-        let secondsToStart = max(0, 600 - event.secondsAfterStart)
-        let time = String(format: "%02d:%02d", secondsToStart / 60, secondsToStart % 60)
-        return secondsToStart == 0 ? "T+00:00" : "T−\(time)"
+        let startOffset = restart ? 300 : 600
+        let offset = event.secondsAfterStart - startOffset
+        let time = String(format: "%02d:%02d", abs(offset) / 60, abs(offset) % 60)
+        if offset == 0 { return "T+00:00" }
+        return offset < 0 ? "T−\\(time)" : "T+\\(time)"
     }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
-            let active = hasStarted
-                ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
-                : SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
-            let current = events[active]
-            let isRunning = running(at: now)
-            let raisedFlags = SignalSequence.flags(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+            let retryPending = restartWarningAt > now.timeIntervalSince1970
+            let useRetrySequence = restartWarningAt > 0 && !retryPending
+            let sequenceEvents = useRetrySequence ? recallRestartEvents : events
+            let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, now.timeIntervalSince1970 - restartWarningAt) : spent)
+            let active: Int
+            if retryPending {
+                active = 0
+            } else if useRetrySequence {
+                active = sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
+            } else if hasStarted {
+                active = SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+            } else {
+                active = SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
+            }
+            let current = sequenceEvents[active]
+            let isRunning = useRetrySequence
+                ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
+                : running(at: now)
+            let displaySeconds = retryPending ? max(0, restartWarningAt - now.timeIntervalSince1970) : sequenceElapsed
+            var visibleFlags = retryPending
+                ? [SignalSequence.flag("orange")]
+                : SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
+            if useRetrySequence && sequenceElapsed < 540 {
+                visibleFlags.append(SignalSequence.flag("orange"))
+            }
+            if generalRecallFlagUp {
+                visibleFlags = [SignalSequence.flag("orange"), SignalSequence.flag("first-sub")]
+            } else if postponementFlagUp {
+                visibleFlags = [SignalSequence.flag("orange"), SignalSequence.flag("AP")]
+            } else if individualRecallFlagUp {
+                visibleFlags.append(SignalSequence.flag("X"))
+            }
+            var uniqueFlags: [String: SignalSequence.Flag] = [:]
+            for flag in visibleFlags { uniqueFlags[flag.id] = flag }
+            let raisedFlags = uniqueFlags.values.sorted { $0.id < $1.id }
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
@@ -90,11 +176,13 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text("オレンジ旗を上げる時刻").foregroundStyle(.black)
+                    Text(retryPending ? "次の予告信号まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻")).foregroundStyle(.black)
                     Spacer()
-                    Text(hasStarted
-                         ? SignalSequence.clockText(Date(timeIntervalSince1970: startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds))
-                         : "TBD")
+                    Text(retryPending
+                         ? elapsedText(displaySeconds)
+                         : (hasStarted
+                            ? SignalSequence.clockText(Date(timeIntervalSince1970: useRetrySequence ? restartWarningAt : (startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds)))
+                            : "TBD"))
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
                 }
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
@@ -102,7 +190,7 @@ struct SignalTimerPanel: View {
                     Text(current.raised ? "↑" : "↓").font(.title3.bold()).foregroundStyle(.black)
                     Text(current.title).font(.caption).lineLimit(1)
                     Spacer()
-                    Text(hasStarted ? elapsedText(spent) : "--:--")
+                    Text((hasStarted || restartWarningAt > 0) ? elapsedText(displaySeconds) : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
@@ -122,7 +210,7 @@ struct SignalTimerPanel: View {
                             }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(eventTimeText(event))
+                            Text(eventTimeText(event, restart: useRetrySequence))
                                 .font(.system(size: compact ? 10 : 12, design: .monospaced))
                             Text(event.hornPulses.map { $0 == 0 ? "●" : "━" }.joined())
                                 .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
@@ -134,13 +222,24 @@ struct SignalTimerPanel: View {
                     }
                 }
                 HStack(spacing: compact ? 8 : 22) {
-                    Button("Interrupt…") { if isRunning { startOrPause(at: now) } }
-                        .disabled(!isRunning).foregroundStyle(.gray)
-                    Button(isRunning ? "Pause" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "Resume" : "Start")) { startOrPause(at: now) }
+                    Button("中断") { if isRunning { startOrPause(at: now) } }
+                        .disabled(!isRunning || restartWarningAt > 0).foregroundStyle(.gray)
+                    Button(isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")) { startOrPause(at: now) }
+                        .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
                 }
                 .font(.system(size: compact ? 12 : 16))
+                HStack(spacing: compact ? 4 : 10) {
+                    Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
+                        .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp || restartWarningAt > 0)
+                    Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
+                        .disabled(postponementFlagUp || restartWarningAt > 0)
+                    Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
+                        .disabled(generalRecallFlagUp || restartWarningAt > 0)
+                }
+                .font(.system(size: compact ? 9 : 12, weight: .semibold))
+                .buttonStyle(.bordered)
                 #if os(iOS)
                 if !compact {
                     let hornLengthText = String(format: "%.1f", hornSeconds)
@@ -181,10 +280,14 @@ struct SignalTimerPanel: View {
                     flagProfile = "custom-five"
                 }
             }
+            .onChange(of: useRetrySequence) { oldValue, newValue in
+                guard !oldValue, newValue else { return }
+                playHorn(pulses: sequenceEvents.first?.hornPulses ?? [0])
+            }
             .onChange(of: active) { oldValue, newValue in
                 guard isRunning, newValue > oldValue else { return }
-                for index in (oldValue + 1)...newValue where events.indices.contains(index) {
-                    playHorn(pulses: events[index].hornPulses)
+                for index in (oldValue + 1)...newValue where sequenceEvents.indices.contains(index) {
+                    playHorn(pulses: sequenceEvents[index].hornPulses)
                 }
             }
         }
@@ -319,6 +422,10 @@ private struct SignalFlagView: View {
                         path.move(to: .zero); path.addLine(to: CGPoint(x: width, y: height))
                         path.addLine(to: CGPoint(x: width, y: .zero)); path.closeSubpath()
                     }.fill(color(1))
+                case "xFlag":
+                    color(0)
+                    Rectangle().fill(color(1)).frame(width: width * 0.22, height: height)
+                    Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
                     Color.white
                     Circle().fill(color(1)).frame(width: height * 0.64, height: height * 0.64)
