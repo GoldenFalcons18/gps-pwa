@@ -17,6 +17,11 @@ class SignalSequenceTest {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
         assertEquals(listOf(0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
         assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
+        assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
+        assertEquals(listOf(0, 0), SignalSequence.generalRecallRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
+        assertEquals(listOf(0, 0), SignalSequence.postponementRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.postponementLower.hornPulses)
     }
 
     @Test
