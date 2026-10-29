@@ -1,7 +1,8 @@
 import Foundation
 
-/// Start-timer signals are scheduled from the operator pressing Start.
-/// Video profiles preserve the exact elapsed-time marks shown in the supplied recordings.
+/// Signal events are timed from the first signal. The standard profile starts
+/// with the orange starting-line flag, five minutes before the warning signal.
+/// Video profiles remain available as alternate reference sequences.
 struct SignalSequence {
     struct Flag: Identifiable, Equatable {
         let id: String
@@ -55,6 +56,7 @@ struct SignalSequence {
         f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
         f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
         f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
+        f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF]),
         f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
         f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
         f("class-3", "クラス旗 3", "classLogo", [0xFFFFFF, 0x00A650], "3"),
@@ -74,12 +76,47 @@ struct SignalSequence {
         Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
     }
 
+    static let individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", [flag("X")], true, [0])
+    static let generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", [flag("first-sub")], true, [0, 0])
+    static let generalRecallLower = e(-3, 0, "第一代表旗を降下", [flag("first-sub")], false, [0])
+    static let postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", [flag("AP")], true, [0, 0])
+    static let postponementLower = e(-5, 0, "回答旗（AP）を降下", [flag("AP")], false, [0])
+
     private static let orange = flag("orange")
     private static let green = flag("green")
     private static let blue = flag("blue-square")
     private static let classFour = flag("class-4")
     private static let diagonal = flag("diagonal")
     private static let checker = flag("checker")
+
+    /// Standard 14-minute sequence measured from raising the orange flag.
+    /// Orange flag is raised 5 minutes before the warning signal.
+    private static func standardStart(classFlag: Flag, prepFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "橙旗を掲揚（予告信号の5分前）", [orange], true, [0]),
+            e(1, 300, "\(classFlag.name)を掲揚（予告信号・スタート5分前）", [classFlag], true, [0]),
+            e(2, 360, "\(prepFlag.name)を掲揚（準備信号・スタート4分前）", [prepFlag], true, [0]),
+            e(3, 540, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
+            e(4, 600, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0]),
+            e(5, 840, "橙旗を降下（スタート約4分後）", [orange], false)
+        ]
+    }
+
+    /// After a general recall or postponement, the restarted warning signal is
+    /// made one minute after the recall/postponement flag is lowered.
+    private static func recallRestart(classFlag: Flag, prepFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "\(classFlag.name)を掲揚（再予告信号）", [classFlag], true, [0]),
+            e(1, 60, "\(prepFlag.name)を掲揚（準備信号）", [prepFlag], true, [0]),
+            e(2, 240, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
+            e(3, 300, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0]),
+            e(4, 540, "橙旗を降下（スタート約4分後）", [orange], false)
+        ]
+    }
+
+    static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
+        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+    }
 
     /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
     private static let video20: [Event] = [
@@ -112,6 +149,7 @@ struct SignalSequence {
     }
 
     static let profiles: [Profile] = [
+        Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から14分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
         Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
         Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
@@ -119,8 +157,10 @@ struct SignalSequence {
         Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
     ]
 
-    static func events(durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
+    static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
         switch profileID {
+        case "standard-start":
+            return standardStart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
         case "video-13":
             return video13
         case "custom-five":
@@ -135,30 +175,33 @@ struct SignalSequence {
     }
 
     /// Select the pre-start row highlighted in each reference recording.
-    static func initialEventIndex(durationMinutes: Int = 20, profileID: String = "video-20") -> Int {
+    static func initialEventIndex(durationMinutes: Int = 20, profileID: String = "standard-start") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID)
         guard !list.isEmpty else { return 0 }
-        let highlightedSecond = profileID == "video-13" ? 540 : (profileID == "custom-five" ? 240 : 600)
+        let highlightedSecond = profileID == "standard-start" ? 0 : (profileID == "video-13" ? 540 : (profileID == "custom-five" ? 240 : 600))
         return list.firstIndex { $0.secondsAfterStart == highlightedSecond } ?? (list.count - 1)
     }
 
-    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> Int {
+    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
         guard !list.isEmpty else { return 0 }
         return list.lastIndex { Double($0.secondsAfterStart) <= elapsed } ?? 0
     }
 
     /// Resolves simultaneous raise/lower calls by the individual flag identity.
-    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+    static func raisedFlags(events: [Event], elapsed: Double) -> [Flag] {
         var raised: [String: Flag] = [:]
-        for event in events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
-        where Double(event.secondsAfterStart) <= elapsed {
+        for event in events where Double(event.secondsAfterStart) <= elapsed {
             for flag in event.flags {
                 if event.raised { raised[flag.id] = flag }
                 else { raised.removeValue(forKey: flag.id) }
             }
         }
         return raised.values.sorted { $0.id < $1.id }
+    }
+
+    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+        raisedFlags(events: events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID), elapsed: elapsed)
     }
 
     static func clockText(_ date: Date, offset: Double = 0) -> String {

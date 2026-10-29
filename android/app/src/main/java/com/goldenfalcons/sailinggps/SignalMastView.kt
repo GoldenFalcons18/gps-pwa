@@ -65,6 +65,41 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             }
             paint.color = state.color
             canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
+            canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
+            when (state.id) {
+                "I" -> {
+                    paint.color = 0xff111111.toInt()
+                    canvas.drawCircle(mastX + flagWidth * 0.5f, y + flagHeight * 0.5f, flagHeight * 0.20f, paint)
+                }
+                "X" -> {
+                    paint.color = 0xffffffff.toInt()
+                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
+                    paint.color = 0xff1769ff.toInt()
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = flagHeight * 0.20f
+                    canvas.drawLine(mastX, y, mastX + flagWidth, y + flagHeight, paint)
+                    canvas.drawLine(mastX + flagWidth, y, mastX, y + flagHeight, paint)
+                    paint.style = Paint.Style.FILL
+                }
+                "AP" -> {
+                    paint.color = 0xffffffff.toInt()
+                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
+                    paint.color = 0xffd71920.toInt()
+                    canvas.drawRect(mastX, y, mastX + flagWidth * 0.5f, y + flagHeight, paint)
+                }
+                "第一代表" -> {
+                    paint.color = 0xff1769ff.toInt()
+                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
+                    paint.color = 0xffd71920.toInt()
+                    val triangle = android.graphics.Path().apply {
+                        moveTo(mastX, y)
+                        lineTo(mastX + flagWidth, y + flagHeight)
+                        lineTo(mastX + flagWidth, y)
+                        close()
+                    }
+                    canvas.drawPath(triangle, paint)
+                }
+            }
             if (state.whiteSquare) {
                 paint.color = 0xffffffff.toInt()
                 val inset = flagWidth * 0.34f
