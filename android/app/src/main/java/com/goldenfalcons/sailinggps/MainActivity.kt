@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.hardware.*
 import android.location.Location
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -419,6 +421,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(events.first().hornPulses)
         }
         signalActiveIndex=-1;updateSignalUi()
+    }
+
+    private fun playSignalHorn(pulses: List<Int>) {
+        if (pulses.isEmpty()) return
+        val tone = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
+        val longMs = displayPrefs.getInt("signalHornMs", 700).coerceIn(100, 3000)
+        val sequence = mutableListOf<Pair<Int, Int>>()
+        pulses.forEachIndexed { index, pulse ->
+            sequence += ToneGenerator.TONE_PROP_BEEP to (if (pulse == 0) 220 else longMs)
+            if (index < pulses.lastIndex) sequence += ToneGenerator.TONE_PROP_BEEP to 180
+        }
+        fun playAt(index: Int) {
+            if (index >= sequence.size) {
+                tone.release()
+                return
+            }
+            val (toneType, duration) = sequence[index]
+            tone.startTone(toneType, duration)
+            uiHandler.postDelayed({ tone.stopTone(); playAt(index + 1) }, duration.toLong())
+        }
+        playAt(0)
     }
 
     private fun syncNictClock() {
