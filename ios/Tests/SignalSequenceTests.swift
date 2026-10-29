@@ -31,6 +31,17 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.flags(elapsed: 840, profileID: "standard-start"), [])
     }
 
+    func testRecallAndPostponementUseRequestedShortHornCounts() {
+        XCTAssertEqual(SignalSequence.individualRecallRaise.flags.map(\\.id), ["X"])
+        XCTAssertEqual(SignalSequence.individualRecallRaise.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.generalRecallRaise.flags.map(\\.id), ["first-sub"])
+        XCTAssertEqual(SignalSequence.generalRecallRaise.hornPulses, [0, 0])
+        XCTAssertEqual(SignalSequence.generalRecallLower.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.postponementRaise.flags.map(\\.id), ["AP"])
+        XCTAssertEqual(SignalSequence.postponementRaise.hornPulses, [0, 0])
+        XCTAssertEqual(SignalSequence.postponementLower.hornPulses, [0])
+    }
+
     func testFlagsChangeAtTheScheduledBoundaries() {
         func ids(at elapsed: Double) -> [String] {
             SignalSequence.flags(elapsed: elapsed, profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
