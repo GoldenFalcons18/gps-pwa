@@ -137,15 +137,18 @@ struct SignalTimerPanel: View {
                     VStack(spacing: 4) {
                         HStack(spacing: 6) {
                             Picker("シーケンス", selection: $flagProfile) {
-                                ForEach(SignalSequence.profiles) { Text($0.name).tag($0.id) }
+                                ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
                             }.pickerStyle(.menu)
                             Text("長音 \(hornLengthText)秒").font(.caption2)
                             Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
                         }
                         if flagProfile == "custom-five" {
                             HStack(spacing: 8) {
-                                Picker("クラス旗", selection: $classFlagID) {
-                                    ForEach(SignalSequence.flagCatalog.filter { $0.id.hasPrefix("class-") }) { Text($0.name).tag($0.id) }
+                                Picker("第1旗", selection: $classFlagID) {
+                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
+                                }.pickerStyle(.menu)
+                                Picker("第2旗", selection: $prepFlagID) {
+                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
                                 }.pickerStyle(.menu)
                                 Picker("準備信号旗", selection: $prepFlagID) {
                                     ForEach(["P", "I", "Z", "U", "black"].compactMap { id in SignalSequence.flagCatalog.first { $0.id == id } }) {
@@ -162,6 +165,13 @@ struct SignalTimerPanel: View {
             .padding(compact ? 4 : 8)
             .background(Color.white)
             .foregroundStyle(.black)
+            .onAppear {
+                if flagProfile == "class-p" || flagProfile == "class-i" {
+                    prepFlagID = flagProfile == "class-p" ? "P" : "I"
+                    classFlagID = "class-1"
+                    flagProfile = "custom-five"
+                }
+            }
             .onChange(of: active) { oldValue, newValue in
                 guard isRunning, newValue > oldValue else { return }
                 for index in (oldValue + 1)...newValue where events.indices.contains(index) {
