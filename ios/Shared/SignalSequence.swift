@@ -56,6 +56,7 @@ struct SignalSequence {
         f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
         f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
         f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
+        f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF], "X"),
         f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
         f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
         f("class-3", "クラス旗 3", "classLogo", [0xFFFFFF, 0x00A650], "3"),
@@ -90,8 +91,25 @@ struct SignalSequence {
             e(1, 300, "\(classFlag.name)を掲揚（予告信号・スタート5分前）", [classFlag], true, [0]),
             e(2, 360, "\(prepFlag.name)を掲揚（準備信号・スタート4分前）", [prepFlag], true, [0]),
             e(3, 540, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
-            e(4, 600, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0])
+            e(4, 600, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0]),
+            e(5, 840, "橙旗を降下（スタート約4分後）", [orange], false)
         ]
+    }
+
+    /// After a general recall or postponement, the restarted warning signal is
+    /// made one minute after the recall/postponement flag is lowered.
+    private static func recallRestart(classFlag: Flag, prepFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "\(classFlag.name)を掲揚（再予告信号）", [classFlag], true, [0]),
+            e(1, 60, "\(prepFlag.name)を掲揚（準備信号）", [prepFlag], true, [0]),
+            e(2, 240, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
+            e(3, 300, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0]),
+            e(4, 540, "橙旗を降下（スタート約4分後）", [orange], false)
+        ]
+    }
+
+    static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
+        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
     }
 
     /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
@@ -125,7 +143,7 @@ struct SignalSequence {
     }
 
     static let profiles: [Profile] = [
-        Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から10分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 10),
+        Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から14分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
         Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
         Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
