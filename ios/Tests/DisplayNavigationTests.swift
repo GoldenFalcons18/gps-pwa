@@ -1,5 +1,6 @@
 import XCTest
 @testable import CoordinateInput
+@testable import WatchNavigation
 final class DisplayNavigationTests: XCTestCase {
     func testGeodesicMarksAndDateline() {
         for distance in stride(from: 100, through: 500, by: 100) {
