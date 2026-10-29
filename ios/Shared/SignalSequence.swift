@@ -76,6 +76,12 @@ struct SignalSequence {
         Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
     }
 
+    static let individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", [flag("X")], true, [0])
+    static let generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", [flag("first-sub")], true, [0, 0])
+    static let generalRecallLower = e(-3, 0, "第一代表旗を降下", [flag("first-sub")], false, [0])
+    static let postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", [flag("AP")], true, [0, 0])
+    static let postponementLower = e(-5, 0, "回答旗（AP）を降下", [flag("AP")], false, [0])
+
     private static let orange = flag("orange")
     private static let green = flag("green")
     private static let blue = flag("blue-square")
