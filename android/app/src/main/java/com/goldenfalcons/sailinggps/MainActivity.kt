@@ -331,8 +331,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         buildSignalRows()
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
-        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").apply();updateSignalUi() }
-        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").apply();playSignalHorn(currentSignalEvents().last().hornPulses);updateSignalUi() }
+        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalEndAt").remove("signalPausedSeconds").remove("signalZeroAnnounced").apply();signalActiveIndex=-1;updateSignalUi() }
+        b.btnSignalZero.setOnClickListener { displayPrefs.edit().putLong("signalEndAt",signalNow()).remove("signalPausedSeconds").putBoolean("signalZeroAnnounced",true).apply();playSignalHorn(currentSignalEvents().last().hornPulses);updateSignalUi() }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         b.signalHornLength.max=29
         b.signalHornLength.progress=(displayPrefs.getInt("signalHornMs",700)/100-1).coerceIn(0,29)
@@ -407,7 +407,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 // Begin the sequence at the next whole minute, then reach the start signal
                 // after the selected sequence duration.
                 val sequenceStart=((now/60_000L)+1)*60_000L
-                displayPrefs.edit().putLong("signalEndAt",sequenceStart+minutes*60_000L).remove("signalPausedSeconds").apply()
+                displayPrefs.edit().putLong("signalEndAt",sequenceStart+minutes*60_000L).remove("signalPausedSeconds").putBoolean("signalZeroAnnounced",false).apply()
             }
         }
         lastSignalEventIndex=-1;updateSignalUi()
@@ -464,10 +464,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 if(index==active && running && signalActiveIndex>=0) row.alpha=0.75f
                 row.animate().alpha(1f).setDuration(220).start()
             }
-            if(running && signalActiveIndex>=0) {
-                playSignalHorn(event.hornPulses)
+            if(running && signalActiveIndex>=0 && active>signalActiveIndex) {
+                // The event just passed is the one whose horn sounds now.
+                playSignalHorn(events[signalActiveIndex].hornPulses)
             }
             signalActiveIndex=active
+        }
+        val completed=end>0L && now>=end && paused<=0L
+        if(completed && !displayPrefs.getBoolean("signalZeroAnnounced",false)) {
+            playSignalHorn(events.last().hornPulses)
+            displayPrefs.edit().putBoolean("signalZeroAnnounced",true).apply()
         }
     }
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
