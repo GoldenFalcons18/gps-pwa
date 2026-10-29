@@ -15,6 +15,8 @@ class SignalSequenceTest {
     @Test
     fun standardTimelineAndRecallRestartUseExpectedOffsets() {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
+        assertEquals("I", SignalSequence.events(14, 0, "I")[2].flag)
+        assertEquals(0xFFF5D328.toInt(), SignalSequence.events(14, 0, "I")[2].color)
         assertEquals(listOf(0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
         assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
         assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
