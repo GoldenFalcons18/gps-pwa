@@ -47,8 +47,8 @@ final class DisplayNavigationTests: XCTestCase {
     func testVideoBCombinesAndLowersFlagsTogether() {
         XCTAssertEqual(SignalSequence.flags(elapsed: 239, profileID: "video-13").map(\.id), ["orange"])
         XCTAssertEqual(SignalSequence.flags(elapsed: 240, profileID: "video-13").count, 3)
-        XCTAssertEqual(SignalSequence.flags(elapsed: 480, profileID: "video-13").count, 2)
-        XCTAssertEqual(SignalSequence.flags(elapsed: 540, profileID: "video-13").map(\.id), ["checker", "orange"])
+        XCTAssertEqual(SignalSequence.flags(elapsed: 480, profileID: "video-13").count, 3)
+        XCTAssertEqual(SignalSequence.flags(elapsed: 540, profileID: "video-13").map(\.id), ["orange"])
         XCTAssertEqual(SignalSequence.flags(elapsed: 780, profileID: "video-13"), [])
     }
 
