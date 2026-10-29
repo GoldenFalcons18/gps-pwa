@@ -17,6 +17,11 @@ final class SignalSequenceTests: XCTestCase {
         ])
     }
 
+    func testStandardSequenceIsTheDefaultAndHighlightsOrangeFlagFirst() {
+        XCTAssertEqual(SignalSequence.events().map(\.secondsAfterStart), [0, 300, 360, 540, 600])
+        XCTAssertEqual(SignalSequence.initialEventIndex(), 0)
+    }
+
     func testFlagsChangeAtTheScheduledBoundaries() {
         func ids(at elapsed: Double) -> [String] {
             SignalSequence.flags(elapsed: elapsed, profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
