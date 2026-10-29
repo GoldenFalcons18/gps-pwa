@@ -114,7 +114,9 @@ struct SignalSequence {
     static let profiles: [Profile] = [
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
         Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
-        Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5)
+        Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5,
+        Profile(id: "class-p", name: "カスタム（クラス旗＋P旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
+        Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
     ]
 
     static func events(durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
@@ -123,6 +125,10 @@ struct SignalSequence {
             return video13
         case "custom-five":
             return customFive(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+        case "class-p":
+            return customFive(classFlag: flag("class-1"), prepFlag: flag("P"))
+        case "class-i":
+            return customFive(classFlag: flag("class-1"), prepFlag: flag("I"))
         default:
             return video20
         }
