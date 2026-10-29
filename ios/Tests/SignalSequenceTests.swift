@@ -6,8 +6,8 @@ final class SignalSequenceTests: XCTestCase {
         let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
 
         XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
-        XCTAssertEqual(events.map(\.raised), [true, true, true, false, false])
-        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0]])
+        XCTAssertEqual(events.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
         XCTAssertEqual(events.map(\.title), [
             "橙旗を掲揚（予告信号の5分前）",
             "クラス旗 4を掲揚（予告信号・スタート5分前）",
@@ -19,7 +19,7 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testStandardSequenceIsTheDefaultAndHighlightsOrangeFlagFirst() {
-        XCTAssertEqual(SignalSequence.events().map(\.secondsAfterStart), [0, 300, 360, 540, 600])
+        XCTAssertEqual(SignalSequence.events().map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
         XCTAssertEqual(SignalSequence.initialEventIndex(), 0)
     }
 
