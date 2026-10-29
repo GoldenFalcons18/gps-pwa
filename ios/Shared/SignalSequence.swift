@@ -56,7 +56,7 @@ struct SignalSequence {
         f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
         f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
         f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
-        f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF], "X"),
+        f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF]),
         f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
         f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
         f("class-3", "クラス旗 3", "classLogo", [0xFFFFFF, 0x00A650], "3"),
@@ -83,7 +83,7 @@ struct SignalSequence {
     private static let diagonal = flag("diagonal")
     private static let checker = flag("checker")
 
-    /// Standard 10-minute start sequence measured from the orange flag.
+    /// Standard 14-minute sequence measured from raising the orange flag.
     /// Orange flag is raised 5 minutes before the warning signal.
     private static func standardStart(classFlag: Flag, prepFlag: Flag) -> [Event] {
         [
