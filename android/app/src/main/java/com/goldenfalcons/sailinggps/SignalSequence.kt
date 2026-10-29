@@ -86,17 +86,17 @@ object SignalSequence {
     val postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", "AP", 0xFFD71920.toInt(), true, 0, 0)
     val postponementLower = e(-5, 0, "回答旗（AP）を降下", "AP", 0xFFD71920.toInt(), false, 0)
 
-    fun restartEvents(): List<SignalEvent> = listOf(
+    fun restartEvents(prepFlag: String = "P"): List<SignalEvent> = listOf(
         e(0, 0, "クラス旗を掲揚（再予告信号）", "級", 0xFF7A35A8.toInt(), true, 0),
-        e(1, 60, "準備信号を掲揚", "P", 0xFF1769FF.toInt(), true, 0),
-        e(2, 240, "準備信号を降下（スタート1分前）", "P", 0xFF1769FF.toInt(), false, 1),
+        e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
+        e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
         e(3, 300, "クラス旗を降下（スタート）", "級", 0xFF7A35A8.toInt(), false, 0),
         e(4, 540, "オレンジ旗を降下（スタート約4分後）", "橙", 0xFFF58A00.toInt(), false)
     )
 
-    fun events(durationMinutes: Int = 14, profileIndex: Int = 0): List<SignalEvent> {
+    fun events(durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): List<SignalEvent> {
         val profile = profiles.getOrElse(profileIndex) { profiles[0] }
-        if (profile.id == "standard-start") return profile.events
+        if (profile.id == "standard-start") return if (prepFlag == "I") profile.events.map { event ->\n            if (event.flag == "P") event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗")) else event\n        } else profile.events
         val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
         return profile.events.map { it.copy(secondsAfterStart = (it.secondsAfterStart * scale).toInt()) }
     }
