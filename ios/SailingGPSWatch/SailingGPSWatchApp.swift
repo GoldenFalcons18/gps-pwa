@@ -19,6 +19,12 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
             return
         }
         #endif
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--preview-signal-video-b") {
+            UserDefaults.standard.set("video-13", forKey: "signalFlagProfile")
+            UserDefaults.standard.set(2, forKey: "watchMode")
+        }
+        #endif
         guard WCSession.isSupported() else { return }
         WCSession.default.delegate = self; WCSession.default.activate()
     }
