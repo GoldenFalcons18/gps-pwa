@@ -319,21 +319,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
-        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス"))
-        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",4).coerceIn(0,4))
+        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス"))
+        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,5))
         b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
         b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
         b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();buildSignalRows();updateSignalUi() }
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();if(position==0){displayPrefs.edit().putInt("signalDurationIndexV2",0).apply();b.signalDuration.setSelection(0)};buildSignalRows();updateSignalUi() }
         }
         b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalDurationIndexV2",position).apply();buildSignalRows();updateSignalUi() }
         }
         buildSignalRows()
+        b.btnSignalIndividualRecall.setOnClickListener { toggleIndividualRecall() }
+        b.btnSignalGeneralRecall.setOnClickListener { toggleGeneralRecall() }
+        b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
-        b.btnSignalReset.setOnClickListener { displayPrefs.edit().remove("signalElapsedStartAt").remove("signalPausedElapsedMs").remove("signalLastFiredIndex").apply();signalActiveIndex=-1;updateSignalUi() }
+        b.btnSignalReset.setOnClickListener { resetSignalSequence() }
         b.btnSignalZero.setOnClickListener {
             val events=currentSignalEvents()
             displayPrefs.edit().putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0).apply()
@@ -376,7 +379,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun signalNow():Long=System.currentTimeMillis()+signalClockOffsetMs
     private fun currentSignalDurationMinutes():Int =
-        listOf(1,3,5,10,20).getOrElse(displayPrefs.getInt("signalDurationIndexV2",4)){20}
+        listOf(14,1,3,5,10,20).getOrElse(displayPrefs.getInt("signalDurationIndexV2",0)){14}
 
     private fun buildSignalRows() {
         b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
