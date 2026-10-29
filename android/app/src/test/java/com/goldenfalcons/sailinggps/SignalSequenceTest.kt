@@ -5,11 +5,18 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
-    fun videoProfileUsesElapsedSignalTimesInOrder() {
-        assertEquals(listOf(0, 300, 360, 540, 600, 1200), SignalSequence.events(20, 0).map { it.secondsAfterStart })
+    fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
             SignalSequence.events(20, 0).map { it.hornPulses })
+    }
+
+    @Test
+    fun standardTimelineAndRecallRestartUseExpectedOffsets() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
+        assertEquals(listOf(0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
     }
 
     @Test
@@ -35,14 +42,14 @@ class SignalSequenceTest {
 
     @Test
     fun sequenceScalingPreservesElapsedOrder() {
-        assertEquals(listOf(0, 150, 180, 270, 300, 600), SignalSequence.events(10, 0).map { it.secondsAfterStart })
+        assertEquals(listOf(0, 150, 180, 270, 300, 600), SignalSequence.events(10, 1).map { it.secondsAfterStart })
     }
 
     @Test
     fun mastShowsCurrentRaisedFlags() {
         assertEquals(listOf("橙"), SignalSequence.flagsAt(0.0, 20, 0).filter { it.raised }.map { it.id })
-        assertEquals(listOf("橙", "緑", "青"), SignalSequence.flagsAt(360.0, 20, 0).filter { it.raised }.map { it.id })
-        assertEquals(listOf("橙"), SignalSequence.flagsAt(600.0, 20, 0).filter { it.raised }.map { it.id })
-        assertEquals(emptyList<String>(), SignalSequence.flagsAt(1200.0, 20, 0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("橙", "級", "P"), SignalSequence.flagsAt(360.0, 14, 0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("橙"), SignalSequence.flagsAt(600.0, 14, 0).filter { it.raised }.map { it.id })
+        assertEquals(emptyList<String>(), SignalSequence.flagsAt(1200.0, 14, 0).filter { it.raised }.map { it.id })
     }
 }
