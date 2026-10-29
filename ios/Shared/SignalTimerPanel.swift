@@ -160,37 +160,6 @@ struct SignalTimerPanel: View {
             let useRetrySequence = restartWarningAt > 0 && !retryPending
             let sequenceEvents = useRetrySequence ? recallRestartEvents : events
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
-            let active: Int
-            if retryPending {
-                active = 0
-            } else if useRetrySequence {
-                active = sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
-            } else if hasStarted {
-                active = SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
-            } else {
-                active = SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
-            }
-            let current = sequenceEvents[active]
-            let isRunning = useRetrySequence
-                ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
-                : running(at: now)
-            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : sequenceElapsed
-            var visibleFlags = retryPending
-                ? [SignalSequence.flag("orange")]
-                : SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
-            if useRetrySequence && sequenceElapsed < 540 {
-                visibleFlags.append(SignalSequence.flag("orange"))
-            }
-            if generalRecallFlagUp {
-                visibleFlags = [SignalSequence.flag("orange"), SignalSequence.flag("first-sub")]
-            } else if postponementFlagUp {
-                visibleFlags = [SignalSequence.flag("orange"), SignalSequence.flag("AP")]
-            } else if individualRecallFlagUp {
-                visibleFlags.append(SignalSequence.flag("X"))
-            }
-            var uniqueFlags: [String: SignalSequence.Flag] = [:]
-            for flag in visibleFlags { uniqueFlags[flag.id] = flag }
-            let raisedFlags = uniqueFlags.values.sorted { $0.id < $1.id }
             let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
             let current = sequenceEvents[active]
             let isRunning = useRetrySequence
