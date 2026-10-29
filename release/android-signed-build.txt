@@ -1,1 +1,1 @@
-1.8.5 versionCode 33 sailing start sequence
+1.8.6 versionCode 34 signal settings
