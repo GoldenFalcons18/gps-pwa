@@ -361,14 +361,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(events.first().hornPulses);signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
         b.btnNictSync.setOnClickListener { syncNictClock() }
-        fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,suffix:String) {
-            seek.max=if(key=="signalHornVolume") 100 else 49
+        fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
+            seek.max=maxProgress
             val stored=displayPrefs.getInt(key,defaultValue)
             seek.progress=if(key=="signalHornVolume") stored.coerceIn(0,100) else ((stored-100)/step).coerceIn(0,seek.max)
             fun render(progress:Int) {
                 val value=if(key=="signalHornVolume") progress else 100+progress*step
                 displayPrefs.edit().putInt(key,value).apply()
-                label.text=if(key=="signalHornVolume") "音量 $value%" else "$suffix ${"%.2f".format(java.util.Locale.US,value/100.0)}秒"
+                label.text=if(key=="signalHornVolume") "音量 $value%" else "$suffix ${"%.2f".format(java.util.Locale.US,value/1000.0)}秒"
             }
             render(seek.progress)
             seek.setOnSeekBarChangeListener(object:android.widget.SeekBar.OnSeekBarChangeListener {
@@ -379,10 +379,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.signalHornEnabled.isChecked=displayPrefs.getBoolean("signalHornEnabled",true)
         b.signalHornEnabled.setOnCheckedChangeListener { _,checked -> displayPrefs.edit().putBoolean("signalHornEnabled",checked).apply() }
-        bindSignalSeek(b.signalHornLength,b.tvHornLength,"signalHornMs",700,100,"長音")
-        bindSignalSeek(b.signalShortHorn,b.tvSignalShortHorn,"signalShortHornMs",220,5,"短音")
-        bindSignalSeek(b.signalGap,b.tvSignalGap,"signalGapMs",180,5,"間隔")
-        bindSignalSeek(b.signalVolume,b.tvSignalVolume,"signalHornVolume",80,1,"音量")
+        bindSignalSeek(b.signalHornLength,b.tvHornLength,"signalHornMs",700,100,49,"長音")
+        bindSignalSeek(b.signalShortHorn,b.tvSignalShortHorn,"signalShortHornMs",220,50,18,"短音")
+        bindSignalSeek(b.signalGap,b.tvSignalGap,"signalGapMs",180,50,38,"間隔")
+        bindSignalSeek(b.signalVolume,b.tvSignalVolume,"signalHornVolume",80,1,100,"音量")
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
     }
