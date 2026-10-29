@@ -183,16 +183,19 @@ struct SignalSequence {
     }
 
     /// Resolves simultaneous raise/lower calls by the individual flag identity.
-    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+    static func raisedFlags(events: [Event], elapsed: Double) -> [Flag] {
         var raised: [String: Flag] = [:]
-        for event in events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
-        where Double(event.secondsAfterStart) <= elapsed {
+        for event in events where Double(event.secondsAfterStart) <= elapsed {
             for flag in event.flags {
                 if event.raised { raised[flag.id] = flag }
                 else { raised.removeValue(forKey: flag.id) }
             }
         }
         return raised.values.sorted { $0.id < $1.id }
+    }
+
+    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+        raisedFlags(events: events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID), elapsed: elapsed)
     }
 
     static func clockText(_ date: Date, offset: Double = 0) -> String {
