@@ -47,7 +47,7 @@ struct SignalTimerPanel: View {
         if generalRecallFlagUp {
             generalRecallFlagUp = false
             playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
-            restartWarningAt = date.timeIntervalSince1970 + 60
+            restartWarningAt = date.timeIntervalSince1970 + clockOffset + 60
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
@@ -61,7 +61,7 @@ struct SignalTimerPanel: View {
         if postponementFlagUp {
             postponementFlagUp = false
             playHorn(pulses: SignalSequence.postponementLower.hornPulses)
-            restartWarningAt = date.timeIntervalSince1970 + 60
+            restartWarningAt = date.timeIntervalSince1970 + clockOffset + 60
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
@@ -125,10 +125,11 @@ struct SignalTimerPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
-            let retryPending = restartWarningAt > now.timeIntervalSince1970
+            let correctedNow = now.timeIntervalSince1970 + clockOffset
+            let retryPending = restartWarningAt > correctedNow
             let useRetrySequence = restartWarningAt > 0 && !retryPending
             let sequenceEvents = useRetrySequence ? recallRestartEvents : events
-            let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, now.timeIntervalSince1970 - restartWarningAt) : spent)
+            let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
             let active: Int
             if retryPending {
                 active = 0
@@ -143,7 +144,7 @@ struct SignalTimerPanel: View {
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
                 : running(at: now)
-            let displaySeconds = retryPending ? max(0, restartWarningAt - now.timeIntervalSince1970) : sequenceElapsed
+            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : sequenceElapsed
             var visibleFlags = retryPending
                 ? [SignalSequence.flag("orange")]
                 : SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
