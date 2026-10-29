@@ -9,6 +9,10 @@ struct SignalTimerPanel: View {
     @AppStorage("signalVideoStarted") private var hasStarted = false
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
+    @AppStorage("signalShortHornSeconds") private var shortHornSeconds = 0.22
+    @AppStorage("signalHornGapSeconds") private var hornGapSeconds = 0.18
+    @AppStorage("signalHornVolume") private var hornVolume = 0.8
+    @AppStorage("signalHornEnabled") private var hornEnabled = true
     @AppStorage("signalFlagProfile") private var flagProfile = "standard-start"
     @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
@@ -248,25 +252,28 @@ struct SignalTimerPanel: View {
                 .buttonStyle(.bordered)
                 #if os(iOS)
                 if !compact {
-                    let hornLengthText = String(format: "%.1f", hornSeconds)
                     VStack(spacing: 4) {
-                        HStack(spacing: 6) {
-                            Picker("シーケンス", selection: $flagProfile) {
-                                ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
-                            }.pickerStyle(.menu)
-                            Text("長音 \(hornLengthText)秒").font(.caption2)
-                            Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
-                        }
+                        Picker("スタート手順", selection: $flagProfile) {
+                            ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
+                        }.pickerStyle(.menu)
                         if flagProfile == "custom-five" || flagProfile == "standard-start" {
                             HStack(spacing: 8) {
-                                Picker("第1旗", selection: $classFlagID) {
-                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
+                                Picker("クラス旗", selection: $classFlagID) {
+                                    ForEach(SignalSequence.flagCatalog.filter { $0.id.hasPrefix("class-") }) { Text($0.name).tag($0.id) }
                                 }.pickerStyle(.menu)
-                                Picker("第2旗", selection: $prepFlagID) {
-                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
+                                Picker("準備旗", selection: $prepFlagID) {
+                                    ForEach(SignalSequence.flagCatalog.filter { ["P", "I", "U", "Z", "black"].contains($0.id) }) { Text($0.name).tag($0.id) }
                                 }.pickerStyle(.menu)
                             }
                         }
+                        DisclosureGroup("ホーン設定") {
+                            Toggle("仮想ホーンを有効にする", isOn: $hornEnabled)
+                            signalSlider("音量", value: $hornVolume, range: 0...1, step: 0.05, format: "%.0f%%", scale: 100)
+                            signalSlider("短音", value: $shortHornSeconds, range: 0.1...1.0, step: 0.05, format: "%.2f秒", scale: 1)
+                            signalSlider("長音", value: $hornSeconds, range: 0.1...5.0, step: 0.1, format: "%.1f秒", scale: 1)
+                            signalSlider("連発間隔", value: $hornGapSeconds, range: 0.1...2.0, step: 0.05, format: "%.2f秒", scale: 1)
+                        }
+                        .font(.caption)
                     }
                     if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
                 }
@@ -299,21 +306,30 @@ struct SignalTimerPanel: View {
         }
     }
 
+    private func signalSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double, format: String, scale: Double) -> some View {
+        HStack(spacing: 6) {
+            Text(title).frame(width: 72, alignment: .leading)
+            Slider(value: value, in: range, step: step)
+            Text(String(format: format, value.wrappedValue * scale))
+                .font(.system(.caption2, design: .monospaced)).frame(width: 48, alignment: .trailing)
+        }
+    }
+
     private func playHorn(pulses: [Int]) {
-        guard !pulses.isEmpty else { return }
+        guard hornEnabled, !pulses.isEmpty else { return }
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
         let rate = 22_050.0
-        let pulseDurations = pulses.map { $0 == 0 ? 0.22 : hornSeconds }
-        let gapSamples = Int(rate * 0.18)
+        let pulseDurations = pulses.map { $0 == 0 ? shortHornSeconds : hornSeconds }
+        let gapSamples = Int(rate * hornGapSeconds)
         var samples = Data(capacity: (pulseDurations.reduce(0) { $0 + Int(rate * $1) } + gapSamples * max(0, pulseDurations.count - 1)) * 2)
         for (burst, pulseDuration) in pulseDurations.enumerated() {
             let count = max(1, Int(rate * pulseDuration))
             for index in 0..<count {
                 let fade = min(1, Double(index) / 160) * min(1, Double(count - index) / 1200)
-                var sample = Int16(sin(2 * Double.pi * 660 * Double(index) / rate) * 0.42 * fade * Double(Int16.max)).littleEndian
+                var sample = Int16(sin(2 * Double.pi * 660 * Double(index) / rate) * 0.42 * hornVolume * fade * Double(Int16.max)).littleEndian
                 withUnsafeBytes(of: &sample) { samples.append(contentsOf: $0) }
             }
             if burst < pulseDurations.count - 1 { samples.append(Data(repeating: 0, count: gapSamples * 2)) }
