@@ -127,11 +127,12 @@ struct SignalTimerPanel: View {
                 .font(.system(size: compact ? 12 : 16))
                 #if os(iOS)
                 if !compact {
+                    let hornLengthText = String(format: "%.1f", hornSeconds)
                     HStack(spacing: 6) {
                         Picker("信号", selection: $flagProfile) {
                             ForEach(SignalSequence.profiles) { Text($0.name).tag($0.id) }
                         }.pickerStyle(.menu)
-                        Text("長音 \\(hornLengthText)秒").font(.caption2)
+                        Text("長音 " + hornLengthText + "秒").font(.caption2)
                         Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
                     }
                     if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
