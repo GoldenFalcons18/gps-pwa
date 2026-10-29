@@ -40,13 +40,13 @@ struct SignalTimerPanel: View {
             individualRecallFlagUp = false
         } else {
             individualRecallFlagUp = true
-            playHorn(pulses: [0])
+            playHorn(pulses: SignalSequence.individualRecallRaise.hornPulses)
         }
     }
     private func toggleGeneralRecall(at date: Date) {
         if generalRecallFlagUp {
             generalRecallFlagUp = false
-            playHorn(pulses: [0])
+            playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
             restartWarningAt = date.timeIntervalSince1970 + 60
         } else {
             pauseForManualSignal(at: date)
@@ -54,13 +54,13 @@ struct SignalTimerPanel: View {
             postponementFlagUp = false
             restartWarningAt = 0
             generalRecallFlagUp = true
-            playHorn(pulses: [0, 0])
+            playHorn(pulses: SignalSequence.generalRecallRaise.hornPulses)
         }
     }
     private func togglePostponement(at date: Date) {
         if postponementFlagUp {
             postponementFlagUp = false
-            playHorn(pulses: [0])
+            playHorn(pulses: SignalSequence.postponementLower.hornPulses)
             restartWarningAt = date.timeIntervalSince1970 + 60
         } else {
             pauseForManualSignal(at: date)
@@ -68,7 +68,7 @@ struct SignalTimerPanel: View {
             generalRecallFlagUp = false
             restartWarningAt = 0
             postponementFlagUp = true
-            playHorn(pulses: [0, 0])
+            playHorn(pulses: SignalSequence.postponementRaise.hornPulses)
         }
     }
     private func elapsed(at date: Date) -> Double {
@@ -197,7 +197,7 @@ struct SignalTimerPanel: View {
                 }
                 .foregroundStyle(.black)
                 VStack(spacing: 1) {
-                    ForEach(events) { event in
+                    ForEach(sequenceEvents) { event in
                         let isActive = event.id == active
                         HStack(spacing: 5) {
                             Text(event.raised ? "↑" : "↓").frame(width: 14)
