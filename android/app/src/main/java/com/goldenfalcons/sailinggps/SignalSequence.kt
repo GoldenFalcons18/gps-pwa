@@ -13,6 +13,6 @@ object SignalSequence {
     )
     fun events(minutes:Int,profileIndex:Int=0):List<SignalEvent>{val p=profiles.getOrElse(profileIndex){profiles[0]};val d=minutes.coerceAtLeast(1);return p.events.map{it.copy(secondsBeforeStart=(it.secondsBeforeStart*d.toDouble()/p.baseDurationMinutes).toInt())}}
     // Advance exactly at a signal boundary; the row being left is the signal fired there.
-    fun nextIndex(left:Double,minutes:Int,profileIndex:Int=0):Int{val es=events(minutes,profileIndex);return es.indexOfFirst{left>it.secondsBeforeStart}.let{if(it<0)es.lastIndex else it}}
+    fun nextIndex(left:Double,minutes:Int,profileIndex:Int=0):Int{val es=events(minutes,profileIndex);return SignalTiming.nextEventIndex(left,es.map{it.secondsBeforeStart})}
     fun untilNext(left:Double,index:Int,minutes:Int,profileIndex:Int=0)=kotlin.math.ceil(left-events(minutes,profileIndex)[index].secondsBeforeStart).toInt()
 }
