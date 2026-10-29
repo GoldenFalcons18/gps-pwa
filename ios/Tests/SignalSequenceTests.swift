@@ -32,12 +32,12 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testRecallAndPostponementUseRequestedShortHornCounts() {
-        XCTAssertEqual(SignalSequence.individualRecallRaise.flags.map(\\.id), ["X"])
+        XCTAssertEqual(SignalSequence.individualRecallRaise.flags.map(\.id), ["X"])
         XCTAssertEqual(SignalSequence.individualRecallRaise.hornPulses, [0])
-        XCTAssertEqual(SignalSequence.generalRecallRaise.flags.map(\\.id), ["first-sub"])
+        XCTAssertEqual(SignalSequence.generalRecallRaise.flags.map(\.id), ["first-sub"])
         XCTAssertEqual(SignalSequence.generalRecallRaise.hornPulses, [0, 0])
         XCTAssertEqual(SignalSequence.generalRecallLower.hornPulses, [0])
-        XCTAssertEqual(SignalSequence.postponementRaise.flags.map(\\.id), ["AP"])
+        XCTAssertEqual(SignalSequence.postponementRaise.flags.map(\.id), ["AP"])
         XCTAssertEqual(SignalSequence.postponementRaise.hornPulses, [0, 0])
         XCTAssertEqual(SignalSequence.postponementLower.hornPulses, [0])
     }
