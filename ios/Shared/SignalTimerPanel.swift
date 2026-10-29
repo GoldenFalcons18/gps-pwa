@@ -150,11 +150,6 @@ struct SignalTimerPanel: View {
                                 Picker("第2旗", selection: $prepFlagID) {
                                     ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
                                 }.pickerStyle(.menu)
-                                Picker("準備信号旗", selection: $prepFlagID) {
-                                    ForEach(["P", "I", "Z", "U", "black"].compactMap { id in SignalSequence.flagCatalog.first { $0.id == id } }) {
-                                        Text($0.name).tag($0.id)
-                                    }
-                                }.pickerStyle(.menu)
                             }
                         }
                     }
