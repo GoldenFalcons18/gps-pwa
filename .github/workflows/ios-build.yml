@@ -51,6 +51,10 @@ jobs:
           sleep 4
           xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed.png
           xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-signal-video-b
+          sleep 4
+          xcrun simctl io "$DEVICE" screenshot screenshots/Watch-signal-video-b.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps.watchkitapp --preview-watch --preview-speed -watchMagnetic NO
           sleep 2
           xcrun simctl io "$DEVICE" screenshot screenshots/Watch-speed-true.png
@@ -99,6 +103,15 @@ jobs:
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 0
           sleep 5
           xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-speed.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-signal-video-a
+          sleep 3
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-signal-video-a.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
+          xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps --preview-signal-video-b
+          sleep 3
+          xcrun simctl io "$DEVICE" screenshot screenshots/iPhone-signal-video-b.png
+          xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           xcrun simctl terminate "$DEVICE" com.goldenfalcons.sailinggps
           xcrun simctl launch "$DEVICE" com.goldenfalcons.sailinggps -displayMode 1
           # Simulated movement supplies COG so heading-up and course marks can be inspected.

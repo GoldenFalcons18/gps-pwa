@@ -1,7 +1,7 @@
 import SwiftUI
 import AVFoundation
 
-/// Signal timer matching the supplied video: elapsed-time sequence, mast panel, signal list and start controls.
+/// Signal timer with the two elapsed-time sequences transcribed from the supplied videos.
 struct SignalTimerPanel: View {
     var compact = false
     @AppStorage("signalVideoStartAt") private var startAt = 0.0
@@ -10,12 +10,16 @@ struct SignalTimerPanel: View {
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalFlagProfile") private var flagProfile = "video-20"
+    @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
+    @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
 
     private let durationMinutes = 20
-    private var events: [SignalSequence.Event] { SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile) }
+    private var events: [SignalSequence.Event] {
+        SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+    }
     private func elapsed(at date: Date) -> Double {
         if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
         return hasStarted ? max(0, pausedSeconds) : 0
@@ -46,9 +50,6 @@ struct SignalTimerPanel: View {
         pausedSeconds = 0
         hasStarted = false
     }
-    private func flagColor(_ hex: UInt32) -> Color {
-        Color(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
-    }
     private func elapsedText(_ seconds: Double) -> String {
         let value = max(0, Int(seconds))
         return String(format: "%02d:%02d", value / 60, value % 60)
@@ -58,10 +59,12 @@ struct SignalTimerPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
-            let active = hasStarted ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile) : SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
+            let active = hasStarted
+                ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+                : SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
             let current = events[active]
             let isRunning = running(at: now)
-            let raisedFlags = SignalSequence.flags(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile)
+            let raisedFlags = SignalSequence.flags(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
@@ -101,9 +104,12 @@ struct SignalTimerPanel: View {
                         let isActive = event.id == active
                         HStack(spacing: 5) {
                             Text(event.raised ? "↑" : "↓").frame(width: 14)
-                            Rectangle().fill(flagColor(event.colorHex))
-                                .frame(width: 17, height: 16)
-                                .overlay { if event.flag == "青" { Rectangle().fill(.white).frame(width: 6, height: 6) } }
+                            HStack(spacing: 2) {
+                                ForEach(event.flags) { flag in
+                                    SignalFlagView(flag: flag)
+                                        .frame(width: compact ? 16 : 22, height: compact ? 12 : 16)
+                                }
+                            }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                             Text(String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60))
@@ -128,12 +134,24 @@ struct SignalTimerPanel: View {
                 #if os(iOS)
                 if !compact {
                     let hornLengthText = String(format: "%.1f", hornSeconds)
-                    HStack(spacing: 6) {
-                        Picker("信号", selection: $flagProfile) {
-                            ForEach(SignalSequence.profiles) { Text($0.name).tag($0.id) }
-                        }.pickerStyle(.menu)
-                        Text("長音 " + hornLengthText + "秒").font(.caption2)
-                        Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
+                    VStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Picker("シーケンス", selection: $flagProfile) {
+                                ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
+                            }.pickerStyle(.menu)
+                            Text("長音 \(hornLengthText)秒").font(.caption2)
+                            Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
+                        }
+                        if flagProfile == "custom-five" {
+                            HStack(spacing: 8) {
+                                Picker("第1旗", selection: $classFlagID) {
+                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
+                                }.pickerStyle(.menu)
+                                Picker("第2旗", selection: $prepFlagID) {
+                                    ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
+                                }.pickerStyle(.menu)
+                            }
+                        }
                     }
                     if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
                 }
@@ -142,6 +160,13 @@ struct SignalTimerPanel: View {
             .padding(compact ? 4 : 8)
             .background(Color.white)
             .foregroundStyle(.black)
+            .onAppear {
+                if flagProfile == "class-p" || flagProfile == "class-i" {
+                    prepFlagID = flagProfile == "class-p" ? "P" : "I"
+                    classFlagID = "class-1"
+                    flagProfile = "custom-five"
+                }
+            }
             .onChange(of: active) { oldValue, newValue in
                 guard isRunning, newValue > oldValue else { return }
                 for index in (oldValue + 1)...newValue where events.indices.contains(index) {
@@ -194,7 +219,7 @@ struct SignalTimerPanel: View {
 }
 
 private struct MastBoard: View {
-    let flags: [SignalSequence.Event]
+    let flags: [SignalSequence.Flag]
     let compact: Bool
 
     var body: some View {
@@ -215,15 +240,8 @@ private struct MastBoard: View {
 
 private struct MastPole: View {
     let poleIndex: Int
-    let flags: [SignalSequence.Event]
+    let flags: [SignalSequence.Flag]
     let height: CGFloat
-
-    private func color(_ hex: UInt32) -> Color {
-        let red = Double((hex >> 16) & 255) / 255
-        let green = Double((hex >> 8) & 255) / 255
-        let blue = Double(hex & 255) / 255
-        return Color(red: red, green: green, blue: blue)
-    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -231,21 +249,79 @@ private struct MastPole: View {
                 .fill(poleIndex == 1 ? Color.orange : Color.gray.opacity(0.85))
                 .frame(width: 2, height: height * 0.94)
             ForEach(flags.indices, id: \.self) { flagIndex in
-                let event = flags[flagIndex]
-                let assignedPole = [1, 3, 2, 4, 0][event.id % 5]
-                if assignedPole == poleIndex {
-                    HStack(spacing: 0) {
-                        color(event.colorHex)
-                        if event.flag == "青" {
-                            Rectangle().fill(Color.white).frame(width: 7, height: 7)
-                        }
-                    }
-                    .frame(width: 25, height: 18)
-                    .offset(x: 2, y: CGFloat(flagIndex % 3) * 20 + 8)
-                    .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
+                if [1, 3, 2, 4, 0][flagIndex % 5] == poleIndex {
+                    SignalFlagView(flag: flags[flagIndex])
+                        .frame(width: 25, height: 18)
+                        .offset(x: 2, y: CGFloat(flagIndex / 5) * 20 + 8)
+                        .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
                 }
             }
         }
         .frame(width: 28, height: height, alignment: .topLeading)
+    }
+}
+
+private struct SignalFlagView: View {
+    let flag: SignalSequence.Flag
+
+    private func color(_ index: Int) -> Color {
+        let hex = flag.colors[min(index, flag.colors.count - 1)]
+        return Color(red: Double((hex >> 16) & 255) / 255,
+                     green: Double((hex >> 8) & 255) / 255,
+                     blue: Double(hex & 255) / 255)
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let height = proxy.size.height
+            ZStack {
+                switch flag.style {
+                case "diagonal":
+                    color(0)
+                    Path { path in
+                        path.move(to: .zero); path.addLine(to: CGPoint(x: width, y: .zero))
+                        path.addLine(to: CGPoint(x: .zero, y: height)); path.closeSubpath()
+                    }.fill(color(1))
+                case "checker", "nFlag", "uFlag":
+                    VStack(spacing: 0) {
+                        HStack(spacing: 0) { color(0); color(1) }
+                        HStack(spacing: 0) { color(1); color(0) }
+                    }
+                case "blueSquare", "pFlag":
+                    color(0)
+                    Rectangle().fill(color(1)).frame(width: width * 0.42, height: height * 0.42)
+                case "iFlag":
+                    color(0)
+                    Circle().fill(color(1)).frame(width: height * 0.50, height: height * 0.50)
+                case "zFlag", "lFlag":
+                    color(0)
+                    VStack(spacing: 0) { color(1); color(0); color(1) }.frame(height: height * 0.62)
+                case "apFlag", "hFlag":
+                    HStack(spacing: 0) { color(0); color(1) }
+                case "firstSub":
+                    color(0)
+                    Path { path in
+                        path.move(to: .zero); path.addLine(to: CGPoint(x: width, y: height))
+                        path.addLine(to: CGPoint(x: width, y: .zero)); path.closeSubpath()
+                    }.fill(color(1))
+                case "classLogo":
+                    Color.white
+                    Circle().fill(color(1)).frame(width: height * 0.64, height: height * 0.64)
+                default:
+                    color(0)
+                }
+                if !flag.symbol.isEmpty {
+                    Text(flag.symbol)
+                        .font(.system(size: max(6, height * 0.58), weight: .black, design: .rounded))
+                        .foregroundStyle(["black", "I", "Z", "L"].contains(flag.id) ? Color.white : Color.black)
+                        .minimumScaleFactor(0.45)
+                        .lineLimit(1)
+                        .shadow(color: .white.opacity(0.5), radius: 0.5)
+                }
+            }
+            .overlay(Rectangle().stroke(Color.black.opacity(0.7), lineWidth: 0.6))
+        }
+        .clipShape(Rectangle())
     }
 }

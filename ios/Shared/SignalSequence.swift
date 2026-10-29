@@ -1,16 +1,29 @@
 import Foundation
 
-/// Flag events are scheduled from the operator's Start press (elapsed time).
+/// Start-timer signals are scheduled from the operator pressing Start.
+/// Video profiles preserve the exact elapsed-time marks shown in the supplied recordings.
 struct SignalSequence {
+    struct Flag: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let style: String
+        let colors: [UInt32]
+        let symbol: String
+    }
+
     struct Event: Identifiable, Equatable {
         let id: Int
         let secondsAfterStart: Int
         let title: String
-        let flag: String
-        let colorHex: UInt32
+        let flags: [Flag]
         let raised: Bool
         let hornPulses: [Int]
+
+        // Kept as convenience accessors for older timeline consumers.
+        var flag: String { flags.first?.name ?? "" }
+        var colorHex: UInt32 { flags.first?.colors.first ?? 0xFFFFFF }
     }
+
     struct Profile: Identifiable {
         let id: String
         let name: String
@@ -18,62 +31,132 @@ struct SignalSequence {
         var baseDurationMinutes: Int = 20
     }
 
-    private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flag: String, _ color: UInt32, _ raised: Bool, _ pulses: [Int] = []) -> Event {
-        Event(id: id, secondsAfterStart: seconds, title: title, flag: flag, colorHex: color, raised: raised, hornPulses: pulses)
+    private static func f(_ id: String, _ name: String, _ style: String, _ colors: [UInt32], _ symbol: String = "") -> Flag {
+        Flag(id: id, name: name, style: style, colors: colors, symbol: symbol)
     }
 
-    /// Default sequence transcribed from the supplied signal-timer video.
-    /// Times are elapsed after Start: 0, 5, 6, 9, 10, and 20 minutes.
-    static let profiles: [Profile] = [
-        Profile(id: "video-20", name: "動画の信号（20分）", events: [
-            e(0, 0, "橙旗を掲揚", "橙", 0xF58A00, true, [0]),
-            e(1, 300, "緑旗を掲揚", "緑", 0x00D228, true, [0]),
-            e(2, 360, "青旗を掲揚", "青", 0x1769FF, true, [0]),
-            e(3, 540, "青旗を降下", "青", 0x1769FF, false, [1]),
-            e(4, 600, "緑旗を降下", "緑", 0x00D228, false, [0]),
-            e(5, 1200, "橙旗を降下", "橙", 0xF58A00, false)
-        ]),
-        Profile(id: "class-p", name: "カスタム（クラス旗＋P旗）", events: [
-            e(0, 0, "クラス旗を掲揚", "級", 0xF58A00, true, [0]),
-            e(1, 60, "P旗を掲揚", "P", 0x1769FF, true, [0]),
-            e(2, 240, "P旗を降下", "P", 0x1769FF, false, [1]),
-            e(3, 300, "クラス旗を降下", "級", 0xF58A00, false, [0])
-        ], baseDurationMinutes: 5),
-        Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: [
-            e(0, 0, "クラス旗を掲揚", "級", 0xF58A00, true, [0]),
-            e(1, 60, "I旗を掲揚", "I", 0xF5D328, true, [0]),
-            e(2, 240, "I旗を降下", "I", 0xF5D328, false, [1]),
-            e(3, 300, "クラス旗を降下", "級", 0xF58A00, false, [0])
-        ], baseDurationMinutes: 5)
+    /// Sailing signal flags plus the flag types visible in both reference videos.
+    /// The drawing style is deliberately part of the flag so same-color flags remain distinguishable.
+    static let flagCatalog: [Flag] = [
+        f("orange", "橙旗", "solid", [0xF58A00], "O"),
+        f("green", "緑旗", "solid", [0x00B83F], "G"),
+        f("blue-square", "青旗（白四角）", "blueSquare", [0x1769FF, 0xFFFFFF], "4"),
+        f("class-4", "クラス旗 4", "classLogo", [0xFFFFFF, 0x1769FF], "4"),
+        f("diagonal", "斜め二色旗", "diagonal", [0xE6D300, 0xD71920], ""),
+        f("checker", "赤白チェック旗", "checker", [0xE32636, 0xFFFFFF], ""),
+        f("P", "P旗", "pFlag", [0x1769FF, 0xFFFFFF], "P"),
+        f("I", "I旗", "iFlag", [0xF5D328, 0x111111], "I"),
+        f("Z", "Z旗", "zFlag", [0xF5D328, 0x111111], "Z"),
+        f("U", "U旗", "uFlag", [0xD71920, 0xFFFFFF], "U"),
+        f("black", "黒色旗", "black", [0x111111], ""),
+        f("AP", "回答旗（AP）", "apFlag", [0xD71920, 0xFFFFFF], "AP"),
+        f("N", "N旗", "nFlag", [0x1769FF, 0xFFFFFF], "N"),
+        f("H", "H旗", "hFlag", [0xD71920, 0xFFFFFF], "H"),
+        f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
+        f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
+        f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
+        f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
+        f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
+        f("class-3", "クラス旗 3", "classLogo", [0xFFFFFF, 0x00A650], "3"),
+        f("class-5", "クラス旗 5", "classLogo", [0xFFFFFF, 0xF58A00], "5"),
+        f("class-6", "クラス旗 6", "classLogo", [0xFFFFFF, 0x7A35A8], "6"),
+        f("class-7", "クラス旗 7", "classLogo", [0xFFFFFF, 0xD71920], "7"),
+        f("class-8", "クラス旗 8", "classLogo", [0xFFFFFF, 0x111111], "8"),
+        f("class-9", "クラス旗 9", "classLogo", [0xFFFFFF, 0xF5D328], "9"),
+        f("class-10", "クラス旗 10", "classLogo", [0xFFFFFF, 0x00A6A6], "10")
     ]
 
-    static func events(durationMinutes: Int = 20, profileID: String = "video-20") -> [Event] {
-        let profile = profiles.first { $0.id == profileID } ?? profiles[0]
-        guard profile.id != "video-20" else { return profile.events }
-        let scale = Double(max(1, durationMinutes)) / Double(max(1, profile.baseDurationMinutes))
-        return profile.events.map {
-            e($0.id, Int((Double($0.secondsAfterStart) * scale).rounded()), $0.title, $0.flag, $0.colorHex, $0.raised, $0.hornPulses)
+    static func flag(_ id: String) -> Flag {
+        flagCatalog.first { $0.id == id } ?? flagCatalog[0]
+    }
+
+    private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
+        Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
+    }
+
+    private static let orange = flag("orange")
+    private static let green = flag("green")
+    private static let blue = flag("blue-square")
+    private static let classFour = flag("class-4")
+    private static let diagonal = flag("diagonal")
+    private static let checker = flag("checker")
+
+    /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
+    private static let video20: [Event] = [
+        e(0, 0, "橙旗を掲揚", [orange], true, [0]),
+        e(1, 300, "緑旗を掲揚", [green], true, [0]),
+        e(2, 360, "青旗を掲揚", [blue], true, [0]),
+        e(3, 540, "青旗を降下", [blue], false, [1]),
+        e(4, 600, "緑旗を降下", [green], false, [0]),
+        e(5, 1200, "橙旗を降下", [orange], false)
+    ]
+
+    /// Exact 0/4/5/8/9/13-minute sequence visible in ScreenRecording_10-25-2026.
+    /// The 4- and 9-minute calls handle two flags together, as shown in the recording.
+    private static let video13: [Event] = [
+        e(0, 0, "橙旗を掲揚", [orange], true, [0]),
+        e(1, 240, "クラス旗・斜め旗を掲揚", [classFour, diagonal], true, [0]),
+        e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
+        e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
+        e(4, 540, "クラス旗・斜め旗を降下", [classFour, diagonal], false, [0]),
+        e(5, 780, "橙旗を降下", [orange], false)
+    ]
+
+    private static func customFive(classFlag: Flag, prepFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "\(classFlag.name)を掲揚", [classFlag], true, [0]),
+            e(1, 60, "\(prepFlag.name)を掲揚", [prepFlag], true, [0]),
+            e(2, 240, "\(prepFlag.name)を降下", [prepFlag], false, [1]),
+            e(3, 300, "\(classFlag.name)を降下", [classFlag], false, [0])
+        ]
+    }
+
+    static let profiles: [Profile] = [
+        Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
+        Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
+        Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
+        Profile(id: "class-p", name: "カスタム（クラス旗＋P旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
+        Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
+    ]
+
+    static func events(durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
+        switch profileID {
+        case "video-13":
+            return video13
+        case "custom-five":
+            return customFive(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+        case "class-p":
+            return customFive(classFlag: flag("class-1"), prepFlag: flag("P"))
+        case "class-i":
+            return customFive(classFlag: flag("class-1"), prepFlag: flag("I"))
+        default:
+            return video20
         }
     }
 
-    /// Safe pre-start highlighted row: choose 10:00 when present, otherwise the last available event.
+    /// Select the pre-start row highlighted in each reference recording.
     static func initialEventIndex(durationMinutes: Int = 20, profileID: String = "video-20") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID)
         guard !list.isEmpty else { return 0 }
-        return list.firstIndex { $0.secondsAfterStart == 600 } ?? (list.count - 1)
+        let highlightedSecond = profileID == "video-13" ? 540 : (profileID == "custom-five" ? 240 : 600)
+        return list.firstIndex { $0.secondsAfterStart == highlightedSecond } ?? (list.count - 1)
     }
 
-    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20") -> Int {
-        let list = events(durationMinutes: durationMinutes, profileID: profileID)
+    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> Int {
+        let list = events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
         guard !list.isEmpty else { return 0 }
         return list.lastIndex { Double($0.secondsAfterStart) <= elapsed } ?? 0
     }
 
-    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20") -> [Event] {
-        var raised: [String: Event] = [:]
-        for event in events(durationMinutes: durationMinutes, profileID: profileID) where Double(event.secondsAfterStart) <= elapsed {
-            if event.raised { raised[event.flag] = event }
-            else { raised.removeValue(forKey: event.flag) }
+    /// Resolves simultaneous raise/lower calls by the individual flag identity.
+    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "video-20", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+        var raised: [String: Flag] = [:]
+        for event in events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
+        where Double(event.secondsAfterStart) <= elapsed {
+            for flag in event.flags {
+                if event.raised { raised[flag.id] = flag }
+                else { raised.removeValue(forKey: flag.id) }
+            }
         }
         return raised.values.sorted { $0.id < $1.id }
     }
