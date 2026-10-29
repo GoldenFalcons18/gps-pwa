@@ -1048,6 +1048,16 @@ struct ContentView: View {
         .onAppear {
             gps.preview(true)
             #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--preview-signal-video-a") {
+                UserDefaults.standard.set("video-20", forKey: "signalFlagProfile")
+                mode = 4
+            }
+            if ProcessInfo.processInfo.arguments.contains("--preview-signal-video-b") {
+                UserDefaults.standard.set("video-13", forKey: "signalFlagProfile")
+                mode = 4
+            }
+            #endif
+            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--preview-library-overlays") {
                 var items=gps.waypoints
                 if items.count<3 { items.append(Waypoint(name:"TEST C",latitude:35.316,longitude:139.468)) }
