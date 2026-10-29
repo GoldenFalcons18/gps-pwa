@@ -196,32 +196,56 @@ struct SignalTimerPanel: View {
 private struct MastBoard: View {
     let flags: [SignalSequence.Event]
     let compact: Bool
-    private func flagColor(_ hex: UInt32) -> Color {
-        Color(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
-    }
+
     var body: some View {
         GeometryReader { proxy in
-            let w = proxy.size.width
-            ZStack(alignment: .bottomLeading) {
-                Color(red: 0.39, green: 0.78, blue: 0.94)
-                ForEach(0..<5, id: \.self) { index in
-                    let x = w * (0.06 + CGFloat(index) * 0.21)
-                    Rectangle().fill(Color.gray.opacity(0.85)).frame(width: 1.5).offset(x: x - w / 2, y: -proxy.size.height * 0.02)
-                }
-                Rectangle().fill(Color.orange).frame(width: 2).offset(x: -w * 0.34, y: -proxy.size.height * 0.02)
-                ForEach(flags.indices, id: \.self) { index in
-                    let event = flags[index]
-                    HStack(spacing: 0) {
-                        flagColor(event.colorHex)
-                        if event.flag == "青" { Color.white.frame(width: 5, height: 5).padding(.trailing, -5) }
-                    }
-                    .frame(width: w * 0.14, height: proxy.size.height * 0.19)
-                    .offset(x: w * (0.36 + CGFloat(index % 2) * 0.025), y: -proxy.size.height * CGFloat(0.18 + index * 0.12))
-                    .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
+            HStack(alignment: .bottom, spacing: proxy.size.width * 0.10) {
+                ForEach(0..<5, id: \.self) { poleIndex in
+                    MastPole(poleIndex: poleIndex, flags: flags, height: proxy.size.height)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.horizontal, proxy.size.width * 0.04)
+            .background(Color(red: 0.39, green: 0.78, blue: 0.94))
             .clipped()
         }
         .clipShape(RoundedRectangle(cornerRadius: 2))
+    }
+}
+
+private struct MastPole: View {
+    let poleIndex: Int
+    let flags: [SignalSequence.Event]
+    let height: CGFloat
+
+    private func color(_ hex: UInt32) -> Color {
+        let red = Double((hex >> 16) & 255) / 255
+        let green = Double((hex >> 8) & 255) / 255
+        let blue = Double(hex & 255) / 255
+        return Color(red: red, green: green, blue: blue)
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Rectangle()
+                .fill(poleIndex == 1 ? Color.orange : Color.gray.opacity(0.85))
+                .frame(width: 2, height: height * 0.94)
+            ForEach(flags.indices, id: \.self) { flagIndex in
+                let event = flags[flagIndex]
+                let assignedPole = [1, 3, 2, 4, 0][event.id % 5]
+                if assignedPole == poleIndex {
+                    HStack(spacing: 0) {
+                        color(event.colorHex)
+                        if event.flag == "青" {
+                            Rectangle().fill(Color.white).frame(width: 7, height: 7)
+                        }
+                    }
+                    .frame(width: 25, height: 18)
+                    .offset(x: 2, y: CGFloat(flagIndex % 3) * 20 + 8)
+                    .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
+                }
+            }
+        }
+        .frame(width: 28, height: height, alignment: .topLeading)
     }
 }
