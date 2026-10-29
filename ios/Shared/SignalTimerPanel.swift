@@ -58,7 +58,7 @@ struct SignalTimerPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
-            let active = hasStarted ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile) : 4
+            let active = hasStarted ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile) : SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
             let current = events[active]
             let isRunning = running(at: now)
             let raisedFlags = SignalSequence.flags(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile)
