@@ -1,1 +1,1 @@
-1.8.4 versionCode 32 signal video timing and flag display
+1.8.3 versionCode 31 sailing signal mode
