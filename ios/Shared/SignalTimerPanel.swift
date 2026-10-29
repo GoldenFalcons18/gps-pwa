@@ -55,7 +55,7 @@ struct SignalTimerPanel: View {
             let now = context.date
             let left = remaining(at: now)
             let events = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile)
-            let active = SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes, profileID: flagProfile)
+            let active = (startAt > 0 || pausedSeconds > 0) ? SignalSequence.nextEventIndex(secondsUntilStart: left, durationMinutes: durationMinutes, profileID: flagProfile) : 0
             let next = events[active]
             let phaseSeconds = SignalSequence.secondsUntilNextEvent(secondsUntilStart: left, index: active, durationMinutes: durationMinutes, profileID: flagProfile)
             let running = startAt > now.timeIntervalSince1970 + clockOffset
@@ -134,7 +134,15 @@ struct SignalTimerPanel: View {
             }
             .padding(compact ? 4 : 10).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black).foregroundStyle(.white).preferredColorScheme(.dark)
-            .onChange(of: active) { oldValue, newValue in if oldValue != newValue && running { playHorn(pulses: next.hornPulses) } }
+            .onChange(of: active) { oldValue, newValue in
+                if oldValue != newValue && running && events.indices.contains(oldValue) {
+                    // The row being left is the signal that has just reached its mark.
+                    playHorn(pulses: events[oldValue].hornPulses)
+                }
+            }
+            .onChange(of: completed) { oldValue, newValue in
+                if !oldValue && newValue { playHorn(pulses: events.last?.hornPulses ?? []) }
+            }
         }
     }
 
