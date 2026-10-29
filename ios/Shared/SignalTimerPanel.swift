@@ -4,8 +4,9 @@ import AVFoundation
 /// Signal timer matching the supplied video: elapsed-time sequence, mast panel, signal list and start controls.
 struct SignalTimerPanel: View {
     var compact = false
-    @AppStorage("signalStartAt") private var startAt = 0.0
-    @AppStorage("signalPausedSeconds") private var pausedSeconds = 0.0
+    @AppStorage("signalVideoStartAt") private var startAt = 0.0
+    @AppStorage("signalVideoPausedSeconds") private var pausedSeconds = 0.0
+    @AppStorage("signalVideoStarted") private var hasStarted = false
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalFlagProfile") private var flagProfile = "video-20"
@@ -17,7 +18,7 @@ struct SignalTimerPanel: View {
     private var events: [SignalSequence.Event] { SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile) }
     private func elapsed(at date: Date) -> Double {
         if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
-        return max(0, pausedSeconds)
+        return hasStarted ? max(0, pausedSeconds) : 0
     }
     private func running(at date: Date) -> Bool {
         startAt > 0 && elapsed(at: date) < Double(events.last?.secondsAfterStart ?? 1200)
@@ -27,11 +28,13 @@ struct SignalTimerPanel: View {
         if running(at: date) {
             pausedSeconds = value
             startAt = 0
+            hasStarted = true
         } else {
-            let wasPaused = pausedSeconds > 0
+            let wasPaused = hasStarted
             startAt = date.timeIntervalSince1970 + clockOffset - (wasPaused ? pausedSeconds : 0)
             if !wasPaused {
                 pausedSeconds = 0
+                hasStarted = true
                 playHorn(pulses: events.first?.hornPulses ?? [])
             }
         }
@@ -39,6 +42,7 @@ struct SignalTimerPanel: View {
     private func reset() {
         startAt = 0
         pausedSeconds = 0
+        hasStarted = false
     }
     private func flagColor(_ hex: UInt32) -> Color {
         Color(red: Double((hex >> 16) & 255) / 255, green: Double((hex >> 8) & 255) / 255, blue: Double(hex & 255) / 255)
@@ -52,7 +56,7 @@ struct SignalTimerPanel: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
-            let active = SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile)
+            let active = hasStarted ? SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile) : 4
             let current = events[active]
             let isRunning = running(at: now)
             let raisedFlags = SignalSequence.flags(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile)
@@ -73,7 +77,7 @@ struct SignalTimerPanel: View {
                 HStack {
                     Text("Start at").foregroundStyle(.black)
                     Spacer()
-                    Text(startAt > 0 || pausedSeconds > 0
+                    Text(hasStarted
                          ? SignalSequence.clockText(Date(timeIntervalSince1970: startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds))
                          : "TBD")
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
@@ -83,7 +87,7 @@ struct SignalTimerPanel: View {
                     Text(current.raised ? "↑" : "↓").font(.title3.bold()).foregroundStyle(.black)
                     Text(current.title).font(.caption).lineLimit(1)
                     Spacer()
-                    Text(startAt > 0 || pausedSeconds > 0 ? elapsedText(spent) : "--:--")
+                    Text(hasStarted ? elapsedText(spent) : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
@@ -202,7 +206,8 @@ private struct MastBoard: View {
                     Rectangle().fill(Color.gray.opacity(0.85)).frame(width: 1.5).offset(x: x - w / 2, y: -proxy.size.height * 0.02)
                 }
                 Rectangle().fill(Color.orange).frame(width: 2).offset(x: -w * 0.34, y: -proxy.size.height * 0.02)
-                ForEach(Array(flags.enumerated()), id: \.element.id) { index, event in
+                ForEach(flags.indices, id: \.self) { index in
+                    let event = flags[index]
                     HStack(spacing: 0) {
                         flagColor(event.colorHex)
                         if event.flag == "青" { Color.white.frame(width: 5, height: 5).padding(.trailing, -5) }
