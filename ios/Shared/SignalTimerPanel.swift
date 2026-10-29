@@ -39,7 +39,6 @@ struct SignalTimerPanel: View {
         if individualRecallFlagUp {
             individualRecallFlagUp = false
         } else {
-            pauseForManualSignal(at: date)
             individualRecallFlagUp = true
             playHorn(pulses: [0])
         }
@@ -232,11 +231,11 @@ struct SignalTimerPanel: View {
                 .font(.system(size: compact ? 12 : 16))
                 HStack(spacing: compact ? 4 : 10) {
                     Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
-                        .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp || restartWarningAt > 0)
+                        .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp)
                     Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
-                        .disabled(postponementFlagUp || restartWarningAt > 0)
+                        .disabled(postponementFlagUp)
                     Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
-                        .disabled(generalRecallFlagUp || restartWarningAt > 0)
+                        .disabled(generalRecallFlagUp)
                 }
                 .font(.system(size: compact ? 9 : 12, weight: .semibold))
                 .buttonStyle(.bordered)
@@ -251,7 +250,7 @@ struct SignalTimerPanel: View {
                             Text("長音 \(hornLengthText)秒").font(.caption2)
                             Slider(value: $hornSeconds, in: 0.1...3.0, step: 0.1).frame(maxWidth: 100)
                         }
-                        if flagProfile == "custom-five" {
+                        if flagProfile == "custom-five" || flagProfile == "standard-start" {
                             HStack(spacing: 8) {
                                 Picker("第1旗", selection: $classFlagID) {
                                     ForEach(SignalSequence.flagCatalog) { Text($0.name).tag($0.id) }
