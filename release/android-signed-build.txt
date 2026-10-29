@@ -1,1 +1,1 @@
-1.8.2 versionCode 30 sailing signal mode
+1.8.3 versionCode 31 sailing signal mode
