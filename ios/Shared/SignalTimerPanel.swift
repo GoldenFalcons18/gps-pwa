@@ -10,6 +10,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalFlagProfile") private var flagProfile = "standard-start"
+    @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
     @State private var syncing = false
@@ -170,6 +171,10 @@ struct SignalTimerPanel: View {
             .background(Color.white)
             .foregroundStyle(.black)
             .onAppear {
+                if sequenceTimingVersion < 2 {
+                    flagProfile = "standard-start"
+                    sequenceTimingVersion = 2
+                }
                 if flagProfile == "class-p" || flagProfile == "class-i" {
                     prepFlagID = flagProfile == "class-p" ? "P" : "I"
                     classFlagID = "class-1"
