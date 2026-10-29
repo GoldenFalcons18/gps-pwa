@@ -9,7 +9,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalVideoStarted") private var hasStarted = false
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
-    @AppStorage("signalFlagProfile") private var flagProfile = "video-20"
+    @AppStorage("signalFlagProfile") private var flagProfile = "standard-start"
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
     @State private var syncing = false
@@ -55,6 +55,15 @@ struct SignalTimerPanel: View {
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
 
+    private func eventTimeText(_ event: SignalSequence.Event) -> String {
+        guard flagProfile == "standard-start" else {
+            return String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60)
+        }
+        let secondsToStart = max(0, 600 - event.secondsAfterStart)
+        let time = String(format: "%02d:%02d", secondsToStart / 60, secondsToStart % 60)
+        return secondsToStart == 0 ? "T+00:00" : "T−\(time)"
+    }
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let now = context.date
@@ -80,7 +89,7 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text("Start at").foregroundStyle(.black)
+                    Text("オレンジ旗を上げる時刻").foregroundStyle(.black)
                     Spacer()
                     Text(hasStarted
                          ? SignalSequence.clockText(Date(timeIntervalSince1970: startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds))
@@ -112,7 +121,7 @@ struct SignalTimerPanel: View {
                             }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60))
+                            Text(eventTimeText(event))
                                 .font(.system(size: compact ? 10 : 12, design: .monospaced))
                             Text(event.hornPulses.map { $0 == 0 ? "●" : "━" }.joined())
                                 .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
