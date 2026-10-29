@@ -30,7 +30,9 @@ struct SignalTimerPanel: View {
             startAt = 0
             hasStarted = true
         } else {
-            let wasPaused = hasStarted
+            let completed = hasStarted && value >= Double(events.last?.secondsAfterStart ?? 1200)
+            let wasPaused = hasStarted && !completed
+            if completed { pausedSeconds = 0 }
             startAt = date.timeIntervalSince1970 + clockOffset - (wasPaused ? pausedSeconds : 0)
             if !wasPaused {
                 pausedSeconds = 0
@@ -118,7 +120,7 @@ struct SignalTimerPanel: View {
                 HStack(spacing: compact ? 8 : 22) {
                     Button("Interrupt…") { if isRunning { startOrPause(at: now) } }
                         .disabled(!isRunning).foregroundStyle(.gray)
-                    Button(isRunning ? "Pause" : (pausedSeconds > 0 ? "Resume" : "Start")) { startOrPause(at: now) }
+                    Button(isRunning ? "Pause" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "Resume" : "Start")) { startOrPause(at: now) }
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
                 }
