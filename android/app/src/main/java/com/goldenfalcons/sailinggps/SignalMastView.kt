@@ -67,6 +67,10 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
             canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
             when (state.id) {
+                "I" -> {
+                    paint.color = 0xff111111.toInt()
+                    canvas.drawCircle(mastX + flagWidth * 0.5f, y + flagHeight * 0.5f, flagHeight * 0.20f, paint)
+                }
                 "X" -> {
                     paint.color = 0xffffffff.toInt()
                     canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
