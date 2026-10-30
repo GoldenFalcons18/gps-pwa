@@ -3,11 +3,11 @@ package com.goldenfalcons.sailinggps
 data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boolean = false) {
     val secondaryColor: Int get() = when (id) {
         "斜め" -> 0xFFD71920.toInt()
-        "赤白チェック" -> 0xFFFFFFFF.toInt()
+        "赤白チェック", "N" -> 0xFFFFFFFF.toInt()
         else -> 0xFFFFFFFF.toInt()
     }
     val style: String get() = when (id) {
-        "斜め" -> "diagonal"
+        "斜め" -> "diagonal"\n        "N" -> "checker"
         "赤白チェック" -> "checker"
         "級", "class-4" -> "classLogo"
         "青", "P" -> "blueSquare"
@@ -139,7 +139,7 @@ object SignalSequence {
         ), baseDurationMinutes = 3)
     )
 
-    val individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", "X", 0xFFFFFFFF.toInt(), true, 0)
+    val abandonRaise = e(-6, 0, "N旗を掲揚（レース中止）", "N", 0xFF1769FF.toInt(), true, 0, 0, 0)\n    val abandonLower = e(-7, 0, "N旗を降下", "N", 0xFF1769FF.toInt(), false, 0)\n    val individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", "X", 0xFFFFFFFF.toInt(), true, 0)
     val generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", "第一代表", 0xFF1769FF.toInt(), true, 0, 0)
     val generalRecallLower = e(-3, 0, "第一代表旗を降下", "第一代表", 0xFF1769FF.toInt(), false, 0)
     val postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", "AP", 0xFFD71920.toInt(), true, 0, 0)
