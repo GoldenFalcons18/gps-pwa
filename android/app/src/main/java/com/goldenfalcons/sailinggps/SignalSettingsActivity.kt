@@ -103,6 +103,9 @@ class SignalSettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
             prefs.edit().putString(key,items[i]).apply()
             if(key=="signalProfileName") { val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0); prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",SignalSequence.profiles[index].id).apply() }
+            if(key=="signalStartRule" && items[i] in listOf("P","I","U","Z","Black")) {
+                prefs.edit().putString("signalPrepFlag",if(items[i]=="Black") "black" else items[i]).apply()
+            }
             build()
         }.show()
     }
