@@ -32,7 +32,31 @@ data class SignalEvent(
         get() = listOf(SignalFlagMark(flag, color, flag == "青" || flag == "P")) + additionalFlags
 }
 data class SignalFlagProfile(val id: String, val name: String, val events: List<SignalEvent>, val baseDurationMinutes: Int = 5)
-data class SignalFlagState(val id: String, val color: Int, val raised: Boolean, val whiteSquare: Boolean, val style: String = "solid", val secondaryColor: Int = 0xFFFFFFFF.toInt())
+data class SignalFlagState(
+    val id: String,
+    val color: Int,
+    val raised: Boolean,
+    val whiteSquare: Boolean,
+    val style: String = when (id) {
+        "級" -> "classLogo"
+        "青", "P" -> "blueSquare"
+        "I" -> "circle"
+        "U", "N", "赤白チェック" -> "checker"
+        "斜め", "O" -> "diagonal"
+        "第一代表" -> "firstSub"
+        "AP" -> "apFlag"
+        "H" -> "hFlag"
+        "L" -> "lFlag"
+        "Z" -> "zFlag"
+        "X" -> "xFlag"
+        else -> if (id.startsWith("class-")) "classLogo" else "solid"
+    },
+    val secondaryColor: Int = when (id) {
+        "斜め", "O" -> 0xFFD71920.toInt()
+        "赤白チェック" -> 0xFFFFFFFF.toInt()
+        else -> 0xFFFFFFFF.toInt()
+    }
+)
 
 object SignalSequence {
     private fun e(id: Int, seconds: Int, title: String, flag: String, color: Int, raised: Boolean, vararg pulses: Int) =
@@ -167,6 +191,17 @@ object SignalSequence {
                 event.copy(secondsAfterStart = 600 + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60)
             else event
         }
+    }
+
+    /** Selects the same pre-start row that the reference app keeps highlighted. */
+    fun initialEventIndex(profileIndex: Int): Int {
+        val profile = profiles.getOrElse(profileIndex) { profiles[0] }
+        val selectedSeconds = when (profile.id) {
+            "video-20" -> 600
+            "video-13" -> 540
+            else -> 0
+        }
+        return profile.events.indexOfFirst { it.secondsAfterStart == selectedSeconds }.takeIf { it >= 0 } ?: 0
     }
 
     /** The most recent elapsed-time signal, or -1 before the first action. */
