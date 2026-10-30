@@ -369,9 +369,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             else displayPrefs.getBoolean("signalOrangeDisplayedUp", false)
             displayPrefs.edit().putBoolean("signalOrangeManualOverride", true)
                 .putBoolean("signalOrangeManualUp", !current).apply()
+            if(!current) playSignalHorn(listOf(0))
             updateSignalUi()
         }
-        b.btnSignalIndividualRecall.setOnClickListener { toggleIndividualRecall() }\n        b.btnSignalNFlag.setOnClickListener { toggleAbandonFlag() }\n        b.btnSignalInterrupt.setOnClickListener { showSignalInterruptDialog() }
+        b.btnSignalIndividualRecall.setOnClickListener { toggleIndividualRecall() }
+        b.btnSignalNFlag.setOnClickListener { toggleAbandonFlag() }
+        b.btnSignalInterrupt.setOnClickListener { showSignalInterruptDialog() }
         b.btnSignalGeneralRecall.setOnClickListener { toggleGeneralRecall() }
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
@@ -495,7 +498,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
-    private fun toggleAbandonFlag() {\n        val wasUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)\n        if(!wasUp) {\n            pauseSignalForManualEvent()\n            displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)\n                .putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",true).apply()\n            playSignalHorn(SignalSequence.abandonRaise.hornPulses)\n        } else {\n            displayPrefs.edit().putBoolean("signalAbandonFlagUp",false).apply()\n            playSignalHorn(SignalSequence.abandonLower.hornPulses)\n        }\n        signalActiveIndex=-1;buildSignalRows();updateSignalUi()\n    }\n\n    private fun showSignalInterruptDialog() {\n        val running=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalRestartAt",0L)>signalNow()\n        val choices=if(running) arrayOf("一時停止","シーケンスをリセット","キャンセル") else arrayOf("再開","最初からやり直す","キャンセル")\n        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("シグナル操作").setItems(choices) { _,which ->\n            when(which) { 0 -> toggleSignalSequence(); 1 -> resetSignalSequence() }\n        }.show()\n    }\n\n    private fun toggleIndividualRecall() {
+    private fun toggleAbandonFlag() {
+        val wasUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        if(!wasUp) {
+            pauseSignalForManualEvent()
+            displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
+                .putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",true).apply()
+            playSignalHorn(SignalSequence.abandonRaise.hornPulses)
+        } else {
+            displayPrefs.edit().putBoolean("signalAbandonFlagUp",false).apply()
+            playSignalHorn(SignalSequence.abandonLower.hornPulses)
+        }
+        signalActiveIndex=-1;buildSignalRows();updateSignalUi()
+    }
+
+    private fun showSignalInterruptDialog() {
+        val running=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalRestartAt",0L)>signalNow()
+        val choices=if(running) arrayOf("一時停止","シーケンスをリセット","キャンセル") else arrayOf("再開","最初からやり直す","キャンセル")
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("シグナル操作").setItems(choices) { _,which ->
+            when(which) { 0 -> toggleSignalSequence(); 1 -> resetSignalSequence() }
+        }.show()
+    }
+
+    private fun toggleIndividualRecall() {
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false)) return
         val wasUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
         if(!wasUp) {
@@ -540,7 +565,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .remove("signalOrangeManualOverride").remove("signalOrangeManualUp")
             .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
             .putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
-            .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).apply()
+            .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false).apply()
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
     }
 
@@ -684,7 +709,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(orangeEnabled && restartMode && !waitingForRestart && elapsedSeconds<orangeDownAt && raised.none { it.id=="橙" }) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false)
         if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false)
-        if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)\n        if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false)
+        if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
+        if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false)
         displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" }).apply()
         if(displayPrefs.getBoolean("signalOrangeManualOverride",false)) {
             raised.removeAll { it.id=="橙" }
@@ -693,7 +719,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
         b.signalMast.show(raised,true)
         b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"分00秒合わせ中（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
-        b.btnSignalStart.isEnabled=!waitingForRestart && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)\n        b.btnSignalInterrupt.isEnabled=started\n        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)\n        b.btnSignalNFlag.text=if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) "N旗 降下" else "N旗（中止）"
+        b.btnSignalStart.isEnabled=!waitingForRestart && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        b.btnSignalInterrupt.isEnabled=started
+        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        b.btnSignalNFlag.text=if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) "N旗 降下" else "N旗（中止）"
         b.btnSignalIndividualRecall.text=if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) "X旗 降下" else "個別リコール X旗（$prepFlag）"
         b.btnSignalIndividualRecall.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false)
         b.btnSignalGeneralRecall.text=if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) "第一代表旗 降下" else "ゼネラルリコール"
