@@ -65,6 +65,12 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.postponementLower.hornPulses, [0])
     }
 
+    func testAbandonAllUsesThreeShortSoundsAndLowerUsesOne() {
+        XCTAssertEqual(SignalSequence.abandonRaise.hornPulses, [0, 0, 0])
+        XCTAssertEqual(SignalSequence.abandonLower.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 125, minimumLeadSeconds: 0), 180)
+    }
+
     func testFlagsChangeAtTheScheduledBoundaries() {
         func ids(at elapsed: Double) -> [String] {
             SignalSequence.flags(elapsed: elapsed, profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
