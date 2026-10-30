@@ -33,12 +33,12 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         }
     }
     private fun cross(c: Canvas, color: Int, thickness: Float) {
-        rect(c,.5f-thickness/2,0f,thickness,1f,color); rect(c,0f,.5f-thickness/2,1f,thickness,color)
+        rect(c,0.5f-thickness/2,0f,thickness,1f,color); rect(c,0f,0.5f-thickness/2,1f,thickness,color)
     }
     private fun pennant(c: Canvas, colors: List<Int>) {
         stripes(c,colors,true)
         // Pennants taper to the fly end.
-        poly(c,white,.70f,0f,1f,.5f,.70f,1f)
+        poly(c,white,0.70f,0f,1f,0.5f,0.70f,1f)
     }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -46,32 +46,32 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         val flagW=width.toFloat(); val flagH=height.toFloat()
         canvas.clipRect(0f,0f,flagW,flagH)
         when(flagName.lowercase()) {
-            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0f,0f,.5f,1f,blue); poly(canvas,blue,.5f,0f,1f,.5f,.5f,1f); poly(canvas,white,.84f,0f,1f,.5f,.84f,1f) }
+            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0f,0f,0.5f,1f,blue); poly(canvas,blue,0.5f,0f,1f,0.5f,0.5f,1f); poly(canvas,white,0.84f,0f,1f,0.5f,0.84f,1f) }
             "bravo" -> rect(canvas,0f,0f,1f,1f,red)
             "charlie" -> stripes(canvas,listOf(blue,white,red,white,blue),false)
             "delta" -> stripes(canvas,listOf(yellow,blue,yellow),false)
             "echo" -> stripes(canvas,listOf(blue,red),false)
-            "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,.5f,.12f,.88f,.5f,.5f,.88f,.12f,.5f) }
+            "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,0.5f,0.12f,0.88f,0.5f,0.5f,0.88f,0.12f,0.5f) }
             "golf" -> stripes(canvas,listOf(yellow,blue,yellow,blue,yellow),true)
             "hotel" -> stripes(canvas,listOf(white,red),true)
             "india" -> { rect(canvas,0f,0f,1f,1f,yellow); p.color=black; canvas.drawCircle(width*.5f,height*.5f,minOf(width,height)*.25f,p) }
             "juliett" -> stripes(canvas,listOf(blue,white,blue),false)
             "kilo" -> stripes(canvas,listOf(yellow,blue),true)
-            "lima" -> { rect(canvas,0f,0f,.5f,.5f,yellow);rect(canvas,.5f,0f,.5f,.5f,black);rect(canvas,0f,.5f,.5f,.5f,black);rect(canvas,.5f,.5f,.5f,.5f,yellow) }
-            "mike" -> {rect(canvas,0f,0f,1f,1f,blue);cross(canvas,white,.18f)}
-            "november" -> {rect(canvas,0f,0f,1f,1f,white);for(x in 0..3)for(y in 0..3)if((x+y)%2==0)rect(canvas,x/4f,y/4f,.25f,.25f,blue)}
+            "lima" -> { rect(canvas,0f,0f,0.5f,0.5f,yellow);rect(canvas,0.5f,0f,0.5f,0.5f,black);rect(canvas,0f,0.5f,0.5f,0.5f,black);rect(canvas,0.5f,0.5f,0.5f,0.5f,yellow) }
+            "mike" -> {rect(canvas,0f,0f,1f,1f,blue);cross(canvas,white,0.18f)}
+            "november" -> {rect(canvas,0f,0f,1f,1f,white);for(x in 0..3)for(y in 0..3)if((x+y)%2==0)rect(canvas,x/4f,y/4f,0.25f,0.25f,blue)}
             "oscar" -> {rect(canvas,0f,0f,1f,1f,yellow);poly(canvas,red,0f,1f,1f,0f,1f,1f)}
-            "papa" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,.34f,.3f,.32f,.4f,white)}
+            "papa" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.34f,0.3f,0.32f,0.4f,white)}
             "quebec" -> rect(canvas,0f,0f,1f,1f,yellow)
             "romeo" -> stripes(canvas,listOf(red,yellow,red),false)
-            "sierra" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,.28f,.22f,.44f,.56f,white)}
+            "sierra" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.28f,0.22f,0.44f,0.56f,white)}
             "tango" -> stripes(canvas,listOf(red,white,blue),true)
-            "uniform" -> {rect(canvas,0f,0f,1f,1f,white);rect(canvas,0f,0f,.5f,.5f,red);rect(canvas,.5f,.5f,.5f,.5f,red)}
-            "victor" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,red,.24f)}
-            "whiskey" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,.18f,.12f,.64f,.76f,white);rect(canvas,.34f,.3f,.32f,.4f,red)}
-            "x-ray" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,blue,.18f)}
+            "uniform" -> {rect(canvas,0f,0f,1f,1f,white);rect(canvas,0f,0f,0.5f,0.5f,red);rect(canvas,0.5f,0.5f,0.5f,0.5f,red)}
+            "victor" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,red,0.24f)}
+            "whiskey" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.18f,0.12f,0.64f,0.76f,white);rect(canvas,0.34f,0.3f,0.32f,0.4f,red)}
+            "x-ray" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,blue,0.18f)}
             "yankee" -> stripes(canvas,listOf(red,yellow,red,yellow,red,yellow),true)
-            "zulu" -> {rect(canvas,0f,0f,.5f,.5f,black);rect(canvas,.5f,0f,.5f,.5f,yellow);rect(canvas,0f,.5f,.5f,.5f,blue);rect(canvas,.5f,.5f,.5f,.5f,red)}
+            "zulu" -> {rect(canvas,0f,0f,0.5f,0.5f,black);rect(canvas,0.5f,0f,0.5f,0.5f,yellow);rect(canvas,0f,0.5f,0.5f,0.5f,blue);rect(canvas,0.5f,0.5f,0.5f,0.5f,red)}
             "answering pennant" -> pennant(canvas,listOf(red,white,red,white,red))
             "first substitute" -> pennant(canvas,listOf(blue,yellow,blue))
             "second substitute" -> pennant(canvas,listOf(blue,white,blue))
