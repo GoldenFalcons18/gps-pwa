@@ -553,7 +553,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         signalActiveIndex=-1
-        displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
         updateSignalUi()
     }
 
