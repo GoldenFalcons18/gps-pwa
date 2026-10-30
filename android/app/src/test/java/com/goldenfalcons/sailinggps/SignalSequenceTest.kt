@@ -5,7 +5,7 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
-    fun signalSequenceSchedulesFirstSignalAfterConfiguredMinimumDelay() {
+    fun signalSequenceAlignsZeroToRealClockMinuteAfterMinimumLead() {
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 15))
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 0))
         assertEquals(60_000L, SignalTiming.scheduledStartAt(60_000L, 0))
