@@ -34,7 +34,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         list.removeAllViews()
         section("General Settings")
         row("Mode", "Fleet") {}
-        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("0秒までの最短時間（開始から旗が動く目安まで）", "signalMinimumTimeToFirstAction", 15, 0, 120) }
+        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("次の分00秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
         row("Time Sync", "ntp.nict.jp / ゼロ合わせ") { AlertDialog.Builder(this).setMessage("シグナル画面のNTP同期とゼロ合わせを使用します。").setPositiveButton("OK", null).show() }
@@ -67,7 +67,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         switch("Enable","signalOrangeEnabled",true)
         row("Displayed For",prefs.getInt("signalOrangeDisplayedMinutes",4).toString()+"分") { number("Displayed For","signalOrangeDisplayedMinutes",4,1,30) }
         row("Removed After Start",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After Start","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="シーケンス開始前は降下状態。開始ボタンから0秒（旗が動く目安）までの最短間隔を設定します。AP・N旗は掲揚時刻を固定せず手動で操作します。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        list.addView(TextView(this).apply { text="シーケンス開始前は降下状態。開始ボタンから実時間の次の分00秒までに確保する最短間隔を設定します。各信号はシーケンスのn分00秒で動作します。AP・N旗は時刻を固定せず手動で掲揚します。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
