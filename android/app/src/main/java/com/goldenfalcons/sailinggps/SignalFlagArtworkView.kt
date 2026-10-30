@@ -15,6 +15,44 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private val yellow = 0xffffdf00.toInt()
     private val black = 0xff111111.toInt()
     private val white = 0xffffffff.toInt()
+    private var signalMark: SignalFlagMark? = null
+
+    fun show(mark: SignalFlagMark, raised: Boolean) {
+        signalMark = mark
+        flagName = mark.id
+        invalidate()
+    }
+
+    private fun drawSignalMark(canvas: Canvas, mark: SignalFlagMark) {
+        val base = mark.color
+        when (mark.style) {
+            "classLogo" -> {
+                rect(canvas,0f,0f,1f,1f,white)
+                p.color=black; p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+                p.typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
+                val label=mark.id.removePrefix("class-").ifEmpty { "4" }
+                p.textSize=minOf(height*0.62f,width*1.35f/label.length.coerceAtLeast(2))
+                canvas.drawText(label,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
+                p.textAlign=Paint.Align.LEFT
+            }
+            "blueSquare" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.34f,0.3f,0.32f,0.4f,white) }
+            "circle" -> { rect(canvas,0f,0f,1f,1f,base); p.color=black; canvas.drawCircle(width*0.5f,height*0.5f,minOf(width,height)*0.24f,p) }
+            "diagonal" -> { rect(canvas,0f,0f,1f,1f,base); poly(canvas,mark.secondaryColor,0f,0f,1f,0f,0f,1f) }
+            "checker" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.5f,0f,0.5f,0.5f,mark.secondaryColor); rect(canvas,0f,0.5f,0.5f,0.5f,mark.secondaryColor) }
+            "apFlag" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.5f,0f,0.5f,1f,white) }
+            "hFlag" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,red) }
+            "lFlag" -> { rect(canvas,0f,0f,0.5f,0.5f,yellow); rect(canvas,0.5f,0f,0.5f,0.5f,black); rect(canvas,0f,0.5f,0.5f,0.5f,black); rect(canvas,0.5f,0.5f,0.5f,0.5f,yellow) }
+            "zFlag" -> { poly(canvas,black,0f,0f,1f,0f,0.5f,0.5f); poly(canvas,yellow,1f,0f,1f,1f,0.5f,0.5f); poly(canvas,red,1f,1f,0f,1f,0.5f,0.5f); poly(canvas,blue,0f,1f,0f,0f,0.5f,0.5f) }
+            "firstSub" -> { rect(canvas,0f,0f,1f,1f,blue); poly(canvas,red,0f,0f,1f,1f,1f,0f) }
+            "xFlag" -> { rect(canvas,0f,0f,1f,1f,white); diagonalCross(canvas,blue,0.22f) }
+            else -> {
+                rect(canvas,0f,0f,1f,1f,base)
+                if(mark.whiteSquare) rect(canvas,0.34f,0.3f,0.32f,0.4f,white)
+            }
+        }
+        p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*0.018f).coerceAtLeast(1f)
+        canvas.drawRect(RectF(0f,0f,width.toFloat(),height.toFloat()),p);p.style=Paint.Style.FILL
+    }
 
     private fun rect(c: Canvas, x: Float, y: Float, w: Float, h: Float, color: Int) {
         p.color = color; p.style = Paint.Style.FILL
@@ -62,6 +100,11 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         val save=canvas.save()
         val flagW=width.toFloat(); val flagH=height.toFloat()
         canvas.clipRect(0f,0f,flagW,flagH)
+        signalMark?.let {
+            drawSignalMark(canvas,it)
+            canvas.restoreToCount(save)
+            return
+        }
         when(flagName.lowercase()) {
             "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue); poly(canvas,white,0.72f,0.34f,1f,0.5f,0.72f,0.66f) }
             "bravo" -> { rect(canvas,0f,0f,1f,1f,red); poly(canvas,white,0.68f,0.34f,1f,0.5f,0.68f,0.66f) }
