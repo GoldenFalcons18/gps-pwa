@@ -2,6 +2,20 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
+    func testVideoSchedulesMatchReferenceTimesFlagStatesAndHornSignals() {
+        let videoA = SignalSequence.events(profileID: "video-20")
+        XCTAssertEqual(videoA.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 1200])
+        XCTAssertEqual(videoA.map { $0.flags.map(\.id) }, [["orange"], ["green"], ["blue-square"], ["blue-square"], ["green"], ["orange"]])
+        XCTAssertEqual(videoA.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(videoA.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+
+        let videoB = SignalSequence.events(profileID: "video-13")
+        XCTAssertEqual(videoB.map(\.secondsAfterStart), [0, 240, 300, 480, 540, 780])
+        XCTAssertEqual(videoB.map { $0.flags.map(\.id) }, [["orange"], ["class-4", "diagonal"], ["checker"], ["checker"], ["class-4", "diagonal"], ["orange"]])
+        XCTAssertEqual(videoB.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(videoB.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+    }
+
     func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
