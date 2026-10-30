@@ -608,10 +608,37 @@ private struct SignalInternationalFlagArtwork: View {
             case "fourth substitute": colors=[red,yellow]; pennant([red,yellow,red],stripesVertical:true)
             default:
                 let n = Int(code.filter(\.isNumber)) ?? 0
-                let palette: [[Color]] = [[yellow,red,yellow],[white,red],[blue,white],[red,white,blue],[red,white],[yellow,red],[black,white],[yellow,red],[white,red],[yellow,red]]
-                let p = palette[min(max(n,0),9)]
-                colors = p
-                pennant(p, stripesVertical:true)
+                if code.contains("nato") {
+                    colors = [white, blue, red, yellow]
+                    switch n {
+                    case 0:
+                        rect(0,0,1,1,white); cross(blue,width:0.10)
+                        for x in [CGFloat(0.12),CGFloat(0.88)] { for y in [CGFloat(0.12),CGFloat(0.88)] {
+                            rect(x-0.035,y-0.035,0.07,0.07,blue)
+                        } }
+                    case 1: stripes([red,yellow],vertical:false)
+                    case 2: stripes([yellow,red],vertical:false)
+                    case 3: stripes([blue,red],vertical:false)
+                    case 4: rect(0,0,1,1,red); cross(white,width:0.17)
+                    case 5: rect(0,0,1,1,yellow); cross(blue,width:0.17)
+                    case 6:
+                        rect(0,0,1,1,white)
+                        for offset in stride(from: -1.0, through: 1.0, by: 0.25) {
+                            var path = Path()
+                            path.move(to: CGPoint(x: max(0, offset) * size.width, y: max(0, -offset) * size.height))
+                            path.addLine(to: CGPoint(x: min(1, offset + 1) * size.width, y: min(1, 1 - offset) * size.height))
+                            context.stroke(path, with: .color(blue), lineWidth: max(2, size.height * 0.09))
+                        }
+                    case 7: stripes([red,white,red],vertical:true)
+                    case 8: rect(0,0,1,1,yellow); rect(0.4,0,0.2,1,blue)
+                    default: rect(0,0,1,1,blue)
+                    }
+                } else {
+                    let palette: [[Color]] = [[yellow,red,yellow],[white,red],[blue,white],[red,white,blue],[red,white],[yellow,red],[black,white],[yellow,red],[white,red],[yellow,red]]
+                    let p = palette[min(max(n,0),9)]
+                    colors = p
+                    pennant(p, stripesVertical:true)
+                }
             }
             context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
         }.aspectRatio(1.5, contentMode: .fit)
