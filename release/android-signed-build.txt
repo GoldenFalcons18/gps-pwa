@@ -1,1 +1,1 @@
-1.8.9 versionCode 37 align race signal actions to real minute marks
+1.8.10 versionCode 38 synchronize signal countdown to real time
