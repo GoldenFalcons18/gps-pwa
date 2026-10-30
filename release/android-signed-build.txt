@@ -1,1 +1,1 @@
-1.8.6 versionCode 34 signal settings
+1.8.8 versionCode 36 scheduled signal start
