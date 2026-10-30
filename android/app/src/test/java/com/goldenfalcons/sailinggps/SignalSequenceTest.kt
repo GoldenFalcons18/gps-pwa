@@ -12,6 +12,13 @@ class SignalSequenceTest {
         assertEquals(120_000L, SignalTiming.scheduledStartAt(50_000L, 15))
     }
     @Test
+    fun countdownUsesCeilingSoItMatchesClockSeconds() {
+        assertEquals(51, SignalTiming.countdownSeconds(50.1))
+        assertEquals(51, SignalTiming.countdownSeconds(51.0))
+        assertEquals(0, SignalTiming.countdownSeconds(0.0))
+    }
+
+    @Test
     fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
