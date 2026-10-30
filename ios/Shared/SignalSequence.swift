@@ -93,6 +93,8 @@ struct SignalSequence {
     }
 
     static let individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", [flag("X")], true, [0])
+    static let abandonRaise = e(-6, 0, "N旗を掲揚（レース中止）", [flag("N")], true, [0, 0, 0])
+    static let abandonLower = e(-7, 0, "N旗を降下", [flag("N")], false, [0])
     static let generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", [flag("first-sub")], true, [0, 0])
     static let generalRecallLower = e(-3, 0, "第一代表旗を降下", [flag("first-sub")], false, [0])
     static let postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", [flag("AP")], true, [0, 0])
