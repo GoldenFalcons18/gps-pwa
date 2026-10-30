@@ -487,7 +487,6 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
                     Color.white
-                    Circle().fill(color(1)).frame(width: height * 0.64, height: height * 0.64)
                 default:
                     color(0)
                 }
