@@ -200,6 +200,7 @@ struct SignalTimerPanel: View {
             let sequenceEvents = useRetrySequence ? recallRestartEvents : events
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
             let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
+            let highlighted = (waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active
             let current = sequenceEvents[max(0, active)]
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
@@ -248,7 +249,7 @@ struct SignalTimerPanel: View {
                 .foregroundStyle(.black)
                 VStack(spacing: 1) {
                     ForEach(sequenceEvents) { event in
-                        let isActive = event.id == active
+                        let isActive = event.id == highlighted
                         HStack(spacing: 5) {
                             Text(event.raised ? "↑" : "↓").frame(width: 14)
                             HStack(spacing: 2) {
