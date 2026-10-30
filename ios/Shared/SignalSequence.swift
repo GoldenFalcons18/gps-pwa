@@ -170,12 +170,12 @@ struct SignalSequence {
 
     /// Exact 0/4/5/8/9/13-minute sequence visible in ScreenRecording_10-25-2026.
     /// The 4- and 9-minute calls handle two flags together, as shown in the recording.
-    private static let video13: [Event] = [
+    private static func video13(classFlag: Flag) -> [Event] {\n        [
         e(0, 0, "橙旗を掲揚", [orange], true, [0]),
-        e(1, 240, "クラス旗・斜め旗を掲揚", [classFour, diagonal], true, [0]),
+        e(1, 240, "クラス旗・斜め旗を掲揚", [classFlag, diagonal], true, [0]),
         e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
         e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
-        e(4, 540, "クラス旗・斜め旗を降下", [classFour, diagonal], false, [0]),
+        e(4, 540, "クラス旗・斜め旗を降下", [classFlag, diagonal], false, [0]),
         e(5, 780, "橙旗を降下", [orange], false)
     ]
 
@@ -191,7 +191,7 @@ struct SignalSequence {
     static let profiles: [Profile] = [
         Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から14分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
-        Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
+        Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13(classFlag: flag("class-4")), baseDurationMinutes: 13),
         Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
         Profile(id: "class-p", name: "カスタム（クラス旗＋P旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
         Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
