@@ -336,12 +336,8 @@ private struct SignalClassPicker: View {
                         ForEach(classFlags.filter { $0.category == category }) { flag in
                             Button { selection = flag.id } label: {
                                 VStack(spacing: 7) {
-                                    Text(flag.symbol)
-                                        .font(.system(size: 28, weight: .black, design: .rounded))
-                                        .frame(maxWidth: .infinity, minHeight: 54)
-                                        .background(selection == flag.id ? Color.orange.opacity(0.3) : Color.white)
-                                        .foregroundStyle(selection == flag.id ? .orange : .black)
-                                        .clipShape(RoundedRectangle(cornerRadius: 5))
+                                    SignalClassLogoMark(name: flag.name)
+                                        .overlay(selection == flag.id ? RoundedRectangle(cornerRadius: 5).stroke(Color.orange, lineWidth: 3) : nil)
                                     Text(flag.name).font(.caption).lineLimit(2).multilineTextAlignment(.center)
                                 }
                             }.buttonStyle(.plain)
@@ -470,32 +466,155 @@ private struct SignalFlagPreview: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Color(hex: flag.flagColor)
-                if flag.layout == "horizontal" {
-                    VStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
-                } else if flag.layout == "vertical" {
-                    HStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
-                } else if flag.layout == "diagonal" || flag.layout == "reverseDiagonal" {
-                    Canvas { context, size in
-                        let path = Path { p in
-                            p.move(to: .zero); p.addLine(to: CGPoint(x: size.width, y: 0))
-                            p.addLine(to: CGPoint(x: size.width, y: size.height)); p.closeSubpath()
-                        }
-                        context.fill(path, with: .color(.white))
-                    }
-                }
-                if flag.style == "text" {
-                    Text(flag.text).font(.system(size: geo.size.height * 0.55, weight: .bold))
-                        .foregroundStyle(Color(hex: flag.textColor))
-                } else if flag.style == "international" {
-                    Text(flag.text.isEmpty ? String(selectedInternationalFlag.prefix(1)) : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
-                        .foregroundStyle(Color(hex: flag.textColor))
+                if flag.style == "international" {
+                    SignalInternationalFlagArtwork(name: selectedInternationalFlag)
                 } else {
-                    Text(flag.text.isEmpty ? String(flag.logoID.dropFirst("class-".count)) : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
-                        .foregroundStyle(Color(hex: flag.textColor))
+                    Color(hex: flag.flagColor)
+                    if flag.layout == "horizontal" {
+                        VStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
+                    } else if flag.layout == "vertical" {
+                        HStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
+                    } else if flag.layout == "diagonal" || flag.layout == "reverseDiagonal" {
+                        Canvas { context, size in
+                            let path = Path { p in
+                                p.move(to: .zero); p.addLine(to: CGPoint(x: size.width, y: 0))
+                                p.addLine(to: CGPoint(x: size.width, y: size.height)); p.closeSubpath()
+                            }
+                            context.fill(path, with: .color(.white))
+                        }
+                    }
+                    if flag.style == "text" {
+                        Text(flag.text).font(.system(size: geo.size.height * 0.55, weight: .bold))
+                            .foregroundStyle(Color(hex: flag.textColor))
+                    } else {
+                        SignalClassLogoMark(name: flag.text.isEmpty ? flag.logoID.replacingOccurrences(of: "class-", with: "") : flag.text,
+                                            color: Color(hex: flag.textColor))
+                    }
                 }
             }.frame(width: geo.size.width, height: geo.size.height)
         }.clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+}
+
+private struct SignalClassLogoMark: View {
+    let name: String
+    var color: Color = .black
+
+    private var mark: String {
+        let value = name.replacingOccurrences(of: "class-", with: "")
+        if value.hasPrefix("J/") { return value.replacingOccurrences(of: "/", with: "\n") }
+        if value == "Optimist" { return "O" }
+        if value == "A-Cat" { return "A" }
+        if value == "Starling" { return "★" }
+        if value == "ILCA" { return "ILCA" }
+        if value == "49er FX" { return "49er\nFX" }
+        return value
+    }
+
+    var body: some View {
+        ZStack {
+            Text(mark)
+                .font(.system(size: mark.count > 5 ? 25 : 34, weight: .black, design: .rounded))
+                .italic()
+                .minimumScaleFactor(0.5)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(color)
+                .padding(.horizontal, 3)
+            if name == "A-Cat" {
+                VStack(spacing: 3) {
+                    Spacer()
+                    Rectangle().fill(color).frame(width: 35, height: 3)
+                    Rectangle().fill(color).frame(width: 28, height: 3)
+                }.padding(.bottom, 5)
+            } else if name == "Optimist" {
+                Circle().stroke(color, lineWidth: 3).padding(9)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .accessibilityLabel(name)
+    }
+}
+
+private struct SignalInternationalFlagArtwork: View {
+    let name: String
+
+    var body: some View {
+        Canvas { context, size in
+            let bounds = CGRect(origin: .zero, size: size)
+            let white = Color.white, black = Color.black, red = Color(red: 0.86, green: 0.02, blue: 0.08)
+            let blue = Color(red: 0.0, green: 0.12, blue: 0.91), yellow = Color.yellow
+            let colors: [Color]
+            let code = name.lowercased()
+            func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ color: Color) {
+                context.fill(Path(CGRect(x: x * size.width, y: y * size.height, width: w * size.width, height: h * size.height)), with: .color(color))
+            }
+            func polygon(_ points: [CGPoint], _ color: Color) {
+                var path = Path()
+                guard let first = points.first else { return }
+                path.move(to: CGPoint(x: first.x * size.width, y: first.y * size.height))
+                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x * size.width, y: point.y * size.height)) }
+                path.closeSubpath()
+                context.fill(path, with: .color(color))
+            }
+            func stripes(_ list: [Color], vertical: Bool) {
+                for (index, color) in list.enumerated() {
+                    let n = CGFloat(list.count), pos = CGFloat(index) / n, extent = 1 / n
+                    if vertical { rect(pos, 0, extent, 1, color) } else { rect(0, pos, 1, extent, color) }
+                }
+            }
+            func cross(_ color: Color, width: CGFloat = 0.22) {
+                rect(0.5 - width / 2, 0, width, 1, color)
+                rect(0, 0.5 - width / 2, 1, width, color)
+            }
+            func pennant(_ palette: [Color], stripesVertical: Bool = false) {
+                stripes(palette, vertical: stripesVertical)
+                polygon([CGPoint(x: 0.70, y: 0), CGPoint(x: 1, y: 0.5), CGPoint(x: 0.70, y: 1)], white)
+            }
+
+            switch code {
+            case "alpha": colors = [white]; rect(0,0,1,1,white); rect(0,0,0.5,1,blue); polygon([CGPoint(x:0.5,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.5,y:1)],blue); polygon([CGPoint(x:0.85,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.85,y:1)],white)
+            case "bravo": colors=[red]; rect(0,0,1,1,red); polygon([CGPoint(x:0.70,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.70,y:1)],red); polygon([CGPoint(x:0.70,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.70,y:1)],red)
+            case "charlie": colors=[blue,white,red,white,blue]; stripes(colors,vertical:false)
+            case "delta": colors=[yellow,blue,yellow]; stripes(colors,vertical:false)
+            case "echo": colors=[blue,red]; stripes(colors,vertical:false)
+            case "foxtrot": colors=[white]; rect(0,0,1,1,white); polygon([CGPoint(x:0.5,y:0.12),CGPoint(x:0.88,y:0.5),CGPoint(x:0.5,y:0.88),CGPoint(x:0.12,y:0.5)],red)
+            case "golf": colors=[yellow,blue,yellow,blue,yellow]; stripes(colors,vertical:true)
+            case "hotel": colors=[white,red]; stripes(colors,vertical:true)
+            case "india": colors=[yellow]; rect(0,0,1,1,yellow); context.fill(Path(ellipseIn:CGRect(x:size.width*0.27,y:size.height*0.2,width:size.width*0.46,height:size.height*0.6)),with:.color(black))
+            case "juliett": colors=[blue,white,blue]; stripes(colors,vertical:false)
+            case "kilo": colors=[yellow,blue]; stripes(colors,vertical:true)
+            case "lima": colors=[yellow,black,yellow,black]; rect(0,0,0.5,0.5,yellow); rect(0.5,0,0.5,0.5,black); rect(0,0.5,0.5,0.5,black); rect(0.5,0.5,0.5,0.5,yellow)
+            case "mike": colors=[blue]; rect(0,0,1,1,blue); cross(white,width:0.18)
+            case "november": colors=[white,blue]; rect(0,0,1,1,white); for x in 0..<4 { for y in 0..<4 where (x+y)%2==0 { rect(CGFloat(x)/4,CGFloat(y)/4,0.25,0.25,blue) } }
+            case "oscar": colors=[yellow,red]; rect(0,0,1,1,yellow); polygon([CGPoint(x:0,y:1),CGPoint(x:1,y:0),CGPoint(x:1,y:1)],red)
+            case "papa": colors=[blue]; rect(0,0,1,1,blue); rect(0.34,0.30,0.32,0.40,white)
+            case "quebec": colors=[yellow]; rect(0,0,1,1,yellow)
+            case "romeo": colors=[red,yellow,red]; stripes(colors,vertical:false)
+            case "sierra": colors=[white,blue]; rect(0,0,1,1,blue); rect(0.28,0.22,0.44,0.56,white)
+            case "tango": colors=[red,white,blue]; stripes(colors,vertical:true)
+            case "uniform": colors=[red,white,red,white]; rect(0,0,1,1,white); rect(0,0,0.5,0.5,red); rect(0.5,0.5,0.5,0.5,red)
+            case "victor": colors=[white]; rect(0,0,1,1,white); cross(red,width:0.25)
+            case "whiskey": colors=[blue]; rect(0,0,1,1,blue); rect(0.18,0.12,0.64,0.76,white); rect(0.34,0.30,0.32,0.40,red)
+            case "x-ray": colors=[white]; rect(0,0,1,1,white); cross(blue,width:0.18)
+            case "yankee": colors=[red,yellow]; stripes([red,yellow,red,yellow,red,yellow],vertical:true)
+            case "zulu": colors=[black,yellow,blue,red]; rect(0,0,0.5,0.5,black); rect(0.5,0,0.5,0.5,yellow); rect(0,0.5,0.5,0.5,blue); rect(0.5,0.5,0.5,0.5,red)
+            case "answering pennant": colors=[red,white]; pennant([red,white,red,white,red],stripesVertical:true)
+            case "first substitute": colors=[blue,yellow]; pennant([blue,yellow,blue],stripesVertical:true)
+            case "second substitute": colors=[blue,white]; pennant([blue,white,blue],stripesVertical:true)
+            case "third substitute": colors=[black,white]; pennant([black,white,black],stripesVertical:true)
+            case "fourth substitute": colors=[red,yellow]; pennant([red,yellow,red],stripesVertical:true)
+            default:
+                let n = Int(code.filter(\.isNumber)) ?? 0
+                let palette: [[Color]] = [[yellow,red,yellow],[white,red],[blue,white],[red,white,blue],[red,white],[yellow,red],[black,white],[yellow,red],[white,red],[yellow,red]]
+                let p = palette[min(max(n,0),9)]
+                colors = p
+                pennant(p, stripesVertical:true)
+            }
+            context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
+        }.aspectRatio(1.5, contentMode: .fit)
     }
 }
 
@@ -510,9 +629,7 @@ private struct SignalInternationalFlagGallery: View {
                     Button { selectedFlag = name } label: {
                         VStack(spacing: 6) {
                             ZStack {
-                                Rectangle().fill(flagColor(name))
-                                Text(String(name.prefix(1))).font(.system(size: 24, weight: .black))
-                                    .foregroundStyle(.white)
+                                SignalInternationalFlagArtwork(name: name)
                                 if selectedFlag == name {
                                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                                 }
@@ -525,24 +642,6 @@ private struct SignalInternationalFlagGallery: View {
         }
         .navigationTitle("Flag")
         .preferredColorScheme(.dark)
-    }
-
-    private func flagColor(_ name: String) -> Color {
-        if ["Bravo","Hotel","Romeo"].contains(name) { return .red }
-        if ["Alpha","Charlie","Echo","Juliett","Papa","Sierra","X-Ray"].contains(name) { return .blue }
-        if ["Delta","Golf","India","Kilo","Quebec","Tango","Yankee"].contains(name) { return .yellow }
-        return .orange
-    }
-}
-
-private struct SignalFlagSwatch: View {
-    let flagID: String
-    var body: some View {
-        let flag = SignalSequence.flag(flagID)
-        RoundedRectangle(cornerRadius: 2).fill(Color.white)
-            .overlay(Text(flag.symbol.isEmpty ? String(flag.name.prefix(1)) : flag.symbol)
-                .font(.caption.bold()).foregroundStyle(.black))
-            .frame(width: 34, height: 24)
     }
 }
 
