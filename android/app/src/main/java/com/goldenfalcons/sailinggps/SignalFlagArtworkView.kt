@@ -36,7 +36,7 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         rect(c,0.5f-thickness/2,0f,thickness,1f,color); rect(c,0f,0.5f-thickness/2,1f,thickness,color)
     }
     private fun pennant(c: Canvas, colors: List<Int>) {
-        val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*.5f); lineTo(0f,height.toFloat()); close() }
+        val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*0.5f); lineTo(0f,height.toFloat()); close() }
         val save=c.save(); c.clipPath(clip); stripes(c,colors,true); c.restoreToCount(save)
     }
     override fun onDraw(canvas: Canvas) {
@@ -53,7 +53,7 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,0.5f,0.12f,0.88f,0.5f,0.5f,0.88f,0.12f,0.5f) }
             "golf" -> stripes(canvas,listOf(yellow,blue,yellow,blue,yellow),true)
             "hotel" -> stripes(canvas,listOf(white,red),true)
-            "india" -> { rect(canvas,0f,0f,1f,1f,yellow); p.color=black; canvas.drawCircle(width*.5f,height*.5f,minOf(width,height)*.25f,p) }
+            "india" -> { rect(canvas,0f,0f,1f,1f,yellow); p.color=black; canvas.drawCircle(width*0.5f,height*0.5f,minOf(width,height)*0.25f,p) }
             "juliett" -> stripes(canvas,listOf(blue,white,blue),false)
             "kilo" -> stripes(canvas,listOf(yellow,blue),true)
             "lima" -> { rect(canvas,0f,0f,0.5f,0.5f,yellow);rect(canvas,0.5f,0f,0.5f,0.5f,black);rect(canvas,0f,0.5f,0.5f,0.5f,black);rect(canvas,0.5f,0.5f,0.5f,0.5f,yellow) }
@@ -82,7 +82,7 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
                 pennant(canvas,palette)
             }
         }
-        p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*.018f).coerceAtLeast(1f)
+        p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*0.018f).coerceAtLeast(1f)
         canvas.drawRect(RectF(0f,0f,flagW,flagH),p)
         canvas.restoreToCount(save)
     }
