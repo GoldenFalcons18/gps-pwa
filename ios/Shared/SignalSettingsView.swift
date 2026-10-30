@@ -1,5 +1,7 @@
 import SwiftUI
+import AudioToolbox
 
+#if os(iOS)
 private struct SignalStartAction: Identifiable, Codable, Hashable {
     var id = UUID()
     var flagID = "class-4"
@@ -56,6 +58,8 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
     var text = ""
     var textColor = "#111111"
 }
+
+private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
 
 private struct SignalFlagChoice: Identifiable, Hashable {
     let id: String
@@ -194,11 +198,11 @@ private struct SignalFleetPresetEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
 
-    private let sequences: [(String, String)] = [
-        ("standard-start", "Rule 26 · 5分"),
-        ("video-20", "動画A · 20分"),
-        ("video-13", "動画B · 13分"),
-        ("custom-five", "カスタム · 5分")
+    private let sequences: [SignalSequenceChoice] = [
+        SignalSequenceChoice(id: "standard-start", name: "Rule 26 · 5分"),
+        SignalSequenceChoice(id: "video-20", name: "動画A · 20分"),
+        SignalSequenceChoice(id: "video-13", name: "動画B · 13分"),
+        SignalSequenceChoice(id: "custom-five", name: "カスタム · 5分")
     ]
     private let rules = ["P", "I", "U", "Z", "Black", "Default"]
 
@@ -209,7 +213,7 @@ private struct SignalFleetPresetEditor: View {
             }
             Section("Defaults") {
                 Picker("Start Sequence", selection: $preset.sequence) {
-                    ForEach(sequences, id: \.0) { Text($0.1).tag($0.0) }
+                    ForEach(sequences) { Text($0.name).tag($0.id) }
                 }
                 Picker("Start Rule", selection: $preset.startRule) {
                     ForEach(rules, id: \.self) { Text($0).tag($0) }
@@ -307,19 +311,19 @@ private struct SignalFleetPresetEditor: View {
 
 private struct SignalClassPicker: View {
     @Binding var selection: String
-    private let categories: [(String, [SignalFlagChoice])] = [
-        ("Multihull", ["A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Multihull") }),
-        ("Keelboat", ["10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Keelboat") }),
-        ("Board", ["Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Board") }),
-        ("Centerboard", ["29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J14","Jollyboat","Laser","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Centerboard") })
-    ]
+    private let categories = ["Multihull", "Keelboat", "Board", "Centerboard"]
+    private let classFlags: [SignalFlagChoice] =
+        ["A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Multihull") } +
+        ["10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Keelboat") } +
+        ["Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Board") } +
+        ["29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J14","Jollyboat","Laser","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Centerboard") }
 
     var body: some View {
         List {
-            ForEach(categories, id: \.0) { category, flags in
+            ForEach(categories, id: \.self) { category in
                 Section(category) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 86), spacing: 12)], spacing: 12) {
-                        ForEach(flags) { flag in
+                        ForEach(classFlags.filter { $0.category == category }) { flag in
                             Button { selection = flag.id } label: {
                                 VStack(spacing: 7) {
                                     Text(flag.symbol)
@@ -648,3 +652,5 @@ private extension Color {
                   opacity: 1)
     }
 }
+
+#endif
