@@ -5,6 +5,22 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
+    fun videoAAndVideoBMatchTheReferenceSignalTimes() {
+        val videoA = SignalSequence.events(20, 1)
+        assertEquals(listOf(0, 300, 360, 540, 600, 1200), videoA.map { it.secondsAfterStart })
+        assertEquals(listOf("橙", "緑", "青", "青", "緑", "橙"), videoA.map { it.flag })
+        assertEquals(listOf(true, true, true, false, false, false), videoA.map { it.raised })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
+            videoA.map { it.hornPulses })
+
+        val videoB = SignalSequence.events(13, 2)
+        assertEquals(listOf(0, 240, 300, 480, 540, 780), videoB.map { it.secondsAfterStart })
+        assertEquals(listOf(true, true, true, false, false, false), videoB.map { it.raised })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
+            videoB.map { it.hornPulses })
+    }
+
+    @Test
     fun signalSequenceAlignsZeroToRealClockMinuteAfterMinimumLead() {
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 15))
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 0))
