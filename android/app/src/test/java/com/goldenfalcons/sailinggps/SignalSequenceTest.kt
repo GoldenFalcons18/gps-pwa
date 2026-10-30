@@ -97,4 +97,10 @@ class SignalSequenceTest {
         assertEquals(listOf("橙"), SignalSequence.flagsAt(600.0, 14, 0).filter { it.raised }.map { it.id })
         assertEquals(emptyList<String>(), SignalSequence.flagsAt(1200.0, 14, 0).filter { it.raised }.map { it.id })
     }
+
+    @Test
+    fun restartWarningFollowsFlagLoweringByExactlyOneMinute() {
+        assertEquals(185_000L, SignalTiming.restartWarningAt(125_000L))
+    }
+
 }
