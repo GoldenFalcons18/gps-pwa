@@ -121,6 +121,10 @@ struct SignalTimerPanel: View {
         let value = max(0, Int(seconds))
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
+    private func countdownText(_ seconds: Double) -> String {
+        let value = SignalSequence.countdownSeconds(seconds)
+        return String(format: "%02d:%02d", value / 60, value % 60)
+    }
 
     private func eventTimeText(_ event: SignalSequence.Event, restart: Bool = false) -> String {
         guard flagProfile == "standard-start" || restart else {
@@ -209,7 +213,7 @@ struct SignalTimerPanel: View {
                     Text(retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻"))).foregroundStyle(.black)
                     Spacer()
                     Text(retryPending
-                         ? elapsedText(displaySeconds)
+                         ? countdownText(displaySeconds)
                          : (hasStarted
                             ? SignalSequence.clockText(Date(timeIntervalSince1970: useRetrySequence ? restartWarningAt : (startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds)))
                             : "TBD"))
@@ -220,7 +224,7 @@ struct SignalTimerPanel: View {
                     Text(waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓")).font(.title3.bold()).foregroundStyle(.black)
                     Text(waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title).font(.caption).lineLimit(1)
                     Spacer()
-                    Text((hasStarted || restartWarningAt > 0) ? elapsedText(displaySeconds) : "--:--")
+                    Text((hasStarted || restartWarningAt > 0) ? ((waitingForFirstSignal || retryPending) ? countdownText(displaySeconds) : elapsedText(displaySeconds)) : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
