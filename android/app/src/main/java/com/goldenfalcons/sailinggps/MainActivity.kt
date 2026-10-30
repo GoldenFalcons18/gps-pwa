@@ -367,7 +367,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
                 .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
                 .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
-                .putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0).apply()
+                .putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0)
+                .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
             playSignalHorn(events.firstOrNull { it.secondsAfterStart==0 }?.hornPulses ?: emptyList());signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
         b.btnNictSync.setOnClickListener { syncNictClock() }
