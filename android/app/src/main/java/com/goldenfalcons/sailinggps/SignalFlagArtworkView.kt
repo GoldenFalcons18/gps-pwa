@@ -35,6 +35,24 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private fun cross(c: Canvas, color: Int, thickness: Float) {
         rect(c,0.5f-thickness/2,0f,thickness,1f,color); rect(c,0f,0.5f-thickness/2,1f,thickness,color)
     }
+    private fun diagonalCross(c: Canvas, color: Int, thickness: Float) {
+        p.color=color; p.style=Paint.Style.STROKE; p.strokeWidth=minOf(width,height)*thickness
+        c.drawLine(0f,0f,width.toFloat(),height.toFloat(),p)
+        c.drawLine(width.toFloat(),0f,0f,height.toFloat(),p)
+        p.style=Paint.Style.FILL
+    }
+    private fun diagonalStripes(c: Canvas, colors: List<Int>) {
+        val save=c.save()
+        c.rotate(-45f,width/2f,height/2f)
+        val span=kotlin.math.hypot(width.toDouble(),height.toDouble()).toFloat()*1.6f
+        val band=span/colors.size
+        colors.forEachIndexed { i,color ->
+            p.color=color; p.style=Paint.Style.FILL
+            val left=width/2f-span/2f+i*band
+            c.drawRect(left,height/2f-span/2f,left+band,height/2f+span/2f,p)
+        }
+        c.restoreToCount(save)
+    }
     private fun pennant(c: Canvas, colors: List<Int>) {
         val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*0.5f); lineTo(0f,height.toFloat()); close() }
         val save=c.save(); c.clipPath(clip); stripes(c,colors,true); c.restoreToCount(save)
@@ -45,10 +63,10 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         val flagW=width.toFloat(); val flagH=height.toFloat()
         canvas.clipRect(0f,0f,flagW,flagH)
         when(flagName.lowercase()) {
-            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue) }
-            "bravo" -> rect(canvas,0f,0f,1f,1f,red)
+            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue); poly(canvas,white,0.72f,0.34f,1f,0.5f,0.72f,0.66f) }
+            "bravo" -> { rect(canvas,0f,0f,1f,1f,red); poly(canvas,white,0.68f,0.34f,1f,0.5f,0.68f,0.66f) }
             "charlie" -> stripes(canvas,listOf(blue,white,red,white,blue),false)
-            "delta" -> stripes(canvas,listOf(yellow,blue,yellow),false)
+            "delta" -> { rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0f,0.12f,1f,0.24f,yellow);rect(canvas,0f,0.64f,1f,0.24f,yellow) }
             "echo" -> stripes(canvas,listOf(blue,red),false)
             "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,0.5f,0.12f,0.88f,0.5f,0.5f,0.88f,0.12f,0.5f) }
             "golf" -> stripes(canvas,listOf(yellow,blue,yellow,blue,yellow),true)
@@ -57,20 +75,20 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "juliett" -> stripes(canvas,listOf(blue,white,blue),false)
             "kilo" -> stripes(canvas,listOf(yellow,blue),true)
             "lima" -> { rect(canvas,0f,0f,0.5f,0.5f,yellow);rect(canvas,0.5f,0f,0.5f,0.5f,black);rect(canvas,0f,0.5f,0.5f,0.5f,black);rect(canvas,0.5f,0.5f,0.5f,0.5f,yellow) }
-            "mike" -> {rect(canvas,0f,0f,1f,1f,blue);cross(canvas,white,0.18f)}
+            "mike" -> {rect(canvas,0f,0f,1f,1f,blue);diagonalCross(canvas,white,0.22f)}
             "november" -> {rect(canvas,0f,0f,1f,1f,white);for(x in 0..3)for(y in 0..3)if((x+y)%2==0)rect(canvas,x/4f,y/4f,0.25f,0.25f,blue)}
             "oscar" -> {rect(canvas,0f,0f,1f,1f,yellow);poly(canvas,red,0f,1f,1f,0f,1f,1f)}
             "papa" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.34f,0.3f,0.32f,0.4f,white)}
             "quebec" -> rect(canvas,0f,0f,1f,1f,yellow)
-            "romeo" -> stripes(canvas,listOf(red,yellow,red),false)
-            "sierra" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.28f,0.22f,0.44f,0.56f,white)}
+            "romeo" -> {rect(canvas,0f,0f,1f,1f,red);cross(canvas,yellow,0.16f)}
+            "sierra" -> {rect(canvas,0f,0f,1f,1f,white);rect(canvas,0.36f,0.34f,0.28f,0.32f,blue)}
             "tango" -> stripes(canvas,listOf(red,white,blue),true)
             "uniform" -> {rect(canvas,0f,0f,1f,1f,white);rect(canvas,0f,0f,0.5f,0.5f,red);rect(canvas,0.5f,0.5f,0.5f,0.5f,red)}
-            "victor" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,red,0.24f)}
+            "victor" -> {rect(canvas,0f,0f,1f,1f,white);diagonalCross(canvas,red,0.28f)}
             "whiskey" -> {rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0.18f,0.12f,0.64f,0.76f,white);rect(canvas,0.34f,0.3f,0.32f,0.4f,red)}
             "x-ray" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,blue,0.18f)}
-            "yankee" -> stripes(canvas,listOf(red,yellow,red,yellow,red,yellow),true)
-            "zulu" -> {rect(canvas,0f,0f,0.5f,0.5f,black);rect(canvas,0.5f,0f,0.5f,0.5f,yellow);rect(canvas,0f,0.5f,0.5f,0.5f,blue);rect(canvas,0.5f,0.5f,0.5f,0.5f,red)}
+            "yankee" -> diagonalStripes(canvas,listOf(red,yellow,red,yellow,red,yellow))
+            "zulu" -> {poly(canvas,black,0f,0f,1f,0f,0.5f,0.5f);poly(canvas,yellow,1f,0f,1f,1f,0.5f,0.5f);poly(canvas,red,1f,1f,0f,1f,0.5f,0.5f);poly(canvas,blue,0f,1f,0f,0f,0.5f,0.5f)}
             "answering pennant" -> pennant(canvas,listOf(red,white,red,white,red))
             "first substitute" -> pennant(canvas,listOf(blue,yellow,blue))
             "second substitute" -> pennant(canvas,listOf(blue,white,blue))
