@@ -378,15 +378,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalGeneralRecall.setOnClickListener { toggleGeneralRecall() }
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
-        b.btnSignalReset.setOnClickListener { resetSignalSequence() }
+        b.btnSignalReset.setOnClickListener { showSignalScheduleDialog() }
         b.btnSignalZero.setOnClickListener {
-            val events=SignalSequence.events(currentSignalDurationMinutes(),displayPrefs.getInt("signalFlagProfileIndex",0),displayPrefs.getString("signalPrepFlag","P") ?: "P")
+            val alignedStart=SignalTiming.scheduledStartAt(signalNow(),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
             displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
-                .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
-                .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
-                .putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0)
+                .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
+                .putBoolean("signalSkipFinalEvent",false).remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
+                .putLong("signalElapsedStartAt",alignedStart).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",-1)
                 .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
-            playSignalHorn(events.firstOrNull { it.secondsAfterStart==0 }?.hornPulses ?: emptyList());signalActiveIndex=-1;buildSignalRows();updateSignalUi()
+            signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
@@ -469,9 +469,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val orange=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val orangeRemoved=displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4)
         val className=displayPrefs.getString("signalSelectedClassName","クラス旗") ?: "クラス旗"
-        if(displayPrefs.getBoolean("signalRestartMode",false)) return SignalSequence.restartEvents(prep,orange,orangeRemoved,className)
-        val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
-        return SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className)
+        val all=if(displayPrefs.getBoolean("signalRestartMode",false)) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
+            val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+            SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className)
+        }
+        return if(displayPrefs.getBoolean("signalSkipFinalEvent",false) && all.size>1) all.dropLast(1) else all
     }
 
     private fun signalEventTimeLabel(event:SignalEvent,restart:Boolean):String {
@@ -513,11 +515,41 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showSignalInterruptDialog() {
-        val running=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalRestartAt",0L)>signalNow()
-        val choices=if(running) arrayOf("一時停止","シーケンスをリセット","キャンセル") else arrayOf("再開","最初からやり直す","キャンセル")
-        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("シグナル操作").setItems(choices) { _,which ->
-            when(which) { 0 -> toggleSignalSequence(); 1 -> resetSignalSequence() }
+        val choices=arrayOf("完全停止","すべて中止（N旗を掲揚）","最後の信号を中止","レースを続行","キャンセル")
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("中断").setItems(choices) { _,which ->
+            when(which) {
+                0 -> resetSignalSequence()
+                1 -> toggleAbandonFlag()
+                2 -> { displayPrefs.edit().putBoolean("signalSkipFinalEvent",true).apply();buildSignalRows();updateSignalUi() }
+                3 -> { if(displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L || displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)>=0L) toggleSignalSequence() }
+            }
         }.show()
+    }
+
+    private fun showSignalScheduleDialog() {
+        val modes=arrayOf("シーケンス開始時刻","スタート信号時刻")
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle("開始時刻を予約").setItems(modes) { _,mode ->
+            val now=java.util.Calendar.getInstance()
+            android.app.TimePickerDialog(this,{ _,hour,minute ->
+                val target=java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY,hour);set(java.util.Calendar.MINUTE,minute);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0) }
+                val firstSignalLead=when(displayPrefs.getInt("signalFlagProfileIndex",0)){2->240;3,4,5,6->0;else->300}
+                val signalOffset=if(mode==1) firstSignalLead*1000L else 0L
+                target.add(java.util.Calendar.MILLISECOND,signalClockOffsetMs.toInt())
+                if(target.timeInMillis-signalOffset<=signalNow()) {
+                    Toast.makeText(this,"選択時刻が近すぎます。シーケンス開始時刻を先にしてください",Toast.LENGTH_LONG).show();return@TimePickerDialog
+                }
+                scheduleSignalStart(target.timeInMillis-signalOffset)
+            },now.get(java.util.Calendar.HOUR_OF_DAY),now.get(java.util.Calendar.MINUTE),true).show()
+        }.setNegativeButton("キャンセル",null).show()
+    }
+
+    private fun scheduleSignalStart(startAt:Long) {
+        displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
+            .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
+            .putBoolean("signalSkipFinalEvent",false).putLong("signalElapsedStartAt",startAt).remove("signalPausedElapsedMs")
+            .remove("signalRestartAt").remove("signalRestartPausedElapsedMs").putInt("signalLastFiredIndex",-1)
+            .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
+        signalActiveIndex=-1;buildSignalRows();updateSignalUi()
     }
 
     private fun toggleIndividualRecall() {
@@ -554,7 +586,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.postponementRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalPostponementFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",signalNow()+60_000L).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
+                .putLong("signalRestartAt",SignalTiming.scheduledStartAt(signalNow()+60_000L,0)).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.postponementLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
@@ -565,13 +597,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .remove("signalOrangeManualOverride").remove("signalOrangeManualUp")
             .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
             .putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
-            .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false).apply()
+            .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false).putBoolean("signalSkipFinalEvent",false).apply()
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
     }
 
     private fun toggleSignalSequence() {
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         val now=signalNow()
+        if(!displayPrefs.getBoolean("signalRestartMode",false) && displayPrefs.getLong("signalElapsedStartAt",0L)>now) { resetSignalSequence();return }
         val events=currentSignalEvents()
         val totalMs=(events.lastOrNull()?.secondsAfterStart ?: 0)*1000L
         if(displayPrefs.getBoolean("signalRestartMode",false)) {
