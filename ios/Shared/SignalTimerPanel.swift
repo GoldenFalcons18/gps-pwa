@@ -8,6 +8,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalVideoPausedSeconds") private var pausedSeconds = 0.0
     @AppStorage("signalVideoStarted") private var hasStarted = false
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
+    @AppStorage("signalMinimumTimeToFirstAction") private var minimumTimeToFirstAction = 15
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
     @AppStorage("signalShortHornSeconds") private var shortHornSeconds = 0.22
     @AppStorage("signalHornGapSeconds") private var hornGapSeconds = 0.18
@@ -95,13 +96,14 @@ struct SignalTimerPanel: View {
             let completed = hasStarted && value >= Double(events.last?.secondsAfterStart ?? 1200)
             let wasPaused = hasStarted && !completed
             if completed { pausedSeconds = 0 }
-            startAt = date.timeIntervalSince1970 + clockOffset - (wasPaused ? pausedSeconds : 0)
+            let correctedNow = date.timeIntervalSince1970 + clockOffset
+            let firstSignalDelay = Double(max(1, minimumTimeToFirstAction))
+            startAt = wasPaused && pausedSeconds > 0
+                ? correctedNow - pausedSeconds
+                : correctedNow + firstSignalDelay
             if !wasPaused {
-                orangeManualOverride = false
-                orangeManualUp = false
                 pausedSeconds = 0
                 hasStarted = true
-                playHorn(pulses: events.first(where: { $0.secondsAfterStart == 0 })?.hornPulses ?? [])
             }
         }
     }
@@ -132,21 +134,22 @@ struct SignalTimerPanel: View {
         return offset < 0 ? "T−\(time)" : "T+\(time)"
     }
 
-    private func activeEventIndex(retryPending: Bool, useRetrySequence: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double, spent: Double) -> Int {
+    private func activeEventIndex(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double, spent: Double) -> Int {
         if retryPending { return 0 }
+        if waitingForFirstSignal { return -1 }
         if useRetrySequence {
             return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
         }
         if hasStarted {
             return SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
         }
-        return SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
+        return -1
     }
 
-    private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
+    private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
         var visible = retryPending
             ? [SignalSequence.flag("orange")]
-            : ((hasStarted || useRetrySequence)
+            : ((hasStarted || useRetrySequence) && !waitingForFirstSignal
                 ? SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
                 : [])
         if useRetrySequence && sequenceElapsed < 540 {
@@ -175,15 +178,16 @@ struct SignalTimerPanel: View {
             let correctedNow = now.timeIntervalSince1970 + clockOffset
             let retryPending = restartWarningAt > correctedNow
             let useRetrySequence = restartWarningAt > 0 && !retryPending
+            let waitingForFirstSignal = !useRetrySequence && startAt > correctedNow
             let sequenceEvents = useRetrySequence ? recallRestartEvents : events
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
-            let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
-            let current = sequenceEvents[active]
+            let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
+            let current = sequenceEvents[max(0, active)]
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
                 : running(at: now)
-            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : sequenceElapsed
-            let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
+            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : (waitingForFirstSignal ? max(0, startAt - correctedNow) : sequenceElapsed)
+            let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
@@ -203,7 +207,7 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(retryPending ? "次の予告信号まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻")).foregroundStyle(.black)
+                    Text(retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "最初の信号まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻"))).foregroundStyle(.black)
                     Spacer()
                     Text(retryPending
                          ? elapsedText(displaySeconds)
@@ -214,8 +218,8 @@ struct SignalTimerPanel: View {
                 }
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
                 HStack(spacing: 8) {
-                    Text(current.raised ? "↑" : "↓").font(.title3.bold()).foregroundStyle(.black)
-                    Text(current.title).font(.caption).lineLimit(1)
+                    Text(waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓")).font(.title3.bold()).foregroundStyle(.black)
+                    Text(waitingForFirstSignal ? "開始待ち · " + current.title : current.title).font(.caption).lineLimit(1)
                     Spacer()
                     Text((hasStarted || restartWarningAt > 0) ? elapsedText(displaySeconds) : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
@@ -251,7 +255,7 @@ struct SignalTimerPanel: View {
                 HStack(spacing: compact ? 8 : 22) {
                     Button("中断") { if isRunning { startOrPause(at: now) } }
                         .disabled(!isRunning || restartWarningAt > 0).foregroundStyle(.gray)
-                    Button(isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")) { startOrPause(at: now) }
+                    Button(waitingForFirstSignal ? "開始待ち（取消）" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始"))) { startOrPause(at: now) }
                         .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
