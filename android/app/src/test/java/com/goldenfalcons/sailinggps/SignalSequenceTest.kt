@@ -5,6 +5,11 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
+    fun signalSequenceSchedulesFirstSignalAfterConfiguredMinimumDelay() {
+        assertEquals(25_000L, SignalTiming.scheduledStartAt(10_000L, 15))
+        assertEquals(11_000L, SignalTiming.scheduledStartAt(10_000L, 0))
+    }
+    @Test
     fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
