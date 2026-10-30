@@ -534,7 +534,7 @@ private struct SignalFlagPreview: View {
     }
 }
 
-private struct SignalClassLogoMark: View {
+struct SignalClassLogoMark: View {
     let name: String
     var color: Color = .black
 
@@ -634,10 +634,15 @@ private struct SignalInternationalFlagArtwork: View {
             }
 
             switch code {
-            case "alpha": colors = [white]; rect(0,0,1,1,white); rect(0,0,0.5,1,blue); polygon([CGPoint(x:0.5,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.5,y:1)],blue); polygon([CGPoint(x:0.85,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.85,y:1)],white)
-            case "bravo": colors=[red]; rect(0,0,1,1,red); polygon([CGPoint(x:0.70,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.70,y:1)],red); polygon([CGPoint(x:0.70,y:0),CGPoint(x:1,y:0.5),CGPoint(x:0.70,y:1)],red)
+            case "alpha":
+                colors=[white,blue]; rect(0,0,1,1,white); rect(0.5,0,0.5,1,blue)
+                polygon([CGPoint(x:0.72,y:0.34),CGPoint(x:1,y:0.5),CGPoint(x:0.72,y:0.66)],white)
+            case "bravo":
+                colors=[red]; rect(0,0,1,1,red)
+                polygon([CGPoint(x:0.68,y:0.34),CGPoint(x:1,y:0.5),CGPoint(x:0.68,y:0.66)],white)
             case "charlie": colors=[blue,white,red,white,blue]; stripes(colors,vertical:false)
-            case "delta": colors=[yellow,blue,yellow]; stripes(colors,vertical:false)
+            case "delta":
+                colors=[blue,yellow]; rect(0,0,1,1,blue); rect(0,0.12,1,0.24,yellow); rect(0,0.64,1,0.24,yellow)
             case "echo": colors=[blue,red]; stripes(colors,vertical:false)
             case "foxtrot": colors=[white]; rect(0,0,1,1,white); polygon([CGPoint(x:0.5,y:0.12),CGPoint(x:0.88,y:0.5),CGPoint(x:0.5,y:0.88),CGPoint(x:0.12,y:0.5)],red)
             case "golf": colors=[yellow,blue,yellow,blue,yellow]; stripes(colors,vertical:true)
@@ -648,18 +653,33 @@ private struct SignalInternationalFlagArtwork: View {
             case "lima": colors=[yellow,black,yellow,black]; rect(0,0,0.5,0.5,yellow); rect(0.5,0,0.5,0.5,black); rect(0,0.5,0.5,0.5,black); rect(0.5,0.5,0.5,0.5,yellow)
             case "mike": colors=[blue]; rect(0,0,1,1,blue); cross(white,width:0.18)
             case "november": colors=[white,blue]; rect(0,0,1,1,white); for x in 0..<4 { for y in 0..<4 where (x+y)%2==0 { rect(CGFloat(x)/4,CGFloat(y)/4,0.25,0.25,blue) } }
-            case "oscar": colors=[yellow,red]; rect(0,0,1,1,yellow); polygon([CGPoint(x:0,y:1),CGPoint(x:1,y:0),CGPoint(x:1,y:1)],red)
+            case "oscar": colors=[yellow,red]; rect(0,0,1,1,yellow); polygon([CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:0,y:1)],red)
             case "papa": colors=[blue]; rect(0,0,1,1,blue); rect(0.34,0.30,0.32,0.40,white)
             case "quebec": colors=[yellow]; rect(0,0,1,1,yellow)
-            case "romeo": colors=[red,yellow,red]; stripes(colors,vertical:false)
-            case "sierra": colors=[white,blue]; rect(0,0,1,1,blue); rect(0.28,0.22,0.44,0.56,white)
+            case "romeo":
+                colors=[red,yellow]; rect(0,0,1,1,red); cross(yellow,width:0.16)
+            case "sierra": colors=[white,blue]; rect(0,0,1,1,white); rect(0.36,0.34,0.28,0.32,blue)
             case "tango": colors=[red,white,blue]; stripes(colors,vertical:true)
-            case "uniform": colors=[red,white,red,white]; rect(0,0,1,1,white); rect(0,0,0.5,0.5,red); rect(0.5,0.5,0.5,0.5,red)
-            case "victor": colors=[white]; rect(0,0,1,1,white); cross(red,width:0.25)
+            case "uniform": colors=[red,white]; rect(0,0,1,1,white); rect(0,0,0.5,0.5,red); rect(0.5,0.5,0.5,0.5,red)
+            case "victor":
+                colors=[white,red]; rect(0,0,1,1,white)
+                polygon([CGPoint(x:0,y:0),CGPoint(x:0.22,y:0),CGPoint(x:1,y:0.78),CGPoint(x:1,y:1),CGPoint(x:0.78,y:1),CGPoint(x:0,y:0.22)],red)
+                polygon([CGPoint(x:1,y:0),CGPoint(x:1,y:0.22),CGPoint(x:0.22,y:1),CGPoint(x:0,y:1),CGPoint(x:0,y:0.78),CGPoint(x:0.78,y:0)],red)
             case "whiskey": colors=[blue]; rect(0,0,1,1,blue); rect(0.18,0.12,0.64,0.76,white); rect(0.34,0.30,0.32,0.40,red)
             case "x-ray": colors=[white]; rect(0,0,1,1,white); cross(blue,width:0.18)
-            case "yankee": colors=[red,yellow]; stripes([red,yellow,red,yellow,red,yellow],vertical:true)
-            case "zulu": colors=[black,yellow,blue,red]; rect(0,0,0.5,0.5,black); rect(0.5,0,0.5,0.5,yellow); rect(0,0.5,0.5,0.5,blue); rect(0.5,0.5,0.5,0.5,red)
+            case "yankee":
+                colors=[red,yellow]
+                for index in 0..<8 {
+                    let low=CGFloat(index)*0.25, high=low+0.25
+                    let points=[CGPoint(x:max(0,low),y:0),CGPoint(x:min(1,high),y:0),CGPoint(x:1,y:max(0,low-1)),CGPoint(x:1,y:min(1,high-1)),CGPoint(x:max(0,low-1),y:1),CGPoint(x:min(1,high-1),y:1),CGPoint(x:0,y:min(1,high)),CGPoint(x:0,y:max(0,low))]
+                    polygon(points, index % 2 == 0 ? red : yellow)
+                }
+            case "zulu":
+                colors=[black,yellow,blue,red]
+                polygon([CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:0.5,y:0.5)],black)
+                polygon([CGPoint(x:1,y:0),CGPoint(x:1,y:1),CGPoint(x:0.5,y:0.5)],yellow)
+                polygon([CGPoint(x:1,y:1),CGPoint(x:0,y:1),CGPoint(x:0.5,y:0.5)],red)
+                polygon([CGPoint(x:0,y:1),CGPoint(x:0,y:0),CGPoint(x:0.5,y:0.5)],blue)
             case "answering pennant": colors=[red,white]; pennant([red,white,red,white,red],stripesVertical:true)
             case "first substitute": colors=[blue,yellow]; pennant([blue,yellow,blue],stripesVertical:true)
             case "second substitute": colors=[blue,white]; pennant([blue,white,blue],stripesVertical:true)
