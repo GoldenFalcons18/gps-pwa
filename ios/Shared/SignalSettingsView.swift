@@ -3,7 +3,6 @@ import SwiftUI
 #if os(iOS)
 import AudioToolbox
 
-#if os(iOS)
 private struct SignalStartAction: Identifiable, Codable, Hashable {
     var id = UUID()
     var flagID = "class-4"
