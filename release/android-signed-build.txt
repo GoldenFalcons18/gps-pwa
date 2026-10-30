@@ -1,1 +1,1 @@
-1.8.8 versionCode 36 scheduled signal start
+1.8.9 versionCode 37 align race signal actions to real minute marks
