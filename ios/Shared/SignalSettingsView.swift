@@ -1,4 +1,6 @@
 import SwiftUI
+
+#if os(iOS)
 import AudioToolbox
 
 #if os(iOS)
