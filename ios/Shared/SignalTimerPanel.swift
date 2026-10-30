@@ -18,7 +18,8 @@ struct SignalTimerPanel: View {
     @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
-    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false\n    @AppStorage("signalAbandonFlagUp") private var abandonFlagUp = false
+    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
+    @AppStorage("signalAbandonFlagUp") private var abandonFlagUp = false
     @AppStorage("signalGeneralRecallFlagUp") private var generalRecallFlagUp = false
     @AppStorage("signalPostponementFlagUp") private var postponementFlagUp = false
     @AppStorage("signalOrangeManualOverride") private var orangeManualOverride = false
@@ -27,7 +28,8 @@ struct SignalTimerPanel: View {
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
-    @State private var showSettings = false\n    @State private var showInterruptOptions = false
+    @State private var showSettings = false
+    @State private var showInterruptOptions = false
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
@@ -43,7 +45,20 @@ struct SignalTimerPanel: View {
         }
         hasStarted = true
     }
-    private func toggleAbandon(at date: Date) {\n        if abandonFlagUp {\n            abandonFlagUp = false\n            playHorn(pulses: [0])\n        } else {\n            pauseForManualSignal(at: date)\n            individualRecallFlagUp = false\n            generalRecallFlagUp = false\n            postponementFlagUp = false\n            abandonFlagUp = true\n            playHorn(pulses: [0, 0, 0])\n        }\n    }\n    private func toggleIndividualRecall(at date: Date) {
+    private func toggleAbandon(at date: Date) {
+        if abandonFlagUp {
+            abandonFlagUp = false
+            playHorn(pulses: [0])
+        } else {
+            pauseForManualSignal(at: date)
+            individualRecallFlagUp = false
+            generalRecallFlagUp = false
+            postponementFlagUp = false
+            abandonFlagUp = true
+            playHorn(pulses: [0, 0, 0])
+        }
+    }
+    private func toggleIndividualRecall(at date: Date) {
         if individualRecallFlagUp {
             individualRecallFlagUp = false
         } else {
@@ -284,7 +299,7 @@ struct SignalTimerPanel: View {
                         Picker("スタート手順", selection: $flagProfile) {
                             ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
                         }.pickerStyle(.menu)
-                        if flagProfile == "custom-five" || flagProfile == "standard-start" {
+                        if flagProfile == "custom-five" || flagProfile == "standard-start" || flagProfile == "video-13" {
                             HStack(spacing: 8) {
                                 Picker("クラス旗", selection: $classFlagID) {
                                     ForEach(SignalSequence.flagCatalog.filter { $0.id.hasPrefix("class-") }) { Text($0.name).tag($0.id) }
@@ -311,7 +326,13 @@ struct SignalTimerPanel: View {
             .background(Color.white)
             .foregroundStyle(.black)
             #if os(iOS)
-            .sheet(isPresented: $showSettings) { SignalSettingsView() }\n            .confirmationDialog("シグナル操作", isPresented: $showInterruptOptions, titleVisibility: .visible) {\n                if isRunning { Button("一時停止") { startOrPause(at: Date()) } }\n                else if hasStarted && !running(at: Date()) { Button("再開") { startOrPause(at: Date()) } }\n                Button("シーケンスをリセット", role: .destructive) { reset() }\n                Button("キャンセル", role: .cancel) {}\n            }
+            .sheet(isPresented: $showSettings) { SignalSettingsView() }
+            .confirmationDialog("シグナル操作", isPresented: $showInterruptOptions, titleVisibility: .visible) {
+                if isRunning { Button("一時停止") { startOrPause(at: Date()) } }
+                else if hasStarted && !running(at: Date()) { Button("再開") { startOrPause(at: Date()) } }
+                Button("シーケンスをリセット", role: .destructive) { reset() }
+                Button("キャンセル", role: .cancel) {}
+            }
             #endif
             .onAppear {
                 if sequenceTimingVersion < 2 {
