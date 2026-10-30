@@ -178,10 +178,9 @@ object SignalSequence {
                 }
             }
         } else {
-            val fixedVideo = profile.id == "video-20" || profile.id == "video-13"
             val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
             profile.events.map { event ->
-                val scaled = if (fixedVideo) event else event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
+                val scaled = event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
                 if (event.flag == "級") scaled.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = scaled.title.replace("クラス旗", className)) else scaled
             }
         }
