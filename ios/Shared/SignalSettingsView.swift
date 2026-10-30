@@ -76,6 +76,34 @@ private struct SignalFlagChoice: Identifiable, Hashable {
     var symbol: String { id.hasPrefix("class-") ? String(id.dropFirst(6)) : name }
 }
 
+private struct SignalFlagSwatch: View {
+    let flagID: String
+    private var flag: SignalSequence.Flag { SignalSequence.flag(flagID) }
+    private var fill: Color {
+        let value = flag.colors.first ?? 0xFFFFFF
+        return Color(red: Double((value >> 16) & 0xFF) / 255,
+                     green: Double((value >> 8) & 0xFF) / 255,
+                     blue: Double(value & 0xFF) / 255)
+    }
+    var body: some View {
+        Group {
+            if flagID.hasPrefix("class-") {
+                SignalClassLogoMark(name: String(flagID.dropFirst(6)))
+            } else {
+                ZStack {
+                    fill
+                    Text(flag.symbol.isEmpty ? flag.name : flag.symbol)
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(fill == .white ? .black : .white)
+                        .minimumScaleFactor(0.5)
+                }
+            }
+        }
+        .frame(width: 44, height: 30)
+        .clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+}
+
 struct SignalSettingsView: View {
     @AppStorage("signalMinimumTimeToFirstAction") private var minimumTime = 15
     @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
