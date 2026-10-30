@@ -63,62 +63,78 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             } else {
                 topY + (downY - topY) * progress
             }
-            val classFlag = state.id.startsWith("class-")
-            paint.color = if (classFlag) 0xffffffff.toInt() else state.color
             val flagRect = RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h))
-            canvas.drawRect(flagRect, paint)
-            if (classFlag) {
-                val className = state.id.removePrefix("class-")
-                val mark = when (className) {
-                    "A-Cat" -> "A"; "49er FX" -> "49er FX"; "J/22" -> "J22"; "J/24" -> "J24"
-                    "J/70" -> "J70"; "J/80" -> "J80"; "International 14" -> "14"; "Formula 18" -> "F18"
-                    "Nacra 17" -> "N17"; "Nacra 15" -> "N15"; "Flying Fifteen" -> "15"; else -> className
+            val classFlag = state.id.startsWith("class-") || state.id == "級"
+            val white = 0xFFFFFFFF.toInt()
+            val black = 0xFF111111.toInt()
+            val red = 0xFFD71920.toInt()
+            val blue = 0xFF1769FF.toInt()
+            val yellow = 0xFFE6D300.toInt()
+            fun fill(color: Int) { paint.color = color; canvas.drawRect(flagRect, paint) }
+            fun triangle(color: Int, points: List<Pair<Float, Float>>) {
+                paint.color = color
+                val path = android.graphics.Path().apply {
+                    moveTo(mastX + flagWidth * points[0].first, y + flagHeight * points[0].second)
+                    points.drop(1).forEach { lineTo(mastX + flagWidth * it.first, y + flagHeight * it.second) }
+                    close()
                 }
-                paint.color = 0xff111111.toInt()
-                paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
-                paint.textAlign = Paint.Align.CENTER
-                paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / mark.length.coerceAtLeast(2)))
-                canvas.drawText(mark, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
-                paint.textAlign = Paint.Align.LEFT
-            } else when (state.id) {
-                "I" -> {
-                    paint.color = 0xff111111.toInt()
-                    canvas.drawCircle(mastX + flagWidth * 0.5f, y + flagHeight * 0.5f, flagHeight * 0.20f, paint)
+                canvas.drawPath(path, paint)
+            }
+            when (state.style) {
+                "blueSquare" -> {
+                    fill(state.color)
+                    paint.color = white
+                    canvas.drawRect(mastX + flagWidth * 0.34f, y + flagHeight * 0.30f, mastX + flagWidth * 0.66f, y + flagHeight * 0.70f, paint)
                 }
-                "X" -> {
-                    paint.color = 0xffffffff.toInt()
-                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
-                    paint.color = 0xff1769ff.toInt()
-                    paint.style = Paint.Style.STROKE
-                    paint.strokeWidth = flagHeight * 0.20f
+                "circle" -> {
+                    fill(state.color); paint.color = black
+                    canvas.drawCircle(flagRect.centerX(), flagRect.centerY(), flagHeight * 0.24f, paint)
+                }
+                "diagonal" -> { fill(state.color); triangle(state.secondaryColor, listOf(0f to 0f, 1f to 0f, 0f to 1f)) }
+                "checker" -> {
+                    fill(state.color); paint.color = state.secondaryColor
+                    canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight * 0.5f, paint)
+                    canvas.drawRect(mastX, y + flagHeight * 0.5f, mastX + flagWidth * 0.5f, y + flagHeight, paint)
+                }
+                "apFlag" -> {
+                    fill(state.color); paint.color = white
+                    canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight, paint)
+                }
+                "hFlag" -> {
+                    fill(white); paint.color = red
+                    canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight, paint)
+                }
+                "lFlag" -> {
+                    fill(yellow); paint.color = black
+                    canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight * 0.5f, paint)
+                    canvas.drawRect(mastX, y + flagHeight * 0.5f, mastX + flagWidth * 0.5f, y + flagHeight, paint)
+                }
+                "zFlag" -> {
+                    fill(black)
+                    triangle(yellow, listOf(0f to 0f, 1f to 0f, 0.5f to 0.5f))
+                    triangle(blue, listOf(1f to 0f, 1f to 1f, 0.5f to 0.5f))
+                    triangle(red, listOf(1f to 1f, 0f to 1f, 0.5f to 0.5f))
+                }
+                "firstSub" -> {
+                    fill(blue); triangle(red, listOf(0f to 0f, 1f to 1f, 1f to 0f))
+                }
+                "xFlag" -> {
+                    fill(white); paint.color = blue
+                    paint.strokeWidth = flagHeight * 0.18f
                     canvas.drawLine(mastX, y, mastX + flagWidth, y + flagHeight, paint)
                     canvas.drawLine(mastX + flagWidth, y, mastX, y + flagHeight, paint)
-                    paint.style = Paint.Style.FILL
                 }
-                "AP" -> {
-                    paint.color = 0xffffffff.toInt()
-                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
-                    paint.color = 0xffd71920.toInt()
-                    canvas.drawRect(mastX, y, mastX + flagWidth * 0.5f, y + flagHeight, paint)
+                "classLogo" -> {
+                    fill(white)
+                    paint.color = black
+                    paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                    paint.textAlign = Paint.Align.CENTER
+                    val mark = state.id.removePrefix("class-")
+                    paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / mark.length.coerceAtLeast(2)))
+                    canvas.drawText(mark, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
+                    paint.textAlign = Paint.Align.LEFT
                 }
-                "第一代表" -> {
-                    paint.color = 0xff1769ff.toInt()
-                    canvas.drawRect(mastX, y, mastX + flagWidth, y + flagHeight, paint)
-                    paint.color = 0xffd71920.toInt()
-                    val triangle = android.graphics.Path().apply {
-                        moveTo(mastX, y)
-                        lineTo(mastX + flagWidth, y + flagHeight)
-                        lineTo(mastX + flagWidth, y)
-                        close()
-                    }
-                    canvas.drawPath(triangle, paint)
-                }
-            }
-            if (state.whiteSquare) {
-                paint.color = 0xffffffff.toInt()
-                val inset = flagWidth * 0.34f
-                val square = flagWidth * 0.32f
-                canvas.drawRect(mastX + inset, y + flagHeight * 0.34f, mastX + inset + square, y + flagHeight * 0.66f, paint)
+                else -> fill(state.color)
             }
         }
     }
