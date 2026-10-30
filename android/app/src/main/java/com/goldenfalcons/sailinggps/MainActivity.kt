@@ -642,7 +642,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.tvSignalClock.text=clock
         b.tvSignalStartAt.text="Start at  " + if(started) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(displayedStart)) else "TBD"
-        b.tvSignalTitle.text=if(waitingForFirstSignal) "0秒待ち · ${event.title}" else event.title
+        b.tvSignalTitle.text=if(waitingForFirstSignal) "分00秒待ち · ${event.title}" else event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
         val shownSeconds=when {
@@ -651,7 +651,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             else -> elapsedSeconds
         }
         b.tvSignalCountdown.text=if(!started) "--:--" else "%02d:%02d".format(shownSeconds.toInt()/60,shownSeconds.toInt()%60)
-        b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"0秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
+        b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
             waitingForRestart && orangeEnabled -> mutableListOf(SignalFlagState("橙",0xFFF58A00.toInt(),true,false))
@@ -670,7 +670,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
         b.signalMast.show(raised,running)
-        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"0秒合わせ中（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
+        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"分00秒合わせ中（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
         b.btnSignalStart.isEnabled=!waitingForRestart && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false)
         b.btnSignalIndividualRecall.text=if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) "X旗 降下" else "個別リコール X旗（$prepFlag）"
         b.btnSignalIndividualRecall.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false)
