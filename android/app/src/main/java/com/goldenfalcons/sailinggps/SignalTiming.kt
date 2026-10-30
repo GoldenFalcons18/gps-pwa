@@ -2,8 +2,12 @@ package com.goldenfalcons.sailinggps
 
 /** Pure elapsed-time boundary math shared by signal presentation and tests. */
 object SignalTiming {
-    fun scheduledStartAt(nowMillis: Long, minimumDelaySeconds: Int): Long =
-        nowMillis + minimumDelaySeconds.coerceAtLeast(0) * 1000L
+    fun scheduledStartAt(nowMillis: Long, minimumDelaySeconds: Int): Long {
+        val earliest = nowMillis + minimumDelaySeconds.coerceAtLeast(0) * 1000L
+        val minute = 60_000L
+        val remainder = Math.floorMod(earliest, minute)
+        return if (remainder == 0L) earliest else earliest + minute - remainder
+    }
 
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
         if (eventOffsets.isEmpty() || !elapsedSeconds.isFinite()) return -1
