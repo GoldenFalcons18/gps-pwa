@@ -97,7 +97,7 @@ struct SignalSettingsView: View {
                     Stepper(value: $minimumTime, in: 0...120, step: 5) {
                         VStack(alignment: .leading) {
                             LabeledContent("0秒までの最短時間", value: "\(minimumTime)秒")
-                            Text("レース管理モード").font(.caption).foregroundStyle(.secondary)
+                            Text("開始ボタンから0秒（旗が動く目安）までの最短間隔です。AP・N旗は掲揚時刻を固定せず手動で操作します。").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Picker("Voice", selection: $voiceName) {
