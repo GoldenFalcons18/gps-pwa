@@ -63,10 +63,24 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             } else {
                 topY + (downY - topY) * progress
             }
-            paint.color = state.color
-            canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
-            canvas.drawRect(RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h)), paint)
-            when (state.id) {
+            val classFlag = state.id.startsWith("class-")
+            paint.color = if (classFlag) 0xffffffff.toInt() else state.color
+            val flagRect = RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h))
+            canvas.drawRect(flagRect, paint)
+            if (classFlag) {
+                val className = state.id.removePrefix("class-")
+                val mark = when (className) {
+                    "A-Cat" -> "A"; "49er FX" -> "49er FX"; "J/22" -> "J22"; "J/24" -> "J24"
+                    "J/70" -> "J70"; "J/80" -> "J80"; "International 14" -> "14"; "Formula 18" -> "F18"
+                    "Nacra 17" -> "N17"; "Nacra 15" -> "N15"; "Flying Fifteen" -> "15"; else -> className
+                }
+                paint.color = 0xff111111.toInt()
+                paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                paint.textAlign = Paint.Align.CENTER
+                paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / mark.length.coerceAtLeast(2)))
+                canvas.drawText(mark, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
+                paint.textAlign = Paint.Align.LEFT
+            } else when (state.id) {
                 "I" -> {
                     paint.color = 0xff111111.toInt()
                     canvas.drawCircle(mastX + flagWidth * 0.5f, y + flagHeight * 0.5f, flagHeight * 0.20f, paint)
