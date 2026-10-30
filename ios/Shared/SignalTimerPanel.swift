@@ -190,13 +190,14 @@ struct SignalTimerPanel: View {
             visible.append(SignalSequence.flag("orange"))
         }
         if generalRecallFlagUp {
-            visible.append(SignalSequence.flag("first-sub"))
+            visible = [SignalSequence.flag("first-sub")]
         } else if postponementFlagUp {
-            visible.append(SignalSequence.flag("AP"))
+            visible = [SignalSequence.flag("AP")]
+        } else if abandonFlagUp {
+            visible = [SignalSequence.flag("N")]
         } else if individualRecallFlagUp {
             visible.append(SignalSequence.flag("X"))
         }
-        if abandonFlagUp { visible.append(SignalSequence.flag("N")) }
         if orangeManualOverride {
             visible.removeAll { $0.id == "orange" }
             if orangeManualUp { visible.append(SignalSequence.flag("orange")) }
@@ -370,9 +371,10 @@ struct SignalTimerPanel: View {
                 }.preferredColorScheme(.dark)
             }
             .confirmationDialog("中断", isPresented: $showInterruptOptions, titleVisibility: .visible) {
-                Button("完全停止", role: .destructive) { reset() }
-                Button("すべて中止（N旗を掲揚）") { toggleAbandon(at: Date()) }
-                Button("最後の信号を中止") { skipFinalEvent = true }
+                Button("停止（待機状態へ戻る）", role: .destructive) { reset() }
+                Button("延期（AP旗）") { togglePostponement(at: Date()) }
+                Button("最後のスタートを再実施（N旗）") { toggleAbandon(at: Date()) }
+                Button("中止したスタートを再実施（N旗）") { toggleAbandon(at: Date()) }
                 Button("レースを続行") { if !isRunning && !waitingForFirstSignal { startOrPause(at: Date()) } }
                 Button("キャンセル", role: .cancel) {}
             }
