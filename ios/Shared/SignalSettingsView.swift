@@ -96,7 +96,7 @@ struct SignalSettingsView: View {
                 Section("General Settings") {
                     Stepper(value: $minimumTime, in: 0...120, step: 5) {
                         VStack(alignment: .leading) {
-                            LabeledContent("最初の信号までの最短時間", value: "\(minimumTime)秒")
+                            LabeledContent("0秒までの最短時間", value: "\(minimumTime)秒")
                             Text("レース管理モード").font(.caption).foregroundStyle(.secondary)
                         }
                     }
