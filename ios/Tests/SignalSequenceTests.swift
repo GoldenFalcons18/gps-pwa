@@ -2,6 +2,12 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
+    func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 50, minimumLeadSeconds: 15), 120)
+    }
+
     func testStandardStartScheduleUsesRaceStartOffsetsAndRequestedHornSignals() {
         let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
 
