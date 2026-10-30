@@ -77,7 +77,7 @@ struct SignalSequence {
         return flagCatalog[0]
     }
 
-    private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
+    /// Align the sequence zero to a real clock minute boundary, no earlier than the configured lead time.\n    static func nextMinuteBoundary(at now: Double, minimumLeadSeconds: Int) -> Double {\n        let minute = 60.0\n        let earliest = now + Double(max(0, minimumLeadSeconds))\n        return ceil(earliest / minute) * minute\n    }\n\n    private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
         Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
     }
 
