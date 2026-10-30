@@ -517,13 +517,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showSignalInterruptDialog() {
-        val choices=arrayOf("完全停止","すべて中止（N旗を掲揚）","最後の信号を中止","レースを続行","キャンセル")
+        val choices=arrayOf("停止（待機状態へ戻る）","延期（AP旗）","最後のスタートを再実施（N旗）","中止したスタートを再実施（N旗）","レースを続行","キャンセル")
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle("中断").setItems(choices) { _,which ->
             when(which) {
                 0 -> resetSignalSequence()
-                1 -> toggleAbandonFlag()
-                2 -> { displayPrefs.edit().putBoolean("signalSkipFinalEvent",true).apply();buildSignalRows();updateSignalUi() }
-                3 -> { if(displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L || displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)>=0L) toggleSignalSequence() }
+                1 -> togglePostponement()
+                2,3 -> toggleAbandonFlag()
+                4 -> { if(displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L || displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)>=0L) toggleSignalSequence() }
             }
         }.show()
     }
@@ -744,10 +744,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         val orangeDownAt=300 + displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4).coerceIn(0,30)*60
         if(orangeEnabled && restartMode && !waitingForRestart && elapsedSeconds<orangeDownAt && raised.none { it.id=="橙" }) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
-        if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false)
-        if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false)
-        if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
-        if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false)
+        when {
+            displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false) }
+            displayPrefs.getBoolean("signalPostponementFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false) }
+            displayPrefs.getBoolean("signalAbandonFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false) }
+            displayPrefs.getBoolean("signalIndividualRecallFlagUp",false) -> raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
+        }
         displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" }).apply()
         if(displayPrefs.getBoolean("signalOrangeManualOverride",false)) {
             raised.removeAll { it.id=="橙" }
