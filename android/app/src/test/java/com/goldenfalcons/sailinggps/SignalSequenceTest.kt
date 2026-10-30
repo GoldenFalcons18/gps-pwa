@@ -60,6 +60,8 @@ class SignalSequenceTest {
         assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
         assertEquals(listOf(0, 0), SignalSequence.postponementRaise.hornPulses)
         assertEquals(listOf(0), SignalSequence.postponementLower.hornPulses)
+        assertEquals(listOf(0, 0, 0), SignalSequence.abandonRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.abandonLower.hornPulses)
     }
 
     @Test
