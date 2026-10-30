@@ -43,6 +43,7 @@
             </LinearLayout>
             <LinearLayout android:id="@+id/signalSequenceContainer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical" />
             <Spinner android:id="@+id/signalPrepFlag" android:layout_width="match_parent" android:layout_height="40dp" />
+            <Button android:id="@+id/btnSignalOrange" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="オレンジ旗を掲揚" android:textSize="12sp" />
             <LinearLayout android:id="@+id/signalManualControls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
                 <Button android:id="@+id/btnSignalIndividualRecall" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="個別リコール X旗" android:textSize="10sp" />
                 <Button android:id="@+id/btnSignalGeneralRecall" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="ゼネラルリコール" android:textSize="10sp" />
