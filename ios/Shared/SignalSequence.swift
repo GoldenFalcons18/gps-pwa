@@ -170,14 +170,16 @@ struct SignalSequence {
 
     /// Exact 0/4/5/8/9/13-minute sequence visible in ScreenRecording_10-25-2026.
     /// The 4- and 9-minute calls handle two flags together, as shown in the recording.
-    private static func video13(classFlag: Flag) -> [Event] {\n        [
-        e(0, 0, "橙旗を掲揚", [orange], true, [0]),
-        e(1, 240, "クラス旗・斜め旗を掲揚", [classFlag, diagonal], true, [0]),
-        e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
-        e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
-        e(4, 540, "クラス旗・斜め旗を降下", [classFlag, diagonal], false, [0]),
-        e(5, 780, "橙旗を降下", [orange], false)
-    ]
+    private static func video13(classFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "橙旗を掲揚", [orange], true, [0]),
+            e(1, 240, "クラス旗・斜め旗を掲揚", [classFlag, diagonal], true, [0]),
+            e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
+            e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
+            e(4, 540, "クラス旗・斜め旗を降下", [classFlag, diagonal], false, [0]),
+            e(5, 780, "橙旗を降下", [orange], false)
+        ]
+    }
 
     private static func customFive(classFlag: Flag, prepFlag: Flag) -> [Event] {
         [
@@ -205,7 +207,7 @@ struct SignalSequence {
                 orangeDownAt: 600 + orangeRemovalMinutes * 60
             )
         case "video-13":
-            return video13
+            return video13(classFlag: flag(classFlagID))
         case "custom-five":
             return customFive(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
         case "class-p":
