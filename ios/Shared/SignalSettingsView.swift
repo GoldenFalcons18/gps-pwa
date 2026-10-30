@@ -61,6 +61,12 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
 }
 
 private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
+private struct SignalColorChoice: Identifiable {
+    let name: String
+    let color: Color
+    let hex: String
+    var id: String { name }
+}
 
 private struct SignalFlagChoice: Identifiable, Hashable {
     let id: String
@@ -389,9 +395,15 @@ private struct SignalClassFlagSettingsView: View {
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
     private let layouts = ["solid", "horizontal", "vertical", "diagonal", "reverseDiagonal"]
-    private let colors: [(String, Color)] = [
-        ("White", .white), ("Black", .black), ("Red", .red), ("Yellow", .yellow),
-        ("Blue", .blue), ("Green", .green), ("Orange", .orange), ("Purple", .purple)
+    private let colors: [SignalColorChoice] = [
+        SignalColorChoice(name: "White", color: .white, hex: "#FFFFFF"),
+        SignalColorChoice(name: "Black", color: .black, hex: "#111111"),
+        SignalColorChoice(name: "Red", color: .red, hex: "#E32636"),
+        SignalColorChoice(name: "Yellow", color: .yellow, hex: "#F5D328"),
+        SignalColorChoice(name: "Blue", color: .blue, hex: "#1769FF"),
+        SignalColorChoice(name: "Green", color: .green, hex: "#00B83F"),
+        SignalColorChoice(name: "Orange", color: .orange, hex: "#F58A00"),
+        SignalColorChoice(name: "Purple", color: .purple, hex: "#7A35A8")
     ]
 
     var body: some View {
@@ -442,8 +454,8 @@ private struct SignalCustomFlagEditor: View {
 
     private func colorPicker(_ title: String, selection: Binding<String>) -> some View {
         Picker(title, selection: selection) {
-            ForEach(colors, id: \.0) { name, color in
-                HStack { Circle().fill(color).frame(width: 20, height: 20); Text(name) }.tag(name == "White" ? "#FFFFFF" : name == "Black" ? "#111111" : name == "Red" ? "#E32636" : name == "Yellow" ? "#F5D328" : name == "Blue" ? "#1769FF" : name == "Green" ? "#00B83F" : name == "Orange" ? "#F58A00" : "#7A35A8")
+            ForEach(colors) { item in
+                HStack { Circle().fill(item.color).frame(width: 20, height: 20); Text(item.name) }.tag(item.hex)
             }
         }.pickerStyle(.menu)
     }
