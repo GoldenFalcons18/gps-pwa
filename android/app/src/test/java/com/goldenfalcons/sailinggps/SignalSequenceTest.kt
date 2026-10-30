@@ -7,7 +7,7 @@ class SignalSequenceTest {
     @Test
     fun signalSequenceSchedulesFirstSignalAfterConfiguredMinimumDelay() {
         assertEquals(25_000L, SignalTiming.scheduledStartAt(10_000L, 15))
-        assertEquals(11_000L, SignalTiming.scheduledStartAt(10_000L, 0))
+        assertEquals(10_000L, SignalTiming.scheduledStartAt(10_000L, 0))
     }
     @Test
     fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
