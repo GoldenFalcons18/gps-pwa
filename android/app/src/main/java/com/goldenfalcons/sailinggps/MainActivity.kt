@@ -286,6 +286,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         debug("Compass sensors registered")
         updateChecker.check()
+        if(currentDisplayMode==4 && ::b.isInitialized) { buildSignalRows(); updateSignalUi() }
     }
 
     override fun onPause() {
@@ -631,7 +632,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             !started -> mutableListOf()
             else -> SignalSequence.flagsAtEvents(events,elapsedSeconds).filter { it.raised }.toMutableList()
         }
-        if(orangeEnabled && restartMode && !waitingForRestart && elapsedSeconds<540 && raised.none { it.id=="橙" }) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
+        val orangeDownAt=300 + displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4).coerceIn(0,30)*60
+        if(orangeEnabled && restartMode && !waitingForRestart && elapsedSeconds<orangeDownAt && raised.none { it.id=="橙" }) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false)
         if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false)
         if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
