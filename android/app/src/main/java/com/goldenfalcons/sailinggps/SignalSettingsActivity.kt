@@ -67,7 +67,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         switch("Enable","signalOrangeEnabled",true)
         row("Displayed For",prefs.getInt("signalOrangeDisplayedMinutes",4).toString()+"分") { number("Displayed For","signalOrangeDisplayedMinutes",4,1,30) }
         row("Removed After Start",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After Start","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="シーケンス開始前は降下状態。開始時に掲揚します。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        list.addView(TextView(this).apply { text="シーケンス開始前は降下状態。開始ボタンから0秒（旗が動く目安）までの最短間隔を設定します。AP・N旗は掲揚時刻を固定せず手動で操作します。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
