@@ -97,7 +97,7 @@ struct SignalTimerPanel: View {
             if !wasPaused {
                 pausedSeconds = 0
                 hasStarted = true
-                playHorn(pulses: events.first?.hornPulses ?? [])
+                playHorn(pulses: events.first(where: { $0.secondsAfterStart == 0 })?.hornPulses ?? [])
             }
         }
     }
