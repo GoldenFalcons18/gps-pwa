@@ -91,7 +91,7 @@ object SignalSequence {
             e(0, 0, "${className}を掲揚（再予告信号）", if (className == "クラス旗") "級" else "class-$className", 0xFF7A35A8.toInt(), true, 0),
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
-            e(3, 300, "${className}を降下（スタート）", "class-$className", 0xFF7A35A8.toInt(), false, 0),
+            e(3, 300, "${className}を降下（スタート）", if (className == "クラス旗") "級" else "class-$className", 0xFF7A35A8.toInt(), false, 0),
             e(4, 540, "オレンジ旗を降下（スタート後）", "橙", 0xFFF58A00.toInt(), false)
         )
         return rows.mapNotNull { row ->
