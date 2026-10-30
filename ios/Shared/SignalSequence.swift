@@ -199,7 +199,7 @@ struct SignalSequence {
         Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
     ]
 
-    static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
+    static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
         switch profileID {
         case "standard-start":
             return applyOrangeSettings(
@@ -227,7 +227,7 @@ struct SignalSequence {
         return list.firstIndex { $0.secondsAfterStart == highlightedSecond } ?? (list.count - 1)
     }
 
-    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> Int {
+    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
         guard !list.isEmpty else { return 0 }
         return list.lastIndex { Double($0.secondsAfterStart) <= elapsed } ?? 0
@@ -245,7 +245,7 @@ struct SignalSequence {
         return raised.values.sorted { $0.id < $1.id }
     }
 
-    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> [Flag] {
         raisedFlags(events: events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID), elapsed: elapsed)
     }
 
