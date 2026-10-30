@@ -359,7 +359,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
                 .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
                 .putLong("signalElapsedStartAt",signalNow()).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",0).apply()
-            playSignalHorn(events.first().hornPulses);signalActiveIndex=-1;buildSignalRows();updateSignalUi()
+            playSignalHorn(events.firstOrNull { it.secondsAfterStart==0 }?.hornPulses ?: emptyList());signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
         b.btnNictSync.setOnClickListener { syncNictClock() }
         fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
