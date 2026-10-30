@@ -479,7 +479,7 @@ private struct SignalFlagPreview: View {
                     Canvas { context, size in
                         let path = Path { p in
                             p.move(to: .zero); p.addLine(to: CGPoint(x: size.width, y: 0))
-                            p.addLine(to: CGPoint(x: size.width, y: size.height)); p.close()
+                            p.addLine(to: CGPoint(x: size.width, y: size.height)); p.closeSubpath()
                         }
                         context.fill(path, with: .color(.white))
                     }
