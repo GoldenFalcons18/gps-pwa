@@ -89,6 +89,16 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "x-ray" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,blue,0.18f)}
             "yankee" -> diagonalStripes(canvas,listOf(red,yellow,red,yellow,red,yellow))
             "zulu" -> {poly(canvas,black,0f,0f,1f,0f,0.5f,0.5f);poly(canvas,yellow,1f,0f,1f,1f,0.5f,0.5f);poly(canvas,red,1f,1f,0f,1f,0.5f,0.5f);poly(canvas,blue,0f,1f,0f,0f,0.5f,0.5f)}
+            "nato 0" -> {rect(canvas,0f,0f,1f,1f,white);cross(canvas,blue,0.10f);for(x in listOf(0.14f,0.86f))for(y in listOf(0.14f,0.86f)){p.color=blue;canvas.drawCircle(x*width,y*height,minOf(width,height)*0.045f,p)}}
+            "nato 1" -> stripes(canvas,listOf(red,yellow),false)
+            "nato 2" -> stripes(canvas,listOf(yellow,red),false)
+            "nato 3" -> stripes(canvas,listOf(blue,red),false)
+            "nato 4" -> {rect(canvas,0f,0f,1f,1f,red);diagonalCross(canvas,white,0.2f)}
+            "nato 5" -> {rect(canvas,0f,0f,1f,1f,yellow);diagonalCross(canvas,blue,0.2f)}
+            "nato 6" -> diagonalStripes(canvas,listOf(blue,white,blue,white,blue))
+            "nato 7" -> stripes(canvas,listOf(red,white,red),true)
+            "nato 8" -> {rect(canvas,0f,0f,1f,1f,yellow);rect(canvas,0.4f,0f,0.2f,1f,blue)}
+            "nato 9" -> rect(canvas,0f,0f,1f,1f,blue)
             "answering pennant" -> pennant(canvas,listOf(red,white,red,white,red))
             "first substitute" -> pennant(canvas,listOf(blue,yellow,blue))
             "second substitute" -> pennant(canvas,listOf(blue,white,blue))
