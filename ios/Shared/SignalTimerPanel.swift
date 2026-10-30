@@ -20,6 +20,8 @@ struct SignalTimerPanel: View {
     @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
     @AppStorage("signalGeneralRecallFlagUp") private var generalRecallFlagUp = false
     @AppStorage("signalPostponementFlagUp") private var postponementFlagUp = false
+    @AppStorage("signalOrangeManualOverride") private var orangeManualOverride = false
+    @AppStorage("signalOrangeManualUp") private var orangeManualUp = false
     @AppStorage("signalRestartWarningAt") private var restartWarningAt = 0.0
     @State private var syncing = false
     @State private var syncMessage = ""
@@ -95,6 +97,8 @@ struct SignalTimerPanel: View {
             if completed { pausedSeconds = 0 }
             startAt = date.timeIntervalSince1970 + clockOffset - (wasPaused ? pausedSeconds : 0)
             if !wasPaused {
+                orangeManualOverride = false
+                orangeManualUp = false
                 pausedSeconds = 0
                 hasStarted = true
                 playHorn(pulses: events.first(where: { $0.secondsAfterStart == 0 })?.hornPulses ?? [])
@@ -109,6 +113,8 @@ struct SignalTimerPanel: View {
         generalRecallFlagUp = false
         postponementFlagUp = false
         restartWarningAt = 0
+        orangeManualOverride = false
+        orangeManualUp = false
     }
     private func elapsedText(_ seconds: Double) -> String {
         let value = max(0, Int(seconds))
@@ -152,6 +158,10 @@ struct SignalTimerPanel: View {
             visible = [SignalSequence.flag("orange"), SignalSequence.flag("AP")]
         } else if individualRecallFlagUp {
             visible.append(SignalSequence.flag("X"))
+        }
+        if orangeManualOverride {
+            visible.removeAll { $0.id == "orange" }
+            if orangeManualUp { visible.append(SignalSequence.flag("orange")) }
         }
         var unique: [String: SignalSequence.Flag] = [:]
         for flag in visible { unique[flag.id] = flag }
@@ -248,6 +258,10 @@ struct SignalTimerPanel: View {
                 }
                 .font(.system(size: compact ? 12 : 16))
                 HStack(spacing: compact ? 4 : 10) {
+                    Button(raisedFlags.contains(where: { $0.id == "orange" }) ? "橙旗 降下" : "橙旗 掲揚") {
+                        orangeManualUp = !raisedFlags.contains(where: { $0.id == "orange" })
+                        orangeManualOverride = true
+                    }
                     Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
                         .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp)
                     Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
@@ -308,8 +322,14 @@ struct SignalTimerPanel: View {
                 playHorn(pulses: sequenceEvents.first?.hornPulses ?? [0])
             }
             .onChange(of: active) { oldValue, newValue in
-                guard isRunning, newValue > oldValue else { return }
-                for index in (oldValue + 1)...newValue where sequenceEvents.indices.contains(index) {
+                guard newValue > oldValue else { return }
+                let crossed = (oldValue + 1)...newValue
+                if crossed.contains(where: { sequenceEvents.indices.contains($0) && sequenceEvents[$0].flags.contains(where: { $0.id == "orange" }) }) {
+                    orangeManualOverride = false
+                    orangeManualUp = false
+                }
+                guard isRunning else { return }
+                for index in crossed where sequenceEvents.indices.contains(index) {
                     playHorn(pulses: sequenceEvents[index].hornPulses)
                 }
             }
