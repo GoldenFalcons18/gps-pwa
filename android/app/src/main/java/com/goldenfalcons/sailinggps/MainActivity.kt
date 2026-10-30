@@ -332,17 +332,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             displayPrefs.edit().putInt("signalFlagProfileIndex",migratedIndex.coerceIn(0,SignalSequence.profiles.lastIndex))
                 .putInt("signalProfileSchemaVersion",2).apply()
         }
-        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス"))
-        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,5))
-        b.signalDuration.isEnabled=displayPrefs.getInt("signalFlagProfileIndex",0) !in listOf(1,2)
+        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス","13分・動画B"))
+        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,6))
         b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
         b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
         b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) {
                 displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply()
-                if(position==0){displayPrefs.edit().putInt("signalDurationIndexV2",0).apply();b.signalDuration.setSelection(0)}
-                b.signalDuration.isEnabled=position!=1 && position!=2
+                val sequenceDurationIndex=when(position) { 0 -> 0; 1 -> 5; 2 -> 6; else -> -1 }
+                if(sequenceDurationIndex>=0) {
+                    displayPrefs.edit().putInt("signalDurationIndexV2",sequenceDurationIndex).apply()
+                    b.signalDuration.setSelection(sequenceDurationIndex)
+                }
                 buildSignalRows();updateSignalUi()
             }
         }
@@ -430,7 +432,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun signalNow():Long=System.currentTimeMillis()+signalClockOffsetMs
     private fun currentSignalDurationMinutes():Int =
-        listOf(14,1,3,5,10,20).getOrElse(displayPrefs.getInt("signalDurationIndexV2",0)){14}
+        listOf(14,1,3,5,10,20,13).getOrElse(displayPrefs.getInt("signalDurationIndexV2",0)){14}
 
     private fun buildSignalRows() {
         b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
