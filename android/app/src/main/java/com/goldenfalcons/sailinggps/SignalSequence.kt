@@ -88,10 +88,10 @@ object SignalSequence {
 
     fun restartEvents(prepFlag: String = "P", orangeEnabled: Boolean = true, orangeRemovedAfterMinutes: Int = 4, className: String = "クラス旗"): List<SignalEvent> {
         val rows = listOf(
-            e(0, 0, "${className}を掲揚（再予告信号）", "級", 0xFF7A35A8.toInt(), true, 0),
+            e(0, 0, "${className}を掲揚（再予告信号）", "class-$className", 0xFF7A35A8.toInt(), true, 0),
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
-            e(3, 300, "${className}を降下（スタート）", "級", 0xFF7A35A8.toInt(), false, 0),
+            e(3, 300, "${className}を降下（スタート）", "class-$className", 0xFF7A35A8.toInt(), false, 0),
             e(4, 540, "オレンジ旗を降下（スタート後）", "橙", 0xFFF58A00.toInt(), false)
         )
         return rows.mapNotNull { row ->
@@ -114,7 +114,7 @@ object SignalSequence {
             profile.events.map { event ->
                 when {
                     event.flag == "P" && prepFlag == "I" -> event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗"))
-                    event.flag == "級" -> event.copy(title = event.title.replace("クラス旗", className))
+                    event.flag == "級" -> event.copy(flag = "class-$className", title = event.title.replace("クラス旗", className))
                     else -> event
                 }
             }
@@ -122,7 +122,7 @@ object SignalSequence {
             val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
             profile.events.map { event ->
                 val scaled = event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
-                if (event.flag == "級") scaled.copy(title = scaled.title.replace("クラス旗", className)) else scaled
+                if (event.flag == "級") scaled.copy(flag = "class-$className", title = scaled.title.replace("クラス旗", className)) else scaled
             }
         }
         return source.mapNotNull { event ->
