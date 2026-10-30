@@ -84,4 +84,9 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(ids(at: 540), ["class-4", "orange"])
         XCTAssertEqual(ids(at: 600), ["orange"])
     }
+
+
+    func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
+        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
+    }
 }
