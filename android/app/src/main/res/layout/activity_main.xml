@@ -26,7 +26,10 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/signalPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center_horizontal" android:padding="10dp" android:visibility="gone" android:background="#FFFFFF">
-            <TextView android:id="@+id/tvSignalClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="15:01:46" android:gravity="center" android:textColor="#111111" android:textSize="20sp" android:fontFamily="monospace" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/tvSignalClock" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="15:01:46" android:gravity="center" android:textColor="#111111" android:textSize="20sp" android:fontFamily="monospace" />
+                <Button android:id="@+id/btnSignalSettings" android:layout_width="42dp" android:layout_height="40dp" android:text="⚙" android:contentDescription="Signal settings" />
+            </LinearLayout>
             <com.goldenfalcons.sailinggps.SignalMastView android:id="@+id/signalMast" android:layout_width="match_parent" android:layout_height="112dp" android:layout_marginTop="4dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="5dp" android:paddingBottom="5dp">
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Start at" android:textColor="#111111" android:textSize="14sp" />
