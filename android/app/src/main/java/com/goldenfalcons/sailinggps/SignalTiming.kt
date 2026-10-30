@@ -9,6 +9,8 @@ object SignalTiming {
         return if (remainder == 0L) earliest else earliest + minute - remainder
     }
 
+    fun countdownSeconds(remainingSeconds: Double): Int = kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(0)
+
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
         if (eventOffsets.isEmpty() || !elapsedSeconds.isFinite()) return -1
         return eventOffsets.indexOfLast { elapsedSeconds >= it }
