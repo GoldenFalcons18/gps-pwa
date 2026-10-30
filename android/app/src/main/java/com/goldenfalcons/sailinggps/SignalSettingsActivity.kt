@@ -34,7 +34,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         list.removeAllViews()
         section("General Settings")
         row("Mode", "Fleet") {}
-        row("Minimum time to first action", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("最初の信号まで", "signalMinimumTimeToFirstAction", 15, 0, 120) }
+        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("0秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
         row("Time Sync", "ntp.nict.jp / ゼロ合わせ") { AlertDialog.Builder(this).setMessage("シグナル画面のNTP同期とゼロ合わせを使用します。").setPositiveButton("OK", null).show() }
