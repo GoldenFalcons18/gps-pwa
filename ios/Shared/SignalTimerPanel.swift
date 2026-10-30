@@ -64,6 +64,7 @@ struct SignalTimerPanel: View {
         }
     }
     private func toggleIndividualRecall(at date: Date) {
+        if !individualRecallFlagUp && (generalRecallFlagUp || postponementFlagUp || abandonFlagUp) { return }
         if individualRecallFlagUp {
             individualRecallFlagUp = false
         } else {
@@ -72,6 +73,7 @@ struct SignalTimerPanel: View {
         }
     }
     private func toggleGeneralRecall(at date: Date) {
+        if !generalRecallFlagUp && abandonFlagUp { return }
         if generalRecallFlagUp {
             generalRecallFlagUp = false
             playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
@@ -80,12 +82,14 @@ struct SignalTimerPanel: View {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
             postponementFlagUp = false
+            abandonFlagUp = false
             restartWarningAt = 0
             generalRecallFlagUp = true
             playHorn(pulses: SignalSequence.generalRecallRaise.hornPulses)
         }
     }
     private func togglePostponement(at date: Date) {
+        if !postponementFlagUp && (generalRecallFlagUp || abandonFlagUp) { return }
         if postponementFlagUp {
             postponementFlagUp = false
             playHorn(pulses: SignalSequence.postponementLower.hornPulses)
@@ -305,7 +309,7 @@ struct SignalTimerPanel: View {
                     Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
                         .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp)
                     Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
-                        .disabled(postponementFlagUp)
+                        .disabled(postponementFlagUp || abandonFlagUp)
                     Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
                         .disabled(generalRecallFlagUp || abandonFlagUp)
                     Button(abandonFlagUp ? "N旗 降下" : "すべて中止 N旗") { toggleAbandon(at: now) }
