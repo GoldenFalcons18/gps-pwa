@@ -326,13 +326,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val newDuration=if(displayPrefs.contains("signalDurationIndexV2")) (displayPrefs.getInt("signalDurationIndexV2",4)+1).coerceIn(0,5) else 0
             displayPrefs.edit().putInt("signalFlagProfileIndex",newProfile).putInt("signalDurationIndexV2",newDuration).putInt("signalProfileSchemaVersion",1).apply()
         }
+        if(displayPrefs.getInt("signalProfileSchemaVersion",0)<2) {
+            val oldIndex=displayPrefs.getInt("signalFlagProfileIndex",0)
+            val migratedIndex=if(oldIndex>=2) oldIndex+1 else oldIndex
+            displayPrefs.edit().putInt("signalFlagProfileIndex",migratedIndex.coerceIn(0,SignalSequence.profiles.lastIndex))
+                .putInt("signalProfileSchemaVersion",2).apply()
+        }
         b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス"))
         b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,5))
+        b.signalDuration.isEnabled=displayPrefs.getInt("signalFlagProfileIndex",0) !in listOf(1,2)
         b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
         b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
         b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply();if(position==0){displayPrefs.edit().putInt("signalDurationIndexV2",0).apply();b.signalDuration.setSelection(0)};buildSignalRows();updateSignalUi() }
+            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) {
+                displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply()
+                if(position==0){displayPrefs.edit().putInt("signalDurationIndexV2",0).apply();b.signalDuration.setSelection(0)}
+                b.signalDuration.isEnabled=position!=1 && position!=2
+                buildSignalRows();updateSignalUi()
+            }
         }
         b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
@@ -429,11 +441,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 background=android.graphics.drawable.GradientDrawable().apply {setColor(0xffeeeeee.toInt());cornerRadius=3f}
             }
             row.addView(TextView(this).apply {text=if(event.raised) "↑" else "↓";textSize=19f;setTextColor(Color.BLACK);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(32,-1)})
-            row.addView(TextView(this).apply {
-                text="";gravity=android.view.Gravity.CENTER;textSize=14f;setTextColor(Color.WHITE)
-                background=android.graphics.drawable.GradientDrawable().apply {setColor(event.color);cornerRadius=1f}
-                layoutParams=LinearLayout.LayoutParams(38,-1).apply {setMargins(2,0,8,0)}
-            })
+            val flagArtworkRow=LinearLayout(this).apply {
+                orientation=LinearLayout.HORIZONTAL
+                gravity=android.view.Gravity.CENTER_VERTICAL
+                event.flagMarks.forEach { mark ->
+                    val artwork=SignalFlagArtworkView(this@MainActivity)
+                    artwork.show(mark,event.raised)
+                    addView(artwork,LinearLayout.LayoutParams(38,-1).apply {setMargins(2,0,2,0)})
+                }
+                layoutParams=LinearLayout.LayoutParams(-2,-1).apply {setMargins(2,0,6,0)}
+            }
+            row.addView(flagArtworkRow)
             row.addView(TextView(this).apply {text=event.title;textSize=13f;setTextColor(Color.BLACK);gravity=android.view.Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,-1,1f)})
             row.addView(TextView(this).apply {text=signalEventTimeLabel(event,displayPrefs.getBoolean("signalRestartMode",false));textSize=12f;setTextColor(Color.DKGRAY);typeface=android.graphics.Typeface.MONOSPACE})
             row.addView(TextView(this).apply { text=event.hornPulses.joinToString(""){if(it==0)"●" else "—"};textSize=12f;setTextColor(Color.DKGRAY);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(42,-1) })
@@ -627,6 +645,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             waitingForFirstSignal || !started -> -1
             else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
         }
+        val highlighted=if(waitingForFirstSignal || !started) SignalSequence.initialEventIndex(profileIndex) else active
         val event=events[active.coerceAtLeast(0)]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.flag=="橙") {
             displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
@@ -687,14 +706,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             displayPrefs.edit().putInt("signalLastFiredIndex",active).apply()
         }
-        if(active!=signalActiveIndex) {
+        if(highlighted!=signalActiveIndex) {
             signalRows.forEachIndexed { index,row ->
-                row.setBackgroundColor(if(index==active) 0xff75c879.toInt() else 0xffeeeeee.toInt())
+                row.setBackgroundColor(if(index==highlighted) 0xff75c879.toInt() else 0xffeeeeee.toInt())
                 row.animate().cancel()
-                row.alpha=if(index==active && running) 0.78f else 1f
-                if(index==active && running) row.animate().alpha(1f).setDuration(180).start()
+                row.alpha=if(index==highlighted && running) 0.78f else 1f
+                if(index==highlighted && running) row.animate().alpha(1f).setDuration(180).start()
             }
-            signalActiveIndex=active
+            signalActiveIndex=highlighted
         }
         if(completed && !restartMode) displayPrefs.edit().remove("signalElapsedStartAt").putLong("signalPausedElapsedMs",totalSeconds*1000L).apply()
     }
