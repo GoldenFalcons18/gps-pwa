@@ -650,7 +650,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             waitingForFirstSignal -> (normalStartAt-now).coerceAtLeast(0L)/1000.0
             else -> elapsedSeconds
         }
-        b.tvSignalCountdown.text=if(!started) "--:--" else "%02d:%02d".format(shownSeconds.toInt()/60,shownSeconds.toInt()%60)
+        val shownWholeSeconds=if(waitingForRestart||waitingForFirstSignal) SignalTiming.countdownSeconds(shownSeconds) else shownSeconds.toInt().coerceAtLeast(0)
+        b.tvSignalCountdown.text=if(!started) "--:--" else "%02d:%02d".format(shownWholeSeconds/60,shownWholeSeconds%60)
         b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
