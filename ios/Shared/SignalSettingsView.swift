@@ -59,6 +59,7 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
     var text = ""
     var textColor = "#111111"
     var logoID = "class-4"
+    var internationalFlag = "Alpha"
 }
 
 private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
@@ -421,6 +422,8 @@ private struct SignalClassFlagSettingsView: View {
 
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
+    @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @Environment(\.dismiss) private var dismiss
     private let layouts = ["solid", "horizontal", "vertical", "diagonal", "reverseDiagonal"]
     private let colors: [SignalColorChoice] = [
         SignalColorChoice(name: "White", color: .white, hex: "#FFFFFF"),
@@ -462,7 +465,7 @@ private struct SignalCustomFlagEditor: View {
                 }
             } else if flag.style == "international" {
                 Section("International Flag") {
-                    NavigationLink("信号旗を選択") { SignalInternationalFlagGallery() }
+                    NavigationLink("信号旗を選択") { SignalInternationalFlagGallery(selection: $flag.internationalFlag) }
                     Text("国際信号旗の一覧から表示する旗を選びます。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -476,6 +479,14 @@ private struct SignalCustomFlagEditor: View {
             }
         }
         .navigationTitle(flag.name.isEmpty ? "Class Flag" : flag.name)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("この旗を使用") {
+                    if flag.style == "logo" { activeClassFlag = flag.logoID }
+                    dismiss()
+                }.tint(.orange)
+            }
+        }
         .preferredColorScheme(.dark)
     }
 
@@ -490,12 +501,11 @@ private struct SignalCustomFlagEditor: View {
 
 private struct SignalFlagPreview: View {
     let flag: SignalCustomFlag
-    @AppStorage("signalSelectedInternationalFlag") private var selectedInternationalFlag = "Alpha"
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 if flag.style == "international" {
-                    SignalInternationalFlagArtwork(name: selectedInternationalFlag)
+                    SignalInternationalFlagArtwork(name: flag.internationalFlag)
                 } else {
                     Color(hex: flag.flagColor)
                     if flag.layout == "horizontal" {
@@ -530,22 +540,31 @@ private struct SignalClassLogoMark: View {
 
     private var mark: String {
         let value = name.replacingOccurrences(of: "class-", with: "")
-        if value.hasPrefix("J/") { return value.replacingOccurrences(of: "/", with: "\n") }
-        if value == "Optimist" { return "O" }
-        if value == "A-Cat" { return "A" }
-        if value == "Starling" { return "★" }
-        if value == "ILCA" { return "ILCA" }
-        if value == "49er FX" { return "49er\nFX" }
+        let marks = [
+            "A-Cat":"A", "Optimist":"O", "Starling":"★", "ILCA":"ILCA",
+            "49er FX":"49er FX", "49er":"49er", "29er":"29er", "420":"420", "470":"470",
+            "Laser":"Laser", "Laser Pico":"Pico", "Laser 4.7":"4.7",
+            "J/22":"J22", "J/24":"J24", "J/70":"J70", "J/80":"J80", "J/105":"J105",
+            "Flying Fifteen":"15", "Flying 11":"11", "International 14":"14",
+            "Formula 18":"F18", "Nacra 17":"N17", "Nacra 15":"N15",
+            "Cyclone 13":"C13", "Melges 24":"M24", "WASZP":"WASZP", "Wing Foil":"Foil"
+        ]
+        if let mark = marks[value] { return mark }
+        let pieces = value.split(separator: " ")
+        if pieces.count > 1 {
+            let initials = pieces.compactMap(\.first).map(String.init).joined()
+            return initials.count >= 2 ? initials : String(value.prefix(8))
+        }
         return value
     }
 
     var body: some View {
         ZStack {
             Text(mark)
-                .font(.system(size: mark.count > 5 ? 25 : 34, weight: .black, design: .rounded))
+                .font(.system(size: 34, weight: .black, design: .rounded))
                 .italic()
-                .minimumScaleFactor(0.5)
-                .lineLimit(2)
+                .minimumScaleFactor(0.28)
+                .lineLimit(1)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(color)
                 .padding(.horizontal, 3)
@@ -686,18 +705,21 @@ private struct SignalInternationalFlagArtwork: View {
 }
 
 private struct SignalInternationalFlagGallery: View {
-    @AppStorage("signalSelectedInternationalFlag") private var selectedFlag = "Alpha"
+    @AppStorage("signalSelectedInternationalFlag") private var storedSelection = "Alpha"
+    private let selection: Binding<String>?
+    init(selection: Binding<String>? = nil) { self.selection = selection }
+    private var selectedFlag: Binding<String> { selection ?? $storedSelection }
     private let flags = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute","Fourth Substitute","NATO 0","NATO 1","NATO 2","NATO 3","NATO 4","NATO 5","NATO 6","NATO 7","NATO 8","NATO 9"]
 
     var body: some View {
         List {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 10)], spacing: 14) {
                 ForEach(flags, id: \.self) { name in
-                    Button { selectedFlag = name } label: {
+                    Button { selectedFlag.wrappedValue = name } label: {
                         VStack(spacing: 6) {
                             ZStack {
                                 SignalInternationalFlagArtwork(name: name)
-                                if selectedFlag == name {
+                                if selectedFlag.wrappedValue == name {
                                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                                 }
                             }.frame(height: 48)
