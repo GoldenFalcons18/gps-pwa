@@ -6,6 +6,9 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 50, minimumLeadSeconds: 15), 120)
+        XCTAssertEqual(SignalSequence.countdownSeconds(50.1), 51)
+        XCTAssertEqual(SignalSequence.countdownSeconds(51.0), 51)
+        XCTAssertEqual(SignalSequence.countdownSeconds(0.0), 0)
     }
 
     func testStandardStartScheduleUsesRaceStartOffsetsAndRequestedHornSignals() {
