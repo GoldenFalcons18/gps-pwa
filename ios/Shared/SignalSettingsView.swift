@@ -616,6 +616,28 @@ private struct SignalInternationalFlagArtwork: View {
                 rect(0.5 - width / 2, 0, width, 1, color)
                 rect(0, 0.5 - width / 2, 1, width, color)
             }
+            func diagonalBand(_ low: CGFloat, _ high: CGFloat, _ color: Color) {
+                func clip(_ points: [CGPoint], boundary: CGFloat, keepBelow: Bool) -> [CGPoint] {
+                    guard !points.isEmpty else { return [] }
+                    var output: [CGPoint] = []
+                    for index in points.indices {
+                        let a = points[index], b = points[(index + 1) % points.count]
+                        let fa = a.x + a.y - boundary, fb = b.x + b.y - boundary
+                        let insideA = keepBelow ? fa <= 0 : fa >= 0
+                        let insideB = keepBelow ? fb <= 0 : fb >= 0
+                        if insideA { output.append(a) }
+                        if insideA != insideB {
+                            let t = fa / (fa - fb)
+                            output.append(CGPoint(x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y)))
+                        }
+                    }
+                    return output
+                }
+                var points = [CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:1,y:1),CGPoint(x:0,y:1)]
+                points = clip(points, boundary: high, keepBelow: true)
+                points = clip(points, boundary: low, keepBelow: false)
+                polygon(points, color)
+            }
             func pennant(_ palette: [Color], stripesVertical: Bool = true) {
                 var pennantPath = Path()
                 pennantPath.move(to: .zero)
@@ -671,8 +693,7 @@ private struct SignalInternationalFlagArtwork: View {
                 colors=[red,yellow]
                 for index in 0..<8 {
                     let low=CGFloat(index)*0.25, high=low+0.25
-                    let points=[CGPoint(x:max(0,low),y:0),CGPoint(x:min(1,high),y:0),CGPoint(x:1,y:max(0,low-1)),CGPoint(x:1,y:min(1,high-1)),CGPoint(x:max(0,low-1),y:1),CGPoint(x:min(1,high-1),y:1),CGPoint(x:0,y:min(1,high)),CGPoint(x:0,y:max(0,low))]
-                    polygon(points, index % 2 == 0 ? red : yellow)
+                    diagonalBand(low, high, index % 2 == 0 ? red : yellow)
                 }
             case "zulu":
                 colors=[black,yellow,blue,red]
