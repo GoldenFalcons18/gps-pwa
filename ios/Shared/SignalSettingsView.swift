@@ -293,7 +293,9 @@ private struct SignalFleetPresetEditor: View {
                 Button("Save") {
                     activeSequence = preset.sequence
                     activeClassFlag = preset.classFlagID
-                    activePrepFlag = preset.prepFlagID
+                    activePrepFlag = ["P", "I", "U", "Z"].contains(preset.startRule)
+                        ? preset.startRule
+                        : (preset.startRule == "Black" ? "black" : preset.prepFlagID)
                     activeOrangeEnabled = preset.orangeEnabled
                     activeOrangeRemoval = preset.orangeRemovedMinutes
                     dismiss()
