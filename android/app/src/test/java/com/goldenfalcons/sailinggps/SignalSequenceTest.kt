@@ -18,6 +18,12 @@ class SignalSequenceTest {
         assertEquals(listOf(true, true, true, false, false, false), videoB.map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
             videoB.map { it.hornPulses })
+        assertEquals(listOf("級", "斜め"), videoB[1].flagMarks.map { it.id })
+        assertEquals(listOf("級", "斜め"), videoB[4].flagMarks.map { it.id })
+        assertEquals(setOf("橙", "級", "斜め", "赤白チェック"),
+            SignalSequence.flagsAtEvents(videoB, 300.0).filter { it.raised }.map { it.id }.toSet())
+        assertEquals(4, SignalSequence.initialEventIndex(1))
+        assertEquals(4, SignalSequence.initialEventIndex(2))
     }
 
     @Test
