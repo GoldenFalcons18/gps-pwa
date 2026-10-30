@@ -144,11 +144,47 @@ class SignalSettingsActivity : AppCompatActivity() {
     }
     private fun classGallery() {
         val classes=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
-        AlertDialog.Builder(this).setTitle("Classes").setItems(classes.toTypedArray()){_,i->prefs.edit().putString("signalSelectedClassName",classes[i]).apply();build()}.show()
+        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=8; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
+            override fun getCount()=classes.size
+            override fun getItem(position:Int)=classes[position]
+            override fun getItemId(position:Int)=position.toLong()
+            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
+                val name=classes[position]
+                return LinearLayout(this@SignalSettingsActivity).apply {
+                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(4,6,4,6)
+                    addView(TextView(this@SignalSettingsActivity).apply {
+                        text=classMark(name); textSize=23f; typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
+                        gravity=Gravity.CENTER; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE)
+                    },LinearLayout.LayoutParams(-1,64))
+                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
+                }
+            }
+        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedClassName",classes[i]).apply(); (tag as? AlertDialog)?.dismiss(); build() } }
+        val dialog=AlertDialog.Builder(this).setTitle("Class Logos").setView(grid).setNegativeButton("閉じる",null).create()
+        grid.tag=dialog; dialog.show()
+    }
+    private fun classMark(name:String):String = when(name) {
+        "A-Cat" -> "A̲"; "Optimist" -> "Ⓞ"; "Starling" -> "★"; "ILCA" -> "ILCA"
+        "49er FX" -> "49er FX"; "J/22" -> "J\n22"; "J/24" -> "J\n24"; "J/70" -> "J\n70"; "J/80" -> "J\n80"
+        "J/105" -> "J\n105"; "420" -> "420"; "470" -> "470"; else -> name
     }
     private fun internationalFlags() {
         val flags=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute","Fourth Substitute")
-        AlertDialog.Builder(this).setTitle("Flag").setItems(flags.toTypedArray()){_,i->prefs.edit().putString("signalSelectedInternationalFlag",flags[i]).apply()}.show()
+        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=10; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
+            override fun getCount()=flags.size
+            override fun getItem(position:Int)=flags[position]
+            override fun getItemId(position:Int)=position.toLong()
+            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
+                val name=flags[position]
+                return LinearLayout(this@SignalSettingsActivity).apply {
+                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER
+                    addView(SignalFlagArtworkView(this@SignalSettingsActivity,name),LinearLayout.LayoutParams(-1,72))
+                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
+                }
+            }
+        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedInternationalFlag",flags[i]).apply(); (tag as? AlertDialog)?.dismiss(); build() } }
+        val dialog=AlertDialog.Builder(this).setTitle("International Signal Flags").setView(ScrollView(this).apply { addView(grid) }).setNegativeButton("閉じる",null).create()
+        grid.tag=dialog; dialog.show()
     }
     private fun flagEditor() {
         val input=EditText(this).apply { hint="Name / Text"; setText(prefs.getString("signalCustomFlagName","Class Flag")); setTextColor(white) }
