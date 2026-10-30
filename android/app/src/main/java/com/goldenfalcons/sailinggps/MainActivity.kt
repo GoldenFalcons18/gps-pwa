@@ -445,7 +445,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 orientation=LinearLayout.HORIZONTAL
                 gravity=android.view.Gravity.CENTER_VERTICAL
                 event.flagMarks.forEach { mark ->
-                    val artwork=SignalFlagArtworkView(this@MainActivity)
+                    val artwork=SignalFlagArtworkView(this@MainActivity,mark.id)
                     artwork.show(mark,event.raised)
                     addView(artwork,LinearLayout.LayoutParams(38,-1).apply {setMargins(2,0,2,0)})
                 }
