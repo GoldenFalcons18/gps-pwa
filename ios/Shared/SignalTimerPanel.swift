@@ -97,7 +97,6 @@ struct SignalTimerPanel: View {
             let wasPaused = hasStarted && !completed
             if completed { pausedSeconds = 0 }
             let correctedNow = date.timeIntervalSince1970 + clockOffset
-            let minimumLeadToZero = Double(max(0, minimumTimeToFirstAction))
             startAt = wasPaused && pausedSeconds > 0
                 ? correctedNow - pausedSeconds
                 : SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
