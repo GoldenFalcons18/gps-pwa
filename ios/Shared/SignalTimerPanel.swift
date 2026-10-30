@@ -18,7 +18,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
-    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
+    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false\n    @AppStorage("signalAbandonFlagUp") private var abandonFlagUp = false
     @AppStorage("signalGeneralRecallFlagUp") private var generalRecallFlagUp = false
     @AppStorage("signalPostponementFlagUp") private var postponementFlagUp = false
     @AppStorage("signalOrangeManualOverride") private var orangeManualOverride = false
@@ -27,7 +27,7 @@ struct SignalTimerPanel: View {
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
-    @State private var showSettings = false
+    @State private var showSettings = false\n    @State private var showInterruptOptions = false
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
@@ -43,7 +43,7 @@ struct SignalTimerPanel: View {
         }
         hasStarted = true
     }
-    private func toggleIndividualRecall(at date: Date) {
+    private func toggleAbandon(at date: Date) {\n        if abandonFlagUp {\n            abandonFlagUp = false\n            playHorn(pulses: [0])\n        } else {\n            pauseForManualSignal(at: date)\n            individualRecallFlagUp = false\n            generalRecallFlagUp = false\n            postponementFlagUp = false\n            abandonFlagUp = true\n            playHorn(pulses: [0, 0, 0])\n        }\n    }\n    private func toggleIndividualRecall(at date: Date) {
         if individualRecallFlagUp {
             individualRecallFlagUp = false
         } else {
@@ -55,7 +55,7 @@ struct SignalTimerPanel: View {
         if generalRecallFlagUp {
             generalRecallFlagUp = false
             playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
-            restartWarningAt = date.timeIntervalSince1970 + clockOffset + 60
+            restartWarningAt = SignalSequence.nextMinuteBoundary(at: date.timeIntervalSince1970 + clockOffset + 60, minimumLeadSeconds: 0)
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
@@ -311,7 +311,7 @@ struct SignalTimerPanel: View {
             .background(Color.white)
             .foregroundStyle(.black)
             #if os(iOS)
-            .sheet(isPresented: $showSettings) { SignalSettingsView() }
+            .sheet(isPresented: $showSettings) { SignalSettingsView() }\n            .confirmationDialog("シグナル操作", isPresented: $showInterruptOptions, titleVisibility: .visible) {\n                if isRunning { Button("一時停止") { startOrPause(at: Date()) } }\n                else if hasStarted && !running(at: Date()) { Button("再開") { startOrPause(at: Date()) } }\n                Button("シーケンスをリセット", role: .destructive) { reset() }\n                Button("キャンセル", role: .cancel) {}\n            }
             #endif
             .onAppear {
                 if sequenceTimingVersion < 2 {
