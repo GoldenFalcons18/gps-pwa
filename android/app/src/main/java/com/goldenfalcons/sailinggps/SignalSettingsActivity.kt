@@ -154,12 +154,13 @@ class SignalSettingsActivity : AppCompatActivity() {
                     orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(4,6,4,6)
                     addView(TextView(this@SignalSettingsActivity).apply {
                         text=classMark(name); textSize=23f; typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
-                        gravity=Gravity.CENTER; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE)
+                        gravity=Gravity.CENTER; isSingleLine=true; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE)
+                        if(android.os.Build.VERSION.SDK_INT>=26) setAutoSizeTextTypeUniformWithConfiguration(10,23,1,android.util.TypedValue.COMPLEX_UNIT_SP)
                     },LinearLayout.LayoutParams(-1,64))
                     addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
                 }
             }
-        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedClassName",classes[i]).apply(); (tag as? AlertDialog)?.dismiss(); build() } }
+        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedClassName",classes[i]).putString("signalCustomClassFlag","class-${classes[i]}").apply(); (tag as? AlertDialog)?.dismiss(); build() } }
         val dialog=AlertDialog.Builder(this).setTitle("Class Logos").setView(grid).setNegativeButton("閉じる",null).create()
         grid.tag=dialog; dialog.show()
     }
@@ -187,12 +188,49 @@ class SignalSettingsActivity : AppCompatActivity() {
         grid.tag=dialog; dialog.show()
     }
     private fun flagEditor() {
-        val input=EditText(this).apply { hint="Name / Text"; setText(prefs.getString("signalCustomFlagName","Class Flag")); setTextColor(white) }
-        val layouts=listOf("Logo","Text","International Flag","全体色","上下分割","左右分割","斜め分割","逆斜め")
-        val spinner=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
-        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0); addView(input); addView(spinner) }
-        AlertDialog.Builder(this).setTitle("Class Flag").setView(box).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
-            prefs.edit().putString("signalCustomFlagName",input.text.toString()).putString("signalCustomFlagLayout",spinner.selectedItem.toString()).apply()
+        val classNames=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
+        val flagNames=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu")
+        val input=EditText(this).apply { hint="旗の名前"; setText(prefs.getString("signalCustomFlagName","Class Flag")); setTextColor(white) }
+        val types=listOf("クラス旗","文字旗","国際信号旗")
+        val type=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,types) }
+        val classes=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,classNames) }
+        val flags=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,flagNames) }
+        classes.setSelection(classNames.indexOf(prefs.getString("signalSelectedClassName","29er")).coerceAtLeast(0))
+        flags.setSelection(flagNames.indexOf(prefs.getString("signalSelectedInternationalFlag","Alpha")).coerceAtLeast(0))
+        val layouts=listOf("全面色","上下分割","左右分割","斜め分割","逆斜め")
+        val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
+        layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
+        val preview=TextView(this).apply { gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE); text="クラス旗の見本" }
+        val box=LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
+            addView(input); addView(type); addView(classes); addView(flags); addView(layout); addView(preview,LinearLayout.LayoutParams(-1,96))
+        }
+        fun updatePreview() {
+            val isInternational=type.selectedItemPosition==2
+            classes.visibility=if(type.selectedItemPosition==0)View.VISIBLE else View.GONE
+            flags.visibility=if(isInternational)View.VISIBLE else View.GONE
+            layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
+            preview.text=when(type.selectedItemPosition){0->classMark(classes.selectedItem.toString());1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
+        }
+        type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
+            override fun onNothingSelected(parent:AdapterView<*>?) {}
+        }
+        classes.onItemSelectedListener=type.onItemSelectedListener
+        flags.onItemSelectedListener=type.onItemSelectedListener
+        input.addTextChangedListener(object:android.text.TextWatcher{
+            override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
+            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) preview.text=s?.toString().orEmpty().ifBlank{"旗"}}
+            override fun afterTextChanged(s:android.text.Editable?){}
+        })
+        AlertDialog.Builder(this).setTitle("クラス旗・信号旗の設定").setView(box).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
+            val editor=prefs.edit().putString("signalCustomFlagName",input.text.toString()).putInt("signalCustomFlagStyle",type.selectedItemPosition).putInt("signalCustomFlagLayoutIndex",layout.selectedItemPosition)
+            when(type.selectedItemPosition){
+                0->{val selected=classNames[classes.selectedItemPosition];editor.putString("signalSelectedClassName",selected).putString("signalCustomClassFlag","class-$selected")}
+                2->editor.putString("signalSelectedInternationalFlag",flagNames[flags.selectedItemPosition])
+            }
+            editor.apply()
+            build()
         }.show()
     }
     private fun notifications() {
