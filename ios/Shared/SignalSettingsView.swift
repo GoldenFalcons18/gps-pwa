@@ -569,9 +569,21 @@ private struct SignalInternationalFlagArtwork: View {
                 rect(0.5 - width / 2, 0, width, 1, color)
                 rect(0, 0.5 - width / 2, 1, width, color)
             }
-            func pennant(_ palette: [Color], stripesVertical: Bool = false) {
-                stripes(palette, vertical: stripesVertical)
-                polygon([CGPoint(x: 0.70, y: 0), CGPoint(x: 1, y: 0.5), CGPoint(x: 0.70, y: 1)], white)
+            func pennant(_ palette: [Color], stripesVertical: Bool = true) {
+                var pennantPath = Path()
+                pennantPath.move(to: .zero)
+                pennantPath.addLine(to: CGPoint(x: size.width, y: size.height * 0.5))
+                pennantPath.addLine(to: CGPoint(x: 0, y: size.height))
+                pennantPath.closeSubpath()
+                var clipped = context
+                clipped.clip(to: pennantPath)
+                for (index, color) in palette.enumerated() {
+                    let n = CGFloat(palette.count), pos = CGFloat(index) / n, extent = 1 / n
+                    let frame = stripesVertical
+                        ? CGRect(x: pos * size.width, y: 0, width: extent * size.width, height: size.height)
+                        : CGRect(x: 0, y: pos * size.height, width: size.width, height: extent * size.height)
+                    clipped.fill(Path(frame), with: .color(color))
+                }
             }
 
             switch code {
