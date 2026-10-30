@@ -307,7 +307,8 @@ struct SignalTimerPanel: View {
                     Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
                         .disabled(postponementFlagUp)
                     Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
-                        .disabled(generalRecallFlagUp)
+                        .disabled(generalRecallFlagUp || abandonFlagUp)
+                    Button(abandonFlagUp ? "N旗 降下" : "すべて中止 N旗") { toggleAbandon(at: now) }
                 }
                 .font(.system(size: compact ? 9 : 12, weight: .semibold))
                 .buttonStyle(.bordered)
@@ -366,7 +367,7 @@ struct SignalTimerPanel: View {
                 Button("完全停止", role: .destructive) { reset() }
                 Button("すべて中止（N旗を掲揚）") { toggleAbandon(at: Date()) }
                 Button("最後の信号を中止") { skipFinalEvent = true }
-                Button("レースを続行") { if !isRunning { startOrPause(at: Date()) } }
+                Button("レースを続行") { if !isRunning && !waitingForFirstSignal { startOrPause(at: Date()) } }
                 Button("キャンセル", role: .cancel) {}
             }
             #endif
@@ -402,7 +403,7 @@ struct SignalTimerPanel: View {
 
     private func scheduleSignalStart() {
         let lead: TimeInterval = scheduleMode == 0 ? 0 : (flagProfile == "video-13" ? 240 : (flagProfile == "custom-five" ? 0 : 300))
-        startAt = scheduledDate.timeIntervalSince1970 - lead
+        startAt = scheduledDate.timeIntervalSince1970 + clockOffset - lead
         pausedSeconds = 0
         hasStarted = true
         restartWarningAt = 0
