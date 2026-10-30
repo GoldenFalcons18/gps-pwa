@@ -48,19 +48,20 @@ struct SignalTimerPanel: View {
             pausedSeconds = elapsed(at: date)
             startAt = 0
         }
-        hasStarted = true
+        if startAt > 0 || hasStarted { hasStarted = true }
     }
     private func toggleAbandon(at date: Date) {
         if abandonFlagUp {
             abandonFlagUp = false
-            playHorn(pulses: [0])
+            playHorn(pulses: SignalSequence.abandonLower.hornPulses)
+            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
             generalRecallFlagUp = false
             postponementFlagUp = false
             abandonFlagUp = true
-            playHorn(pulses: [0, 0, 0])
+            playHorn(pulses: SignalSequence.abandonRaise.hornPulses)
         }
     }
     private func toggleIndividualRecall(at date: Date) {
@@ -77,7 +78,7 @@ struct SignalTimerPanel: View {
         if generalRecallFlagUp {
             generalRecallFlagUp = false
             playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
-            restartWarningAt = SignalSequence.nextMinuteBoundary(at: date.timeIntervalSince1970 + clockOffset + 60, minimumLeadSeconds: 0)
+            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
@@ -93,7 +94,7 @@ struct SignalTimerPanel: View {
         if postponementFlagUp {
             postponementFlagUp = false
             playHorn(pulses: SignalSequence.postponementLower.hornPulses)
-            restartWarningAt = SignalSequence.nextMinuteBoundary(at: date.timeIntervalSince1970 + clockOffset + 60, minimumLeadSeconds: 0)
+            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
         } else {
             pauseForManualSignal(at: date)
             individualRecallFlagUp = false
@@ -141,6 +142,7 @@ struct SignalTimerPanel: View {
         individualRecallFlagUp = false
         generalRecallFlagUp = false
         postponementFlagUp = false
+        abandonFlagUp = false
         restartWarningAt = 0
         orangeManualOverride = false
         orangeManualUp = false
@@ -188,9 +190,9 @@ struct SignalTimerPanel: View {
             visible.append(SignalSequence.flag("orange"))
         }
         if generalRecallFlagUp {
-            visible = [SignalSequence.flag("orange"), SignalSequence.flag("first-sub")]
+            visible.append(SignalSequence.flag("first-sub"))
         } else if postponementFlagUp {
-            visible = [SignalSequence.flag("orange"), SignalSequence.flag("AP")]
+            visible.append(SignalSequence.flag("AP"))
         } else if individualRecallFlagUp {
             visible.append(SignalSequence.flag("X"))
         }
