@@ -602,7 +602,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val restartAt=displayPrefs.getLong("signalRestartAt",0L)
         val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
         val waitingForRestart=restartMode && restartAt>now
-        val waitingForFirstSignal=!restartMode && normalStartAt>now
         val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
         val duration=currentSignalDurationMinutes()
         val prepFlag=displayPrefs.getString("signalPrepFlag","P") ?: "P"
@@ -610,6 +609,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val totalSeconds=events.lastOrNull()?.secondsAfterStart ?: 0
         val normalStartAt=displayPrefs.getLong("signalElapsedStartAt",0L)
         val normalPaused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
+        val waitingForFirstSignal=!restartMode && normalStartAt>now
         val startAt=if(restartMode) restartAt else normalStartAt
         val elapsedMs=when {
             restartMode && restartAt>0L -> (now-restartAt).coerceAtLeast(0L)
