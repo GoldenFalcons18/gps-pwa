@@ -100,7 +100,7 @@ struct SignalTimerPanel: View {
             let minimumLeadToZero = Double(max(0, minimumTimeToFirstAction))
             startAt = wasPaused && pausedSeconds > 0
                 ? correctedNow - pausedSeconds
-                : correctedNow + minimumLeadToZero
+                : SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
             if !wasPaused {
                 pausedSeconds = 0
                 hasStarted = true
@@ -207,7 +207,7 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "0秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻"))).foregroundStyle(.black)
+                    Text(retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻"))).foregroundStyle(.black)
                     Spacer()
                     Text(retryPending
                          ? elapsedText(displaySeconds)
@@ -219,7 +219,7 @@ struct SignalTimerPanel: View {
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
                 HStack(spacing: 8) {
                     Text(waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓")).font(.title3.bold()).foregroundStyle(.black)
-                    Text(waitingForFirstSignal ? "0秒待ち · " + current.title : current.title).font(.caption).lineLimit(1)
+                    Text(waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title).font(.caption).lineLimit(1)
                     Spacer()
                     Text((hasStarted || restartWarningAt > 0) ? elapsedText(displaySeconds) : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
@@ -255,7 +255,7 @@ struct SignalTimerPanel: View {
                 HStack(spacing: compact ? 8 : 22) {
                     Button("中断") { if isRunning { startOrPause(at: now) } }
                         .disabled(!isRunning || restartWarningAt > 0).foregroundStyle(.gray)
-                    Button(waitingForFirstSignal ? "0秒合わせ中（取消）" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始"))) { startOrPause(at: now) }
+                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始"))) { startOrPause(at: now) }
                         .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
