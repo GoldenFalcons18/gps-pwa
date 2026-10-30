@@ -69,7 +69,12 @@ struct SignalSequence {
     ]
 
     static func flag(_ id: String) -> Flag {
-        flagCatalog.first { $0.id == id } ?? flagCatalog[0]
+        if let known = flagCatalog.first(where: { $0.id == id }) { return known }
+        if id.hasPrefix("class-") {
+            let name = String(id.dropFirst("class-".count))
+            return Flag(id: id, name: name, style: "classLogo", colors: [0xFFFFFF, 0x1769FF], symbol: name)
+        }
+        return flagCatalog[0]
     }
 
     private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
@@ -114,8 +119,32 @@ struct SignalSequence {
         ]
     }
 
+    private static var orangeFlagEnabled: Bool {
+        UserDefaults.standard.object(forKey: "signalOrangeEnabled") as? Bool ?? true
+    }
+
+    private static var orangeRemovalMinutes: Int {
+        let stored = UserDefaults.standard.object(forKey: "signalOrangeRemovedAfterMinutes") as? Int
+        return min(30, max(0, stored ?? 4))
+    }
+
+    private static func applyOrangeSettings(_ source: [Event], orangeDownAt: Int) -> [Event] {
+        source.compactMap { event in
+            guard event.flags.contains(where: { $0.id == "orange" }) else { return event }
+            guard orangeFlagEnabled else { return nil }
+            if !event.raised {
+                return Event(id: event.id, secondsAfterStart: orangeDownAt, title: event.title,
+                             flags: event.flags, raised: false, hornPulses: event.hornPulses)
+            }
+            return event
+        }
+    }
+
     static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
-        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+        applyOrangeSettings(
+            recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID)),
+            orangeDownAt: 300 + orangeRemovalMinutes * 60
+        )
     }
 
     /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
@@ -160,7 +189,10 @@ struct SignalSequence {
     static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
         switch profileID {
         case "standard-start":
-            return standardStart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+            return applyOrangeSettings(
+                standardStart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID)),
+                orangeDownAt: 600 + orangeRemovalMinutes * 60
+            )
         case "video-13":
             return video13
         case "custom-five":

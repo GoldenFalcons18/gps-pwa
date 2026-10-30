@@ -32,6 +32,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SignalSettingsActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".GpsLoggingService"
             android:exported="false"
