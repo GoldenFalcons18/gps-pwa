@@ -76,7 +76,7 @@
                 <Button android:id="@+id/btnSignalInterrupt" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="中断…" android:enabled="false" />
                 <Button android:id="@+id/btnSignalStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Start" />
                 <Button android:id="@+id/btnSignalZero" android:layout_width="48dp" android:layout_height="wrap_content" android:text="◴" />
-                <Button android:id="@+id/btnSignalReset" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" android:text="リセット" />
+                <Button android:id="@+id/btnSignalReset" android:layout_width="48dp" android:layout_height="wrap_content" android:text="◷" android:contentDescription="開始時刻を予約" />
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
