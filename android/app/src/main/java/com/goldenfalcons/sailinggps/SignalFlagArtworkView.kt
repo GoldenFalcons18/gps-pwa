@@ -36,9 +36,8 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         rect(c,0.5f-thickness/2,0f,thickness,1f,color); rect(c,0f,0.5f-thickness/2,1f,thickness,color)
     }
     private fun pennant(c: Canvas, colors: List<Int>) {
-        stripes(c,colors,true)
-        // Pennants taper to the fly end.
-        poly(c,white,0.70f,0f,1f,0.5f,0.70f,1f)
+        val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*.5f); lineTo(0f,height.toFloat()); close() }
+        val save=c.save(); c.clipPath(clip); stripes(c,colors,true); c.restoreToCount(save)
     }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -46,7 +45,7 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         val flagW=width.toFloat(); val flagH=height.toFloat()
         canvas.clipRect(0f,0f,flagW,flagH)
         when(flagName.lowercase()) {
-            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0f,0f,0.5f,1f,blue); poly(canvas,blue,0.5f,0f,1f,0.5f,0.5f,1f); poly(canvas,white,0.84f,0f,1f,0.5f,0.84f,1f) }
+            "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue) }
             "bravo" -> rect(canvas,0f,0f,1f,1f,red)
             "charlie" -> stripes(canvas,listOf(blue,white,red,white,blue),false)
             "delta" -> stripes(canvas,listOf(yellow,blue,yellow),false)
