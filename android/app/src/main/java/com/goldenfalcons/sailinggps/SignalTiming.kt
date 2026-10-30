@@ -9,6 +9,8 @@ object SignalTiming {
         return if (remainder == 0L) earliest else earliest + minute - remainder
     }
 
+    fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
+
     fun countdownSeconds(remainingSeconds: Double): Int = kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(0)
 
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
