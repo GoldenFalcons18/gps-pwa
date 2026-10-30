@@ -2,6 +2,9 @@ package com.goldenfalcons.sailinggps
 
 /** Pure elapsed-time boundary math shared by signal presentation and tests. */
 object SignalTiming {
+    fun scheduledStartAt(nowMillis: Long, minimumDelaySeconds: Int): Long =
+        nowMillis + minimumDelaySeconds.coerceAtLeast(1) * 1000L
+
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
         if (eventOffsets.isEmpty() || !elapsedSeconds.isFinite()) return -1
         return eventOffsets.indexOfLast { elapsedSeconds >= it }
