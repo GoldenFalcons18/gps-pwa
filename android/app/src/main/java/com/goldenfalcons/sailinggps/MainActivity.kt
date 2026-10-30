@@ -521,7 +521,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun toggleIndividualRecall() {
-        if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false)) return
+        if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         val wasUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
         if(!wasUp) {
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",true).apply()
@@ -550,7 +550,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(!wasUp) {
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
-                .putBoolean("signalRestartMode",false).putLong("signalRestartAt",0L).putBoolean("signalPostponementFlagUp",true).apply()
+                .putBoolean("signalRestartMode",false).putLong("signalRestartAt",0L).putBoolean("signalPostponementFlagUp",true).putBoolean("signalAbandonFlagUp",false).apply()
             playSignalHorn(SignalSequence.postponementRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalPostponementFlagUp",false).putBoolean("signalRestartMode",true)
@@ -570,7 +570,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun toggleSignalSequence() {
-        if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false)) return
+        if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         val now=signalNow()
         val events=currentSignalEvents()
         val totalMs=(events.lastOrNull()?.secondsAfterStart ?: 0)*1000L
@@ -724,7 +724,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
         b.btnSignalNFlag.text=if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) "N旗 降下" else "N旗（中止）"
         b.btnSignalIndividualRecall.text=if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) "X旗 降下" else "個別リコール X旗（$prepFlag）"
-        b.btnSignalIndividualRecall.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false)
+        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
         b.btnSignalGeneralRecall.text=if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) "第一代表旗 降下" else "ゼネラルリコール"
         b.btnSignalPostponement.text=if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) "AP 降下" else "AP 掲揚"
 
