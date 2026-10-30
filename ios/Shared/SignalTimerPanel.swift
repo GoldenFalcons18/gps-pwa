@@ -24,6 +24,7 @@ struct SignalTimerPanel: View {
     @State private var syncing = false
     @State private var syncMessage = ""
     @State private var hornPlayer: AVAudioPlayer?
+    @State private var showSettings = false
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
@@ -139,7 +140,9 @@ struct SignalTimerPanel: View {
     private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
         var visible = retryPending
             ? [SignalSequence.flag("orange")]
-            : SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
+            : ((hasStarted || useRetrySequence)
+                ? SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
+                : [])
         if useRetrySequence && sequenceElapsed < 540 {
             visible.append(SignalSequence.flag("orange"))
         }
@@ -179,6 +182,10 @@ struct SignalTimerPanel: View {
                         .font(.system(size: compact ? 14 : 22, weight: .medium, design: .monospaced))
                     Spacer()
                     if !compact {
+                        #if os(iOS)
+                        Button { showSettings = true } label: { Image(systemName: "gearshape.fill") }
+                            .buttonStyle(.plain).foregroundStyle(.orange)
+                        #endif
                         Button(syncing ? "…" : "◉") { Task { await syncClock() } }
                             .buttonStyle(.plain).foregroundStyle(.blue)
                     }
@@ -282,6 +289,9 @@ struct SignalTimerPanel: View {
             .padding(compact ? 4 : 8)
             .background(Color.white)
             .foregroundStyle(.black)
+            #if os(iOS)
+            .sheet(isPresented: $showSettings) { SignalSettingsView() }
+            #endif
             .onAppear {
                 if sequenceTimingVersion < 2 {
                     flagProfile = "standard-start"
