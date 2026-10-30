@@ -57,6 +57,7 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
     var flagColor = "#FFFFFF"
     var text = ""
     var textColor = "#111111"
+    var logoID = "class-4"
 }
 
 private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
@@ -428,7 +429,7 @@ private struct SignalCustomFlagEditor: View {
                 }
             } else {
                 Section("Logo") {
-                    NavigationLink("クラスのロゴを選択") { SignalClassPicker(selection: .constant("class-4")) }
+                    NavigationLink("クラスのロゴを選択") { SignalClassPicker(selection: $flag.logoID) }
                 }
             }
             Section("Preview") {
@@ -450,6 +451,7 @@ private struct SignalCustomFlagEditor: View {
 
 private struct SignalFlagPreview: View {
     let flag: SignalCustomFlag
+    @AppStorage("signalSelectedInternationalFlag") private var selectedInternationalFlag = "Alpha"
     var body: some View {
         GeometryReader { geo in
             ZStack {
@@ -471,10 +473,10 @@ private struct SignalFlagPreview: View {
                     Text(flag.text).font(.system(size: geo.size.height * 0.55, weight: .bold))
                         .foregroundStyle(Color(hex: flag.textColor))
                 } else if flag.style == "international" {
-                    Text(flag.text.isEmpty ? "A" : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
+                    Text(flag.text.isEmpty ? String(selectedInternationalFlag.prefix(1)) : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
                         .foregroundStyle(Color(hex: flag.textColor))
                 } else {
-                    Text(flag.text.isEmpty ? "⚑" : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
+                    Text(flag.text.isEmpty ? String(flag.logoID.dropFirst("class-".count)) : flag.text).font(.system(size: geo.size.height * 0.55, weight: .black))
                         .foregroundStyle(Color(hex: flag.textColor))
                 }
             }.frame(width: geo.size.width, height: geo.size.height)
@@ -483,21 +485,26 @@ private struct SignalFlagPreview: View {
 }
 
 private struct SignalInternationalFlagGallery: View {
-    @Environment(\.dismiss) private var dismiss
+    @AppStorage("signalSelectedInternationalFlag") private var selectedFlag = "Alpha"
     private let flags = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute","Fourth Substitute","NATO 0","NATO 1","NATO 2","NATO 3","NATO 4","NATO 5","NATO 6","NATO 7","NATO 8","NATO 9"]
 
     var body: some View {
         List {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 10)], spacing: 14) {
                 ForEach(flags, id: \.self) { name in
-                    VStack(spacing: 6) {
-                        ZStack {
-                            Rectangle().fill(flagColor(name))
-                            Text(String(name.prefix(1))).font(.system(size: 24, weight: .black))
-                                .foregroundStyle(.white)
-                        }.frame(height: 48)
-                        Text(name).font(.caption2).lineLimit(2).multilineTextAlignment(.center)
-                    }
+                    Button { selectedFlag = name } label: {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                Rectangle().fill(flagColor(name))
+                                Text(String(name.prefix(1))).font(.system(size: 24, weight: .black))
+                                    .foregroundStyle(.white)
+                                if selectedFlag == name {
+                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                                }
+                            }.frame(height: 48)
+                            Text(name).font(.caption2).lineLimit(2).multilineTextAlignment(.center)
+                        }
+                    }.buttonStyle(.plain)
                 }
             }.padding(.vertical)
         }
