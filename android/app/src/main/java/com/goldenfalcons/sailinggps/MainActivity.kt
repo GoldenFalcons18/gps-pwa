@@ -564,10 +564,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun toggleGeneralRecall() {
         val wasUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        if(!wasUp && displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         if(!wasUp) {
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false)
-                .putBoolean("signalRestartMode",false).putLong("signalRestartAt",0L).putBoolean("signalGeneralRecallFlagUp",true).apply()
+                .putBoolean("signalRestartMode",false).putLong("signalRestartAt",0L).putBoolean("signalAbandonFlagUp",false).putBoolean("signalGeneralRecallFlagUp",true).apply()
             playSignalHorn(SignalSequence.generalRecallRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalRestartMode",true)
@@ -579,6 +580,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun togglePostponement() {
         val wasUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
+        if(!wasUp && (displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false))) return
         if(!wasUp) {
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
@@ -760,6 +762,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
         b.btnSignalGeneralRecall.text=if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) "第一代表旗 降下" else "ゼネラルリコール"
         b.btnSignalPostponement.text=if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) "AP 降下" else "AP 掲揚"
+        b.btnSignalGeneralRecall.isEnabled=!displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        b.btnSignalPostponement.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
 
         val lastFired=displayPrefs.getInt("signalLastFiredIndex",-1)
         if(running && active>lastFired) {
