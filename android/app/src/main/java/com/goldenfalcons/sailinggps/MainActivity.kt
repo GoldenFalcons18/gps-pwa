@@ -508,7 +508,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 .putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",true).apply()
             playSignalHorn(SignalSequence.abandonRaise.hornPulses)
         } else {
-            displayPrefs.edit().putBoolean("signalAbandonFlagUp",false).apply()
+            displayPrefs.edit().putBoolean("signalAbandonFlagUp",false).putBoolean("signalRestartMode",true)
+                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L)
+                .putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.abandonLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
@@ -572,7 +574,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.generalRecallRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",SignalTiming.scheduledStartAt(signalNow()+60_000L,0)).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
+                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.generalRecallLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
@@ -588,7 +590,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.postponementRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalPostponementFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",SignalTiming.scheduledStartAt(signalNow()+60_000L,0)).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
+                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.postponementLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
