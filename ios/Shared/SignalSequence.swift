@@ -84,6 +84,9 @@ struct SignalSequence {
         return ceil(earliest / minute) * minute
     }
 
+    /// Restart warning is exactly one minute after AP, N, or first-substitute is lowered.
+    static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
+
     static func countdownSeconds(_ remaining: Double) -> Int {
         max(0, Int(ceil(remaining)))
     }
