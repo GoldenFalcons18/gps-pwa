@@ -1,5 +1,23 @@
 package com.goldenfalcons.sailinggps
 
+data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boolean = false) {
+    val secondaryColor: Int get() = when (id) {
+        "斜め" -> 0xFFD71920.toInt()
+        "赤白チェック" -> 0xFFFFFFFF.toInt()
+        else -> 0xFFFFFFFF.toInt()
+    }
+    val style: String get() = when (id) {
+        "斜め" -> "diagonal"
+        "赤白チェック" -> "checker"
+        "級", "class-4" -> "classLogo"
+        "青", "P" -> "blueSquare"
+        "I" -> "circle"
+        "第一代表" -> "firstSub"
+        "AP" -> "apFlag"
+        "X" -> "xFlag"
+        else -> "solid"
+    }
+}
 data class SignalEvent(
     val id: Int,
     val secondsAfterStart: Int,
@@ -7,14 +25,21 @@ data class SignalEvent(
     val color: Int,
     val raised: Boolean,
     val flag: String,
-    val hornPulses: List<Int>
-)
+    val hornPulses: List<Int>,
+    val additionalFlags: List<SignalFlagMark> = emptyList()
+) {
+    val flagMarks: List<SignalFlagMark>
+        get() = listOf(SignalFlagMark(flag, color, flag == "青" || flag == "P")) + additionalFlags
+}
 data class SignalFlagProfile(val id: String, val name: String, val events: List<SignalEvent>, val baseDurationMinutes: Int = 5)
-data class SignalFlagState(val id: String, val color: Int, val raised: Boolean, val whiteSquare: Boolean)
+data class SignalFlagState(val id: String, val color: Int, val raised: Boolean, val whiteSquare: Boolean, val style: String = "solid", val secondaryColor: Int = 0xFFFFFFFF.toInt())
 
 object SignalSequence {
     private fun e(id: Int, seconds: Int, title: String, flag: String, color: Int, raised: Boolean, vararg pulses: Int) =
         SignalEvent(id, seconds, title, color, raised, flag, pulses.toList())
+
+    private fun eWithFlags(id: Int, seconds: Int, title: String, flag: String, color: Int, raised: Boolean, additional: List<SignalFlagMark>, vararg pulses: Int) =
+        SignalEvent(id, seconds, title, color, raised, flag, pulses.toList(), additional)
 
     // Standard race sequence, measured from the orange flag raise at T-10 minutes.
     val profiles = listOf(
@@ -34,6 +59,16 @@ object SignalSequence {
             e(4, 600, "緑旗を降下", "緑", 0xFF00D228.toInt(), false, 0),
             e(5, 1200, "橙旗を降下", "橙", 0xFFF58A00.toInt(), false)
         ), baseDurationMinutes = 20),
+        SignalFlagProfile("video-13", "動画の信号（13分）", listOf(
+            e(0, 0, "橙旗を掲揚", "橙", 0xFFF58A00.toInt(), true, 0),
+            eWithFlags(1, 240, "クラス旗・斜め旗を掲揚", "級", 0xFFFFFFFF.toInt(), true,
+                listOf(SignalFlagMark("斜め", 0xFFE6D300.toInt())), 0),
+            e(2, 300, "赤白チェック旗を掲揚", "赤白チェック", 0xFFE32636.toInt(), true, 0),
+            e(3, 480, "赤白チェック旗を降下", "赤白チェック", 0xFFE32636.toInt(), false, 1),
+            eWithFlags(4, 540, "クラス旗・斜め旗を降下", "級", 0xFFFFFFFF.toInt(), false,
+                listOf(SignalFlagMark("斜め", 0xFFE6D300.toInt())), 0),
+            e(5, 780, "橙旗を降下", "橙", 0xFFF58A00.toInt(), false)
+        ), baseDurationMinutes = 13),
         SignalFlagProfile("class-p", "カスタム（クラス旗＋P旗）", listOf(
             e(0, 0, "クラス旗を掲揚", "級", 0xFFF58A00.toInt(), true, 0),
             e(1, 60, "P旗を掲揚", "P", 0xFF1769FF.toInt(), true, 0),
@@ -119,9 +154,10 @@ object SignalSequence {
                 }
             }
         } else {
+            val fixedVideo = profile.id == "video-20" || profile.id == "video-13"
             val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
             profile.events.map { event ->
-                val scaled = event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
+                val scaled = if (fixedVideo) event else event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
                 if (event.flag == "級") scaled.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = scaled.title.replace("クラス旗", className)) else scaled
             }
         }
@@ -148,10 +184,17 @@ object SignalSequence {
         flagsAtEvents(events(durationMinutes, profileIndex, prepFlag), elapsedSeconds)
 
     fun flagsAtEvents(list: List<SignalEvent>, elapsedSeconds: Double): List<SignalFlagState> {
-        return list.groupBy { it.flag }.map { (flag, actions) ->
-            val latest = actions.lastOrNull { it.secondsAfterStart <= elapsedSeconds }
-            val exemplar = actions.first()
-            SignalFlagState(flag, latest?.color ?: exemplar.color, latest?.raised ?: false, flag == "青" || flag == "P")
+        val transitions = list.flatMap { event ->
+            event.flagMarks.map { mark ->
+                event.secondsAfterStart to SignalFlagState(
+                    mark.id, mark.color, event.raised, mark.whiteSquare, mark.style, mark.secondaryColor
+                )
+            }
+        }
+        return transitions.groupBy { it.second.id }.map { (_, actions) ->
+            val latest = actions.lastOrNull { it.first <= elapsedSeconds }
+            val first = actions.first().second
+            (latest?.second ?: first).copy(raised = latest?.second?.raised ?: false)
         }
     }
 }
