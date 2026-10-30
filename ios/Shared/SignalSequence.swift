@@ -84,6 +84,10 @@ struct SignalSequence {
         return ceil(earliest / minute) * minute
     }
 
+    static func countdownSeconds(_ remaining: Double) -> Int {
+        max(0, Int(ceil(remaining)))
+    }
+
     private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
         Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
     }
