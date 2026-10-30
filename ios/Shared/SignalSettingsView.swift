@@ -96,8 +96,8 @@ struct SignalSettingsView: View {
                 Section("General Settings") {
                     Stepper(value: $minimumTime, in: 0...120, step: 5) {
                         VStack(alignment: .leading) {
-                            LabeledContent("0秒までの最短時間", value: "\(minimumTime)秒")
-                            Text("開始ボタンから0秒（旗が動く目安）までの最短間隔です。AP・N旗は掲揚時刻を固定せず手動で操作します。").font(.caption).foregroundStyle(.secondary)
+                            LabeledContent("次の分00秒までの最短時間", value: "\(minimumTime)秒")
+                            Text("開始ボタンから実時間の次の分00秒までに確保する最短間隔です。各信号はシーケンスのn分00秒で動作します。AP・N旗は時刻を固定せず手動で掲揚します。").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Picker("Voice", selection: $voiceName) {
