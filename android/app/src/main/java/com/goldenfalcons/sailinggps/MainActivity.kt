@@ -738,12 +738,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
-            waitingForRestart && orangeEnabled -> mutableListOf(SignalFlagState("橙",0xFFF58A00.toInt(),true,false))
-            waitingForFirstSignal || !started -> mutableListOf()
+            waitingForRestart || waitingForFirstSignal || !started -> mutableListOf()
             else -> SignalSequence.flagsAtEvents(events,elapsedSeconds).filter { it.raised }.toMutableList()
         }
-        val orangeDownAt=300 + displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4).coerceIn(0,30)*60
-        if(orangeEnabled && restartMode && !waitingForRestart && elapsedSeconds<orangeDownAt && raised.none { it.id=="橙" }) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
         when {
             displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false) }
             displayPrefs.getBoolean("signalPostponementFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false) }
