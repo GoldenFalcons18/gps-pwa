@@ -25,7 +25,8 @@ struct SignalClassLogoMark: View {
         return value
     }
 
-    var body: some View {
+    @ViewBuilder
+    private var fallbackMark: some View {
         ZStack {
             Text(mark)
                 .font(.system(size: 34, weight: .black, design: .rounded))
@@ -44,6 +45,23 @@ struct SignalClassLogoMark: View {
             } else if name == "Optimist" {
                 Circle().stroke(color, lineWidth: 3).padding(9)
             }
+        }
+    }
+
+    var body: some View {
+        Group {
+            #if os(iOS)
+            if let image = SignalClassLogoAssets.image(for: name) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(5)
+            } else {
+                fallbackMark
+            }
+            #else
+            fallbackMark
+            #endif
         }
         .frame(maxWidth: .infinity, minHeight: 54)
         .background(Color.white)
