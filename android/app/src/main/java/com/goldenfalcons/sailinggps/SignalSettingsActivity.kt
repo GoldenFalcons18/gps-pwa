@@ -53,7 +53,6 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Start Sequence", selectedProfile()) { choose("Start Sequence", SignalSequence.profiles.map { it.name }, "signalProfileName") }
         row("Start Rule", prefs.getString("signalStartRule", "P") ?: "P") { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
         row("Classes", prefs.getString("signalSelectedClassName", "クラス旗") ?: "クラス旗") { classGallery() }
-        row("準備信号", prefs.getString("signalPrepFlag", "P") ?: "P") { choosePrep() }
         switch("Custom Race Delay", "signalRaceDelayEnabled", false)
         row("Time between races", prefs.getInt("signalRaceDelayMinutes", 0).toString()+"分") { number("レース間隔", "signalRaceDelayMinutes", 0, 0, 60) }
 
@@ -111,8 +110,9 @@ class SignalSettingsActivity : AppCompatActivity() {
                     .putInt("signalOrangeDisplayedMinutes",displayed)
                     .putInt("signalOrangeRemovedAfterMinutes",removed).apply()
             }
-            if(key=="signalStartRule" && items[i] in listOf("P","I","U","Z","Black")) {
-                prefs.edit().putString("signalPrepFlag",if(items[i]=="Black") "black" else items[i]).apply()
+            if(key=="signalStartRule") {
+                val prep=when(items[i]) { "P","I","U","Z" -> items[i]; "Black" -> "black"; else -> "P" }
+                prefs.edit().putString("signalPrepFlag",prep).apply()
             }
             build()
         }.show()
