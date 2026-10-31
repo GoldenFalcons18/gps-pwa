@@ -65,8 +65,9 @@ class SignalSettingsActivity : AppCompatActivity() {
 
         section("Orange Flag")
         switch("Enable","signalOrangeEnabled",true)
-        row("Removed After Start",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After Start","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="待機中は降下状態です。シーケンス0分で短音と共に掲揚し、クラス旗降下をスタートとして設定分後に降下します。手動操作もできます。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        row("Displayed For",prefs.getInt("signalOrangeDisplayedMinutes",5).toString()+"分") { number("Displayed For","signalOrangeDisplayedMinutes",5,0,30) }
+        row("Removed After",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After","signalOrangeRemovedAfterMinutes",4,0,30) }
+        list.addView(TextView(this).apply { text="シーケンス開始時にオレンジ旗を掲揚し、最初の信号の設定分前に掲揚します。最後の信号から設定分後に降下します。待機中・再スタート時は降下状態で、地図上から手動操作できます。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
@@ -101,7 +102,15 @@ class SignalSettingsActivity : AppCompatActivity() {
     private fun choose(title:String,items:List<String>,key:String) {
         AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
             prefs.edit().putString(key,items[i]).apply()
-            if(key=="signalProfileName") { val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0); prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",SignalSequence.profiles[index].id).apply() }
+            if(key=="signalProfileName") {
+                val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0)
+                val profile=SignalSequence.profiles[index]
+                val displayed=if(profile.id=="video-13") 4 else 5
+                val removed=if(profile.id=="video-20") 10 else 4
+                prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",profile.id)
+                    .putInt("signalOrangeDisplayedMinutes",displayed)
+                    .putInt("signalOrangeRemovedAfterMinutes",removed).apply()
+            }
             if(key=="signalStartRule" && items[i] in listOf("P","I","U","Z","Black")) {
                 prefs.edit().putString("signalPrepFlag",if(items[i]=="Black") "black" else items[i]).apply()
             }
