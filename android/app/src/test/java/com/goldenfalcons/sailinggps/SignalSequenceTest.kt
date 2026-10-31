@@ -31,6 +31,25 @@ class SignalSequenceTest {
         for (profile in SignalSequence.profiles.indices) {
             assertEquals(false, SignalSequence.events(20, profile, orangeEnabled = false).any { it.flag == "橙" })
         }
+        val orangeOff = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = false,
+            orangeDisplayedMinutes = 5,
+            orangeRemovedAfterMinutes = 4
+        )
+        assertEquals(listOf(0, 60, 240, 300), orangeOff.map { it.secondsAfterStart })
+        assertEquals(listOf("級", "P", "P", "級"), orangeOff.map { it.flag })
+
+        val longerOrange = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = true,
+            orangeDisplayedMinutes = 7,
+            orangeRemovedAfterMinutes = 3
+        )
+        assertEquals(listOf(0, 420, 480, 660, 720, 1140), longerOrange.map { it.secondsAfterStart })
+
         val restart = SignalSequence.restartEvents()
         assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
         assertEquals(listOf("第一代表"), SignalSequence.generalRecallRaise.flagMarks.map { it.id })
