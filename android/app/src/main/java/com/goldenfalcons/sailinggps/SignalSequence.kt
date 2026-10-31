@@ -165,7 +165,8 @@ object SignalSequence {
         prepFlag: String = "P",
         orangeEnabled: Boolean = true,
         orangeRemovedAfterMinutes: Int = 4,
-        className: String = "クラス旗"
+        className: String = "クラス旗",
+        orangeDisplayedMinutes: Int = 5
     ): List<SignalEvent> {
         val profile = profiles.getOrElse(profileIndex) { profiles[0] }
         val source = if (profile.id == "standard-start") {
@@ -177,18 +178,26 @@ object SignalSequence {
                 }
             }
         } else {
-            val scale = durationMinutes.coerceAtLeast(1).toDouble() / profile.baseDurationMinutes.coerceAtLeast(1)
+            // Reference-video profiles keep their recorded spacing; the duration picker must not stretch them.
             profile.events.map { event ->
-                val scaled = event.copy(secondsAfterStart = (event.secondsAfterStart * scale).toInt())
-                if (event.flag == "級") scaled.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = scaled.title.replace("クラス旗", className)) else scaled
+                if (event.flag == "級") event.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = event.title.replace("クラス旗", className)) else event
             }
         }
+
+        val hasOrange = source.any { it.flag == "橙" }
+        val firstSignal = source.firstOrNull { it.flag != "橙" && it.raised }?.secondsAfterStart ?: 0
+        val lastSignal = source.lastOrNull { it.flag != "橙" }?.secondsAfterStart ?: firstSignal
+        val displayShift = if (hasOrange) orangeDisplayedMinutes.coerceIn(0, 30) * 60 - firstSignal else 0
+        val orangeDownAt = lastSignal + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60
+
         return source.mapNotNull { event ->
-            if (event.flag == "橙" && !orangeEnabled) null
-            else if (event.flag == "橙" && profile.id == "standard-start" && !event.raised)
-                event.copy(secondsAfterStart = 600 + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60)
-            else event
-        }
+            when {
+                event.flag == "橙" && !orangeEnabled -> null
+                event.flag == "橙" && event.raised -> event
+                event.flag == "橙" && !event.raised -> event.copy(secondsAfterStart = orangeDownAt)
+                else -> event.copy(secondsAfterStart = (event.secondsAfterStart + displayShift).coerceAtLeast(0))
+            }
+        }.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
     }
 
     /** Selects the same pre-start row that the reference app keeps highlighted. */
