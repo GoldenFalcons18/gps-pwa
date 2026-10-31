@@ -108,9 +108,21 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         }
         c.restoreToCount(save)
     }
-    private fun pennant(c: Canvas, colors: List<Int>) {
+    private fun pennant(c: Canvas, colors: List<Int>, vertical: Boolean = true, mark: String = "") {
         val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*0.5f); lineTo(0f,height.toFloat()); close() }
-        val save=c.save(); c.clipPath(clip); stripes(c,colors,true); c.restoreToCount(save)
+        val save=c.save()
+        c.clipPath(clip)
+        stripes(c,colors,vertical)
+        when(mark) {
+            "redCircle" -> { p.color=red; c.drawCircle(width*0.43f,height*0.5f,minOf(width,height)*0.17f,p) }
+            "whiteCircle" -> { p.color=white; c.drawCircle(width*0.43f,height*0.5f,minOf(width,height)*0.17f,p) }
+            "whiteCross" -> cross(c,white,0.18f)
+            "redCross" -> cross(c,red,0.18f)
+            "yellowTriangle" -> poly(c,yellow,0.12f,0.20f,0.67f,0.50f,0.12f,0.80f)
+            "whiteTriangle" -> poly(c,white,0.12f,0.20f,0.67f,0.50f,0.12f,0.80f)
+            "blackBand" -> rect(c,0f,0.35f,0.70f,0.30f,black)
+        }
+        c.restoreToCount(save)
     }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -126,7 +138,7 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue); poly(canvas,white,0.72f,0.34f,1f,0.5f,0.72f,0.66f) }
             "bravo" -> { rect(canvas,0f,0f,1f,1f,red); poly(canvas,white,0.68f,0.34f,1f,0.5f,0.68f,0.66f) }
             "charlie" -> stripes(canvas,listOf(blue,white,red,white,blue),false)
-            "delta" -> { rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0f,0.12f,1f,0.24f,yellow);rect(canvas,0f,0.64f,1f,0.24f,yellow) }
+            "delta" -> stripes(canvas,listOf(yellow,blue,yellow),false)
             "echo" -> stripes(canvas,listOf(blue,red),false)
             "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,0.5f,0.12f,0.88f,0.5f,0.5f,0.88f,0.12f,0.5f) }
             "golf" -> stripes(canvas,listOf(yellow,blue,yellow,blue,yellow),true)
@@ -160,14 +172,24 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "nato 8" -> {rect(canvas,0f,0f,1f,1f,yellow);rect(canvas,0.4f,0f,0.2f,1f,blue)}
             "nato 9" -> rect(canvas,0f,0f,1f,1f,blue)
             "answering pennant" -> pennant(canvas,listOf(red,white,red,white,red))
-            "first substitute" -> pennant(canvas,listOf(blue,yellow,blue))
-            "second substitute" -> pennant(canvas,listOf(blue,white,blue))
-            "third substitute" -> pennant(canvas,listOf(black,white,black))
-            "fourth substitute" -> pennant(canvas,listOf(red,yellow,red))
+            "first substitute" -> pennant(canvas,listOf(blue),mark="yellowTriangle")
+            "second substitute" -> pennant(canvas,listOf(blue),mark="whiteTriangle")
+            "third substitute" -> pennant(canvas,listOf(white),mark="blackBand")
+            "fourth substitute" -> pennant(canvas,listOf(red,yellow,red),vertical=false)
             else -> {
                 val n=Regex("\\d+").find(flagName)?.value?.toIntOrNull() ?: 0
-                val palette=listOf(listOf(yellow,red,yellow),listOf(white,red),listOf(blue,white),listOf(red,white,blue),listOf(red,white),listOf(yellow,red),listOf(black,white),listOf(yellow,red),listOf(white,red),listOf(yellow,red))[n.coerceIn(0,9)]
-                pennant(canvas,palette)
+                when(n) {
+                    0 -> pennant(canvas,listOf(yellow,red,yellow))
+                    1 -> pennant(canvas,listOf(white),mark="redCircle")
+                    2 -> pennant(canvas,listOf(blue),mark="whiteCircle")
+                    3 -> pennant(canvas,listOf(red,white,blue),vertical=false)
+                    4 -> pennant(canvas,listOf(red),mark="whiteCross")
+                    5 -> pennant(canvas,listOf(yellow,blue),vertical=false)
+                    6 -> pennant(canvas,listOf(black,white),vertical=false)
+                    7 -> pennant(canvas,listOf(yellow,red),vertical=false)
+                    8 -> pennant(canvas,listOf(white),mark="redCross")
+                    else -> pennant(canvas,listOf(white,red,black,yellow))
+                }
             }
         }
         p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*0.018f).coerceAtLeast(1f)
