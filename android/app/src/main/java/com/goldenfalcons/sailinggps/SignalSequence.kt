@@ -18,6 +18,7 @@ data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boole
         id == "X" -> "xFlag"
         else -> "solid"
     }
+}
 data class SignalEvent(
     val id: Int,
     val secondsAfterStart: Int,
