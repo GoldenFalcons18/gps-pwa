@@ -151,26 +151,84 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun classGallery() {
-val classes=listOf("A-Cat","29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Dart 18","Dragon","Europe","Finn","Firebug","Flying 11","Flying Ant","Formula 18","Formula Kite","GP14","Hobie","Hornet","ILCA","International 14","IOD","J/14","J/22","J/24","J/70","J/80","J/105","J/105","Javelin","Jollyboat","Laser","Laser 4.7","Laser Pico","Lightning","Luch","Melges 24","Moth","Monarch","Nacra","Nacra 15","Nacra 17","National 18","OK","Optimist","Paper Tiger","Pirate","RS Aero","RS Feva","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","TP 52","Trias","Viper","WASZP","Wayfarer","Weta","Weta+","X-79","X-99","Yngling","Zoom 8","10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","Melges 24","RS:X","T293","Windsurfer","Wing Foil")
-        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=8; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
-            override fun getCount()=classes.size
-            override fun getItem(position:Int)=classes[position]
-            override fun getItemId(position:Int)=position.toLong()
-            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
-                val name=classes[position]
-                return LinearLayout(this@SignalSettingsActivity).apply {
-                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(4,6,4,6)
-                    addView(TextView(this@SignalSettingsActivity).apply {
-                        text=classMark(name); textSize=23f; typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
-                        gravity=Gravity.CENTER; isSingleLine=true; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE)
-                        if(android.os.Build.VERSION.SDK_INT>=26) setAutoSizeTextTypeUniformWithConfiguration(10,23,1,android.util.TypedValue.COMPLEX_UNIT_SP)
-                    },LinearLayout.LayoutParams(-1,64))
-                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
+        val groups = linkedMapOf(
+            "Multihull" to listOf("A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"),
+            "Keelboat" to listOf("10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"),
+            "Board" to listOf("Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"),
+            "Centerboard" to listOf("29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J/14","Jollyboat","Laser","Laser 4.7","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling")
+        )
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 12)
+        }
+        var dialog: AlertDialog? = null
+        val density = resources.displayMetrics.density
+        groups.forEach { (category, classes) ->
+            content.addView(TextView(this).apply {
+                text = category
+                textSize = 17f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(0xFFB0B0B5.toInt())
+                setPadding(4, 18, 4, 8)
+            })
+            val grid = GridView(this).apply {
+                numColumns = 3
+                horizontalSpacing = (8 * density).toInt()
+                verticalSpacing = (8 * density).toInt()
+                stretchMode = GridView.STRETCH_COLUMN_WIDTH
+                adapter = object : BaseAdapter() {
+                    override fun getCount() = classes.size
+                    override fun getItem(position: Int) = classes[position]
+                    override fun getItemId(position: Int) = position.toLong()
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
+                        val name = classes[position]
+                        return LinearLayout(this@SignalSettingsActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER
+                            setPadding(4, 5, 4, 5)
+                            addView(TextView(this@SignalSettingsActivity).apply {
+                                text = classMark(name)
+                                textSize = 23f
+                                typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                                gravity = Gravity.CENTER
+                                isSingleLine = true
+                                setTextColor(Color.BLACK)
+                                setBackgroundColor(Color.WHITE)
+                                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                    setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                                }
+                            }, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
+                            addView(TextView(this@SignalSettingsActivity).apply {
+                                text = name
+                                textSize = 12f
+                                gravity = Gravity.CENTER
+                                setTextColor(white)
+                                setPadding(0, 4, 0, 0)
+                                maxLines = 2
+                            })
+                        }
+                    }
+                }
+                setOnItemClickListener { _, _, index, _ ->
+                    val selected = classes[index]
+                    prefs.edit()
+                        .putString("signalSelectedClassName", selected)
+                        .putString("signalCustomClassFlag", "class-$selected")
+                        .apply()
+                    dialog?.dismiss()
+                    build()
                 }
             }
-        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedClassName",classes[i]).putString("signalCustomClassFlag","class-${classes[i]}").apply(); (tag as? AlertDialog)?.dismiss(); build() } }
-        val dialog=AlertDialog.Builder(this).setTitle("Class Logos").setView(grid).setNegativeButton("閉じる",null).create()
-        grid.tag=dialog; dialog.show()
+            val rows = (classes.size + 2) / 3
+            content.addView(grid, LinearLayout.LayoutParams(-1, rows * (82 * density).toInt()))
+        }
+        val scroll = ScrollView(this).apply { addView(content) }
+        dialog = AlertDialog.Builder(this)
+            .setTitle("クラス旗を選択")
+            .setView(scroll)
+            .setNegativeButton("閉じる", null)
+            .create()
+        dialog?.show()
     }
     private fun classMark(name:String):String = when(name) {
         "A-Cat" -> "A̲"; "Optimist" -> "Ⓞ"; "Starling" -> "★"; "ILCA" -> "ILCA"
