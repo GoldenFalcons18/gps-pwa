@@ -115,6 +115,13 @@ struct SignalTimerPanel: View {
     }
     private func startOrPause(at date: Date) {
         let correctedNow = date.timeIntervalSince1970 + clockOffset
+        let retryEnd = restartWarningAt + Double(recallRestartEvents.last?.secondsAfterStart ?? 300)
+        if restartWarningAt > 0 && correctedNow >= retryEnd {
+            reset()
+            startAt = SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
+            hasStarted = true
+            return
+        }
         if startAt > correctedNow {
             reset()
             return
@@ -213,13 +220,15 @@ struct SignalTimerPanel: View {
             let now = context.date
             let spent = elapsed(at: now)
             let correctedNow = now.timeIntervalSince1970 + clockOffset
-            let retryPending = restartWarningAt > correctedNow
-            let useRetrySequence = restartWarningAt > 0 && !retryPending
-            let waitingForFirstSignal = !useRetrySequence && startAt > correctedNow
-            let sequenceEvents = useRetrySequence ? recallRestartEvents : events
+            let retryTimeline = restartWarningAt > 0
+            let retryPending = retryTimeline && restartWarningAt > correctedNow
+            let useRetrySequence = retryTimeline && !retryPending
+            let waitingForFirstSignal = !retryTimeline && startAt > correctedNow
+            let sequenceEvents = retryTimeline ? recallRestartEvents : events
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
             let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
-            let highlighted = (waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active
+            let retrySequenceComplete = useRetrySequence && sequenceElapsed >= Double(sequenceEvents.last?.secondsAfterStart ?? 300)
+            let highlighted = retryTimeline ? active : ((waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active)
             let current = sequenceEvents[max(0, active)]
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
@@ -279,7 +288,7 @@ struct SignalTimerPanel: View {
                             }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(eventTimeText(event, restart: useRetrySequence))
+                            Text(eventTimeText(event, restart: retryTimeline))
                                 .font(.system(size: compact ? 10 : 12, design: .monospaced))
                             Text(event.hornPulses.map { $0 == 0 ? "●" : "━" }.joined())
                                 .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
@@ -293,8 +302,8 @@ struct SignalTimerPanel: View {
                 HStack(spacing: compact ? 8 : 22) {
                     Button("中断…") { showInterruptOptions = true }
                         .disabled(!hasStarted && restartWarningAt == 0).foregroundStyle(.gray)
-                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始"))) { startOrPause(at: now) }
-                        .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
+                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (retrySequenceComplete ? "開始" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")))) { startOrPause(at: now) }
+                        .disabled(retryPending || (useRetrySequence && !retrySequenceComplete) || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     #if os(iOS)
                     Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
