@@ -33,8 +33,9 @@ struct SignalTimerPanel: View {
     @State private var showInterruptOptions = false
     @State private var showSchedule = false
     @State private var showClassPicker = false
-    @State private var scheduledDate = Date().addingTimeInterval(120)
+    @State private var scheduledDate = SignalSequence.defaultScheduledDate()
     @State private var scheduleMode = 0
+    @State private var scheduleValidationMessage = ""
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
@@ -296,7 +297,7 @@ struct SignalTimerPanel: View {
                         .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     #if os(iOS)
-                    Button { scheduledDate = Date().addingTimeInterval(120); showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
+                    Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
                     #else
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
                     #endif
@@ -376,8 +377,13 @@ struct SignalTimerPanel: View {
                             Text("シーケンス開始").tag(0)
                             Text("スタート信号").tag(1)
                         }.pickerStyle(.segmented)
-                        DatePicker("開始時刻", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
-                        Text("開始時刻は実時間に合わせて動作します。スタート信号を選ぶと、先行信号時間だけ前から始まります。").font(.footnote).foregroundStyle(.secondary)
+                            .onChange(of: scheduleMode) { _, _ in scheduleValidationMessage = "" }
+                        DatePicker(scheduleMode == 0 ? "シーケンス開始時刻" : "スタート時刻", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
+                            .onChange(of: scheduledDate) { _, _ in scheduleValidationMessage = "" }
+                        Text("時刻は分単位で予約し、秒は00秒に揃えます。スタート時刻を選ぶと、選択中のシーケンスに必要な先行時間を差し引きます。").font(.footnote).foregroundStyle(.secondary)
+                        if !scheduleValidationMessage.isEmpty {
+                            Text(scheduleValidationMessage).font(.footnote).foregroundStyle(.red)
+                        }
                     }
                     .navigationTitle("開始時刻を予約")
                     .toolbar {
@@ -426,8 +432,17 @@ struct SignalTimerPanel: View {
     }
 
     private func scheduleSignalStart() {
-        let lead: TimeInterval = scheduleMode == 0 ? 0 : (flagProfile == "video-13" ? 240 : (flagProfile == "custom-five" ? 0 : 300))
-        startAt = scheduledDate.timeIntervalSince1970 + clockOffset - lead
+        let scheduledStart = SignalSequence.scheduledSequenceStart(
+            selectedDate: scheduledDate,
+            clockOffset: clockOffset,
+            scheduleAtRaceStart: scheduleMode == 1,
+            profileID: flagProfile
+        )
+        guard scheduledStart.timeIntervalSince1970 > Date().timeIntervalSince1970 + clockOffset else {
+            scheduleValidationMessage = "選択した時刻は過ぎているか、シーケンス開始に必要な先行時間がありません。未来の時刻を選んでください。"
+            return
+        }
+        startAt = scheduledStart.timeIntervalSince1970
         pausedSeconds = 0
         hasStarted = true
         restartWarningAt = 0
