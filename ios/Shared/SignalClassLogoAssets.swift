@@ -1,6 +1,6 @@
-#if os(iOS)
+#if os(iOS) || os(watchOS)
 import Foundation
-import UIKit
+import ImageIO
 
 /// Bundled Wikimedia Commons sail emblems. Images are decoded once and remain available offline.
 enum SignalClassLogoAssets {
@@ -13,14 +13,15 @@ enum SignalClassLogoAssets {
         return encoded.compactMapValues { Data(base64Encoded: $0) }
     }()
 
-    private static let imageCache = NSCache<NSString, UIImage>()
+    private static let imageCache = NSCache<NSString, CGImageBox>()
 
-    static func image(for className: String) -> UIImage? {
+    static func image(for className: String) -> CGImage? {
         let key = assetKey(for: className)
         guard let data = imageData[key] else { return nil }
-        if let cached = imageCache.object(forKey: key as NSString) { return cached }
-        guard let image = UIImage(data: data) else { return nil }
-        imageCache.setObject(image, forKey: key as NSString)
+        if let cached = imageCache.object(forKey: key as NSString) { return cached.image }
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+        imageCache.setObject(CGImageBox(image), forKey: key as NSString)
         return image
     }
 
@@ -41,5 +42,10 @@ enum SignalClassLogoAssets {
         default: return value
         }
     }
+}
+
+private final class CGImageBox: NSObject {
+    let image: CGImage
+    init(_ image: CGImage) { self.image = image }
 }
 #endif
