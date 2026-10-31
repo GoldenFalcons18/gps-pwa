@@ -38,7 +38,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             "第一代表" -> "First Substitute"
             "Z" -> "Zulu"
             "L" -> "Lima"
-            else -> state.id
+            else -> state.id.removePrefix("intl:")
         }
         val bitmap = artworkCache.getOrPut(name) {
             val width = 300
@@ -130,6 +130,16 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             }
             when (state.style) {
                 "internationalFlag" -> drawInternationalArtwork(canvas, state, flagRect)
+                "textFlag" -> {
+                    fill(state.color)
+                    val label = state.id.removePrefix("text:")
+                    paint.color = if (android.graphics.Color.luminance(state.color) > 0.45f) black else white
+                    paint.textAlign = Paint.Align.CENTER
+                    paint.typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+                    paint.textSize = minOf(flagHeight * 0.58f, flagWidth * 1.45f / label.length.coerceAtLeast(1))
+                    canvas.drawText(label, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
+                    paint.textAlign = Paint.Align.LEFT
+                }
                 "blueSquare" -> {
                     fill(state.color)
                     paint.color = white
