@@ -584,11 +584,13 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width * 0.22, height: height)
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
-                    Color.white
+                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""))
+                case "internationalFlag":
+                    SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
                 default:
                     color(0)
                 }
-                if !flag.symbol.isEmpty {
+                if !flag.symbol.isEmpty && flag.style != "classLogo" && flag.style != "internationalFlag" {
                     Text(flag.symbol)
                         .font(.system(size: max(6, height * 0.58), weight: .black, design: .rounded))
                         .foregroundStyle(["black", "I", "Z", "L"].contains(flag.id) ? Color.white : Color.black)
