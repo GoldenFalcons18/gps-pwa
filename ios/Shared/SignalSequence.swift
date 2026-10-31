@@ -10,6 +10,7 @@ struct SignalSequence {
         let style: String
         let colors: [UInt32]
         let symbol: String
+        var artworkName: String? = nil
     }
 
     struct Event: Identifiable, Equatable {
@@ -32,14 +33,14 @@ struct SignalSequence {
         var baseDurationMinutes: Int = 20
     }
 
-    private static func f(_ id: String, _ name: String, _ style: String, _ colors: [UInt32], _ symbol: String = "") -> Flag {
-        Flag(id: id, name: name, style: style, colors: colors, symbol: symbol)
+    private static func f(_ id: String, _ name: String, _ style: String, _ colors: [UInt32], _ symbol: String = "", _ artworkName: String? = nil) -> Flag {
+        Flag(id: id, name: name, style: style, colors: colors, symbol: symbol, artworkName: artworkName)
     }
 
     /// Sailing signal flags plus the flag types visible in both reference videos.
     /// The drawing style is deliberately part of the flag so same-color flags remain distinguishable.
     static let flagCatalog: [Flag] = [
-        f("orange", "橙旗", "solid", [0xF58A00], "O"),
+        f("orange", "橙旗", "solid", [0xF58A00]),
         f("green", "緑旗", "solid", [0x00B83F], "G"),
         f("blue-square", "青旗（白四角）", "blueSquare", [0x1769FF, 0xFFFFFF], "4"),
         f("class-4", "クラス旗 4", "classLogo", [0xFFFFFF, 0x1769FF], "4"),
@@ -47,15 +48,15 @@ struct SignalSequence {
         f("checker", "赤白チェック旗", "checker", [0xE32636, 0xFFFFFF], ""),
         f("P", "P旗", "pFlag", [0x1769FF, 0xFFFFFF], "P"),
         f("I", "I旗", "iFlag", [0xF5D328, 0x111111], "I"),
-        f("Z", "Z旗", "zFlag", [0xF5D328, 0x111111], "Z"),
+        f("Z", "Z旗", "internationalFlag", [0xF5D328, 0x111111], "", "Zulu"),
         f("U", "U旗", "uFlag", [0xD71920, 0xFFFFFF], "U"),
         f("black", "黒色旗", "black", [0x111111], ""),
-        f("AP", "回答旗（AP）", "apFlag", [0xD71920, 0xFFFFFF], "AP"),
+        f("AP", "回答旗（AP）", "internationalFlag", [0xD71920, 0xFFFFFF], "", "Answering Pennant"),
         f("N", "N旗", "nFlag", [0x1769FF, 0xFFFFFF], "N"),
         f("H", "H旗", "hFlag", [0xD71920, 0xFFFFFF], "H"),
-        f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
+        f("L", "L旗", "internationalFlag", [0xF5D328, 0x111111], "", "Lima"),
         f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
-        f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
+        f("first-sub", "第一代表旗", "internationalFlag", [0x1769FF, 0xD71920], "", "First Substitute"),
         f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF]),
         f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
         f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
