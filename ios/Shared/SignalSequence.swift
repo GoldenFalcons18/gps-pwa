@@ -71,6 +71,14 @@ struct SignalSequence {
 
     static func flag(_ id: String) -> Flag {
         if let known = flagCatalog.first(where: { $0.id == id }) { return known }
+        if id.hasPrefix("intl:") {
+            let artwork = String(id.dropFirst("intl:".count))
+            return Flag(id: id, name: artwork, style: "internationalFlag", colors: [0xFFFFFF], symbol: "", artworkName: artwork)
+        }
+        if id.hasPrefix("text:") {
+            let label = String(id.dropFirst("text:".count))
+            return Flag(id: id, name: label, style: "textFlag", colors: [0xFFFFFF], symbol: label)
+        }
         if id.hasPrefix("class-") {
             let name = String(id.dropFirst("class-".count))
             return Flag(id: id, name: name, style: "classLogo", colors: [0xFFFFFF, 0x1769FF], symbol: name)
