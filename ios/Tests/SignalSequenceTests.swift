@@ -43,14 +43,14 @@ final class SignalSequenceTests: XCTestCase {
         defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         let orangeOffStandard = SignalSequence.events(profileID: "standard-start")
         XCTAssertEqual(orangeOffStandard.map(\.secondsAfterStart), [0, 60, 240, 300])
-        XCTAssertEqual(orangeOffStandard.map(\.flag), ["class-4", "P", "P", "class-4"])
+        XCTAssertEqual(orangeOffStandard.map(\.flag), ["クラス旗 4", "P旗", "P旗", "クラス旗 4"])
 
         defaults.set(true, forKey: "signalOrangeEnabled")
         defaults.set(7, forKey: "signalOrangeDisplayedMinutes")
         defaults.set(3, forKey: "signalOrangeRemovedAfterMinutes")
         XCTAssertEqual(
             SignalSequence.events(profileID: "standard-start").map(\.secondsAfterStart),
-            [0, 420, 480, 660, 720, 1140],
+            [0, 420, 480, 660, 720, 900],
             "Changing orange display time shifts the race signals; removal remains relative to the last shifted signal"
         )
         defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
