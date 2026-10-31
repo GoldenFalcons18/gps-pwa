@@ -5,19 +5,72 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
+    fun raceStartOffsetTracksOrangePhaseAndDisabledOrange() {
+        assertEquals(600, SignalSequence.startReferenceOffset("standard-start", true, 5))
+        assertEquals(540, SignalSequence.startReferenceOffset("standard-start", true, 4))
+        assertEquals(300, SignalSequence.startReferenceOffset("standard-start", false, 5))
+        assertEquals(0, SignalSequence.startReferenceOffset("video-20", true, 5))
+    }
+
+    @Test
     fun videoAAndVideoBMatchTheReferenceSignalTimes() {
-        val videoA = SignalSequence.events(20, 1)
+        val videoA = SignalSequence.events(20, 1, orangeRemovedAfterMinutes = 10, orangeDisplayedMinutes = 5)
         assertEquals(listOf(0, 300, 360, 540, 600, 1200), videoA.map { it.secondsAfterStart })
         assertEquals(listOf("橙", "緑", "青", "青", "緑", "橙"), videoA.map { it.flag })
         assertEquals(listOf(true, true, true, false, false, false), videoA.map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
             videoA.map { it.hornPulses })
 
-        val videoB = SignalSequence.events(13, 2)
+        val videoB = SignalSequence.events(13, 2, orangeRemovedAfterMinutes = 4, orangeDisplayedMinutes = 4)
         assertEquals(listOf(0, 240, 300, 480, 540, 780), videoB.map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), videoB.map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
             videoB.map { it.hornPulses })
+        assertEquals(listOf("級", "斜め"), videoB[1].flagMarks.map { it.id })
+        assertEquals(listOf("級", "斜め"), videoB[4].flagMarks.map { it.id })
+        assertEquals(setOf("橙", "級", "斜め", "赤白チェック"),
+            SignalSequence.flagsAtEvents(videoB, 300.0).filter { it.raised }.map { it.id }.toSet())
+        assertEquals(4, SignalSequence.initialEventIndex(1))
+        assertEquals(4, SignalSequence.initialEventIndex(2))
+    }
+
+    @Test
+    fun orangeDisableSettingAppliesToEveryProfileAndRecallKeepsOrangeDown() {
+        for (profile in SignalSequence.profiles.indices) {
+            assertEquals(false, SignalSequence.events(20, profile, orangeEnabled = false).any { it.flag == "橙" })
+        }
+        val orangeOff = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = false,
+            orangeDisplayedMinutes = 5,
+            orangeRemovedAfterMinutes = 4
+        )
+        assertEquals(listOf(0, 60, 240, 300), orangeOff.map { it.secondsAfterStart })
+        assertEquals(listOf("級", "P", "P", "級"), orangeOff.map { it.flag })
+
+        val longerOrange = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = true,
+            orangeDisplayedMinutes = 7,
+            orangeRemovedAfterMinutes = 3
+        )
+        assertEquals(listOf(0, 420, 480, 660, 720, 900), longerOrange.map { it.secondsAfterStart })
+
+        val restart = SignalSequence.restartEvents()
+        assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("第一代表"), SignalSequence.generalRecallRaise.flagMarks.map { it.id })
+        assertEquals(listOf("AP"), SignalSequence.postponementRaise.flagMarks.map { it.id })
+    }
+
+    @Test
+    fun selectedClassFlagCanBeLogoTextOrInternationalFlag() {
+        assertEquals("class-Laser", SignalSequence.events(14, 0, className = "Laser")[1].flag)
+        assertEquals("text:Class 1", SignalSequence.events(14, 0, className = "text:Class 1")[1].flag)
+        assertEquals("intl:Alpha", SignalSequence.events(14, 0, className = "intl:Alpha")[1].flag)
+        assertEquals("internationalFlag", SignalFlagMark("intl:Alpha", 0xFFFFFFFF.toInt()).style)
+        assertEquals("textFlag", SignalFlagMark("text:Class 1", 0xFFFFFFFF.toInt()).style)
     }
 
     @Test
@@ -35,6 +88,17 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun selectedStartRuleControlsTheRaisedAndLoweredPreparationFlag() {
+        val expected = mapOf("P" to "P", "I" to "I", "U" to "U", "Z" to "Z", "black" to "black")
+        for ((rule, flag) in expected) {
+            val events = SignalSequence.events(14, 0, prepFlag = rule)
+            assertEquals(flag, events[2].flag)
+            assertEquals(flag, events[3].flag)
+            assertEquals(events[2].color, events[3].color)
+        }
+    }
+
+    @Test
     fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
@@ -47,13 +111,15 @@ class SignalSequenceTest {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
         assertEquals("I", SignalSequence.events(14, 0, "I")[2].flag)
         assertEquals(0xFFF5D328.toInt(), SignalSequence.events(14, 0, "I")[2].color)
-        assertEquals(listOf(0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
-        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
+        assertEquals(listOf(0, 60, 240, 300), SignalSequence.restartEvents().map { it.secondsAfterStart })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0)), SignalSequence.restartEvents().map { it.hornPulses })
         assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
         assertEquals(listOf(0, 0), SignalSequence.generalRecallRaise.hornPulses)
         assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
         assertEquals(listOf(0, 0), SignalSequence.postponementRaise.hornPulses)
         assertEquals(listOf(0), SignalSequence.postponementLower.hornPulses)
+        assertEquals(listOf(0, 0, 0), SignalSequence.abandonRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.abandonLower.hornPulses)
     }
 
     @Test
@@ -78,8 +144,8 @@ class SignalSequenceTest {
     }
 
     @Test
-    fun sequenceScalingPreservesElapsedOrder() {
-        assertEquals(listOf(0, 150, 180, 270, 300, 600), SignalSequence.events(10, 1).map { it.secondsAfterStart })
+    fun referenceVideoTimingDoesNotScaleWithDuration() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(10, 1).map { it.secondsAfterStart })
     }
 
     @Test
@@ -89,4 +155,10 @@ class SignalSequenceTest {
         assertEquals(listOf("橙"), SignalSequence.flagsAt(600.0, 14, 0).filter { it.raised }.map { it.id })
         assertEquals(emptyList<String>(), SignalSequence.flagsAt(1200.0, 14, 0).filter { it.raised }.map { it.id })
     }
+
+    @Test
+    fun restartWarningFollowsFlagLoweringByExactlyOneMinute() {
+        assertEquals(185_000L, SignalTiming.restartWarningAt(125_000L))
+    }
+
 }

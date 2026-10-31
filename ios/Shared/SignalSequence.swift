@@ -10,6 +10,7 @@ struct SignalSequence {
         let style: String
         let colors: [UInt32]
         let symbol: String
+        var artworkName: String? = nil
     }
 
     struct Event: Identifiable, Equatable {
@@ -32,14 +33,14 @@ struct SignalSequence {
         var baseDurationMinutes: Int = 20
     }
 
-    private static func f(_ id: String, _ name: String, _ style: String, _ colors: [UInt32], _ symbol: String = "") -> Flag {
-        Flag(id: id, name: name, style: style, colors: colors, symbol: symbol)
+    private static func f(_ id: String, _ name: String, _ style: String, _ colors: [UInt32], _ symbol: String = "", _ artworkName: String? = nil) -> Flag {
+        Flag(id: id, name: name, style: style, colors: colors, symbol: symbol, artworkName: artworkName)
     }
 
     /// Sailing signal flags plus the flag types visible in both reference videos.
     /// The drawing style is deliberately part of the flag so same-color flags remain distinguishable.
     static let flagCatalog: [Flag] = [
-        f("orange", "橙旗", "solid", [0xF58A00], "O"),
+        f("orange", "橙旗", "solid", [0xF58A00]),
         f("green", "緑旗", "solid", [0x00B83F], "G"),
         f("blue-square", "青旗（白四角）", "blueSquare", [0x1769FF, 0xFFFFFF], "4"),
         f("class-4", "クラス旗 4", "classLogo", [0xFFFFFF, 0x1769FF], "4"),
@@ -47,15 +48,15 @@ struct SignalSequence {
         f("checker", "赤白チェック旗", "checker", [0xE32636, 0xFFFFFF], ""),
         f("P", "P旗", "pFlag", [0x1769FF, 0xFFFFFF], "P"),
         f("I", "I旗", "iFlag", [0xF5D328, 0x111111], "I"),
-        f("Z", "Z旗", "zFlag", [0xF5D328, 0x111111], "Z"),
+        f("Z", "Z旗", "internationalFlag", [0xF5D328, 0x111111], "", "Zulu"),
         f("U", "U旗", "uFlag", [0xD71920, 0xFFFFFF], "U"),
         f("black", "黒色旗", "black", [0x111111], ""),
-        f("AP", "回答旗（AP）", "apFlag", [0xD71920, 0xFFFFFF], "AP"),
+        f("AP", "回答旗（AP）", "internationalFlag", [0xD71920, 0xFFFFFF], "", "Answering Pennant"),
         f("N", "N旗", "nFlag", [0x1769FF, 0xFFFFFF], "N"),
         f("H", "H旗", "hFlag", [0xD71920, 0xFFFFFF], "H"),
-        f("L", "L旗", "lFlag", [0xF5D328, 0x111111], "L"),
+        f("L", "L旗", "internationalFlag", [0xF5D328, 0x111111], "", "Lima"),
         f("O", "O旗", "diagonal", [0xF5D328, 0xD71920], "O"),
-        f("first-sub", "第一代表旗", "firstSub", [0x1769FF, 0xD71920], "1"),
+        f("first-sub", "第一代表旗", "internationalFlag", [0x1769FF, 0xD71920], "", "First Substitute"),
         f("X", "X旗（個別リコール）", "xFlag", [0xFFFFFF, 0x1769FF]),
         f("class-1", "クラス旗 1", "classLogo", [0xFFFFFF, 0xD71920], "1"),
         f("class-2", "クラス旗 2", "classLogo", [0xFFFFFF, 0x1769FF], "2"),
@@ -70,6 +71,14 @@ struct SignalSequence {
 
     static func flag(_ id: String) -> Flag {
         if let known = flagCatalog.first(where: { $0.id == id }) { return known }
+        if id.hasPrefix("intl:") {
+            let artwork = String(id.dropFirst("intl:".count))
+            return Flag(id: id, name: artwork, style: "internationalFlag", colors: [0xFFFFFF], symbol: "", artworkName: artwork)
+        }
+        if id.hasPrefix("text:") {
+            let label = String(id.dropFirst("text:".count))
+            return Flag(id: id, name: label, style: "textFlag", colors: [0xFFFFFF], symbol: label)
+        }
         if id.hasPrefix("class-") {
             let name = String(id.dropFirst("class-".count))
             return Flag(id: id, name: name, style: "classLogo", colors: [0xFFFFFF, 0x1769FF], symbol: name)
@@ -84,6 +93,9 @@ struct SignalSequence {
         return ceil(earliest / minute) * minute
     }
 
+    /// Restart warning is exactly one minute after AP, N, or first-substitute is lowered.
+    static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
+
     static func countdownSeconds(_ remaining: Double) -> Int {
         max(0, Int(ceil(remaining)))
     }
@@ -93,6 +105,8 @@ struct SignalSequence {
     }
 
     static let individualRecallRaise = e(-1, 0, "X旗を掲揚（個別リコール）", [flag("X")], true, [0])
+    static let abandonRaise = e(-6, 0, "N旗を掲揚（レース中止）", [flag("N")], true, [0, 0, 0])
+    static let abandonLower = e(-7, 0, "N旗を降下", [flag("N")], false, [0])
     static let generalRecallRaise = e(-2, 0, "第一代表旗を掲揚（ゼネラルリコール）", [flag("first-sub")], true, [0, 0])
     static let generalRecallLower = e(-3, 0, "第一代表旗を降下", [flag("first-sub")], false, [0])
     static let postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", [flag("AP")], true, [0, 0])
@@ -125,8 +139,7 @@ struct SignalSequence {
             e(0, 0, "\(classFlag.name)を掲揚（再予告信号）", [classFlag], true, [0]),
             e(1, 60, "\(prepFlag.name)を掲揚（準備信号）", [prepFlag], true, [0]),
             e(2, 240, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
-            e(3, 300, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0]),
-            e(4, 540, "橙旗を降下（スタート約4分後）", [orange], false)
+            e(3, 300, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0])
         ]
     }
 
@@ -134,28 +147,53 @@ struct SignalSequence {
         UserDefaults.standard.object(forKey: "signalOrangeEnabled") as? Bool ?? true
     }
 
-    private static var orangeRemovalMinutes: Int {
-        let stored = UserDefaults.standard.object(forKey: "signalOrangeRemovedAfterMinutes") as? Int
-        return min(30, max(0, stored ?? 4))
+    private static func orangeDisplayedMinutes(for profileID: String) -> Int {
+        let defaultValue = profileID == "video-13" ? 4 : 5
+        let stored = UserDefaults.standard.object(forKey: "signalOrangeDisplayedMinutes") as? Int
+        return min(30, max(0, stored ?? defaultValue))
     }
 
-    private static func applyOrangeSettings(_ source: [Event], orangeDownAt: Int) -> [Event] {
-        source.compactMap { event in
-            guard event.flags.contains(where: { $0.id == "orange" }) else { return event }
-            guard orangeFlagEnabled else { return nil }
-            if !event.raised {
-                return Event(id: event.id, secondsAfterStart: orangeDownAt, title: event.title,
+    private static func orangeRemovalMinutes(for profileID: String) -> Int {
+        let defaultValue = profileID == "video-20" ? 10 : 4
+        let stored = UserDefaults.standard.object(forKey: "signalOrangeRemovedAfterMinutes") as? Int
+        return min(30, max(0, stored ?? defaultValue))
+    }
+
+    /// Race-start T+00 reference, relative to the synchronized first action.
+    static func startReferenceOffset(profileID: String) -> Int {
+        guard profileID == "standard-start" else { return 0 }
+        let warningAfterOrange = orangeFlagEnabled ? orangeDisplayedMinutes(for: profileID) : 0
+        return (warningAfterOrange + 5) * 60
+    }
+
+    private static func applyOrangeSettings(_ source: [Event], profileID: String) -> [Event] {
+        let nonOrangeEvents = source.filter { !$0.flags.contains(where: { $0.id == "orange" }) }
+        guard let firstSignal = nonOrangeEvents.first(where: \.raised)?.secondsAfterStart else {
+            return source.filter { !$0.flags.contains(where: { $0.id == "orange" }) }
+        }
+        // Sequence zero is the orange raise only when that flag is enabled.
+        // Otherwise the first race signal must be the first action at zero.
+        let shift = orangeFlagEnabled
+            ? orangeDisplayedMinutes(for: profileID) * 60 - firstSignal
+            : -firstSignal
+        let lastSignal = nonOrangeEvents.last?.secondsAfterStart ?? firstSignal
+        let orangeDownAt = lastSignal + shift + orangeRemovalMinutes(for: profileID) * 60
+
+        return source.compactMap { event in
+            let isOrange = event.flags.contains(where: { $0.id == "orange" })
+            if isOrange && !orangeFlagEnabled { return nil }
+            if isOrange && !event.raised {
+                return Event(id: event.id, secondsAfterStart: orangeDownAt, title: "橙旗を降下（最後の信号から設定時間後）",
                              flags: event.flags, raised: false, hornPulses: event.hornPulses)
             }
-            return event
-        }
+            if isOrange { return event }
+            return Event(id: event.id, secondsAfterStart: max(0, event.secondsAfterStart + shift), title: event.title,
+                         flags: event.flags, raised: event.raised, hornPulses: event.hornPulses)
+        }.sorted { $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart }
     }
 
     static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
-        applyOrangeSettings(
-            recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID)),
-            orangeDownAt: 300 + orangeRemovalMinutes * 60
-        )
+        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
     }
 
     /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
@@ -170,14 +208,16 @@ struct SignalSequence {
 
     /// Exact 0/4/5/8/9/13-minute sequence visible in ScreenRecording_10-25-2026.
     /// The 4- and 9-minute calls handle two flags together, as shown in the recording.
-    private static let video13: [Event] = [
-        e(0, 0, "橙旗を掲揚", [orange], true, [0]),
-        e(1, 240, "クラス旗・斜め旗を掲揚", [classFour, diagonal], true, [0]),
-        e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
-        e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
-        e(4, 540, "クラス旗・斜め旗を降下", [classFour, diagonal], false, [0]),
-        e(5, 780, "橙旗を降下", [orange], false)
-    ]
+    private static func video13(classFlag: Flag) -> [Event] {
+        [
+            e(0, 0, "橙旗を掲揚", [orange], true, [0]),
+            e(1, 240, "クラス旗・斜め旗を掲揚", [classFlag, diagonal], true, [0]),
+            e(2, 300, "赤白チェック旗を掲揚", [checker], true, [0]),
+            e(3, 480, "赤白チェック旗を降下", [checker], false, [1]),
+            e(4, 540, "クラス旗・斜め旗を降下", [classFlag, diagonal], false, [0]),
+            e(5, 780, "橙旗を降下", [orange], false)
+        ]
+    }
 
     private static func customFive(classFlag: Flag, prepFlag: Flag) -> [Event] {
         [
@@ -189,23 +229,20 @@ struct SignalSequence {
     }
 
     static let profiles: [Profile] = [
-        Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から14分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
+        Profile(id: "standard-start", name: "帆走スタート（Rule 26・5分＋橙旗）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
-        Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13, baseDurationMinutes: 13),
+        Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13(classFlag: flag("class-4")), baseDurationMinutes: 13),
         Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
         Profile(id: "class-p", name: "カスタム（クラス旗＋P旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
         Profile(id: "class-i", name: "カスタム（クラス旗＋I旗）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("I")), baseDurationMinutes: 5)
     ]
 
-    static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Event] {
+    static func events(durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
         switch profileID {
         case "standard-start":
-            return applyOrangeSettings(
-                standardStart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID)),
-                orangeDownAt: 600 + orangeRemovalMinutes * 60
-            )
+            return applyOrangeSettings(standardStart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID)), profileID: profileID)
         case "video-13":
-            return video13
+            return applyOrangeSettings(video13(classFlag: flag(classFlagID)), profileID: profileID)
         case "custom-five":
             return customFive(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
         case "class-p":
@@ -213,7 +250,7 @@ struct SignalSequence {
         case "class-i":
             return customFive(classFlag: flag("class-1"), prepFlag: flag("I"))
         default:
-            return video20
+            return applyOrangeSettings(video20, profileID: profileID)
         }
     }
 
@@ -225,7 +262,7 @@ struct SignalSequence {
         return list.firstIndex { $0.secondsAfterStart == highlightedSecond } ?? (list.count - 1)
     }
 
-    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> Int {
+    static func activeEventIndex(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID)
         guard !list.isEmpty else { return 0 }
         return list.lastIndex { Double($0.secondsAfterStart) <= elapsed } ?? 0
@@ -243,7 +280,7 @@ struct SignalSequence {
         return raised.values.sorted { $0.id < $1.id }
     }
 
-    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-1", prepFlagID: String = "P") -> [Flag] {
+    static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> [Flag] {
         raisedFlags(events: events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID), elapsed: elapsed)
     }
 

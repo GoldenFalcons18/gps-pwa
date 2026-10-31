@@ -1,1 +1,1 @@
-1.8.10 versionCode 38 synchronize signal countdown to real time
+1.8.22 versionCode 50 add verified sailing class emblems

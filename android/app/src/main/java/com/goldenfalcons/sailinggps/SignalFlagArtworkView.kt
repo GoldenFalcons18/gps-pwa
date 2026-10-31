@@ -15,6 +15,69 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private val yellow = 0xffffdf00.toInt()
     private val black = 0xff111111.toInt()
     private val white = 0xffffffff.toInt()
+    private var signalMark: SignalFlagMark? = null
+
+    fun show(mark: SignalFlagMark, raised: Boolean) {
+        flagName = when {
+            mark.id.startsWith("intl:") -> mark.id.removePrefix("intl:")
+            mark.id == "AP" -> "Answering Pennant"
+            mark.id == "第一代表" -> "First Substitute"
+            mark.id == "Z" -> "Zulu"
+            mark.id == "L" -> "Lima"
+            else -> mark.id
+        }
+        signalMark = if (mark.style == "internationalFlag") null else mark
+        invalidate()
+    }
+
+    private fun drawSignalMark(canvas: Canvas, mark: SignalFlagMark) {
+        val base = mark.color
+        when (mark.style) {
+            "textFlag" -> {
+                rect(canvas,0f,0f,1f,1f,base)
+                p.color=if(android.graphics.Color.luminance(base)>0.45f) black else white
+                p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+                p.typeface=android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.BOLD)
+                val label=mark.id.removePrefix("text:").removePrefix("intl:")
+                p.textSize=minOf(height*0.62f,width*1.45f/label.length.coerceAtLeast(1))
+                canvas.drawText(label,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
+                p.textAlign=Paint.Align.LEFT
+            }
+            "classLogo" -> {
+                rect(canvas,0f,0f,1f,1f,white)
+                val className = mark.id.removePrefix("class-").ifEmpty { "4" }
+                val logo = SignalClassLogoAssets.bitmap(context, className)
+                if (logo != null) {
+                    val insetX = width * 0.06f
+                    val insetY = height * 0.06f
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+                    canvas.drawBitmap(logo, null, RectF(insetX, insetY, width - insetX, height - insetY), paint)
+                } else {
+                    p.color=black; p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+                    p.typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
+                    p.textSize=minOf(height*0.62f,width*1.35f/className.length.coerceAtLeast(2))
+                    canvas.drawText(className,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
+                    p.textAlign=Paint.Align.LEFT
+                }
+            }
+            "blueSquare" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.34f,0.3f,0.32f,0.4f,white) }
+            "circle" -> { rect(canvas,0f,0f,1f,1f,base); p.color=black; canvas.drawCircle(width*0.5f,height*0.5f,minOf(width,height)*0.24f,p) }
+            "diagonal" -> { rect(canvas,0f,0f,1f,1f,base); poly(canvas,mark.secondaryColor,0f,0f,1f,0f,0f,1f) }
+            "checker" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.5f,0f,0.5f,0.5f,mark.secondaryColor); rect(canvas,0f,0.5f,0.5f,0.5f,mark.secondaryColor) }
+            "apFlag" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.5f,0f,0.5f,1f,white) }
+            "hFlag" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,red) }
+            "lFlag" -> { rect(canvas,0f,0f,0.5f,0.5f,yellow); rect(canvas,0.5f,0f,0.5f,0.5f,black); rect(canvas,0f,0.5f,0.5f,0.5f,black); rect(canvas,0.5f,0.5f,0.5f,0.5f,yellow) }
+            "zFlag" -> { poly(canvas,black,0f,0f,1f,0f,0.5f,0.5f); poly(canvas,yellow,1f,0f,1f,1f,0.5f,0.5f); poly(canvas,red,1f,1f,0f,1f,0.5f,0.5f); poly(canvas,blue,0f,1f,0f,0f,0.5f,0.5f) }
+            "firstSub" -> { rect(canvas,0f,0f,1f,1f,blue); poly(canvas,red,0f,0f,1f,1f,1f,0f) }
+            "xFlag" -> { rect(canvas,0f,0f,1f,1f,white); diagonalCross(canvas,blue,0.22f) }
+            else -> {
+                rect(canvas,0f,0f,1f,1f,base)
+                if(mark.whiteSquare) rect(canvas,0.34f,0.3f,0.32f,0.4f,white)
+            }
+        }
+        p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*0.018f).coerceAtLeast(1f)
+        canvas.drawRect(RectF(0f,0f,width.toFloat(),height.toFloat()),p);p.style=Paint.Style.FILL
+    }
 
     private fun rect(c: Canvas, x: Float, y: Float, w: Float, h: Float, color: Int) {
         p.color = color; p.style = Paint.Style.FILL
@@ -53,20 +116,37 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         }
         c.restoreToCount(save)
     }
-    private fun pennant(c: Canvas, colors: List<Int>) {
+    private fun pennant(c: Canvas, colors: List<Int>, vertical: Boolean = true, mark: String = "") {
         val clip=Path().apply { moveTo(0f,0f); lineTo(width.toFloat(),height*0.5f); lineTo(0f,height.toFloat()); close() }
-        val save=c.save(); c.clipPath(clip); stripes(c,colors,true); c.restoreToCount(save)
+        val save=c.save()
+        c.clipPath(clip)
+        stripes(c,colors,vertical)
+        when(mark) {
+            "redCircle" -> { p.color=red; c.drawCircle(width*0.43f,height*0.5f,minOf(width,height)*0.17f,p) }
+            "whiteCircle" -> { p.color=white; c.drawCircle(width*0.43f,height*0.5f,minOf(width,height)*0.17f,p) }
+            "whiteCross" -> cross(c,white,0.18f)
+            "redCross" -> cross(c,red,0.18f)
+            "yellowTriangle" -> poly(c,yellow,0.12f,0.20f,0.67f,0.50f,0.12f,0.80f)
+            "whiteTriangle" -> poly(c,white,0.12f,0.20f,0.67f,0.50f,0.12f,0.80f)
+            "blackBand" -> rect(c,0f,0.35f,0.70f,0.30f,black)
+        }
+        c.restoreToCount(save)
     }
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val save=canvas.save()
         val flagW=width.toFloat(); val flagH=height.toFloat()
         canvas.clipRect(0f,0f,flagW,flagH)
+        signalMark?.let {
+            drawSignalMark(canvas,it)
+            canvas.restoreToCount(save)
+            return
+        }
         when(flagName.lowercase()) {
             "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue); poly(canvas,white,0.72f,0.34f,1f,0.5f,0.72f,0.66f) }
             "bravo" -> { rect(canvas,0f,0f,1f,1f,red); poly(canvas,white,0.68f,0.34f,1f,0.5f,0.68f,0.66f) }
             "charlie" -> stripes(canvas,listOf(blue,white,red,white,blue),false)
-            "delta" -> { rect(canvas,0f,0f,1f,1f,blue);rect(canvas,0f,0.12f,1f,0.24f,yellow);rect(canvas,0f,0.64f,1f,0.24f,yellow) }
+            "delta" -> stripes(canvas,listOf(yellow,blue,yellow),false)
             "echo" -> stripes(canvas,listOf(blue,red),false)
             "foxtrot" -> { rect(canvas,0f,0f,1f,1f,white); poly(canvas,red,0.5f,0.12f,0.88f,0.5f,0.5f,0.88f,0.12f,0.5f) }
             "golf" -> stripes(canvas,listOf(yellow,blue,yellow,blue,yellow),true)
@@ -100,14 +180,24 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             "nato 8" -> {rect(canvas,0f,0f,1f,1f,yellow);rect(canvas,0.4f,0f,0.2f,1f,blue)}
             "nato 9" -> rect(canvas,0f,0f,1f,1f,blue)
             "answering pennant" -> pennant(canvas,listOf(red,white,red,white,red))
-            "first substitute" -> pennant(canvas,listOf(blue,yellow,blue))
-            "second substitute" -> pennant(canvas,listOf(blue,white,blue))
-            "third substitute" -> pennant(canvas,listOf(black,white,black))
-            "fourth substitute" -> pennant(canvas,listOf(red,yellow,red))
+            "first substitute" -> pennant(canvas,listOf(blue),mark="yellowTriangle")
+            "second substitute" -> pennant(canvas,listOf(blue),mark="whiteTriangle")
+            "third substitute" -> pennant(canvas,listOf(white),mark="blackBand")
+            "fourth substitute" -> pennant(canvas,listOf(red,yellow,red),vertical=false)
             else -> {
                 val n=Regex("\\d+").find(flagName)?.value?.toIntOrNull() ?: 0
-                val palette=listOf(listOf(yellow,red,yellow),listOf(white,red),listOf(blue,white),listOf(red,white,blue),listOf(red,white),listOf(yellow,red),listOf(black,white),listOf(yellow,red),listOf(white,red),listOf(yellow,red))[n.coerceIn(0,9)]
-                pennant(canvas,palette)
+                when(n) {
+                    0 -> pennant(canvas,listOf(yellow,red,yellow))
+                    1 -> pennant(canvas,listOf(white),mark="redCircle")
+                    2 -> pennant(canvas,listOf(blue),mark="whiteCircle")
+                    3 -> pennant(canvas,listOf(red,white,blue),vertical=false)
+                    4 -> pennant(canvas,listOf(red),mark="whiteCross")
+                    5 -> pennant(canvas,listOf(yellow,blue),vertical=false)
+                    6 -> pennant(canvas,listOf(black,white),vertical=false)
+                    7 -> pennant(canvas,listOf(yellow,red),vertical=false)
+                    8 -> pennant(canvas,listOf(white),mark="redCross")
+                    else -> pennant(canvas,listOf(white,red,black,yellow))
+                }
             }
         }
         p.color=0xff777777.toInt();p.style=Paint.Style.STROKE;p.strokeWidth=(width*0.018f).coerceAtLeast(1f)

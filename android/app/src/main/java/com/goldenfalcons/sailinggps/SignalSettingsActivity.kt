@@ -51,9 +51,9 @@ class SignalSettingsActivity : AppCompatActivity() {
 
         section("Start 1")
         row("Start Sequence", selectedProfile()) { choose("Start Sequence", SignalSequence.profiles.map { it.name }, "signalProfileName") }
-        row("Start Rule", prefs.getString("signalStartRule", "P") ?: "P") { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
+        val activePrepRule=when(prefs.getString("signalPrepFlag","P") ?: "P") { "black" -> "Black"; else -> prefs.getString("signalPrepFlag","P") ?: "P" }
+        row("Start Rule", activePrepRule) { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
         row("Classes", prefs.getString("signalSelectedClassName", "クラス旗") ?: "クラス旗") { classGallery() }
-        row("準備信号", prefs.getString("signalPrepFlag", "P") ?: "P") { choosePrep() }
         switch("Custom Race Delay", "signalRaceDelayEnabled", false)
         row("Time between races", prefs.getInt("signalRaceDelayMinutes", 0).toString()+"分") { number("レース間隔", "signalRaceDelayMinutes", 0, 0, 60) }
 
@@ -63,11 +63,14 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Finish Window", prefs.getInt("signalFinishWindowMinutes",20).toString()+"分") { number("Finish Window","signalFinishWindowMinutes",20,1,120) }
         section("Rule 42 Override"); switch("Enable","signalRule42Override",false)
 
+        val orangeProfile=SignalSequence.profiles.getOrElse(prefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}
+        val orangeDisplayDefault=if(orangeProfile.id=="video-13") 4 else 5
+        val orangeRemovalDefault=if(orangeProfile.id=="video-20") 10 else 4
         section("Orange Flag")
         switch("Enable","signalOrangeEnabled",true)
-        row("Displayed For",prefs.getInt("signalOrangeDisplayedMinutes",4).toString()+"分") { number("Displayed For","signalOrangeDisplayedMinutes",4,1,30) }
-        row("Removed After Start",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After Start","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="シーケンス開始前は降下状態。開始ボタンから実時間の次の分00秒までに確保する最短間隔を設定します。各信号はシーケンスのn分00秒で動作します。AP・N旗は時刻を固定せず手動で掲揚します。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        row("橙旗掲揚から予告信号まで",prefs.getInt("signalOrangeDisplayedMinutes",orangeDisplayDefault).toString()+"分") { number("橙旗掲揚から予告信号まで（分）","signalOrangeDisplayedMinutes",orangeDisplayDefault,0,30) }
+        row("スタート後、橙旗を降下するまで",prefs.getInt("signalOrangeRemovedAfterMinutes",orangeRemovalDefault).toString()+"分") { number("スタート後、橙旗を降下するまで（分）","signalOrangeRemovedAfterMinutes",orangeRemovalDefault,0,30) }
+        list.addView(TextView(this).apply { text="待機中は橙旗を降下します。有効にすると、同期したシーケンス開始時に自動掲揚します。予告信号とスタートの時刻は橙旗の掲揚時間に応じて表示します。橙旗は設定した時間後に降下し、掲揚・降下は手動でも操作できます。動画Aの既定はスタート後10分、ほかは4分です。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
@@ -102,9 +105,18 @@ class SignalSettingsActivity : AppCompatActivity() {
     private fun choose(title:String,items:List<String>,key:String) {
         AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
             prefs.edit().putString(key,items[i]).apply()
-            if(key=="signalProfileName") { val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0); prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",SignalSequence.profiles[index].id).apply() }
-            if(key=="signalStartRule" && items[i] in listOf("P","I","U","Z","Black")) {
-                prefs.edit().putString("signalPrepFlag",if(items[i]=="Black") "black" else items[i]).apply()
+            if(key=="signalProfileName") {
+                val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0)
+                val profile=SignalSequence.profiles[index]
+                val displayed=if(profile.id=="video-13") 4 else 5
+                val removed=if(profile.id=="video-20") 10 else 4
+                prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",profile.id)
+                    .putInt("signalOrangeDisplayedMinutes",displayed)
+                    .putInt("signalOrangeRemovedAfterMinutes",removed).apply()
+            }
+            if(key=="signalStartRule") {
+                val prep=when(items[i]) { "P","I","U","Z" -> items[i]; "Black" -> "black"; else -> "P" }
+                prefs.edit().putString("signalPrepFlag",prep).apply()
             }
             build()
         }.show()
@@ -143,26 +155,96 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun classGallery() {
-        val classes=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
-        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=8; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
-            override fun getCount()=classes.size
-            override fun getItem(position:Int)=classes[position]
-            override fun getItemId(position:Int)=position.toLong()
-            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
-                val name=classes[position]
-                return LinearLayout(this@SignalSettingsActivity).apply {
-                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(4,6,4,6)
-                    addView(TextView(this@SignalSettingsActivity).apply {
-                        text=classMark(name); textSize=23f; typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
-                        gravity=Gravity.CENTER; isSingleLine=true; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE)
-                        if(android.os.Build.VERSION.SDK_INT>=26) setAutoSizeTextTypeUniformWithConfiguration(10,23,1,android.util.TypedValue.COMPLEX_UNIT_SP)
-                    },LinearLayout.LayoutParams(-1,64))
-                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
+        val groups = linkedMapOf(
+            "Multihull" to listOf("A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"),
+            "Keelboat" to listOf("10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"),
+            "Board" to listOf("Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"),
+            "Centerboard" to listOf("29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J/14","Jollyboat","Laser","Laser 4.7","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling")
+        )
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 12)
+        }
+        var dialog: AlertDialog? = null
+        val density = resources.displayMetrics.density
+        groups.forEach { (category, classes) ->
+            content.addView(TextView(this).apply {
+                text = category
+                textSize = 17f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(0xFFB0B0B5.toInt())
+                setPadding(4, 18, 4, 8)
+            })
+            val grid = GridView(this).apply {
+                numColumns = 3
+                horizontalSpacing = (8 * density).toInt()
+                verticalSpacing = (8 * density).toInt()
+                stretchMode = GridView.STRETCH_COLUMN_WIDTH
+                adapter = object : BaseAdapter() {
+                    override fun getCount() = classes.size
+                    override fun getItem(position: Int) = classes[position]
+                    override fun getItemId(position: Int) = position.toLong()
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
+                        val name = classes[position]
+                        return LinearLayout(this@SignalSettingsActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER
+                            setPadding(4, 5, 4, 5)
+                            val logoBitmap = SignalClassLogoAssets.bitmap(this@SignalSettingsActivity, name)
+                            val markBox = FrameLayout(this@SignalSettingsActivity).apply {
+                                setBackgroundColor(Color.WHITE)
+                                if (logoBitmap != null) {
+                                    addView(ImageView(this@SignalSettingsActivity).apply {
+                                        setImageBitmap(logoBitmap)
+                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                        setPadding((5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt())
+                                    }, FrameLayout.LayoutParams(-1, -1))
+                                } else {
+                                    addView(TextView(this@SignalSettingsActivity).apply {
+                                        text = classMark(name)
+                                        textSize = 23f
+                                        typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                                        gravity = Gravity.CENTER
+                                        isSingleLine = true
+                                        setTextColor(Color.BLACK)
+                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                            setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                                        }
+                                    }, FrameLayout.LayoutParams(-1, -1))
+                                }
+                            }
+                            addView(markBox, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
+                            addView(TextView(this@SignalSettingsActivity).apply {
+                                text = name
+                                textSize = 12f
+                                gravity = Gravity.CENTER
+                                setTextColor(white)
+                                setPadding(0, 4, 0, 0)
+                                maxLines = 2
+                            })
+                        }
+                    }
+                }
+                setOnItemClickListener { _, _, index, _ ->
+                    val selected = classes[index]
+                    prefs.edit()
+                        .putString("signalSelectedClassName", selected)
+                        .putString("signalCustomClassFlag", "class-$selected")
+                        .apply()
+                    dialog?.dismiss()
+                    build()
                 }
             }
-        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedClassName",classes[i]).putString("signalCustomClassFlag","class-${classes[i]}").apply(); (tag as? AlertDialog)?.dismiss(); build() } }
-        val dialog=AlertDialog.Builder(this).setTitle("Class Logos").setView(grid).setNegativeButton("閉じる",null).create()
-        grid.tag=dialog; dialog.show()
+            val rows = (classes.size + 2) / 3
+            content.addView(grid, LinearLayout.LayoutParams(-1, rows * (82 * density).toInt()))
+        }
+        val scroll = ScrollView(this).apply { addView(content) }
+        dialog = AlertDialog.Builder(this)
+            .setTitle("クラス旗を選択")
+            .setView(scroll)
+            .setNegativeButton("閉じる", null)
+            .create()
+        dialog?.show()
     }
     private fun classMark(name:String):String = when(name) {
         "A-Cat" -> "A̲"; "Optimist" -> "Ⓞ"; "Starling" -> "★"; "ILCA" -> "ILCA"
@@ -200,7 +282,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         val layouts=listOf("全面色","上下分割","左右分割","斜め分割","逆斜め")
         val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
         layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
-        val preview=TextView(this).apply { gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE); text="クラス旗の見本" }
+        val preview=FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
         val box=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
             addView(input); addView(type); addView(classes); addView(flags); addView(layout); addView(preview,LinearLayout.LayoutParams(-1,96))
@@ -210,7 +292,20 @@ class SignalSettingsActivity : AppCompatActivity() {
             classes.visibility=if(type.selectedItemPosition==0)View.VISIBLE else View.GONE
             flags.visibility=if(isInternational)View.VISIBLE else View.GONE
             layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
-            preview.text=when(type.selectedItemPosition){0->classMark(classes.selectedItem.toString());1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
+            preview.removeAllViews()
+            val label = when(type.selectedItemPosition){0->classes.selectedItem.toString();1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
+            val logo = if(type.selectedItemPosition==0) SignalClassLogoAssets.bitmap(this, label) else null
+            if (logo != null) {
+                preview.addView(ImageView(this).apply {
+                    setImageBitmap(logo); scaleType=ImageView.ScaleType.FIT_CENTER
+                    setPadding(8,8,8,8)
+                }, FrameLayout.LayoutParams(-1,-1))
+            } else {
+                preview.addView(TextView(this).apply {
+                    text=if(type.selectedItemPosition==0) classMark(label) else label
+                    gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK)
+                }, FrameLayout.LayoutParams(-1,-1))
+            }
         }
         type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
             override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
@@ -220,14 +315,15 @@ class SignalSettingsActivity : AppCompatActivity() {
         flags.onItemSelectedListener=type.onItemSelectedListener
         input.addTextChangedListener(object:android.text.TextWatcher{
             override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
-            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) preview.text=s?.toString().orEmpty().ifBlank{"旗"}}
+            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) updatePreview()}
             override fun afterTextChanged(s:android.text.Editable?){}
         })
         AlertDialog.Builder(this).setTitle("クラス旗・信号旗の設定").setView(box).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
             val editor=prefs.edit().putString("signalCustomFlagName",input.text.toString()).putInt("signalCustomFlagStyle",type.selectedItemPosition).putInt("signalCustomFlagLayoutIndex",layout.selectedItemPosition)
             when(type.selectedItemPosition){
                 0->{val selected=classNames[classes.selectedItemPosition];editor.putString("signalSelectedClassName",selected).putString("signalCustomClassFlag","class-$selected")}
-                2->editor.putString("signalSelectedInternationalFlag",flagNames[flags.selectedItemPosition])
+                1->{val label=input.text.toString().trim().ifEmpty{"旗"};editor.putString("signalSelectedClassName","text:$label").putString("signalCustomFlagText",label)}
+                2->{val selected=flagNames[flags.selectedItemPosition];editor.putString("signalSelectedInternationalFlag",selected).putString("signalSelectedClassName","intl:$selected")}
             }
             editor.apply()
             build()
