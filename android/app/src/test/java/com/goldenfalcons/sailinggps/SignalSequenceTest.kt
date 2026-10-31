@@ -39,7 +39,7 @@ class SignalSequenceTest {
             orangeRemovedAfterMinutes = 4
         )
         assertEquals(listOf(0, 60, 240, 300), orangeOff.map { it.secondsAfterStart })
-        assertEquals(listOf("級", "P", "P", "級"), orangeOff.map { it.flag })
+        assertEquals(listOf("クラス旗", "P", "P", "クラス旗"), orangeOff.map { it.flag })
 
         val longerOrange = SignalSequence.events(
             durationMinutes = 14,
