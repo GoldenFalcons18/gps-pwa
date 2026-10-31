@@ -162,7 +162,7 @@ struct SignalTimerPanel: View {
         guard flagProfile == "standard-start" || restart else {
             return String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60)
         }
-        let startOffset = restart ? 300 : 600
+        let startOffset = restart ? 300 : SignalSequence.startReferenceOffset(profileID: flagProfile)
         let offset = event.secondsAfterStart - startOffset
         let time = String(format: "%02d:%02d", abs(offset) / 60, abs(offset) % 60)
         if offset == 0 { return "T+00:00" }
