@@ -38,6 +38,15 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun selectedClassFlagCanBeLogoTextOrInternationalFlag() {
+        assertEquals("class-Laser", SignalSequence.events(14, 0, className = "Laser")[1].flag)
+        assertEquals("text:Class 1", SignalSequence.events(14, 0, className = "text:Class 1")[1].flag)
+        assertEquals("intl:Alpha", SignalSequence.events(14, 0, className = "intl:Alpha")[1].flag)
+        assertEquals("internationalFlag", SignalFlagMark("intl:Alpha", 0xFFFFFFFF.toInt()).style)
+        assertEquals("textFlag", SignalFlagMark("text:Class 1", 0xFFFFFFFF.toInt()).style)
+    }
+
+    @Test
     fun signalSequenceAlignsZeroToRealClockMinuteAfterMinimumLead() {
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 15))
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 0))
