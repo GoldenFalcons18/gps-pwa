@@ -12,7 +12,7 @@ targets:
     type: application
     platform: iOS
     sources: [SailingGPS, Shared]
-    resources: [Shared/signal-class-logos.json]
+    resources: [Shared/signal-class-logos.json, Shared/signal-class-logos-extra-1.json, Shared/signal-class-logos-extra-2.json, Shared/signal-class-logos-extra-3.json, Shared/signal-class-logos-extra-4.json, Shared/signal-class-logos-extra-5.json, Shared/signal-class-logos-extra-6.json, Shared/signal-class-logos-extra-7.json]
     dependencies:
       - target: SailingGPSWatch
         embed: true
@@ -39,8 +39,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.8.21'
-        CURRENT_PROJECT_VERSION: 66
+        MARKETING_VERSION: '1.8.22'
+        CURRENT_PROJECT_VERSION: 67
         TARGETED_DEVICE_FAMILY: '1,2'
       configs:
         Release:
@@ -70,8 +70,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps.watchkitapp
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.8.20'
-        CURRENT_PROJECT_VERSION: 65
+        MARKETING_VERSION: '1.8.22'
+        CURRENT_PROJECT_VERSION: 66
         SKIP_INSTALL: YES
       configs:
         Release:
