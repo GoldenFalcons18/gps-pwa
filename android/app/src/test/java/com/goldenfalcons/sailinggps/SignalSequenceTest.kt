@@ -39,7 +39,7 @@ class SignalSequenceTest {
             orangeRemovedAfterMinutes = 4
         )
         assertEquals(listOf(0, 60, 240, 300), orangeOff.map { it.secondsAfterStart })
-        assertEquals(listOf("クラス旗", "P", "P", "クラス旗"), orangeOff.map { it.flag })
+        assertEquals(listOf("級", "P", "P", "級"), orangeOff.map { it.flag })
 
         val longerOrange = SignalSequence.events(
             durationMinutes = 14,
@@ -126,7 +126,7 @@ class SignalSequenceTest {
 
     @Test
     fun sequenceScalingPreservesElapsedOrder() {
-        assertEquals(listOf(0, 150, 180, 270, 300, 600), SignalSequence.events(10, 1).map { it.secondsAfterStart })
+        assertEquals(listOf(0, 300, 360, 540, 600, 1200), SignalSequence.events(10, 1).map { it.secondsAfterStart })
     }
 
     @Test
