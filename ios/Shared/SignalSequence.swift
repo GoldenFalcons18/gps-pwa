@@ -144,12 +144,12 @@ struct SignalSequence {
         return min(30, max(0, stored ?? 4))
     }
 
-    private static func applyOrangeSettings(_ source: [Event], orangeDownAt: Int) -> [Event] {
+    private static func applyOrangeSettings(_ source: [Event], orangeDownAt: Int?) -> [Event] {
         source.compactMap { event in
             guard event.flags.contains(where: { $0.id == "orange" }) else { return event }
             guard orangeFlagEnabled else { return nil }
             if !event.raised {
-                return Event(id: event.id, secondsAfterStart: orangeDownAt, title: event.title,
+                return Event(id: event.id, secondsAfterStart: orangeDownAt ?? event.secondsAfterStart, title: event.title,
                              flags: event.flags, raised: false, hornPulses: event.hornPulses)
             }
             return event
@@ -212,7 +212,7 @@ struct SignalSequence {
                 orangeDownAt: 600 + orangeRemovalMinutes * 60
             )
         case "video-13":
-            return video13(classFlag: flag(classFlagID))
+            return applyOrangeSettings(video13(classFlag: flag(classFlagID)), orangeDownAt: nil)
         case "custom-five":
             return customFive(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
         case "class-p":
@@ -220,7 +220,7 @@ struct SignalSequence {
         case "class-i":
             return customFive(classFlag: flag("class-1"), prepFlag: flag("I"))
         default:
-            return video20
+            return applyOrangeSettings(video20, orangeDownAt: nil)
         }
     }
 
