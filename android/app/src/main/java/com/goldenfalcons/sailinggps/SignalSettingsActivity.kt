@@ -282,7 +282,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         val layouts=listOf("全面色","上下分割","左右分割","斜め分割","逆斜め")
         val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
         layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
-        val preview=TextView(this).apply { gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK); setBackgroundColor(Color.WHITE); text="クラス旗の見本" }
+        val preview=FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
         val box=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
             addView(input); addView(type); addView(classes); addView(flags); addView(layout); addView(preview,LinearLayout.LayoutParams(-1,96))
@@ -292,7 +292,20 @@ class SignalSettingsActivity : AppCompatActivity() {
             classes.visibility=if(type.selectedItemPosition==0)View.VISIBLE else View.GONE
             flags.visibility=if(isInternational)View.VISIBLE else View.GONE
             layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
-            preview.text=when(type.selectedItemPosition){0->classMark(classes.selectedItem.toString());1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
+            preview.removeAllViews()
+            val label = when(type.selectedItemPosition){0->classes.selectedItem.toString();1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
+            val logo = if(type.selectedItemPosition==0) SignalClassLogoAssets.bitmap(this, label) else null
+            if (logo != null) {
+                preview.addView(ImageView(this).apply {
+                    setImageBitmap(logo); scaleType=ImageView.ScaleType.FIT_CENTER
+                    setPadding(8,8,8,8)
+                }, FrameLayout.LayoutParams(-1,-1))
+            } else {
+                preview.addView(TextView(this).apply {
+                    text=if(type.selectedItemPosition==0) classMark(label) else label
+                    gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK)
+                }, FrameLayout.LayoutParams(-1,-1))
+            }
         }
         type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
             override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
@@ -302,7 +315,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         flags.onItemSelectedListener=type.onItemSelectedListener
         input.addTextChangedListener(object:android.text.TextWatcher{
             override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
-            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) preview.text=s?.toString().orEmpty().ifBlank{"旗"}}
+            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) updatePreview()}
             override fun afterTextChanged(s:android.text.Editable?){}
         })
         AlertDialog.Builder(this).setTitle("クラス旗・信号旗の設定").setView(box).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
