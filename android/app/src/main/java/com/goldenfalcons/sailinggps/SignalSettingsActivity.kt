@@ -65,9 +65,9 @@ class SignalSettingsActivity : AppCompatActivity() {
 
         section("Orange Flag")
         switch("Enable","signalOrangeEnabled",true)
-        row("Displayed For",prefs.getInt("signalOrangeDisplayedMinutes",5).toString()+"分") { number("Displayed For","signalOrangeDisplayedMinutes",5,0,30) }
-        row("Removed After",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("Removed After","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="シーケンス開始時にオレンジ旗を掲揚し、最初の信号の設定分前に掲揚します。最後の信号から設定分後に降下します。待機中・再スタート時は降下状態で、地図上から手動操作できます。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        row("最初のレース信号より前",prefs.getInt("signalOrangeDisplayedMinutes",5).toString()+"分") { number("最初のレース信号より前（分）","signalOrangeDisplayedMinutes",5,0,30) }
+        row("最後の信号の後",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("最後の信号の後（分）","signalOrangeRemovedAfterMinutes",4,0,30) }
+        list.addView(TextView(this).apply { text="待機中は降下状態です。有効時は開始時に橙旗を掲揚し、設定時間後に最初のレース信号を行います。無効時は最初のレース信号が0秒です。橙旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
