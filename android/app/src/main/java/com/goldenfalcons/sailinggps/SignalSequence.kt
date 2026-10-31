@@ -162,10 +162,10 @@ object SignalSequence {
 
     fun restartEvents(prepFlag: String = "P", orangeEnabled: Boolean = true, orangeRemovedAfterMinutes: Int = 4, className: String = "クラス旗"): List<SignalEvent> {
         val rows = listOf(
-            e(0, 0, "${className}を掲揚（再予告信号）", if (className == "クラス旗") "級" else "class-$className", 0xFF7A35A8.toInt(), true, 0),
+            e(0, 0, "${classFlagLabel(className)}を掲揚（再予告信号）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), true, 0),
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
-            e(3, 300, "${className}を降下（スタート）", if (className == "クラス旗") "級" else "class-$className", 0xFF7A35A8.toInt(), false, 0),
+            e(3, 300, "${classFlagLabel(className)}を降下（スタート）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), false, 0),
         )
         return rows
     }
@@ -191,7 +191,7 @@ object SignalSequence {
         } else {
             // Reference-video profiles keep their recorded spacing; the duration picker must not stretch them.
             profile.events.map { event ->
-                if (event.flag == "級") event.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = event.title.replace("クラス旗", className)) else event
+                if (event.flag == "級") event.copy(flag = resolvedClassFlagId(className), title = event.title.replace("クラス旗", classFlagLabel(className))) else event
             }
         }
 
