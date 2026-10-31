@@ -33,7 +33,8 @@ class SignalSequenceTest {
         }
         val restart = SignalSequence.restartEvents()
         assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
-        assertEquals(listOf("第一代表旗", "AP"), listOf(SignalSequence.generalRecallRaise, SignalSequence.postponementRaise).map { it.title.substringBefore("を") })
+        assertEquals(listOf("第一代表"), SignalSequence.generalRecallRaise.flagMarks.map { it.id })
+        assertEquals(listOf("AP"), SignalSequence.postponementRaise.flagMarks.map { it.id })
     }
 
     @Test
