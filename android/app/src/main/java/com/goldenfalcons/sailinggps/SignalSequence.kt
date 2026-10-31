@@ -150,13 +150,8 @@ object SignalSequence {
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
             e(3, 300, "${className}を降下（スタート）", if (className == "クラス旗") "級" else "class-$className", 0xFF7A35A8.toInt(), false, 0),
-            e(4, 540, "オレンジ旗を降下（スタート後）", "橙", 0xFFF58A00.toInt(), false)
         )
-        return rows.mapNotNull { row ->
-            if (row.flag == "橙" && !orangeEnabled) null
-            else if (row.flag == "橙" && !row.raised) row.copy(secondsAfterStart = 300 + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60)
-            else row
-        }
+        return rows
     }
 
     fun events(
