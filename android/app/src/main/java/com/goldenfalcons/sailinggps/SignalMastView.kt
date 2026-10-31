@@ -80,6 +80,28 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                 }
                 canvas.drawPath(path, paint)
             }
+            fun pennant(colors: List<Int>) {
+                val path = android.graphics.Path().apply {
+                    moveTo(mastX, y)
+                    lineTo(mastX + flagWidth, y + flagHeight * 0.5f)
+                    lineTo(mastX, y + flagHeight)
+                    close()
+                }
+                val save = canvas.save()
+                canvas.clipPath(path)
+                colors.forEachIndexed { band, color ->
+                    paint.color = color
+                    val left = mastX + flagWidth * band / colors.size
+                    val right = mastX + flagWidth * (band + 1) / colors.size
+                    canvas.drawRect(left, y, right, y + flagHeight, paint)
+                }
+                canvas.restoreToCount(save)
+                paint.color = 0xff333333.toInt()
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = (flagWidth * 0.018f).coerceAtLeast(1f)
+                canvas.drawPath(path, paint)
+                paint.style = Paint.Style.FILL
+            }
             when (state.style) {
                 "blueSquare" -> {
                     fill(state.color)
@@ -96,10 +118,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                     canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight * 0.5f, paint)
                     canvas.drawRect(mastX, y + flagHeight * 0.5f, mastX + flagWidth * 0.5f, y + flagHeight, paint)
                 }
-                "apFlag" -> {
-                    fill(state.color); paint.color = white
-                    canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight, paint)
-                }
+                "apFlag" -> pennant(listOf(red, white, red, white, red))
                 "hFlag" -> {
                     fill(white); paint.color = red
                     canvas.drawRect(mastX + flagWidth * 0.5f, y, mastX + flagWidth, y + flagHeight, paint)
@@ -115,9 +134,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                     triangle(blue, listOf(1f to 0f, 1f to 1f, 0.5f to 0.5f))
                     triangle(red, listOf(1f to 1f, 0f to 1f, 0.5f to 0.5f))
                 }
-                "firstSub" -> {
-                    fill(blue); triangle(red, listOf(0f to 0f, 1f to 1f, 1f to 0f))
-                }
+                "firstSub" -> pennant(listOf(blue, yellow, blue))
                 "xFlag" -> {
                     fill(white); paint.color = blue
                     paint.strokeWidth = flagHeight * 0.18f
