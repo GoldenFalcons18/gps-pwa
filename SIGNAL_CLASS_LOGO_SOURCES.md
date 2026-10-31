@@ -4,6 +4,11 @@ The picker and signal display use bundled offline image previews. Original marks
 
 ## Public domain marks
 
+## International signal flag images
+
+- International Flags and Pennants Chart, cropped into 40 offline flag images — Wikimedia Commons, public domain (U.S. Government work): https://commons.wikimedia.org/wiki/File:ICS-flags.png
+
+
 - C-Scow — https://commons.wikimedia.org/wiki/File:C-ScowLogo.png
 - Flying Fifteen — https://commons.wikimedia.org/wiki/File:Flying15-Klassenzeichen.JPG
 - International 806 — https://commons.wikimedia.org/wiki/File:Segelzeichen_International_806.svg
