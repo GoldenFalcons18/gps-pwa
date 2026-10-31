@@ -27,6 +27,16 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun orangeDisableSettingAppliesToEveryProfileAndRecallKeepsOrangeDown() {
+        for (profile in SignalSequence.profiles.indices) {
+            assertEquals(false, SignalSequence.events(20, profile, orangeEnabled = false).any { it.flag == "橙" })
+        }
+        val restart = SignalSequence.restartEvents()
+        assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("第一代表旗", "AP"), listOf(SignalSequence.generalRecallRaise, SignalSequence.postponementRaise).map { it.title.substringBefore("を") })
+    }
+
+    @Test
     fun signalSequenceAlignsZeroToRealClockMinuteAfterMinimumLead() {
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 15))
         assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 0))
