@@ -34,10 +34,27 @@ final class SignalSequenceTests: XCTestCase {
         }
 
         for profile in ["standard-start", "video-13", "video-20"] {
-            XCTAssertFalse(SignalSequence.events(profileID: profile).contains { $0.flags.contains { $0.id == "orange" } })
+            let events = SignalSequence.events(profileID: profile)
+            XCTAssertFalse(events.contains { $0.flags.contains { $0.id == "orange" } })
+            XCTAssertEqual(events.first?.secondsAfterStart, 0, "With orange disabled, the first race signal is action zero")
         }
 
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let orangeOffStandard = SignalSequence.events(profileID: "standard-start")
+        XCTAssertEqual(orangeOffStandard.map(\.secondsAfterStart), [0, 60, 240, 300])
+        XCTAssertEqual(orangeOffStandard.map(\.flag), ["class-4", "P", "P", "class-4"])
+
         defaults.set(true, forKey: "signalOrangeEnabled")
+        defaults.set(7, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(3, forKey: "signalOrangeRemovedAfterMinutes")
+        XCTAssertEqual(
+            SignalSequence.events(profileID: "standard-start").map(\.secondsAfterStart),
+            [0, 420, 480, 660, 720, 1140],
+            "Changing orange display time shifts the race signals; removal remains relative to the last shifted signal"
+        )
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         let restart = SignalSequence.recallRestartEvents()
         XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 0).map(\.id), ["class-4"])
         XCTAssertEqual(SignalSequence.flag("AP").artworkName, "Answering Pennant")
