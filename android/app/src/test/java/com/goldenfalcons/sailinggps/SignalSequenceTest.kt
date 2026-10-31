@@ -80,6 +80,17 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun selectedStartRuleControlsTheRaisedAndLoweredPreparationFlag() {
+        val expected = mapOf("P" to "P", "I" to "I", "U" to "U", "Z" to "Z", "black" to "black")
+        for ((rule, flag) in expected) {
+            val events = SignalSequence.events(14, 0, prepFlag = rule)
+            assertEquals(flag, events[2].flag)
+            assertEquals(flag, events[3].flag)
+            assertEquals(events[2].color, events[3].color)
+        }
+    }
+
+    @Test
     fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
