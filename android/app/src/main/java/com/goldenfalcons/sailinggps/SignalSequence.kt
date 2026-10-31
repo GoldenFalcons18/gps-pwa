@@ -183,7 +183,19 @@ object SignalSequence {
         val source = if (profile.id == "standard-start") {
             profile.events.map { event ->
                 when {
-                    event.flag == "P" && prepFlag == "I" -> event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗"))
+                    event.flag == "P" -> {
+                        val normalized = if (prepFlag.equals("black", ignoreCase = true)) "black" else prepFlag
+                        val color = when (normalized) {
+                            "I", "Z" -> 0xFFF5D328.toInt()
+                            "U" -> 0xFFD72C32.toInt()
+                            "black" -> 0xFF111111.toInt()
+                            else -> 0xFF1769FF.toInt()
+                        }
+                        val label = when (normalized) {
+                            "I" -> "I旗"; "U" -> "U旗"; "Z" -> "Z旗"; "black" -> "黒旗"; else -> "P旗"
+                        }
+                        event.copy(flag = normalized, color = color, title = event.title.replace("P旗", label))
+                    }
                     event.flag == "級" -> event.copy(flag = resolvedClassFlagId(className), title = event.title.replace("クラス旗", classFlagLabel(className)))
                     else -> event
                 }
