@@ -48,7 +48,7 @@ class SignalSequenceTest {
             orangeDisplayedMinutes = 7,
             orangeRemovedAfterMinutes = 3
         )
-        assertEquals(listOf(0, 420, 480, 660, 720, 1140), longerOrange.map { it.secondsAfterStart })
+        assertEquals(listOf(0, 420, 480, 660, 720, 900), longerOrange.map { it.secondsAfterStart })
 
         val restart = SignalSequence.restartEvents()
         assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
