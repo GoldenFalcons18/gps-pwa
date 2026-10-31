@@ -51,7 +51,8 @@ class SignalSettingsActivity : AppCompatActivity() {
 
         section("Start 1")
         row("Start Sequence", selectedProfile()) { choose("Start Sequence", SignalSequence.profiles.map { it.name }, "signalProfileName") }
-        row("Start Rule", prefs.getString("signalStartRule", "P") ?: "P") { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
+        val activePrepRule=when(prefs.getString("signalPrepFlag","P") ?: "P") { "black" -> "Black"; else -> prefs.getString("signalPrepFlag","P") ?: "P" }
+        row("Start Rule", activePrepRule) { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
         row("Classes", prefs.getString("signalSelectedClassName", "クラス旗") ?: "クラス旗") { classGallery() }
         switch("Custom Race Delay", "signalRaceDelayEnabled", false)
         row("Time between races", prefs.getInt("signalRaceDelayMinutes", 0).toString()+"分") { number("レース間隔", "signalRaceDelayMinutes", 0, 0, 60) }
