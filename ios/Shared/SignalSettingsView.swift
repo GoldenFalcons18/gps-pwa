@@ -31,7 +31,7 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
     var finishWindowMinutes = 20
     var rule42Override = false
     var orangeEnabled = true
-    var orangeDisplayedMinutes = 4
+    var orangeDisplayedMinutes = 5
     var orangeRemovedMinutes = 4
     var starts: [SignalStartAction] = [
         SignalStartAction(flagID: "class-4", minute: 5, raised: true, horn: "short")
@@ -233,6 +233,7 @@ private struct SignalFleetPresetEditor: View {
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
     @AppStorage("signalCustomPrepFlag") private var activePrepFlag = "P"
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
+    @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
     @AppStorage("signalOrangeRemovedAfterMinutes") private var activeOrangeRemoval = 4
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
@@ -282,9 +283,11 @@ private struct SignalFleetPresetEditor: View {
             Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
             Section("Orange Flag") {
                 Toggle("Enable", isOn: $preset.orangeEnabled)
-                Stepper("スタート後に降下：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
+                Stepper("最初の信号の何分前に掲揚：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("待機中は降下状態です。シーケンス0分で短音と共に掲揚し、クラス旗降下をスタートとして設定分後に降下します。手動操作もできます。")
+                Stepper("最後の信号から何分後に降下：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
+                    .disabled(!preset.orangeEnabled)
+                Text("待機中と再スタート時は降下状態です。シーケンス開始時に掲揚し、設定した時間に最初の信号を行います。オレンジ旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
@@ -317,6 +320,19 @@ private struct SignalFleetPresetEditor: View {
                 }
             }
         }
+        .onChange(of: preset.sequence) { _, sequence in
+            switch sequence {
+            case "video-13":
+                preset.orangeDisplayedMinutes = 4
+                preset.orangeRemovedMinutes = 4
+            case "video-20":
+                preset.orangeDisplayedMinutes = 5
+                preset.orangeRemovedMinutes = 10
+            default:
+                preset.orangeDisplayedMinutes = 5
+                preset.orangeRemovedMinutes = 4
+            }
+        }
         .navigationTitle("Fleet Start")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -327,6 +343,7 @@ private struct SignalFleetPresetEditor: View {
                         ? preset.startRule
                         : (preset.startRule == "Black" ? "black" : preset.prepFlagID)
                     activeOrangeEnabled = preset.orangeEnabled
+                    activeOrangeDisplayed = preset.orangeDisplayedMinutes
                     activeOrangeRemoval = preset.orangeRemovedMinutes
                     dismiss()
                 }.tint(.orange)
