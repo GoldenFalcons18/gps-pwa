@@ -88,7 +88,9 @@ private struct SignalFlagSwatch: View {
     }
     var body: some View {
         Group {
-            if flagID.hasPrefix("class-") {
+            if flag.style == "internationalFlag" {
+                SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
+            } else if flagID.hasPrefix("class-") {
                 SignalClassLogoMark(name: String(flagID.dropFirst(6)))
             } else {
                 ZStack {
@@ -583,7 +585,7 @@ struct SignalClassLogoMark: View {
     }
 }
 
-private struct SignalInternationalFlagArtwork: View {
+struct SignalInternationalFlagArtwork: View {
     let name: String
 
     var body: some View {
