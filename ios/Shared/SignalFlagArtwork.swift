@@ -70,7 +70,14 @@ struct SignalInternationalFlagArtwork: View {
     let name: String
 
     var body: some View {
-        Canvas { context, size in
+        Group {
+            if let image = SignalClassLogoAssets.image(for: name) {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .scaledToFit()
+                    .background(Color.white)
+            } else {
+                Canvas { context, size in
             let bounds = CGRect(origin: .zero, size: size)
             let white = Color.white, black = Color.black, red = Color(red: 0.86, green: 0.02, blue: 0.08)
             let blue = Color(red: 0.0, green: 0.12, blue: 0.91), yellow = Color.yellow
@@ -248,6 +255,8 @@ struct SignalInternationalFlagArtwork: View {
             }
             context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
         }.aspectRatio(1.5, contentMode: .fit)
+            }
+        }
     }
 }
 #endif

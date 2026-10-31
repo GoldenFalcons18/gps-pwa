@@ -1,3 +1,7 @@
+## 1.8.24
+- Added all 26 alphabet flags, 10 numeral pennants, 3 substitutes, and the answering pennant as bundled offline images for iPhone, Apple Watch, and Android.
+- Updated the signal flag gallery to the complete International Code of Signals set.
+
 ## 1.8.22
 - クラス選択と信号表示に、利用条件を確認した帆章画像を追加しました。追加ロゴは61種類で、iPhone・Androidの両方でオフライン表示できます。
 - 信号モードの旗の掲揚・降下、オレンジ旗のタイミング、リコール手順を更新しました。

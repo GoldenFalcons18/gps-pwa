@@ -1,1 +1,1 @@
-1.8.22 versionCode 50 add verified sailing class emblems
+1.8.24 versionCode 52 complete International Code signal flags

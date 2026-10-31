@@ -22,6 +22,13 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             mark.id.startsWith("intl:") -> mark.id.removePrefix("intl:")
             mark.id == "AP" -> "Answering Pennant"
             mark.id == "第一代表" -> "First Substitute"
+            mark.id == "P" -> "Papa"
+            mark.id == "I" -> "India"
+            mark.id == "U" -> "Uniform"
+            mark.id == "N" -> "November"
+            mark.id == "H" -> "Hotel"
+            mark.id == "O" -> "Oscar"
+            mark.id == "X" -> "X-Ray"
             mark.id == "Z" -> "Zulu"
             mark.id == "L" -> "Lima"
             else -> mark.id
@@ -139,6 +146,12 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         canvas.clipRect(0f,0f,flagW,flagH)
         signalMark?.let {
             drawSignalMark(canvas,it)
+            canvas.restoreToCount(save)
+            return
+        }
+        SignalClassLogoAssets.bitmap(context, flagName)?.let { image ->
+            val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            canvas.drawBitmap(image, null, RectF(0f, 0f, flagW, flagH), imagePaint)
             canvas.restoreToCount(save)
             return
         }
