@@ -105,7 +105,7 @@ struct SignalInternationalFlagArtwork: View {
                 points = clip(points, boundary: low, keepBelow: false)
                 polygon(points, color)
             }
-            func pennant(_ palette: [Color], stripesVertical: Bool = true) {
+            func pennant(_ palette: [Color], stripesVertical: Bool = true, mark: String = "") {
                 var pennantPath = Path()
                 pennantPath.move(to: .zero)
                 pennantPath.addLine(to: CGPoint(x: size.width, y: size.height * 0.5))
@@ -120,6 +120,24 @@ struct SignalInternationalFlagArtwork: View {
                         : CGRect(x: 0, y: pos * size.height, width: size.width, height: extent * size.height)
                     clipped.fill(Path(frame), with: .color(color))
                 }
+                switch mark {
+                case "redCircle": clipped.fill(Path(ellipseIn:CGRect(x:size.width*0.27,y:size.height*0.32,width:size.width*0.23,height:size.height*0.36)),with:.color(red))
+                case "whiteCircle": clipped.fill(Path(ellipseIn:CGRect(x:size.width*0.27,y:size.height*0.32,width:size.width*0.23,height:size.height*0.36)),with:.color(white))
+                case "whiteCross", "redCross":
+                    let color = mark == "whiteCross" ? white : red
+                    clipped.fill(Path(CGRect(x:size.width*0.42,y:0,width:size.width*0.16,height:size.height)),with:.color(color))
+                    clipped.fill(Path(CGRect(x:0,y:size.height*0.40,width:size.width,height:size.height*0.20)),with:.color(color))
+                case "yellowTriangle", "whiteTriangle":
+                    let color = mark == "yellowTriangle" ? yellow : white
+                    var triangle = Path()
+                    triangle.move(to:CGPoint(x:size.width*0.12,y:size.height*0.20))
+                    triangle.addLine(to:CGPoint(x:size.width*0.67,y:size.height*0.50))
+                    triangle.addLine(to:CGPoint(x:size.width*0.12,y:size.height*0.80))
+                    triangle.closeSubpath()
+                    clipped.fill(triangle,with:.color(color))
+                case "blackBand": clipped.fill(Path(CGRect(x:0,y:size.height*0.35,width:size.width*0.70,height:size.height*0.30)),with:.color(black))
+                default: break
+                }
             }
 
             switch code {
@@ -130,8 +148,7 @@ struct SignalInternationalFlagArtwork: View {
                 colors=[red]; rect(0,0,1,1,red)
                 polygon([CGPoint(x:0.68,y:0.34),CGPoint(x:1,y:0.5),CGPoint(x:0.68,y:0.66)],white)
             case "charlie": colors=[blue,white,red,white,blue]; stripes(colors,vertical:false)
-            case "delta":
-                colors=[blue,yellow]; rect(0,0,1,1,blue); rect(0,0.12,1,0.24,yellow); rect(0,0.64,1,0.24,yellow)
+            case "delta": colors=[yellow,blue,yellow]; stripes(colors,vertical:false)
             case "echo": colors=[blue,red]; stripes(colors,vertical:false)
             case "foxtrot": colors=[white]; rect(0,0,1,1,white); polygon([CGPoint(x:0.5,y:0.12),CGPoint(x:0.88,y:0.5),CGPoint(x:0.5,y:0.88),CGPoint(x:0.12,y:0.5)],red)
             case "golf": colors=[yellow,blue,yellow,blue,yellow]; stripes(colors,vertical:true)
@@ -169,10 +186,10 @@ struct SignalInternationalFlagArtwork: View {
                 polygon([CGPoint(x:1,y:1),CGPoint(x:0,y:1),CGPoint(x:0.5,y:0.5)],red)
                 polygon([CGPoint(x:0,y:1),CGPoint(x:0,y:0),CGPoint(x:0.5,y:0.5)],blue)
             case "answering pennant": colors=[red,white]; pennant([red,white,red,white,red],stripesVertical:true)
-            case "first substitute": colors=[blue,yellow]; pennant([blue,yellow,blue],stripesVertical:true)
-            case "second substitute": colors=[blue,white]; pennant([blue,white,blue],stripesVertical:true)
-            case "third substitute": colors=[black,white]; pennant([black,white,black],stripesVertical:true)
-            case "fourth substitute": colors=[red,yellow]; pennant([red,yellow,red],stripesVertical:true)
+            case "first substitute": colors=[blue,yellow]; pennant([blue],mark:"yellowTriangle")
+            case "second substitute": colors=[blue,white]; pennant([blue],mark:"whiteTriangle")
+            case "third substitute": colors=[white,black]; pennant([white],mark:"blackBand")
+            case "fourth substitute": colors=[red,yellow]; pennant([red,yellow,red],stripesVertical:false)
             default:
                 let n = Int(code.filter(\.isNumber)) ?? 0
                 if code.contains("nato") {
@@ -201,12 +218,19 @@ struct SignalInternationalFlagArtwork: View {
                     default: rect(0,0,1,1,blue)
                     }
                 } else {
-                    let palette: [[Color]] = [[yellow,red,yellow],[white,red],[blue,white],[red,white,blue],[red,white],[yellow,red],[black,white],[yellow,red],[white,red],[yellow,red]]
-                    let p = palette[min(max(n,0),9)]
-                    colors = p
-                    pennant(p, stripesVertical:true)
+                    switch n {
+                    case 0: colors=[yellow,red]; pennant([yellow,red,yellow])
+                    case 1: colors=[white,red]; pennant([white],mark:"redCircle")
+                    case 2: colors=[blue,white]; pennant([blue],mark:"whiteCircle")
+                    case 3: colors=[red,white,blue]; pennant([red,white,blue],stripesVertical:false)
+                    case 4: colors=[red,white]; pennant([red],mark:"whiteCross")
+                    case 5: colors=[yellow,blue]; pennant([yellow,blue],stripesVertical:false)
+                    case 6: colors=[black,white]; pennant([black,white],stripesVertical:false)
+                    case 7: colors=[yellow,red]; pennant([yellow,red],stripesVertical:false)
+                    case 8: colors=[white,red]; pennant([white],mark:"redCross")
+                    default: colors=[white,red,black,yellow]; pennant([white,red,black,yellow])
+                    }
                 }
-            }
             context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
         }.aspectRatio(1.5, contentMode: .fit)
     }
