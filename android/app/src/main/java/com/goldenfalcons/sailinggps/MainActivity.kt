@@ -483,7 +483,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(!restart && profile.id!="standard-start") return "%02d:%02d".format(event.secondsAfterStart/60,event.secondsAfterStart%60)
         val orangeOn=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val orangeBeforeWarning=displayPrefs.getInt("signalOrangeDisplayedMinutes",if(profile.id=="video-13") 4 else 5)
-        val startOffset=if(restart) 300 else (if(orangeOn) orangeBeforeWarning+5 else 5)*60
+        val startOffset=if(restart) 300 else SignalSequence.startReferenceOffset(profile.id,orangeOn,orangeBeforeWarning)
         val offset=event.secondsAfterStart-startOffset
         if(offset==0) return "T+00:00"
         val value=abs(offset)
