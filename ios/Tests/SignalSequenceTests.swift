@@ -2,6 +2,26 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
+    func testStartReferenceOffsetTracksOrangePhaseSettings() {
+        let defaults = UserDefaults.standard
+        let oldEnabled = defaults.object(forKey: "signalOrangeEnabled")
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        defer {
+            if let oldEnabled { defaults.set(oldEnabled, forKey: "signalOrangeEnabled") }
+            else { defaults.removeObject(forKey: "signalOrangeEnabled") }
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+        }
+        defaults.set(true, forKey: "signalOrangeEnabled")
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 600)
+        defaults.set(4, forKey: "signalOrangeDisplayedMinutes")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 540)
+        defaults.set(false, forKey: "signalOrangeEnabled")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 300)
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "video-20"), 0)
+    }
+
     func testVideoSchedulesMatchReferenceTimesFlagStatesAndHornSignals() {
         UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
         UserDefaults.standard.set(10, forKey: "signalOrangeRemovedAfterMinutes")
