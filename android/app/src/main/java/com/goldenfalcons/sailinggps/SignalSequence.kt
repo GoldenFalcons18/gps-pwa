@@ -57,6 +57,9 @@ data class SignalFlagState(
 )
 
 object SignalSequence {
+    fun startReferenceOffset(profileId: String, orangeEnabled: Boolean, orangeDisplayedMinutes: Int): Int =
+        if (profileId == "standard-start") ((if (orangeEnabled) orangeDisplayedMinutes.coerceIn(0, 30) else 0) + 5) * 60 else 0
+
     private fun resolvedClassFlagId(value: String): String = when {
         value == "クラス旗" -> "級"
         value.startsWith("intl:") -> value
