@@ -13,8 +13,7 @@ data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boole
         "級", "class-4" -> "classLogo"
         "青", "P" -> "blueSquare"
         "I" -> "circle"
-        "第一代表" -> "firstSub"
-        "AP" -> "apFlag"
+        "第一代表", "AP", "Z", "L" -> "internationalFlag"
         "X" -> "xFlag"
         else -> "solid"
     }
@@ -44,11 +43,8 @@ data class SignalFlagState(
         "I" -> "circle"
         "U", "N", "赤白チェック" -> "checker"
         "斜め", "O" -> "diagonal"
-        "第一代表" -> "firstSub"
-        "AP" -> "apFlag"
+        "第一代表", "AP", "Z", "L" -> "internationalFlag"
         "H" -> "hFlag"
-        "L" -> "lFlag"
-        "Z" -> "zFlag"
         "X" -> "xFlag"
         else -> if (id.startsWith("class-")) "classLogo" else "solid"
     },
