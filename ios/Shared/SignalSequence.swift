@@ -159,6 +159,13 @@ struct SignalSequence {
         return min(30, max(0, stored ?? defaultValue))
     }
 
+    /// Race-start T+00 reference, relative to the synchronized first action.
+    static func startReferenceOffset(profileID: String) -> Int {
+        guard profileID == "standard-start" else { return 0 }
+        let warningAfterOrange = orangeFlagEnabled ? orangeDisplayedMinutes(for: profileID) : 0
+        return (warningAfterOrange + 5) * 60
+    }
+
     private static func applyOrangeSettings(_ source: [Event], profileID: String) -> [Event] {
         let nonOrangeEvents = source.filter { !$0.flags.contains(where: { $0.id == "orange" }) }
         guard let firstSignal = nonOrangeEvents.first(where: \.raised)?.secondsAfterStart else {
