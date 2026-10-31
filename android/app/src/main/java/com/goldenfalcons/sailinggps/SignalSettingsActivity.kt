@@ -151,7 +151,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun classGallery() {
-        val classes=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
+val classes=listOf("A-Cat","29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Dart 18","Dragon","Europe","Finn","Firebug","Flying 11","Flying Ant","Formula 18","Formula Kite","GP14","Hobie","Hornet","ILCA","International 14","IOD","J/14","J/22","J/24","J/70","J/80","J/105","J/105","Javelin","Jollyboat","Laser","Laser 4.7","Laser Pico","Lightning","Luch","Melges 24","Moth","Monarch","Nacra","Nacra 15","Nacra 17","National 18","OK","Optimist","Paper Tiger","Pirate","RS Aero","RS Feva","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","TP 52","Trias","Viper","WASZP","Wayfarer","Weta","Weta+","X-79","X-99","Yngling","Zoom 8","10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","Melges 24","RS:X","T293","Windsurfer","Wing Foil")
         val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=8; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
             override fun getCount()=classes.size
             override fun getItem(position:Int)=classes[position]
