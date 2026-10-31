@@ -6,14 +6,14 @@ import org.junit.Test
 class SignalSequenceTest {
     @Test
     fun videoAAndVideoBMatchTheReferenceSignalTimes() {
-        val videoA = SignalSequence.events(20, 1)
+        val videoA = SignalSequence.events(20, 1, orangeRemovedAfterMinutes = 10, orangeDisplayedMinutes = 5)
         assertEquals(listOf(0, 300, 360, 540, 600, 1200), videoA.map { it.secondsAfterStart })
         assertEquals(listOf("橙", "緑", "青", "青", "緑", "橙"), videoA.map { it.flag })
         assertEquals(listOf(true, true, true, false, false, false), videoA.map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
             videoA.map { it.hornPulses })
 
-        val videoB = SignalSequence.events(13, 2)
+        val videoB = SignalSequence.events(13, 2, orangeRemovedAfterMinutes = 4, orangeDisplayedMinutes = 4)
         assertEquals(listOf(0, 240, 300, 480, 540, 780), videoB.map { it.secondsAfterStart })
         assertEquals(listOf(true, true, true, false, false, false), videoB.map { it.raised })
         assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
@@ -64,8 +64,8 @@ class SignalSequenceTest {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
         assertEquals("I", SignalSequence.events(14, 0, "I")[2].flag)
         assertEquals(0xFFF5D328.toInt(), SignalSequence.events(14, 0, "I")[2].color)
-        assertEquals(listOf(0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
-        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
+        assertEquals(listOf(0, 60, 240, 300), SignalSequence.restartEvents().map { it.secondsAfterStart })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0)), SignalSequence.restartEvents().map { it.hornPulses })
         assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
         assertEquals(listOf(0, 0), SignalSequence.generalRecallRaise.hornPulses)
         assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
