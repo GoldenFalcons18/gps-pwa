@@ -24,9 +24,28 @@ object SignalClassLogoAssets {
 
     private fun imageMap(context: Context): JSONObject {
         encodedImages?.let { return it }
-        val loaded = runCatching {
-            context.assets.open("signal-class-logos.json").bufferedReader().use { JSONObject(it.readText()) }
-        }.getOrElse { JSONObject() }
+        val loaded = JSONObject()
+        val assets = listOf(
+            "signal-class-logos.json",
+            "signal-class-logos-extra-1.json",
+            "signal-class-logos-extra-2.json",
+            "signal-class-logos-extra-3.json",
+            "signal-class-logos-extra-4.json",
+            "signal-class-logos-extra-5.json",
+            "signal-class-logos-extra-6.json",
+            "signal-class-logos-extra-7.json"
+        )
+        assets.forEach { asset ->
+            runCatching {
+                context.assets.open(asset).bufferedReader().use { JSONObject(it.readText()) }
+            }.getOrNull()?.let { source ->
+                val keys = source.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    loaded.put(key, source.optString(key))
+                }
+            }
+        }
         encodedImages = loaded
         return loaded
     }
