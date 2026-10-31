@@ -44,7 +44,6 @@ object SignalClassLogoAssets {
             "tornado" -> "Tornado"
             "star" -> "Star_red"
             "laser" -> "Sailing_laser"
-            "laser 4.7", "laser pico" -> "Sailing_laser"
             "snipe" -> "Sailing_snipe"
             else -> value
         }
