@@ -32,6 +32,7 @@ struct SignalTimerPanel: View {
     @State private var showSettings = false
     @State private var showInterruptOptions = false
     @State private var showSchedule = false
+    @State private var showClassPicker = false
     @State private var scheduledDate = Date().addingTimeInterval(120)
     @State private var scheduleMode = 0
 
@@ -181,14 +182,13 @@ struct SignalTimerPanel: View {
     }
 
     private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
+        // During AP/N/first-substitute restart delay and the restarted warning
+        // sequence, the orange flag stays down unless the user raises it manually.
         var visible = retryPending
-            ? [SignalSequence.flag("orange")]
+            ? []
             : ((hasStarted || useRetrySequence) && !waitingForFirstSignal
                 ? SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
                 : [])
-        if useRetrySequence && sequenceElapsed < 540 {
-            visible.append(SignalSequence.flag("orange"))
-        }
         if generalRecallFlagUp {
             visible = [SignalSequence.flag("first-sub")]
         } else if postponementFlagUp {
@@ -327,9 +327,13 @@ struct SignalTimerPanel: View {
                         }.pickerStyle(.menu)
                         if flagProfile == "custom-five" || flagProfile == "standard-start" || flagProfile == "video-13" {
                             HStack(spacing: 8) {
-                                Picker("クラス旗", selection: $classFlagID) {
-                                    ForEach(SignalSequence.flagCatalog.filter { $0.id.hasPrefix("class-") }) { Text($0.name).tag($0.id) }
-                                }.pickerStyle(.menu)
+                                Button { showClassPicker = true } label: {
+                                    HStack {
+                                        Text("クラス旗")
+                                        Text(SignalSequence.flag(classFlagID).name).foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.down").font(.caption)
+                                    }
+                                }.buttonStyle(.plain)
                                 Picker("準備旗", selection: $prepFlagID) {
                                     ForEach(SignalSequence.flagCatalog.filter { ["P", "I", "U", "Z", "black"].contains($0.id) }) { Text($0.name).tag($0.id) }
                                 }.pickerStyle(.menu)
@@ -353,6 +357,18 @@ struct SignalTimerPanel: View {
             .foregroundStyle(.black)
             #if os(iOS)
             .sheet(isPresented: $showSettings) { SignalSettingsView() }
+            .sheet(isPresented: $showClassPicker) {
+                NavigationStack {
+                    SignalClassPicker(selection: $classFlagID)
+                        .navigationTitle("クラス旗")
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("完了") { showClassPicker = false }.tint(.orange)
+                            }
+                        }
+                }
+                .preferredColorScheme(.dark)
+            }
             .sheet(isPresented: $showSchedule) {
                 NavigationStack {
                     Form {
