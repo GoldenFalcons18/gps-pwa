@@ -5,6 +5,14 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
+    fun raceStartOffsetTracksOrangePhaseAndDisabledOrange() {
+        assertEquals(600, SignalSequence.startReferenceOffset("standard-start", true, 5))
+        assertEquals(540, SignalSequence.startReferenceOffset("standard-start", true, 4))
+        assertEquals(300, SignalSequence.startReferenceOffset("standard-start", false, 5))
+        assertEquals(0, SignalSequence.startReferenceOffset("video-20", true, 5))
+    }
+
+    @Test
     fun videoAAndVideoBMatchTheReferenceSignalTimes() {
         val videoA = SignalSequence.events(20, 1, orangeRemovedAfterMinutes = 10, orangeDisplayedMinutes = 5)
         assertEquals(listOf(0, 300, 360, 540, 600, 1200), videoA.map { it.secondsAfterStart })
