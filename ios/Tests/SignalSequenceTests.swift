@@ -165,6 +165,32 @@ final class SignalSequenceTests: XCTestCase {
     }
 
 
+    func testScheduledStartsDiscardHiddenSecondsAndUseSelectedProfilesLeadTime() {
+        let selected = Date(timeIntervalSince1970: 10 * 60 + 37)
+
+        XCTAssertEqual(
+            SignalSequence.scheduledSequenceStart(selectedDate: selected, clockOffset: -2, scheduleAtRaceStart: false, profileID: "standard-start").timeIntervalSince1970,
+            600,
+            accuracy: 0.001,
+            "Sequence-start reservations must use the selected minute, with zero hidden seconds"
+        )
+        XCTAssertEqual(
+            SignalSequence.scheduledSequenceStart(selectedDate: selected, clockOffset: -2, scheduleAtRaceStart: true, profileID: "standard-start", orangeEnabled: true, orangeDisplayedMinutes: 5).timeIntervalSince1970,
+            0,
+            accuracy: 0.001,
+            "Rule 26 race-start reservation must begin ten minutes before the start when orange is enabled"
+        )
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "standard-start", orangeEnabled: false), 300)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "video-20", orangeEnabled: true, orangeDisplayedMinutes: 5), 600)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "video-13", orangeEnabled: true, orangeDisplayedMinutes: 4), 540)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "custom-five", orangeEnabled: true), 300)
+    }
+
+    func testDefaultScheduleDateIsRoundedToAFullMinute() {
+        let date = SignalSequence.defaultScheduledDate(now: Date(timeIntervalSince1970: 17), minimumLeadSeconds: 120)
+        XCTAssertEqual(date.timeIntervalSince1970, 180, accuracy: 0.001)
+    }
+
     func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
         XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
     }
