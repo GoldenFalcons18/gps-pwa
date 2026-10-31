@@ -247,7 +247,7 @@ private struct SignalFleetPresetEditor: View {
     @State private var showingAddFlag = false
 
     private let sequences: [SignalSequenceChoice] = [
-        SignalSequenceChoice(id: "standard-start", name: "Rule 26 · 5分"),
+        SignalSequenceChoice(id: "standard-start", name: "Rule 26・5分（橙旗は別設定）"),
         SignalSequenceChoice(id: "video-20", name: "動画A · 20分"),
         SignalSequenceChoice(id: "video-13", name: "動画B · 13分"),
         SignalSequenceChoice(id: "custom-five", name: "カスタム · 5分")
@@ -289,13 +289,13 @@ private struct SignalFleetPresetEditor: View {
                     .disabled(!preset.timeLimitEnabled)
             }
             Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
-            Section("Orange Flag") {
-                Toggle("Enable", isOn: $preset.orangeEnabled)
-                Stepper("最初の信号の何分前に掲揚：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
+            Section("橙旗") {
+                Toggle("シーケンスに橙旗を含める", isOn: $preset.orangeEnabled)
+                Stepper("最初のレース信号より前：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Stepper("最後の信号から何分後に降下：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
+                Stepper("最後の信号の後：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("待機中と再スタート時は降下状態です。シーケンス開始時に掲揚し、設定した時間に最初の信号を行います。オレンジ旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。")
+                Text("待機中は降下状態です。有効時は開始時に橙旗を掲揚し、設定時間後に最初のレース信号を行います。無効時は最初のレース信号が0秒になります。橙旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
