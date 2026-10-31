@@ -4,6 +4,26 @@ The picker and signal display use bundled offline image previews. Original marks
 
 ## Public domain marks
 
+- C-Scow — https://commons.wikimedia.org/wiki/File:C-ScowLogo.png
+- Flying Fifteen — https://commons.wikimedia.org/wiki/File:Flying15-Klassenzeichen.JPG
+- International 806 — https://commons.wikimedia.org/wiki/File:Segelzeichen_International_806.svg
+- J/22 — https://commons.wikimedia.org/wiki/File:J_22_blue.svg
+- J/70 — https://commons.wikimedia.org/wiki/File:J_70.JPG
+- Javelin — https://commons.wikimedia.org/wiki/File:Javelin_red.svg
+- Kielzugvogel — https://commons.wikimedia.org/wiki/File:Kielzugvogel_black.svg
+- Knarr — https://commons.wikimedia.org/wiki/File:Knarr_black.svg
+- Leisure 17 — https://commons.wikimedia.org/wiki/File:Leisure_17.jpg
+- Monarch — https://commons.wikimedia.org/wiki/File:Monarch.svg
+- Neptun 22 — https://commons.wikimedia.org/wiki/File:Neptun_22.svg
+- NS14 — https://commons.wikimedia.org/wiki/File:NS14_sail_symbol.svg
+- Platu 25 — https://commons.wikimedia.org/wiki/File:Platu25_Beneteau25_sailemblem.svg
+- Rhodes 19 — https://commons.wikimedia.org/wiki/File:Rhodes_19_sail_badge.png
+- Solo — https://commons.wikimedia.org/wiki/File:Solo_zeilteken.svg
+- Soling — https://commons.wikimedia.org/wiki/File:Soling_black.svg
+- Sonar — https://commons.wikimedia.org/wiki/File:Sonar_red.svg
+- Spaekhugger — https://commons.wikimedia.org/wiki/File:Spaekhugger_black.svg
+- TP 52 — https://commons.wikimedia.org/wiki/File:Transpac52_Sailing.svg
+
 - A-Cat — https://commons.wikimedia.org/wiki/File:A-Cat_black.svg
 - 29er — https://commons.wikimedia.org/wiki/File:29er_black.svg
 - 420 — https://commons.wikimedia.org/wiki/File:420_black.svg
@@ -45,6 +65,9 @@ The picker and signal display use bundled offline image previews. Original marks
 - Wayfarer — https://commons.wikimedia.org/wiki/File:W-logo.jpg
 
 ## Creative Commons marks
+
+- T293 — https://commons.wikimedia.org/wiki/File:Techno_293.svg
+- Musto Skiff — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:MUSTO_SKIFF_BLACK_FD-300x225.jpg
 
 Authors are identified on the linked Commons pages. These image previews are provided under their source licenses; the license links are included on each page.
 
