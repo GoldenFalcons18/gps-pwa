@@ -42,7 +42,15 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
         guard let data = value.data(using: .utf8),
               let saved = try? JSONDecoder().decode([SignalFleetPreset].self, from: data),
               !saved.isEmpty else { return [.starter] }
-        return saved
+        return saved.map { preset in
+            var migrated = preset
+            // Earlier builds stored 4 as the default but did not apply this setting.
+            // Keep the 4-minute video-B preset; restore the five-minute default elsewhere.
+            if migrated.orangeDisplayedMinutes == 4 && migrated.sequence != "video-13" {
+                migrated.orangeDisplayedMinutes = 5
+            }
+            return migrated
+        }
     }
     static func encode(_ value: [SignalFleetPreset]) -> String {
         guard let data = try? JSONEncoder().encode(value) else { return "[]" }
