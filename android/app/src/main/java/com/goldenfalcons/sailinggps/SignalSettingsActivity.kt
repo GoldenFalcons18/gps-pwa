@@ -190,18 +190,30 @@ class SignalSettingsActivity : AppCompatActivity() {
                             orientation = LinearLayout.VERTICAL
                             gravity = Gravity.CENTER
                             setPadding(4, 5, 4, 5)
-                            addView(TextView(this@SignalSettingsActivity).apply {
-                                text = classMark(name)
-                                textSize = 23f
-                                typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
-                                gravity = Gravity.CENTER
-                                isSingleLine = true
-                                setTextColor(Color.BLACK)
+                            val logoBitmap = SignalClassLogoAssets.bitmap(this@SignalSettingsActivity, name)
+                            val markBox = FrameLayout(this@SignalSettingsActivity).apply {
                                 setBackgroundColor(Color.WHITE)
-                                if (android.os.Build.VERSION.SDK_INT >= 26) {
-                                    setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                                if (logoBitmap != null) {
+                                    addView(ImageView(this@SignalSettingsActivity).apply {
+                                        setImageBitmap(logoBitmap)
+                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                        setPadding((5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt())
+                                    }, FrameLayout.LayoutParams(-1, -1))
+                                } else {
+                                    addView(TextView(this@SignalSettingsActivity).apply {
+                                        text = classMark(name)
+                                        textSize = 23f
+                                        typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                                        gravity = Gravity.CENTER
+                                        isSingleLine = true
+                                        setTextColor(Color.BLACK)
+                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                            setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                                        }
+                                    }, FrameLayout.LayoutParams(-1, -1))
                                 }
-                            }, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
+                            }
+                            addView(markBox, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
                             addView(TextView(this@SignalSettingsActivity).apply {
                                 text = name
                                 textSize = 12f
