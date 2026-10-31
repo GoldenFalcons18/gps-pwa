@@ -80,7 +80,7 @@ object SignalSequence {
 
     // Standard race sequence, measured from the orange flag raise at T-10 minutes.
     val profiles = listOf(
-        SignalFlagProfile("standard-start", "帆走スタート（オレンジ旗から14分）", listOf(
+        SignalFlagProfile("standard-start", "帆走スタート（Rule 26・5分＋橙旗）", listOf(
             e(0, 0, "オレンジ旗を掲揚（予告信号の5分前）", "橙", 0xFFF58A00.toInt(), true, 0),
             e(1, 300, "クラス旗を掲揚（スタート5分前）", "級", 0xFF7A35A8.toInt(), true, 0),
             e(2, 360, "準備信号を掲揚（スタート4分前）", "P", 0xFF1769FF.toInt(), true, 0),
@@ -198,8 +198,14 @@ object SignalSequence {
         val hasOrange = source.any { it.flag == "橙" }
         val firstSignal = source.firstOrNull { it.flag != "橙" && it.raised }?.secondsAfterStart ?: 0
         val lastSignal = source.lastOrNull { it.flag != "橙" }?.secondsAfterStart ?: firstSignal
-        val displayShift = if (hasOrange) orangeDisplayedMinutes.coerceIn(0, 30) * 60 - firstSignal else 0
-        val orangeDownAt = lastSignal + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60
+
+        // With the orange flag enabled, sequence zero is its raise and the first
+        // race signal follows after the configured display interval. With it
+        // disabled, the first race signal itself is the first action at zero.
+        val displayShift = if (!hasOrange) 0
+            else if (orangeEnabled) orangeDisplayedMinutes.coerceIn(0, 30) * 60 - firstSignal
+            else -firstSignal
+        val orangeDownAt = lastSignal + displayShift + orangeRemovedAfterMinutes.coerceIn(0, 30) * 60
 
         return source.mapNotNull { event ->
             when {
