@@ -1,1 +1,1 @@
-1.8.23 versionCode 51 add complete International Code signal flag images
+1.8.24 versionCode 52 complete International Code signal flags
