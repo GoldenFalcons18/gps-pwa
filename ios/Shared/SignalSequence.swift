@@ -164,9 +164,13 @@ struct SignalSequence {
         guard let firstSignal = nonOrangeEvents.first(where: \.raised)?.secondsAfterStart else {
             return source.filter { !$0.flags.contains(where: { $0.id == "orange" }) }
         }
-        let shift = orangeDisplayedMinutes(for: profileID) * 60 - firstSignal
+        // Sequence zero is the orange raise only when that flag is enabled.
+        // Otherwise the first race signal must be the first action at zero.
+        let shift = orangeFlagEnabled
+            ? orangeDisplayedMinutes(for: profileID) * 60 - firstSignal
+            : -firstSignal
         let lastSignal = nonOrangeEvents.last?.secondsAfterStart ?? firstSignal
-        let orangeDownAt = lastSignal + orangeRemovalMinutes(for: profileID) * 60
+        let orangeDownAt = lastSignal + shift + orangeRemovalMinutes(for: profileID) * 60
 
         return source.compactMap { event in
             let isOrange = event.flags.contains(where: { $0.id == "orange" })
@@ -218,7 +222,7 @@ struct SignalSequence {
     }
 
     static let profiles: [Profile] = [
-        Profile(id: "standard-start", name: "帆走スタート（オレンジ旗から14分）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
+        Profile(id: "standard-start", name: "帆走スタート（Rule 26・5分＋橙旗）", events: standardStart(classFlag: flag("class-4"), prepFlag: flag("P")), baseDurationMinutes: 14),
         Profile(id: "video-20", name: "動画A（0・5・6・9・10・20分）", events: video20),
         Profile(id: "video-13", name: "動画B（0・4・5・8・9・13分）", events: video13(classFlag: flag("class-4")), baseDurationMinutes: 13),
         Profile(id: "custom-five", name: "5分シーケンス（旗を選択）", events: customFive(classFlag: flag("class-1"), prepFlag: flag("P")), baseDurationMinutes: 5),
