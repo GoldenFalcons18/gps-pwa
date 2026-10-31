@@ -61,6 +61,16 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.flag("first-sub").artworkName, "First Substitute")
     }
 
+    func testSelectedStartRuleChangesThePreparationFlag() {
+        let expected = ["P": "P", "I": "I", "U": "U", "Z": "Z", "black": "black"]
+        for (rule, flagID) in expected {
+            let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: rule)
+            XCTAssertEqual(events[2].flags.first?.id, flagID)
+            XCTAssertEqual(events[3].flags.first?.id, flagID)
+            XCTAssertEqual(events[2].colorHex, events[3].colorHex)
+        }
+    }
+
     func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
