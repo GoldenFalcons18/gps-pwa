@@ -21,9 +21,9 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
         flagName = when {
             mark.id.startsWith("intl:") -> mark.id.removePrefix("intl:")
             mark.id == "AP" -> "Answering Pennant"
-            "第一代表" -> "First Substitute"
-            "Z" -> "Zulu"
-            "L" -> "Lima"
+            mark.id == "第一代表" -> "First Substitute"
+            mark.id == "Z" -> "Zulu"
+            mark.id == "L" -> "Lima"
             else -> mark.id
         }
         signalMark = if (mark.style == "internationalFlag") null else mark
