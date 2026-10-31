@@ -62,11 +62,14 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Finish Window", prefs.getInt("signalFinishWindowMinutes",20).toString()+"分") { number("Finish Window","signalFinishWindowMinutes",20,1,120) }
         section("Rule 42 Override"); switch("Enable","signalRule42Override",false)
 
+        val orangeProfile=SignalSequence.profiles.getOrElse(prefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}
+        val orangeDisplayDefault=if(orangeProfile.id=="video-13") 4 else 5
+        val orangeRemovalDefault=if(orangeProfile.id=="video-20") 10 else 4
         section("Orange Flag")
         switch("Enable","signalOrangeEnabled",true)
-        row("最初のレース信号より前",prefs.getInt("signalOrangeDisplayedMinutes",5).toString()+"分") { number("最初のレース信号より前（分）","signalOrangeDisplayedMinutes",5,0,30) }
-        row("最後の信号の後",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString()+"分") { number("最後の信号の後（分）","signalOrangeRemovedAfterMinutes",4,0,30) }
-        list.addView(TextView(this).apply { text="待機中は降下状態です。有効時は開始時に橙旗を掲揚し、設定時間後に最初のレース信号を行います。無効時は最初のレース信号が0秒です。橙旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
+        row("橙旗掲揚から予告信号まで",prefs.getInt("signalOrangeDisplayedMinutes",orangeDisplayDefault).toString()+"分") { number("橙旗掲揚から予告信号まで（分）","signalOrangeDisplayedMinutes",orangeDisplayDefault,0,30) }
+        row("スタート後、橙旗を降下するまで",prefs.getInt("signalOrangeRemovedAfterMinutes",orangeRemovalDefault).toString()+"分") { number("スタート後、橙旗を降下するまで（分）","signalOrangeRemovedAfterMinutes",orangeRemovalDefault,0,30) }
+        list.addView(TextView(this).apply { text="待機中は橙旗を降下します。有効にすると、同期したシーケンス開始時に自動掲揚します。予告信号とスタートの時刻は橙旗の掲揚時間に応じて表示します。橙旗は設定した時間後に降下し、掲揚・降下は手動でも操作できます。動画Aの既定はスタート後10分、ほかは4分です。"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
         section("Starts")
         val starts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
