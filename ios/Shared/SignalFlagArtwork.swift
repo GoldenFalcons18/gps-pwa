@@ -231,6 +231,7 @@ struct SignalInternationalFlagArtwork: View {
                     default: colors=[white,red,black,yellow]; pennant([white,red,black,yellow])
                     }
                 }
+            }
             context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
         }.aspectRatio(1.5, contentMode: .fit)
     }
