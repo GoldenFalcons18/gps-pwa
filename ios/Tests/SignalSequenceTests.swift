@@ -3,12 +3,16 @@ import XCTest
 
 final class SignalSequenceTests: XCTestCase {
     func testVideoSchedulesMatchReferenceTimesFlagStatesAndHornSignals() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(10, forKey: "signalOrangeRemovedAfterMinutes")
         let videoA = SignalSequence.events(profileID: "video-20")
         XCTAssertEqual(videoA.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 1200])
         XCTAssertEqual(videoA.map { $0.flags.map(\.id) }, [["orange"], ["green"], ["blue-square"], ["blue-square"], ["green"], ["orange"]])
         XCTAssertEqual(videoA.map(\.raised), [true, true, true, false, false, false])
         XCTAssertEqual(videoA.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
 
+        UserDefaults.standard.set(4, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         let videoB = SignalSequence.events(profileID: "video-13")
         XCTAssertEqual(videoB.map(\.secondsAfterStart), [0, 240, 300, 480, 540, 780])
         XCTAssertEqual(videoB.map { $0.flags.map(\.id) }, [["orange"], ["class-4", "diagonal"], ["checker"], ["checker"], ["class-4", "diagonal"], ["orange"]])
@@ -46,6 +50,8 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testStandardStartScheduleUsesRaceStartOffsetsAndRequestedHornSignals() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
 
         XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
@@ -68,8 +74,8 @@ final class SignalSequenceTests: XCTestCase {
 
     func testRecallRestartAndOrangeFlagRemovalTimes() {
         let restart = SignalSequence.recallRestartEvents(classFlagID: "class-4", prepFlagID: "P")
-        XCTAssertEqual(restart.map(\.secondsAfterStart), [0, 60, 240, 300, 540])
-        XCTAssertEqual(restart.map(\.hornPulses), [[0], [0], [1], [0], []])
+        XCTAssertEqual(restart.map(\.secondsAfterStart), [0, 60, 240, 300])
+        XCTAssertEqual(restart.map(\.hornPulses), [[0], [0], [1], [0]])
         XCTAssertEqual(SignalSequence.flags(elapsed: 839, profileID: "standard-start").map(\.id), ["orange"])
         XCTAssertEqual(SignalSequence.flags(elapsed: 840, profileID: "standard-start"), [])
     }
