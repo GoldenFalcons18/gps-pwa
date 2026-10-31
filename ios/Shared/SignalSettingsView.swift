@@ -499,7 +499,11 @@ private struct SignalCustomFlagEditor: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("この旗を使用") {
-                    if flag.style == "logo" { activeClassFlag = flag.logoID }
+                    switch flag.style {
+                    case "logo": activeClassFlag = flag.logoID
+                    case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
+                    default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
+                    }
                     dismiss()
                 }.tint(.orange)
             }
