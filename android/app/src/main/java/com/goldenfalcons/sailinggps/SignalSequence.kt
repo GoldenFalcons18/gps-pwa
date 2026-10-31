@@ -84,7 +84,7 @@ object SignalSequence {
             e(0, 0, "オレンジ旗を掲揚（予告信号の5分前）", "橙", 0xFFF58A00.toInt(), true, 0),
             e(1, 300, "クラス旗を掲揚（スタート5分前）", "級", 0xFF7A35A8.toInt(), true, 0),
             e(2, 360, "準備信号を掲揚（スタート4分前）", "P", 0xFF1769FF.toInt(), true, 0),
-            e(3, 540, "準備信号を降下（スタート1分前）", "P", 0xFF1769FF.toInt(), false, 1),
+            e(3, 540, "P旗を降下（スタート1分前）", "P", 0xFF1769FF.toInt(), false, 1),
             e(4, 600, "クラス旗を降下（スタート）", "級", 0xFF7A35A8.toInt(), false, 0),
             e(5, 840, "オレンジ旗を降下（スタート約4分後）", "橙", 0xFFF58A00.toInt(), false)
         ), baseDurationMinutes = 14),
