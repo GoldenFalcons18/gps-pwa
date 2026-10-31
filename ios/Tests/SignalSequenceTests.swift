@@ -63,11 +63,13 @@ final class SignalSequenceTests: XCTestCase {
             "P旗を掲揚（準備信号・スタート4分前）",
             "P旗を降下（スタート1分前）",
             "クラス旗 4を降下（スタート）",
-            "橙旗を降下（スタート約4分後）"
+            "橙旗を降下（最後の信号から設定時間後）"
         ])
     }
 
     func testStandardSequenceIsTheDefaultAndHighlightsOrangeFlagFirst() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         XCTAssertEqual(SignalSequence.events().map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
         XCTAssertEqual(SignalSequence.initialEventIndex(), 0)
     }
