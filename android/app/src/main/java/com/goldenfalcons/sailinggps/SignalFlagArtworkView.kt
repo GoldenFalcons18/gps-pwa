@@ -18,8 +18,14 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private var signalMark: SignalFlagMark? = null
 
     fun show(mark: SignalFlagMark, raised: Boolean) {
-        signalMark = mark
-        flagName = mark.id
+        flagName = when (mark.id) {
+            "AP" -> "Answering Pennant"
+            "第一代表" -> "First Substitute"
+            "Z" -> "Zulu"
+            "L" -> "Lima"
+            else -> mark.id
+        }
+        signalMark = if (mark.style == "internationalFlag") null else mark
         invalidate()
     }
 
