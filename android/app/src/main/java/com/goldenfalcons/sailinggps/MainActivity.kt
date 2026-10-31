@@ -468,10 +468,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val prep=displayPrefs.getString("signalPrepFlag","P") ?: "P"
         val orange=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val orangeRemoved=displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4)
+        val orangeDisplayed=displayPrefs.getInt("signalOrangeDisplayedMinutes",5)
         val className=displayPrefs.getString("signalSelectedClassName","クラス旗") ?: "クラス旗"
         val all=if(displayPrefs.getBoolean("signalRestartMode",false)) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
             val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
-            SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className)
+            SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className,orangeDisplayed)
         }
         return if(displayPrefs.getBoolean("signalSkipFinalEvent",false) && all.size>1) all.dropLast(1) else all
     }
