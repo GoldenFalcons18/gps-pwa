@@ -291,11 +291,11 @@ private struct SignalFleetPresetEditor: View {
             Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
             Section("橙旗") {
                 Toggle("シーケンスに橙旗を含める", isOn: $preset.orangeEnabled)
-                Stepper("最初のレース信号より前：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
+                Stepper("橙旗掲揚から予告信号まで：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Stepper("最後の信号の後：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
+                Stepper("スタート後、橙旗を降下するまで：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("待機中は降下状態です。有効時は開始時に橙旗を掲揚し、設定時間後に最初のレース信号を行います。無効時は最初のレース信号が0秒になります。橙旗は最後の信号から設定時間後に降下します。掲揚・降下は手動でも操作できます。")
+                Text("待機中は橙旗を降下します。有効時は同期したシーケンス開始時に自動掲揚します。予告信号とスタートの時刻は橙旗の掲揚時間に応じて表示します。橙旗は設定時間後に降下し、掲揚・降下は手動でも操作できます。動画Aの既定はスタート後10分、ほかは4分です。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
