@@ -10,12 +10,10 @@ data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boole
         id.startsWith("intl:") -> "internationalFlag"
         id.startsWith("text:") -> "textFlag"
         id == "斜め" -> "diagonal"
-        id == "N" || id == "赤白チェック" -> "checker"
+        id == "赤白チェック" -> "checker"
         id == "級" || id.startsWith("class-") -> "classLogo"
         id == "青" -> "blueSquare"
         id in setOf("P", "I", "U", "N", "H", "O", "X", "第一代表", "AP", "Z", "L") -> "internationalFlag"
-        id == "第一代表" || id == "AP" || id == "Z" || id == "L" -> "internationalFlag"
-        id == "X" -> "xFlag"
         else -> "solid"
     }
 }
