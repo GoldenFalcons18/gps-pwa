@@ -18,8 +18,9 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private var signalMark: SignalFlagMark? = null
 
     fun show(mark: SignalFlagMark, raised: Boolean) {
-        flagName = when (mark.id) {
-            "AP" -> "Answering Pennant"
+        flagName = when {
+            mark.id.startsWith("intl:") -> mark.id.removePrefix("intl:")
+            mark.id == "AP" -> "Answering Pennant"
             "第一代表" -> "First Substitute"
             "Z" -> "Zulu"
             "L" -> "Lima"
@@ -32,6 +33,16 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
     private fun drawSignalMark(canvas: Canvas, mark: SignalFlagMark) {
         val base = mark.color
         when (mark.style) {
+            "textFlag" -> {
+                rect(canvas,0f,0f,1f,1f,base)
+                p.color=if(android.graphics.Color.luminance(base)>0.45f) black else white
+                p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+                p.typeface=android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.BOLD)
+                val label=mark.id.removePrefix("text:").removePrefix("intl:")
+                p.textSize=minOf(height*0.62f,width*1.45f/label.length.coerceAtLeast(1))
+                canvas.drawText(label,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
+                p.textAlign=Paint.Align.LEFT
+            }
             "classLogo" -> {
                 rect(canvas,0f,0f,1f,1f,white)
                 p.color=black; p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
