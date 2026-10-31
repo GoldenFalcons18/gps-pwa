@@ -45,12 +45,20 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             }
             "classLogo" -> {
                 rect(canvas,0f,0f,1f,1f,white)
-                p.color=black; p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
-                p.typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
-                val label=mark.id.removePrefix("class-").ifEmpty { "4" }
-                p.textSize=minOf(height*0.62f,width*1.35f/label.length.coerceAtLeast(2))
-                canvas.drawText(label,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
-                p.textAlign=Paint.Align.LEFT
+                val className = mark.id.removePrefix("class-").ifEmpty { "4" }
+                val logo = SignalClassLogoAssets.bitmap(context, className)
+                if (logo != null) {
+                    val insetX = width * 0.06f
+                    val insetY = height * 0.06f
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+                    canvas.drawBitmap(logo, null, RectF(insetX, insetY, width - insetX, height - insetY), paint)
+                } else {
+                    p.color=black; p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+                    p.typeface=android.graphics.Typeface.create("sans-serif-black",android.graphics.Typeface.BOLD_ITALIC)
+                    p.textSize=minOf(height*0.62f,width*1.35f/className.length.coerceAtLeast(2))
+                    canvas.drawText(className,width*0.5f,height*0.5f-(p.ascent()+p.descent())/2f,p)
+                    p.textAlign=Paint.Align.LEFT
+                }
             }
             "blueSquare" -> { rect(canvas,0f,0f,1f,1f,base); rect(canvas,0.34f,0.3f,0.32f,0.4f,white) }
             "circle" -> { rect(canvas,0f,0f,1f,1f,base); p.color=black; canvas.drawCircle(width*0.5f,height*0.5f,minOf(width,height)*0.24f,p) }
