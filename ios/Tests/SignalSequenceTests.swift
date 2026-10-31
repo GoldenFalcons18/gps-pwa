@@ -16,6 +16,26 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(videoB.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
     }
 
+    func testOrangeDisableSettingAppliesToAllVideoProfilesAndRestartStartsOrangeDown() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: "signalOrangeEnabled")
+        defaults.set(false, forKey: "signalOrangeEnabled")
+        defer {
+            if let previous { defaults.set(previous, forKey: "signalOrangeEnabled") }
+            else { defaults.removeObject(forKey: "signalOrangeEnabled") }
+        }
+
+        for profile in ["standard-start", "video-13", "video-20"] {
+            XCTAssertFalse(SignalSequence.events(profileID: profile).contains { $0.flags.contains { $0.id == "orange" } })
+        }
+
+        defaults.set(true, forKey: "signalOrangeEnabled")
+        let restart = SignalSequence.recallRestartEvents()
+        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 0).map(\.id), ["class-4"])
+        XCTAssertEqual(SignalSequence.flag("AP").artworkName, "Answering Pennant")
+        XCTAssertEqual(SignalSequence.flag("first-sub").artworkName, "First Substitute")
+    }
+
     func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
