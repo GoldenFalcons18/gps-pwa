@@ -3,6 +3,7 @@ package com.goldenfalcons.sailinggps
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
@@ -13,6 +14,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
     private var previous = emptyList<SignalFlagState>()
     private var flags = emptyList<SignalFlagState>()
     private var progress = 1f
+    private val artworkCache = mutableMapOf<String, Bitmap>()
 
     fun show(states: List<SignalFlagState>, animate: Boolean) {
         if (states == flags) return
@@ -28,6 +30,30 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             progress = 1f
             invalidate()
         }
+    }
+
+    private fun drawInternationalArtwork(canvas: Canvas, state: SignalFlagState, bounds: RectF) {
+        val name = when (state.id) {
+            "AP" -> "Answering Pennant"
+            "第一代表" -> "First Substitute"
+            "Z" -> "Zulu"
+            "L" -> "Lima"
+            else -> state.id
+        }
+        val bitmap = artworkCache.getOrPut(name) {
+            val width = 300
+            val height = 200
+            val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val artwork = SignalFlagArtworkView(context, name)
+            artwork.measure(
+                MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+            )
+            artwork.layout(0, 0, width, height)
+            artwork.draw(Canvas(image))
+            image
+        }
+        canvas.drawBitmap(bitmap, null, bounds, paint)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -103,6 +129,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                 paint.style = Paint.Style.FILL
             }
             when (state.style) {
+                "internationalFlag" -> drawInternationalArtwork(canvas, state, flagRect)
                 "blueSquare" -> {
                     fill(state.color)
                     paint.color = white
