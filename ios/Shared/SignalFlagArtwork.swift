@@ -50,18 +50,14 @@ struct SignalClassLogoMark: View {
 
     var body: some View {
         Group {
-            #if os(iOS)
             if let image = SignalClassLogoAssets.image(for: name) {
-                Image(uiImage: image)
+                Image(decorative: image, scale: 1)
                     .resizable()
                     .scaledToFit()
                     .padding(5)
             } else {
                 fallbackMark
             }
-            #else
-            fallbackMark
-            #endif
         }
         .frame(maxWidth: .infinity, minHeight: 54)
         .background(Color.white)
