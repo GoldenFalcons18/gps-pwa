@@ -6,18 +6,18 @@ data class SignalFlagMark(val id: String, val color: Int, val whiteSquare: Boole
         "赤白チェック", "N" -> 0xFFFFFFFF.toInt()
         else -> 0xFFFFFFFF.toInt()
     }
-    val style: String get() = when (id) {
-        "斜め" -> "diagonal"
-        "N" -> "checker"
-        "赤白チェック" -> "checker"
-        "級", "class-4" -> "classLogo"
-        "青", "P" -> "blueSquare"
-        "I" -> "circle"
-        "第一代表", "AP", "Z", "L" -> "internationalFlag"
-        "X" -> "xFlag"
+    val style: String get() = when {
+        id.startsWith("intl:") -> "internationalFlag"
+        id.startsWith("text:") -> "textFlag"
+        id == "斜め" -> "diagonal"
+        id == "N" || id == "赤白チェック" -> "checker"
+        id == "級" || id.startsWith("class-") -> "classLogo"
+        id == "青" || id == "P" -> "blueSquare"
+        id == "I" -> "circle"
+        id == "第一代表" || id == "AP" || id == "Z" || id == "L" -> "internationalFlag"
+        id == "X" -> "xFlag"
         else -> "solid"
     }
-}
 data class SignalEvent(
     val id: Int,
     val secondsAfterStart: Int,
@@ -56,6 +56,21 @@ data class SignalFlagState(
 )
 
 object SignalSequence {
+    private fun resolvedClassFlagId(value: String): String = when {
+        value == "クラス旗" -> "級"
+        value.startsWith("intl:") -> value
+        value.startsWith("text:") -> value
+        value.startsWith("class-") -> value
+        else -> "class-$value"
+    }
+
+    private fun classFlagLabel(value: String): String = when {
+        value.startsWith("intl:") -> value.removePrefix("intl:")
+        value.startsWith("text:") -> value.removePrefix("text:")
+        value.startsWith("class-") -> value.removePrefix("class-")
+        else -> value
+    }
+
     private fun e(id: Int, seconds: Int, title: String, flag: String, color: Int, raised: Boolean, vararg pulses: Int) =
         SignalEvent(id, seconds, title, color, raised, flag, pulses.toList())
 
@@ -168,7 +183,7 @@ object SignalSequence {
             profile.events.map { event ->
                 when {
                     event.flag == "P" && prepFlag == "I" -> event.copy(flag = "I", color = 0xFFF5D328.toInt(), title = event.title.replace("P旗", "I旗"))
-                    event.flag == "級" -> event.copy(flag = if (className == "クラス旗") "級" else "class-$className", title = event.title.replace("クラス旗", className))
+                    event.flag == "級" -> event.copy(flag = resolvedClassFlagId(className), title = event.title.replace("クラス旗", classFlagLabel(className)))
                     else -> event
                 }
             }
