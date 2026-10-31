@@ -18,6 +18,10 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(videoB.map { $0.flags.map(\.id) }, [["orange"], ["class-4", "diagonal"], ["checker"], ["checker"], ["class-4", "diagonal"], ["orange"]])
         XCTAssertEqual(videoB.map(\.raised), [true, true, true, false, false, false])
         XCTAssertEqual(videoB.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        XCTAssertEqual(SignalSequence.events(profileID: "standard-start").map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
     }
 
     func testOrangeDisableSettingAppliesToAllVideoProfilesAndRestartStartsOrangeDown() {
