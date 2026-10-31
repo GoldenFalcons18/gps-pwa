@@ -136,8 +136,8 @@ class SignalSequenceTest {
     }
 
     @Test
-    fun sequenceScalingPreservesElapsedOrder() {
-        assertEquals(listOf(0, 300, 360, 540, 600, 1200), SignalSequence.events(10, 1).map { it.secondsAfterStart })
+    fun referenceVideoTimingDoesNotScaleWithDuration() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(10, 1).map { it.secondsAfterStart })
     }
 
     @Test
