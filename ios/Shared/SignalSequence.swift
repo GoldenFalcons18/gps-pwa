@@ -93,6 +93,47 @@ struct SignalSequence {
         return ceil(earliest / minute) * minute
     }
 
+    /// Convert a date-picker selection to the exact visible minute. The picker can
+    /// retain hidden seconds, so discard them before applying the synchronized clock offset.
+    static func scheduledSequenceStart(
+        selectedDate: Date,
+        clockOffset: Double,
+        scheduleAtRaceStart: Bool,
+        profileID: String,
+        orangeEnabled: Bool? = nil,
+        orangeDisplayedMinutes: Int? = nil
+    ) -> Date {
+        let selectedMinute = floor(selectedDate.timeIntervalSince1970 / 60) * 60
+        let correctedMinute = ((selectedMinute + clockOffset) / 60).rounded() * 60
+        let lead = scheduleAtRaceStart
+            ? scheduledStartLeadSeconds(profileID: profileID, orangeEnabled: orangeEnabled, orangeDisplayedMinutes: orangeDisplayedMinutes)
+            : 0
+        return Date(timeIntervalSince1970: correctedMinute - Double(lead))
+    }
+
+    /// The selected race-start time is the class-flag lowering (T+00).
+    /// Orange-enabled sequences include the configured orange-flag lead plus the
+    /// five-minute warning sequence; custom five-minute sequences start at the warning.
+    static func scheduledStartLeadSeconds(
+        profileID: String,
+        orangeEnabled: Bool? = nil,
+        orangeDisplayedMinutes: Int? = nil
+    ) -> Int {
+        let usesOrange = ["standard-start", "video-13", "video-20"].contains(profileID)
+        let enabled = orangeEnabled ?? orangeFlagEnabled
+        guard usesOrange && enabled else { return 300 }
+        let defaultMinutes = profileID == "video-13" ? 4 : 5
+        let minutes = orangeDisplayedMinutes ?? (UserDefaults.standard.object(forKey: "signalOrangeDisplayedMinutes") as? Int ?? defaultMinutes)
+        return (min(30, max(0, minutes)) + 5) * 60
+    }
+
+    /// Start the schedule picker on a clean future minute, rather than inheriting the
+    /// current clock's hidden seconds.
+    static func defaultScheduledDate(now: Date = Date(), minimumLeadSeconds: Int = 120) -> Date {
+        let earliest = now.timeIntervalSince1970 + Double(max(0, minimumLeadSeconds))
+        return Date(timeIntervalSince1970: ceil(earliest / 60) * 60)
+    }
+
     /// Restart warning is exactly one minute after AP, N, or first-substitute is lowered.
     static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
 
