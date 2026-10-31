@@ -142,6 +142,12 @@ class SignalFlagArtworkView(context: Context, var flagName: String) : View(conte
             canvas.restoreToCount(save)
             return
         }
+        SignalClassLogoAssets.bitmap(context, flagName)?.let { image ->
+            val imagePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+            canvas.drawBitmap(image, null, RectF(0f, 0f, flagW, flagH), imagePaint)
+            canvas.restoreToCount(save)
+            return
+        }
         when(flagName.lowercase()) {
             "alpha" -> { rect(canvas,0f,0f,1f,1f,white); rect(canvas,0.5f,0f,0.5f,1f,blue); poly(canvas,white,0.72f,0.34f,1f,0.5f,0.72f,0.66f) }
             "bravo" -> { rect(canvas,0f,0f,1f,1f,red); poly(canvas,white,0.68f,0.34f,1f,0.5f,0.68f,0.66f) }
