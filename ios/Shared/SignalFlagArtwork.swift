@@ -1,3 +1,4 @@
+#if os(iOS) || os(watchOS)
 import SwiftUI
 
 struct SignalClassLogoMark: View {
@@ -210,3 +211,4 @@ struct SignalInternationalFlagArtwork: View {
         }.aspectRatio(1.5, contentMode: .fit)
     }
 }
+#endif
