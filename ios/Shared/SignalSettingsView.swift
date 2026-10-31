@@ -280,11 +280,9 @@ private struct SignalFleetPresetEditor: View {
             Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
             Section("Orange Flag") {
                 Toggle("Enable", isOn: $preset.orangeEnabled)
-                Stepper("表示時間：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 1...30)
-                    .disabled(!preset.orangeEnabled)
                 Stepper("スタート後に降下：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("シーケンス開始前は降下状態です。開始時に掲揚し、設定した時間後に降下します。")
+                Text("待機中は降下状態です。シーケンス0分で短音と共に掲揚し、クラス旗降下をスタートとして設定分後に降下します。手動操作もできます。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
@@ -348,7 +346,7 @@ private struct SignalFleetPresetEditor: View {
     }
 }
 
-private struct SignalClassPicker: View {
+struct SignalClassPicker: View {
     @Binding var selection: String
     private let categories = ["Multihull", "Keelboat", "Board", "Centerboard"]
     private let classFlags: [SignalFlagChoice] =
