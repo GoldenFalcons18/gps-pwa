@@ -5,12 +5,30 @@ import ImageIO
 /// Bundled Wikimedia Commons sail emblems. Images are decoded once and remain available offline.
 enum SignalClassLogoAssets {
     private static let imageData: [String: Data] = {
-        guard let url = Bundle.main.url(forResource: "signal-class-logos", withExtension: "json"),
-              let json = try? Data(contentsOf: url),
-              let encoded = try? JSONSerialization.jsonObject(with: json) as? [String: String] else {
-            return [:]
+        var images: [String: Data] = [:]
+        let resourceNames = [
+            "signal-class-logos",
+            "signal-class-logos-extra-1",
+            "signal-class-logos-extra-2",
+            "signal-class-logos-extra-3",
+            "signal-class-logos-extra-4",
+            "signal-class-logos-extra-5",
+            "signal-class-logos-extra-6",
+            "signal-class-logos-extra-7"
+        ]
+        for name in resourceNames {
+            guard let url = Bundle.main.url(forResource: name, withExtension: "json"),
+                  let json = try? Data(contentsOf: url),
+                  let encoded = try? JSONSerialization.jsonObject(with: json) as? [String: String] else {
+                continue
+            }
+            for (key, value) in encoded {
+                if let data = Data(base64Encoded: value) {
+                    images[key] = data
+                }
+            }
         }
-        return encoded.compactMapValues { Data(base64Encoded: $0) }
+        return images
     }()
 
     private static let imageCache = NSCache<NSString, CGImageBox>()
