@@ -26,9 +26,9 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+          - UIInterfaceOrientationPortraitUpsideDown
         UIBackgroundModes: [location]
         NSLocationWhenInUseUsageDescription: 航行位置と航跡を表示・記録します。
         NSLocationAlwaysAndWhenInUseUsageDescription: 画面を消した状態でも、開始した航跡記録を続けます。
@@ -39,8 +39,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.8.25'
-        CURRENT_PROJECT_VERSION: 67
+        MARKETING_VERSION: '1.8.26'
+        CURRENT_PROJECT_VERSION: 68
         TARGETED_DEVICE_FAMILY: '1,2'
       configs:
         Release:
@@ -70,8 +70,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.goldenfalcons.sailinggps.watchkitapp
         SWIFT_VERSION: '5.0'
-        MARKETING_VERSION: '1.8.25'
-        CURRENT_PROJECT_VERSION: 66
+        MARKETING_VERSION: '1.8.26'
+        CURRENT_PROJECT_VERSION: 67
         SKIP_INSTALL: YES
       configs:
         Release:
