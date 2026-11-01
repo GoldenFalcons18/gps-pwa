@@ -4,6 +4,7 @@ import SwiftUI
 struct SignalClassLogoMark: View {
     let name: String
     var color: Color = .black
+    var backgroundColor: Color = .white
 
     private var mark: String {
         let value = name.replacingOccurrences(of: "class-", with: "")
@@ -52,15 +53,17 @@ struct SignalClassLogoMark: View {
         Group {
             if let image = SignalClassLogoAssets.image(for: name) {
                 Image(decorative: image, scale: 1)
+                    .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .padding(5)
+                    .foregroundStyle(color)
             } else {
                 fallbackMark
             }
         }
         .frame(maxWidth: .infinity, minHeight: 54)
-        .background(Color.white)
+        .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .accessibilityLabel(name)
     }
