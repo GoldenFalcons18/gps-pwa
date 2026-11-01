@@ -239,6 +239,8 @@ private struct SignalFleetPresetEditor: View {
     @Binding var preset: SignalFleetPreset
     @AppStorage("signalFlagProfile") private var activeSequence = "standard-start"
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
+    @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @AppStorage("signalCustomPrepFlag") private var activePrepFlag = "P"
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
     @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
@@ -497,6 +499,7 @@ private struct SignalCustomFlagEditor: View {
             } else {
                 Section("Logo") {
                     NavigationLink("クラスのロゴを選択") { SignalClassPicker(selection: $flag.logoID) }
+                    colorPicker("ロゴ色", selection: $flag.textColor)
                 }
             }
             Section("Preview") {
@@ -508,7 +511,10 @@ private struct SignalCustomFlagEditor: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("この旗を使用") {
                     switch flag.style {
-                    case "logo": activeClassFlag = flag.logoID
+                    case "logo":
+                        activeClassFlag = flag.logoID
+                        activeLogoColor = flag.textColor
+                        activeLogoBackground = flag.flagColor
                     case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
                     default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
                     }
@@ -555,7 +561,8 @@ private struct SignalFlagPreview: View {
                             .foregroundStyle(Color(hex: flag.textColor))
                     } else {
                         SignalClassLogoMark(name: flag.text.isEmpty ? flag.logoID.replacingOccurrences(of: "class-", with: "") : flag.text,
-                                            color: Color(hex: flag.textColor))
+                                            color: Color(hex: flag.textColor),
+                                            backgroundColor: Color(hex: flag.flagColor))
                     }
                 }
             }.frame(width: geo.size.width, height: geo.size.height)
