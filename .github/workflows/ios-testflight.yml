@@ -71,7 +71,14 @@ jobs:
           import Foundation
           import ImageIO
           let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-          let expected = ["420", "470", "29er", "49er"]
+          let expected = ["470", "29er", "49er"]
+          let standaloneLogo = root.appendingPathComponent("signal-class-420.png")
+          guard let standaloneData = try? Data(contentsOf: standaloneLogo),
+                let standaloneSource = CGImageSourceCreateWithData(standaloneData as CFData, nil),
+                CGImageSourceCreateImageAtIndex(standaloneSource, 0, nil) != nil else {
+              fatalError("Missing or unreadable standalone 420 class logo in archived app")
+          }
+          print("Verified archived standalone class logo: 420")
           let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)!
           let jsonURLs = files.compactMap { $0 as? URL }.filter { $0.lastPathComponent.hasPrefix("signal-class-logos") && $0.pathExtension == "json" }
           func normalize(_ value: String) -> String { value.lowercased().filter { $0.isLetter || $0.isNumber } }
