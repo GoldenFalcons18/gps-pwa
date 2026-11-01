@@ -1,6 +1,8 @@
 import SwiftUI
 import AVFoundation
 
+// Rebuild trigger for logo color controls
+
 /// Signal timer with the two elapsed-time sequences transcribed from the supplied videos.
 struct SignalTimerPanel: View {
     var compact = false
