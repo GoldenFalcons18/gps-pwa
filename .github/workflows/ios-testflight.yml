@@ -80,7 +80,7 @@ jobs:
                   if image.startswith(bytes([137, 80, 78, 71, 13, 10, 26, 10])):
                       (output / f"class-logo-{key}.png").write_bytes(image)
                       count += 1
-          required = ["420", "470", "29er", "49er"]
+          required = ["420", "470", "29er"]
           missing = [name for name in required if not (output / f"class-logo-{name}.png").is_file()]
           if missing:
               raise SystemExit("Missing required class logo assets: " + ", ".join(missing))
@@ -103,7 +103,7 @@ jobs:
           import Foundation
           import ImageIO
           let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-          for name in ["420", "470", "29er", "49er"] {
+          for name in ["420", "470", "29er"] {
               let url = root.appendingPathComponent("ClassLogos/class-logo-\\(name).png")
               guard let data = try? Data(contentsOf: url),
                     let source = CGImageSourceCreateWithData(data as CFData, nil),
