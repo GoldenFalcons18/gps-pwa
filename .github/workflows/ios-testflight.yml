@@ -76,7 +76,7 @@ jobs:
                       image = base64.b64decode(encoded, validate=True)
                   except Exception:
                       continue
-                  if image.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+                  if image.startswith(bytes([137, 80, 78, 71, 13, 10, 26, 10])):
                       (output / f"class-logo-{key}.png").write_bytes(image)
                       count += 1
           required = ["420", "470", "29er", "49er"]
