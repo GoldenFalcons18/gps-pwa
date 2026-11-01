@@ -248,13 +248,8 @@ class SignalSettingsActivity : AppCompatActivity() {
     }
     private fun classMark(name:String):String = when(name) {
         "A-Cat" -> "A̲"; "Optimist" -> "Ⓞ"; "Starling" -> "★"; "ILCA" -> "ILCA"
-        "49er FX" -> "49er FX"; "J/22" -> "J
-22"; "J/24" -> "J
-24"; "J/70" -> "J
-70"; "J/80" -> "J
-80"
-        "J/105" -> "J
-105"; "420" -> "420"; "470" -> "470"; else -> name
+        "49er FX" -> "49er FX"; "J/22" -> "J\n22"; "J/24" -> "J\n24"; "J/70" -> "J\n70"; "J/80" -> "J\n80"
+        "J/105" -> "J\n105"; "420" -> "420"; "470" -> "470"; else -> name
     }
     private fun internationalFlags() {
         val flags=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute")
