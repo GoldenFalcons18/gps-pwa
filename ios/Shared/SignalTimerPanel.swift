@@ -613,8 +613,8 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
                     SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""),
-                                        color: Color(hex: logoColorHex),
-                                        backgroundColor: Color(hex: logoBackgroundHex))
+                                        color: signalDisplayColor(logoColorHex),
+                                        backgroundColor: signalDisplayColor(logoBackgroundHex))
                 case "internationalFlag":
                     SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
                 default:
@@ -636,12 +636,10 @@ private struct SignalFlagView: View {
 }
 
 
-private extension Color {
-    init(hex: String) {
+private func signalDisplayColor(_ hex: String) -> Color {
         let digits = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         let value = UInt64(digits, radix: 16) ?? 0xFFFFFF
-        self.init(.sRGB, red: Double((value >> 16) & 0xFF) / 255,
-                  green: Double((value >> 8) & 0xFF) / 255,
-                  blue: Double(value & 0xFF) / 255, opacity: 1)
-    }
+        return Color(.sRGB, red: Double((value >> 16) & 0xFF) / 255,
+                     green: Double((value >> 8) & 0xFF) / 255,
+                     blue: Double(value & 0xFF) / 255, opacity: 1)
 }
