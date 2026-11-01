@@ -54,6 +54,33 @@ jobs:
           PY
       - name: Run iPhone logic tests
         run: swift test --package-path ios
+      - name: Prepare standalone class logo assets
+        run: |
+          python3 - <<'PY'
+          import base64, json, pathlib, re
+          shared = pathlib.Path("ios/Shared")
+          output = shared / "ClassLogos"
+          output.mkdir(parents=True, exist_ok=True)
+          count = 0
+          for source in sorted(shared.glob("signal-class-logos*.json")):
+              catalog = json.loads(source.read_text(encoding="utf-8"))
+              for name, encoded in catalog.items():
+                  key = "".join(c for c in name.lower() if c.isalnum())
+                  if not key:
+                      continue
+                  try:
+                      image = base64.b64decode(encoded, validate=True)
+                  except Exception:
+                      continue
+                  if image.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+                      (output / f"class-logo-{key}.png").write_bytes(image)
+                      count += 1
+          required = ["420", "470", "29er", "49er"]
+          missing = [name for name in required if not (output / f"class-logo-{name}.png").is_file()]
+          if missing:
+              raise SystemExit("Missing required class logo assets: " + ", ".join(missing))
+          print(f"Prepared {count} standalone class logo PNGs")
+          PY
       - name: Generate Xcode project
         run: |
           brew install xcodegen
@@ -71,31 +98,14 @@ jobs:
           import Foundation
           import ImageIO
           let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-          let expected = ["470", "29er", "49er"]
-          let standaloneLogo = root.appendingPathComponent("signal-class-420.png")
-          guard let standaloneData = try? Data(contentsOf: standaloneLogo),
-                let standaloneSource = CGImageSourceCreateWithData(standaloneData as CFData, nil),
-                CGImageSourceCreateImageAtIndex(standaloneSource, 0, nil) != nil else {
-              fatalError("Missing or unreadable standalone 420 class logo in archived app")
-          }
-          print("Verified archived standalone class logo: 420")
-          let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)!
-          let jsonURLs = files.compactMap { $0 as? URL }.filter { $0.lastPathComponent.hasPrefix("signal-class-logos") && $0.pathExtension == "json" }
-          func normalize(_ value: String) -> String { value.lowercased().filter { $0.isLetter || $0.isNumber } }
-          for name in expected {
-              var found = false
-              for url in jsonURLs {
-                  guard let data = try? Data(contentsOf: url),
-                        let images = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-                        let encoded = images.first(where: { normalize($0.key) == normalize(name) })?.value,
-                        let bytes = Data(base64Encoded: encoded),
-                        let source = CGImageSourceCreateWithData(bytes as CFData, nil),
-                        CGImageSourceCreateImageAtIndex(source, 0, nil) != nil else { continue }
-                  found = true
-                  break
+          for name in ["420", "470", "29er", "49er"] {
+              let url = root.appendingPathComponent("ClassLogos/class-logo-\\(name).png")
+              guard let data = try? Data(contentsOf: url),
+                    let source = CGImageSourceCreateWithData(data as CFData, nil),
+                    CGImageSourceCreateImageAtIndex(source, 0, nil) != nil else {
+                  fatalError("Missing or unreadable archived class logo: \\(name)")
               }
-              guard found else { fatalError("Missing or unreadable class logo in archived app: \(name)") }
-              print("Verified archived class logo: \(name)")
+              print("Verified archived class logo PNG: \\(name)")
           }
           SWIFT
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" -exportPath "$RUNNER_TEMP/testflight-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" 2>&1 | tee testflight-logs/export.log
