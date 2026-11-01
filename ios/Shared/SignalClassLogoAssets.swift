@@ -36,9 +36,21 @@ enum SignalClassLogoAssets {
 
     static func image(for className: String) -> CGImage? {
         let key = assetKey(for: className)
-        guard let data = imageData[normalizedKey(key)] else { return nil }
         if let cached = imageCache.object(forKey: key as NSString) { return cached.image }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+
+        // The 420 PNG is also bundled as a standalone resource so the picker does
+        // not depend on decoding the large JSON image catalog to find this logo.
+        if normalizedKey(key) == "420",
+           let url = Bundle.main.url(forResource: "signal-class-420", withExtension: "png"),
+           let data = try? Data(contentsOf: url),
+           let source = CGImageSourceCreateWithData(data as CFData, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            imageCache.setObject(CGImageBox(image), forKey: key as NSString)
+            return image
+        }
+
+        guard let data = imageData[normalizedKey(key)],
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
         imageCache.setObject(CGImageBox(image), forKey: key as NSString)
         return image
