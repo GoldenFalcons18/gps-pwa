@@ -73,7 +73,8 @@ jobs:
                   if not key:
                       continue
                   try:
-                      image = base64.b64decode(encoded, validate=True)
+                      compact = "".join(encoded.split())
+                      image = base64.b64decode(compact + "=" * (-len(compact) % 4), validate=True)
                   except Exception:
                       continue
                   if image.startswith(bytes([137, 80, 78, 71, 13, 10, 26, 10])):
