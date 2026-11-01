@@ -1,6 +1,8 @@
 import SwiftUI
 import AVFoundation
 
+// Rebuild trigger for logo color controls
+
 /// Signal timer with the two elapsed-time sequences transcribed from the supplied videos.
 struct SignalTimerPanel: View {
     var compact = false
@@ -33,8 +35,9 @@ struct SignalTimerPanel: View {
     @State private var showInterruptOptions = false
     @State private var showSchedule = false
     @State private var showClassPicker = false
-    @State private var scheduledDate = Date().addingTimeInterval(120)
+    @State private var scheduledDate = SignalSequence.defaultScheduledDate()
     @State private var scheduleMode = 0
+    @State private var scheduleValidationMessage = ""
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
@@ -114,6 +117,13 @@ struct SignalTimerPanel: View {
     }
     private func startOrPause(at date: Date) {
         let correctedNow = date.timeIntervalSince1970 + clockOffset
+        let retryEnd = restartWarningAt + Double(recallRestartEvents.last?.secondsAfterStart ?? 300)
+        if restartWarningAt > 0 && correctedNow >= retryEnd {
+            reset()
+            startAt = SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
+            hasStarted = true
+            return
+        }
         if startAt > correctedNow {
             reset()
             return
@@ -212,13 +222,15 @@ struct SignalTimerPanel: View {
             let now = context.date
             let spent = elapsed(at: now)
             let correctedNow = now.timeIntervalSince1970 + clockOffset
-            let retryPending = restartWarningAt > correctedNow
-            let useRetrySequence = restartWarningAt > 0 && !retryPending
-            let waitingForFirstSignal = !useRetrySequence && startAt > correctedNow
-            let sequenceEvents = useRetrySequence ? recallRestartEvents : events
+            let retryTimeline = restartWarningAt > 0
+            let retryPending = retryTimeline && restartWarningAt > correctedNow
+            let useRetrySequence = retryTimeline && !retryPending
+            let waitingForFirstSignal = !retryTimeline && startAt > correctedNow
+            let sequenceEvents = retryTimeline ? recallRestartEvents : events
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
             let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
-            let highlighted = (waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active
+            let retrySequenceComplete = useRetrySequence && sequenceElapsed >= Double(sequenceEvents.last?.secondsAfterStart ?? 300)
+            let highlighted = retryTimeline ? active : ((waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active)
             let current = sequenceEvents[max(0, active)]
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
@@ -278,7 +290,7 @@ struct SignalTimerPanel: View {
                             }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(eventTimeText(event, restart: useRetrySequence))
+                            Text(eventTimeText(event, restart: retryTimeline))
                                 .font(.system(size: compact ? 10 : 12, design: .monospaced))
                             Text(event.hornPulses.map { $0 == 0 ? "●" : "━" }.joined())
                                 .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
@@ -292,11 +304,11 @@ struct SignalTimerPanel: View {
                 HStack(spacing: compact ? 8 : 22) {
                     Button("中断…") { showInterruptOptions = true }
                         .disabled(!hasStarted && restartWarningAt == 0).foregroundStyle(.gray)
-                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始"))) { startOrPause(at: now) }
-                        .disabled(restartWarningAt > 0 || generalRecallFlagUp || postponementFlagUp)
+                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (retrySequenceComplete ? "開始" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")))) { startOrPause(at: now) }
+                        .disabled(retryPending || (useRetrySequence && !retrySequenceComplete) || generalRecallFlagUp || postponementFlagUp)
                         .foregroundStyle(.blue).fontWeight(.semibold)
                     #if os(iOS)
-                    Button { scheduledDate = Date().addingTimeInterval(120); showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
+                    Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
                     #else
                     Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
                     #endif
@@ -376,8 +388,13 @@ struct SignalTimerPanel: View {
                             Text("シーケンス開始").tag(0)
                             Text("スタート信号").tag(1)
                         }.pickerStyle(.segmented)
-                        DatePicker("開始時刻", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
-                        Text("開始時刻は実時間に合わせて動作します。スタート信号を選ぶと、先行信号時間だけ前から始まります。").font(.footnote).foregroundStyle(.secondary)
+                            .onChange(of: scheduleMode) { _, _ in scheduleValidationMessage = "" }
+                        DatePicker(scheduleMode == 0 ? "シーケンス開始時刻" : "スタート時刻", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
+                            .onChange(of: scheduledDate) { _, _ in scheduleValidationMessage = "" }
+                        Text("時刻は分単位で予約し、秒は00秒に揃えます。スタート時刻を選ぶと、選択中のシーケンスに必要な先行時間を差し引きます。").font(.footnote).foregroundStyle(.secondary)
+                        if !scheduleValidationMessage.isEmpty {
+                            Text(scheduleValidationMessage).font(.footnote).foregroundStyle(.red)
+                        }
                     }
                     .navigationTitle("開始時刻を予約")
                     .toolbar {
@@ -426,8 +443,17 @@ struct SignalTimerPanel: View {
     }
 
     private func scheduleSignalStart() {
-        let lead: TimeInterval = scheduleMode == 0 ? 0 : (flagProfile == "video-13" ? 240 : (flagProfile == "custom-five" ? 0 : 300))
-        startAt = scheduledDate.timeIntervalSince1970 + clockOffset - lead
+        let scheduledStart = SignalSequence.scheduledSequenceStart(
+            selectedDate: scheduledDate,
+            clockOffset: clockOffset,
+            scheduleAtRaceStart: scheduleMode == 1,
+            profileID: flagProfile
+        )
+        guard scheduledStart.timeIntervalSince1970 > Date().timeIntervalSince1970 + clockOffset else {
+            scheduleValidationMessage = "選択した時刻は過ぎているか、シーケンス開始に必要な先行時間がありません。未来の時刻を選んでください。"
+            return
+        }
+        startAt = scheduledStart.timeIntervalSince1970
         pausedSeconds = 0
         hasStarted = true
         restartWarningAt = 0
@@ -537,6 +563,8 @@ private struct MastPole: View {
 
 private struct SignalFlagView: View {
     let flag: SignalSequence.Flag
+    @AppStorage("signalClassLogoTextColor") private var logoColorHex = "#111111"
+    @AppStorage("signalClassLogoBackgroundColor") private var logoBackgroundHex = "#FFFFFF"
 
     private func color(_ index: Int) -> Color {
         let hex = flag.colors[min(index, flag.colors.count - 1)]
@@ -584,7 +612,9 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width * 0.22, height: height)
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
-                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""))
+                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""),
+                                        color: signalDisplayColor(logoColorHex),
+                                        backgroundColor: signalDisplayColor(logoBackgroundHex))
                 case "internationalFlag":
                     SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
                 default:
@@ -603,4 +633,13 @@ private struct SignalFlagView: View {
         }
         .clipShape(Rectangle())
     }
+}
+
+
+private func signalDisplayColor(_ hex: String) -> Color {
+        let digits = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let value = UInt64(digits, radix: 16) ?? 0xFFFFFF
+        return Color(.sRGB, red: Double((value >> 16) & 0xFF) / 255,
+                     green: Double((value >> 8) & 0xFF) / 255,
+                     blue: Double(value & 0xFF) / 255, opacity: 1)
 }

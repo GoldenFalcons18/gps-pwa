@@ -17,14 +17,15 @@ enum SignalClassLogoAssets {
             "signal-class-logos-extra-7"
         ]
         for name in resourceNames {
-            guard let url = Bundle.main.url(forResource: name, withExtension: "json"),
+            guard let url = resourceURL(for: name),
                   let json = try? Data(contentsOf: url),
                   let encoded = try? JSONSerialization.jsonObject(with: json) as? [String: String] else {
                 continue
             }
             for (key, value) in encoded {
-                if let data = Data(base64Encoded: value) {
-                    images[key] = data
+                if let data = Data(base64Encoded: value),
+                   CGImageSourceCreateWithData(data as CFData, nil) != nil {
+                    images[normalizedKey(key)] = data
                 }
             }
         }
@@ -35,16 +36,71 @@ enum SignalClassLogoAssets {
 
     static func image(for className: String) -> CGImage? {
         let key = assetKey(for: className)
-        guard let data = imageData[key] else { return nil }
-        if let cached = imageCache.object(forKey: key as NSString) { return cached.image }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+        let normalized = normalizedKey(key)
+        if let cached = imageCache.object(forKey: normalized as NSString) { return cached.image }
+
+        // Generated image files are bundled separately so every class mark is
+        // loaded as a normal PNG instead of decoded from the large JSON catalog.
+        if let url = Bundle.main.url(
+            forResource: "class-logo-\(normalized)",
+            withExtension: "png"
+        ), let data = try? Data(contentsOf: url),
+           let source = CGImageSourceCreateWithData(data as CFData, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
+            return image
+        }
+
+        if normalized == "420",
+           let url = Bundle.main.url(forResource: "signal-class-420", withExtension: "png"),
+           let data = try? Data(contentsOf: url),
+           let source = CGImageSourceCreateWithData(data as CFData, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
+            return image
+        }
+
+        guard let data = imageData[normalized],
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
-        imageCache.setObject(CGImageBox(image), forKey: key as NSString)
+        imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
         return image
     }
 
+    private static func resourceURL(for name: String) -> URL? {
+        let fileName = "\(name).json"
+        var bundles = Bundle.allBundles + Bundle.allFrameworks
+        if !bundles.contains(where: { $0.bundleURL == Bundle.main.bundleURL }) {
+            bundles.insert(Bundle.main, at: 0)
+        }
+
+        for bundle in bundles {
+            if let url = bundle.url(forResource: name, withExtension: "json")
+                ?? bundle.url(forResource: name, withExtension: "json", subdirectory: "Shared") {
+                return url
+            }
+            guard let root = bundle.resourceURL else { continue }
+            if let enumerator = FileManager.default.enumerator(
+                at: root,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) {
+                for case let url as URL in enumerator where url.lastPathComponent == fileName {
+                    return url
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func normalizedKey(_ value: String) -> String {
+        value.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+
     private static func assetKey(for className: String) -> String {
-        let value = className.replacingOccurrences(of: "class-", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = className
+            .replacingOccurrences(of: "class-", with: "", options: [.caseInsensitive])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         switch value.lowercased() {
         case "a-cat": return "A-Cat"
         case "29er": return "29er"

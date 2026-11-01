@@ -179,14 +179,27 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                     canvas.drawLine(mastX + flagWidth, y, mastX, y + flagHeight, paint)
                 }
                 "classLogo" -> {
-                    fill(white)
-                    paint.color = black
-                    paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
-                    paint.textAlign = Paint.Align.CENTER
-                    val mark = state.id.removePrefix("class-")
-                    paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / mark.length.coerceAtLeast(2)))
-                    canvas.drawText(mark, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
-                    paint.textAlign = Paint.Align.LEFT
+                    val prefs = context.getSharedPreferences("display", Context.MODE_PRIVATE)
+                    val bg = prefs.getInt("signalClassLogoBackgroundColor", white)
+                    val ink = prefs.getInt("signalClassLogoTextColor", black)
+                    fill(bg)
+                    val logoName = state.id.removePrefix("class-")
+                    val bitmap = artworkCache.getOrPut("class:$logoName") {
+                        SignalClassLogoAssets.bitmap(context, logoName) ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                    }
+                    if (bitmap.width > 1) {
+                        val oldFilter = paint.colorFilter
+                        paint.colorFilter = android.graphics.PorterDuffColorFilter(ink, android.graphics.PorterDuff.Mode.SRC_IN)
+                        canvas.drawBitmap(bitmap, null, flagRect, paint)
+                        paint.colorFilter = oldFilter
+                    } else {
+                        paint.color = ink
+                        paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                        paint.textAlign = Paint.Align.CENTER
+                        paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / logoName.length.coerceAtLeast(2)))
+                        canvas.drawText(logoName, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
+                        paint.textAlign = Paint.Align.LEFT
+                    }
                 }
                 else -> fill(state.color)
             }

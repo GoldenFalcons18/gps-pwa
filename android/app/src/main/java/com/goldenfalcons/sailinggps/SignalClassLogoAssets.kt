@@ -15,7 +15,7 @@ object SignalClassLogoAssets {
     fun bitmap(context: Context, className: String): Bitmap? {
         val key = assetKey(className)
         bitmapCache[key]?.let { return it }
-        val encoded = imageMap(context).optString(key).takeIf { it.isNotBlank() } ?: return null
+        val encoded = findEncodedImage(imageMap(context), key) ?: return null
         val bytes = runCatching { Base64.decode(encoded, Base64.DEFAULT) }.getOrNull() ?: return null
         val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
         bitmapCache[key] = image
@@ -36,19 +36,40 @@ object SignalClassLogoAssets {
             "signal-class-logos-extra-7.json"
         )
         assets.forEach { asset ->
-            runCatching {
-                context.assets.open(asset).bufferedReader().use { JSONObject(it.readText()) }
-            }.getOrNull()?.let { source ->
-                val keys = source.keys()
+            val source = sequenceOf(asset, "Shared/$asset")
+                .mapNotNull { path ->
+                    runCatching {
+                        context.assets.open(path).bufferedReader().use { JSONObject(it.readText()) }
+                    }.getOrNull()
+                }
+                .firstOrNull()
+            source?.let {
+                val keys = it.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
-                    loaded.put(key, source.optString(key))
+                    loaded.put(key, it.optString(key))
                 }
             }
         }
         encodedImages = loaded
         return loaded
     }
+
+    private fun findEncodedImage(images: JSONObject, key: String): String? {
+        images.optString(key).takeIf { it.isNotBlank() }?.let { return it }
+        val normalized = normalizeKey(key)
+        val keys = images.keys()
+        while (keys.hasNext()) {
+            val candidate = keys.next()
+            if (normalizeKey(candidate) == normalized) {
+                return images.optString(candidate).takeIf { it.isNotBlank() }
+            }
+        }
+        return null
+    }
+
+    private fun normalizeKey(value: String): String =
+        value.lowercase().filter { it.isLetterOrDigit() }
 
     private fun assetKey(className: String): String {
         val value = className.removePrefix("class-").trim()

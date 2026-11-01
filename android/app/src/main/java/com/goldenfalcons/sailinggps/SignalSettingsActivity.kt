@@ -282,10 +282,15 @@ class SignalSettingsActivity : AppCompatActivity() {
         val layouts=listOf("全面色","上下分割","左右分割","斜め分割","逆斜め")
         val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
         layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
-        val preview=FrameLayout(this).apply { setBackgroundColor(Color.WHITE) }
+        var logoColor = prefs.getInt("signalClassLogoTextColor", Color.BLACK)
+        var logoBackground = prefs.getInt("signalClassLogoBackgroundColor", Color.WHITE)
+        val logoColorButton = Button(this).apply { text = "ロゴ色を選択"; setTextColor(logoColor) }
+        val backgroundColorButton = Button(this).apply { text = "背景色を選択"; setTextColor(logoBackground) }
+        val preview=FrameLayout(this).apply { setBackgroundColor(logoBackground) }
         val box=LinearLayout(this).apply {
             orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
-            addView(input); addView(type); addView(classes); addView(flags); addView(layout); addView(preview,LinearLayout.LayoutParams(-1,96))
+            addView(input); addView(type); addView(classes); addView(flags); addView(layout);
+            addView(logoColorButton); addView(backgroundColorButton); addView(preview,LinearLayout.LayoutParams(-1,96))
         }
         fun updatePreview() {
             val isInternational=type.selectedItemPosition==2
@@ -293,20 +298,30 @@ class SignalSettingsActivity : AppCompatActivity() {
             flags.visibility=if(isInternational)View.VISIBLE else View.GONE
             layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
             preview.removeAllViews()
+            preview.setBackgroundColor(logoBackground)
+            logoColorButton.text = "ロゴ色: ${String.format("#%06X", 0xFFFFFF and logoColor)}"
+            backgroundColorButton.text = "背景色: ${String.format("#%06X", 0xFFFFFF and logoBackground)}"
+            logoColorButton.setTextColor(logoColor)
+            backgroundColorButton.setTextColor(if (Color.luminance(logoBackground) > 0.45f) Color.BLACK else Color.WHITE)
             val label = when(type.selectedItemPosition){0->classes.selectedItem.toString();1->input.text.toString().ifBlank{"旗"};else->flagNames[flags.selectedItemPosition]}
             val logo = if(type.selectedItemPosition==0) SignalClassLogoAssets.bitmap(this, label) else null
             if (logo != null) {
                 preview.addView(ImageView(this).apply {
                     setImageBitmap(logo); scaleType=ImageView.ScaleType.FIT_CENTER
+                    setColorFilter(logoColor, android.graphics.PorterDuff.Mode.SRC_IN)
                     setPadding(8,8,8,8)
                 }, FrameLayout.LayoutParams(-1,-1))
             } else {
                 preview.addView(TextView(this).apply {
                     text=if(type.selectedItemPosition==0) classMark(label) else label
-                    gravity=Gravity.CENTER; textSize=22f; setTextColor(Color.BLACK)
+                    gravity=Gravity.CENTER; textSize=22f; setTextColor(logoColor)
                 }, FrameLayout.LayoutParams(-1,-1))
             }
         }
+        val paletteNames = arrayOf("黒","白","赤","橙","黄","緑","青","紫")
+        val paletteColors = intArrayOf(Color.BLACK, Color.WHITE, 0xFFE32636.toInt(), 0xFFF58A00.toInt(), 0xFFF5D328.toInt(), 0xFF00B83F.toInt(), 0xFF1769FF.toInt(), 0xFF7A35A8.toInt())
+        logoColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("ロゴ色").setItems(paletteNames) { _, i -> logoColor=paletteColors[i]; updatePreview() }.show() }
+        backgroundColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("背景色").setItems(paletteNames) { _, i -> logoBackground=paletteColors[i]; updatePreview() }.show() }
         type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
             override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
             override fun onNothingSelected(parent:AdapterView<*>?) {}
@@ -320,6 +335,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         })
         AlertDialog.Builder(this).setTitle("クラス旗・信号旗の設定").setView(box).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
             val editor=prefs.edit().putString("signalCustomFlagName",input.text.toString()).putInt("signalCustomFlagStyle",type.selectedItemPosition).putInt("signalCustomFlagLayoutIndex",layout.selectedItemPosition)
+                .putInt("signalClassLogoTextColor", logoColor).putInt("signalClassLogoBackgroundColor", logoBackground)
             when(type.selectedItemPosition){
                 0->{val selected=classNames[classes.selectedItemPosition];editor.putString("signalSelectedClassName",selected).putString("signalCustomClassFlag","class-$selected")}
                 1->{val label=input.text.toString().trim().ifEmpty{"旗"};editor.putString("signalSelectedClassName","text:$label").putString("signalCustomFlagText",label)}
