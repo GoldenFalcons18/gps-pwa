@@ -36,23 +36,35 @@ enum SignalClassLogoAssets {
 
     static func image(for className: String) -> CGImage? {
         let key = assetKey(for: className)
-        if let cached = imageCache.object(forKey: key as NSString) { return cached.image }
+        let normalized = normalizedKey(key)
+        if let cached = imageCache.object(forKey: normalized as NSString) { return cached.image }
 
-        // The 420 PNG is also bundled as a standalone resource so the picker does
-        // not depend on decoding the large JSON image catalog to find this logo.
-        if normalizedKey(key) == "420",
+        // Generated image files are bundled separately so every class mark is
+        // loaded as a normal PNG instead of decoded from the large JSON catalog.
+        if let url = Bundle.main.url(
+            forResource: "class-logo-\(normalized)",
+            withExtension: "png",
+            subdirectory: "ClassLogos"
+        ), let data = try? Data(contentsOf: url),
+           let source = CGImageSourceCreateWithData(data as CFData, nil),
+           let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+            imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
+            return image
+        }
+
+        if normalized == "420",
            let url = Bundle.main.url(forResource: "signal-class-420", withExtension: "png"),
            let data = try? Data(contentsOf: url),
            let source = CGImageSourceCreateWithData(data as CFData, nil),
            let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
-            imageCache.setObject(CGImageBox(image), forKey: key as NSString)
+            imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
             return image
         }
 
-        guard let data = imageData[normalizedKey(key)],
+        guard let data = imageData[normalized],
               let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
-        imageCache.setObject(CGImageBox(image), forKey: key as NSString)
+        imageCache.setObject(CGImageBox(image), forKey: normalized as NSString)
         return image
     }
 
