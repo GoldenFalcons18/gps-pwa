@@ -43,8 +43,7 @@ enum SignalClassLogoAssets {
         // loaded as a normal PNG instead of decoded from the large JSON catalog.
         if let url = Bundle.main.url(
             forResource: "class-logo-\(normalized)",
-            withExtension: "png",
-            subdirectory: "ClassLogos"
+            withExtension: "png"
         ), let data = try? Data(contentsOf: url),
            let source = CGImageSourceCreateWithData(data as CFData, nil),
            let image = CGImageSourceCreateImageAtIndex(source, 0, nil) {
