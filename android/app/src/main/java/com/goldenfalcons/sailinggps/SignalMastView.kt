@@ -178,16 +178,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
                     canvas.drawLine(mastX, y, mastX + flagWidth, y + flagHeight, paint)
                     canvas.drawLine(mastX + flagWidth, y, mastX, y + flagHeight, paint)
                 }
-                "classLogo" -> {
-                    fill(white)
-                    paint.color = black
-                    paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
-                    paint.textAlign = Paint.Align.CENTER
-                    val mark = state.id.removePrefix("class-")
-                    paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / mark.length.coerceAtLeast(2)))
-                    canvas.drawText(mark, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)
-                    paint.textAlign = Paint.Align.LEFT
-                }
+                "classLogo" -> {\n                    val prefs = context.getSharedPreferences("display", Context.MODE_PRIVATE)\n                    val bg = prefs.getInt("signalClassLogoBackgroundColor", white)\n                    val ink = prefs.getInt("signalClassLogoTextColor", black)\n                    fill(bg)\n                    val logoName = state.id.removePrefix("class-")\n                    val bitmap = artworkCache.getOrPut("class:$logoName") {\n                        SignalClassLogoAssets.bitmap(context, logoName) ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)\n                    }\n                    if (bitmap.width > 1) {\n                        val oldFilter = paint.colorFilter\n                        paint.colorFilter = android.graphics.PorterDuffColorFilter(ink, android.graphics.PorterDuff.Mode.SRC_IN)\n                        canvas.drawBitmap(bitmap, null, flagRect, paint)\n                        paint.colorFilter = oldFilter\n                    } else {\n                        paint.color = ink\n                        paint.typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)\n                        paint.textAlign = Paint.Align.CENTER\n                        paint.textSize = (flagHeight * 0.52f).coerceAtMost(flagWidth * (1.35f / logoName.length.coerceAtLeast(2)))\n                        canvas.drawText(logoName, flagRect.centerX(), flagRect.centerY() - (paint.ascent() + paint.descent()) / 2f, paint)\n                        paint.textAlign = Paint.Align.LEFT\n                    }\n                }
                 else -> fill(state.color)
             }
         }
