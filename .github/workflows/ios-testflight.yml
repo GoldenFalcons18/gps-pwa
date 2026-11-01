@@ -98,7 +98,21 @@ jobs:
           set -euo pipefail
           mkdir -p testflight-logs
           xcodebuild -project ios/SailingGPS.xcodeproj -scheme SailingGPS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" SAILING_CODE_SIGN_STYLE=Manual SAILING_CODE_SIGN_IDENTITY="$DISTRIBUTION_IDENTITY" SAILING_PROFILE_UUID="$PROFILE_UUID" SAILING_WATCH_PROFILE_UUID="$WATCH_PROFILE_UUID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" archive 2>&1 | tee testflight-logs/archive.log
-          python3 -c 'import os,pathlib,plistlib; p=next((pathlib.Path(os.environ["RUNNER_TEMP"])/"SailingGPS.xcarchive/Products/Applications").glob("*.app/Info.plist")); apps=[p]+list(p.parent.glob("Watch/*.app/Info.plist")); assert len(apps)==2, "Watch app missing"; values=[plistlib.loads(a.read_bytes()) for a in apps]; assert all(v.get("ITSAppUsesNonExemptEncryption") is False for v in values); assert all(v["CFBundleVersion"]==os.environ["BUILD_NUMBER"] for v in values); assert len({v["CFBundleShortVersionString"] for v in values})==1; print("Encryption export declaration verified: false (iPhone and Watch)"); print("Watch bundle verified:",values[1]["CFBundleShortVersionString"],values[1]["CFBundleVersion"])'
+          python3 - <<'PY'
+          import os, pathlib, plistlib
+          app_root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "SailingGPS.xcarchive/Products/Applications"
+          phone = next(app_root.glob("*.app/Info.plist"))
+          watch = list(phone.parent.glob("Watch/*.app/Info.plist"))
+          assert len(watch) == 1, f"Expected one Watch app; found {len(watch)}"
+          apps = [phone, watch[0]]
+          values = [plistlib.loads(path.read_bytes()) for path in apps]
+          for label, value in zip(("iPhone", "Watch"), values):
+              print(f"{label}: version={value.get('CFBundleShortVersionString')} build={value.get('CFBundleVersion')} encryption={value.get('ITSAppUsesNonExemptEncryption')}")
+          assert all(value.get("ITSAppUsesNonExemptEncryption") is False for value in values), "Encryption declaration missing or not false"
+          assert all(value.get("CFBundleVersion") == os.environ["BUILD_NUMBER"] for value in values), "iPhone and Watch build numbers must match BUILD_NUMBER"
+          assert len({value.get("CFBundleShortVersionString") for value in values}) == 1, "iPhone and Watch marketing versions must match"
+          print("Encryption export declaration and Watch bundle verified.")
+          PY
           swift - "$RUNNER_TEMP/SailingGPS.xcarchive/Products/Applications/SailingGPS.app" <<'SWIFT'
           import Foundation
           import ImageIO
