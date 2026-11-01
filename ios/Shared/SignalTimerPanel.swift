@@ -561,6 +561,8 @@ private struct MastPole: View {
 
 private struct SignalFlagView: View {
     let flag: SignalSequence.Flag
+    @AppStorage("signalClassLogoTextColor") private var logoColorHex = "#111111"
+    @AppStorage("signalClassLogoBackgroundColor") private var logoBackgroundHex = "#FFFFFF"
 
     private func color(_ index: Int) -> Color {
         let hex = flag.colors[min(index, flag.colors.count - 1)]
@@ -608,7 +610,7 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width * 0.22, height: height)
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
-                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""))
+                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""),\n                                        color: Color(hex: logoColorHex),\n                                        backgroundColor: Color(hex: logoBackgroundHex))
                 case "internationalFlag":
                     SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
                 default:
