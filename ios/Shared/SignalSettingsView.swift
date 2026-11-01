@@ -239,8 +239,6 @@ private struct SignalFleetPresetEditor: View {
     @Binding var preset: SignalFleetPreset
     @AppStorage("signalFlagProfile") private var activeSequence = "standard-start"
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
-    @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
-    @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @AppStorage("signalCustomPrepFlag") private var activePrepFlag = "P"
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
     @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
@@ -450,6 +448,8 @@ private struct SignalClassFlagSettingsView: View {
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
+    @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @Environment(\.dismiss) private var dismiss
     private let layouts = ["solid", "horizontal", "vertical", "diagonal", "reverseDiagonal"]
     private let colors: [SignalColorChoice] = [
