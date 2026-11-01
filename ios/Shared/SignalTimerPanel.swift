@@ -610,7 +610,9 @@ private struct SignalFlagView: View {
                     Rectangle().fill(color(1)).frame(width: width * 0.22, height: height)
                     Rectangle().fill(color(1)).frame(width: width, height: height * 0.22)
                 case "classLogo":
-                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""),\n                                        color: Color(hex: logoColorHex),\n                                        backgroundColor: Color(hex: logoBackgroundHex))
+                    SignalClassLogoMark(name: flag.id.replacingOccurrences(of: "class-", with: ""),
+                                        color: Color(hex: logoColorHex),
+                                        backgroundColor: Color(hex: logoBackgroundHex))
                 case "internationalFlag":
                     SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
                 default:
@@ -628,5 +630,16 @@ private struct SignalFlagView: View {
             .overlay(Rectangle().stroke(Color.black.opacity(0.7), lineWidth: 0.6))
         }
         .clipShape(Rectangle())
+    }
+}
+
+
+private extension Color {
+    init(hex: String) {
+        let digits = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let value = UInt64(digits, radix: 16) ?? 0xFFFFFF
+        self.init(.sRGB, red: Double((value >> 16) & 0xFF) / 255,
+                  green: Double((value >> 8) & 0xFF) / 255,
+                  blue: Double(value & 0xFF) / 255, opacity: 1)
     }
 }
