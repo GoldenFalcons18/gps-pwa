@@ -63,7 +63,11 @@ jobs:
           output.mkdir(parents=True, exist_ok=True)
           count = 0
           for source in sorted(shared.glob("signal-class-logos*.json")):
-              catalog = json.loads(source.read_text(encoding="utf-8"))
+              raw = source.read_text(encoding="utf-8-sig")
+              start = raw.find("{")
+              if start < 0:
+                  raise SystemExit(f"No JSON object in {source}")
+              catalog = json.loads(raw[start:])
               for name, encoded in catalog.items():
                   key = "".join(c for c in name.lower() if c.isalnum())
                   if not key:
