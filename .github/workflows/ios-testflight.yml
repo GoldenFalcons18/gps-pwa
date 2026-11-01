@@ -87,8 +87,8 @@ jobs:
                   found = true
                   break
               }
-              guard found else { fatalError("Missing or unreadable class logo in archived app: \\(name)") }
-              print("Verified archived class logo: \\(name)")
+              guard found else { fatalError("Missing or unreadable class logo in archived app: \(name)") }
+              print("Verified archived class logo: \(name)")
           }
           SWIFT
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" -exportPath "$RUNNER_TEMP/testflight-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" 2>&1 | tee testflight-logs/export.log
