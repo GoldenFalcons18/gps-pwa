@@ -12,7 +12,18 @@ targets:
     type: application
     platform: iOS
     sources: [SailingGPS, Shared]
-    resources: [Shared/signal-class-420.png, Shared/signal-class-logos.json, Shared/signal-class-logos-extra-1.json, Shared/signal-class-logos-extra-2.json, Shared/signal-class-logos-extra-3.json, Shared/signal-class-logos-extra-4.json, Shared/signal-class-logos-extra-5.json, Shared/signal-class-logos-extra-6.json, Shared/signal-class-logos-extra-7.json, Shared/signal-international-flags.json]
+    resources:
+      - path: Shared/ClassLogos
+        type: folder
+      - Shared/signal-class-logos.json
+      - Shared/signal-class-logos-extra-1.json
+      - Shared/signal-class-logos-extra-2.json
+      - Shared/signal-class-logos-extra-3.json
+      - Shared/signal-class-logos-extra-4.json
+      - Shared/signal-class-logos-extra-5.json
+      - Shared/signal-class-logos-extra-6.json
+      - Shared/signal-class-logos-extra-7.json
+      - Shared/signal-international-flags.json
     dependencies:
       - target: SailingGPSWatch
         embed: true
@@ -53,7 +64,11 @@ targets:
     platform: watchOS
     deploymentTarget: '10.0'
     sources: [SailingGPSWatch, Shared]
-    resources: [Shared/signal-class-420.png, Shared/signal-class-logos.json, Shared/signal-international-flags.json]
+    resources:
+      - path: Shared/ClassLogos
+        type: folder
+      - Shared/signal-class-logos.json
+      - Shared/signal-international-flags.json
     info:
       path: SailingGPSWatch/Info.plist
       properties:
