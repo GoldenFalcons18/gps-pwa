@@ -23,7 +23,8 @@ enum SignalClassLogoAssets {
                 continue
             }
             for (key, value) in encoded {
-                if let data = Data(base64Encoded: value) {
+                if let data = Data(base64Encoded: value),
+                   CGImageSourceCreateWithData(data as CFData, nil) != nil {
                     images[normalizedKey(key)] = data
                 }
             }
@@ -44,19 +45,26 @@ enum SignalClassLogoAssets {
     }
 
     private static func resourceURL(for name: String) -> URL? {
-        if let url = Bundle.main.url(forResource: name, withExtension: "json") {
-            return url
+        let fileName = "\(name).json"
+        var bundles = Bundle.allBundles + Bundle.allFrameworks
+        if !bundles.contains(where: { $0.bundleURL == Bundle.main.bundleURL }) {
+            bundles.insert(Bundle.main, at: 0)
         }
-        if let url = Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Shared") {
-            return url
-        }
-        guard let root = Bundle.main.resourceURL else { return nil }
-        let expected = "\(name).json"
-        let direct = root.appendingPathComponent("Shared", isDirectory: true).appendingPathComponent(expected)
-        if FileManager.default.fileExists(atPath: direct.path) { return direct }
-        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {
-            for case let url as URL in enumerator where url.lastPathComponent == expected {
+
+        for bundle in bundles {
+            if let url = bundle.url(forResource: name, withExtension: "json")
+                ?? bundle.url(forResource: name, withExtension: "json", subdirectory: "Shared") {
                 return url
+            }
+            guard let root = bundle.resourceURL else { continue }
+            if let enumerator = FileManager.default.enumerator(
+                at: root,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ) {
+                for case let url as URL in enumerator where url.lastPathComponent == fileName {
+                    return url
+                }
             }
         }
         return nil
