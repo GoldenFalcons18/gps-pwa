@@ -81,6 +81,13 @@ class SignalSequenceTest {
         assertEquals(120_000L, SignalTiming.scheduledStartAt(50_000L, 15))
     }
     @Test
+    fun refreshWaitsForTheNextCorrectedWholeSecond() {
+        assertEquals(400L, SignalTiming.millisUntilNextSecond(12_345_600L))
+        assertEquals(1L, SignalTiming.millisUntilNextSecond(12_345_699L))
+        assertEquals(1000L, SignalTiming.millisUntilNextSecond(12_345_700L))
+    }
+
+    @Test
     fun countdownUsesCeilingSoItMatchesClockSeconds() {
         assertEquals(51, SignalTiming.countdownSeconds(50.1))
         assertEquals(51, SignalTiming.countdownSeconds(51.0))
