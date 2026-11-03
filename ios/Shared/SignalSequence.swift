@@ -151,6 +151,8 @@ struct SignalSequence {
             !$0.raised && $0.flags.contains(where: { $0.id.hasPrefix("class-") })
         } ?? events.lastIndex {
             !$0.raised && $0.title.contains("スタート")
+        } ?? events.lastIndex {
+            !$0.raised && !$0.flags.contains(where: { $0.id == "orange" })
         }
     }
 
