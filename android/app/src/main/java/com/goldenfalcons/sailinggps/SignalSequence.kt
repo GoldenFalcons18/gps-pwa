@@ -320,7 +320,7 @@ object SignalSequence {
             val classTitle = classUp.title.substringBefore("を掲揚")
             timeline += classUp.copy(
                 secondsAfterStart = warningAt,
-                title = "\${classTitle}を掲揚（予告信号）",
+                title = "${classTitle}を掲揚（予告信号）",
                 hornPulses = action.horn
             )
 
@@ -356,7 +356,7 @@ object SignalSequence {
                 timeline += SignalEvent(
                     id = timeline.size,
                     secondsAfterStart = customTime,
-                    title = "\${flag}を\${if (custom.raised) "掲揚" else "降下"}（設定信号）",
+                    title = "${flag}を${if (custom.raised) "掲揚" else "降下"}（設定信号）",
                     color = color,
                     raised = custom.raised,
                     flag = flag,
@@ -375,7 +375,7 @@ object SignalSequence {
             timeline += SignalEvent(
                 id = timeline.size,
                 secondsAfterStart = at,
-                title = "\${flag}を\${if (action.raised) "掲揚" else "降下"}（設定信号）",
+                title = "${flag}を${if (action.raised) "掲揚" else "降下"}（設定信号）",
                 color = color,
                 raised = action.raised,
                 flag = flag,
