@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
             if(currentDisplayMode>=2) updateNavigationUi()
             if(currentDisplayMode==4) updateSignalUi()
-            uiHandler.postDelayed(this, 1000)
+            uiHandler.postDelayed(this, SignalTiming.millisUntilNextSecond(signalNow()))
         }
     }
     private var latestLat: Double? = null
