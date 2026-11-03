@@ -11,6 +11,9 @@ object SignalTiming {
 
     fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
 
+    /** Delay the next refresh until the next whole corrected-clock second. */
+    fun millisUntilNextSecond(nowMillis: Long): Long = 1000L - Math.floorMod(nowMillis, 1000L)
+
     fun countdownSeconds(remainingSeconds: Double): Int = kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(0)
 
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
