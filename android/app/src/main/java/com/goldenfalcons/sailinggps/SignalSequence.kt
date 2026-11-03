@@ -275,9 +275,9 @@ object SignalSequence {
         }.sortedByDescending { it.second }
         if (classRows.isEmpty()) return null
 
-        val classUp = base.firstOrNull { it.flag == "級" && it.raised } ?: return null
-        val classDown = base.firstOrNull { it.flag == "級" && !it.raised } ?: return null
-        val prepUp = base.firstOrNull { it.flag != "級" && it.flag != "橙" && it.raised } ?: return null
+        val classUp = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && it.raised } ?: return null
+        val classDown = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && !it.raised } ?: return null
+        val prepUp = base.firstOrNull { it.flag != classUp.flag && it.flag != "橙" && it.raised } ?: return null
         val prepDown = base.firstOrNull { it.flag == prepUp.flag && !it.raised } ?: return null
         val orangeUp = base.firstOrNull { it.flag == "橙" && it.raised }
         val orangeDown = base.lastOrNull { it.flag == "橙" && !it.raised }
@@ -288,7 +288,6 @@ object SignalSequence {
         var finalRaceStart = 0
         classRows.forEachIndexed { index, (row, secondsBeforeStart, configuredHorn) ->
             val warningAt = (referenceOffset - secondsBeforeStart + index * delay).coerceAtLeast(0)
-            val className = row.substringBefore("·").trim()
             val classTitle = classUp.title.substringBefore("を掲揚")
             val warning = classUp.copy(
                 id = index * 4 + 1,
