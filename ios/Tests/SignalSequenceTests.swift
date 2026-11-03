@@ -186,6 +186,43 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "custom-five", orangeEnabled: true), 300)
     }
 
+
+    func testSavedFleetStartsGenerateTheRule26TimelineUsedByTimer() {
+        let json = #"[{"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "P",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(events.map(\\.hornPulses), [[0], [0], [0], [1], [0], []])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: events, elapsed: 360).map(\\.id).sorted(), ["P", "class-4", "orange"])
+    }
+
+    func testFleetStartTimeMovesSignalsAndOrangeCanBeAbsent() {
+        let json = #"[{"flagID":"class-420","minute":4,"second":0,"raised":true,"enabled":true,"horn":"long"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "I",
+            orangeEnabled: false,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\\.secondsAfterStart), [60, 120, 300, 360])
+        XCTAssertEqual(events.first?.hornPulses, [1])
+        XCTAssertFalse(events.contains { $0.flags.contains(where: { $0.id == "orange" }) })
+    }
+
     func testDefaultScheduleDateIsRoundedToAFullMinute() {
         let date = SignalSequence.defaultScheduledDate(now: Date(timeIntervalSince1970: 17), minimumLeadSeconds: 120)
         XCTAssertEqual(date.timeIntervalSince1970, 180, accuracy: 0.001)
