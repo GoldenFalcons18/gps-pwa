@@ -147,7 +147,9 @@ struct SignalSequence {
             !$0.raised &&
             $0.title.contains("スタート") &&
             $0.flags.contains(where: { $0.id.hasPrefix("class-") })
-        } ?? events.firstIndex {
+        } ?? events.lastIndex {
+            !$0.raised && $0.flags.contains(where: { $0.id.hasPrefix("class-") })
+        } ?? events.lastIndex {
             !$0.raised && $0.title.contains("スタート")
         }
     }
