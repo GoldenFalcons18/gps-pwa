@@ -20,6 +20,12 @@ struct SignalTimerPanel: View {
     @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
     @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
     @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
+    @AppStorage("signalOrangeEnabled") private var orangeEnabled = true
+    @AppStorage("signalOrangeDisplayedMinutes") private var orangeDisplayedMinutes = 5
+    @AppStorage("signalOrangeRemovedAfterMinutes") private var orangeRemovedMinutes = 4
+    @AppStorage("signalRaceDelayEnabled") private var raceDelayEnabled = false
+    @AppStorage("signalRaceDelayMinutes") private var raceDelayMinutes = 0
     @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
     @AppStorage("signalAbandonFlagUp") private var abandonFlagUp = false
     @AppStorage("signalSkipFinalEvent") private var skipFinalEvent = false
@@ -41,7 +47,17 @@ struct SignalTimerPanel: View {
 
     private let durationMinutes = 20
     private var events: [SignalSequence.Event] {
-        let all = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+        let base = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+        let all = SignalSequence.configuredStartEvents(
+            json: activeStartActionsJSON,
+            profileID: flagProfile,
+            prepFlagID: prepFlagID,
+            orangeEnabled: orangeEnabled,
+            orangeDisplayedMinutes: orangeDisplayedMinutes,
+            orangeRemovedMinutes: orangeRemovedMinutes,
+            raceDelayEnabled: raceDelayEnabled,
+            raceDelayMinutes: raceDelayMinutes
+        ) ?? base
         return skipFinalEvent && all.count > 1 ? Array(all.dropLast()) : all
     }
     private var recallRestartEvents: [SignalSequence.Event] {
