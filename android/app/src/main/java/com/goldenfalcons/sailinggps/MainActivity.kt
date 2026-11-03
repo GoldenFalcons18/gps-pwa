@@ -472,9 +472,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val orangeRemoved=displayPrefs.getInt("signalOrangeRemovedAfterMinutes",if(profileId=="video-20") 10 else 4)
         val orangeDisplayed=displayPrefs.getInt("signalOrangeDisplayedMinutes",if(profileId=="video-13") 4 else 5)
         val className=displayPrefs.getString("signalSelectedClassName","クラス旗") ?: "クラス旗"
-        val all=if(displayPrefs.getBoolean("signalRestartMode",false)) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        val base=if(restartMode) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
             SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className,orangeDisplayed)
         }
+        val all=if(!restartMode && profileId=="standard-start") {
+            val rows=displayPrefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+            SignalSequence.configuredStandardEvents(
+                base=base,
+                entries=rows,
+                referenceOffset=SignalSequence.startReferenceOffset(profileId,orange,orangeDisplayed),
+                orangeRemovedAfterMinutes=orangeRemoved,
+                raceDelayEnabled=displayPrefs.getBoolean("signalRaceDelayEnabled",false),
+                raceDelayMinutes=displayPrefs.getInt("signalRaceDelayMinutes",0)
+            ) ?: base
+        } else base
         return if(displayPrefs.getBoolean("signalSkipFinalEvent",false) && all.size>1) all.dropLast(1) else all
     }
 
