@@ -122,6 +122,47 @@ class SignalSequenceTest {
         assertEquals(listOf(0), SignalSequence.abandonLower.hornPulses)
     }
 
+
+    @Test
+    fun savedFleetStartRowsDriveRuntimeFlagsAndHorns() {
+        val base = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "クラス旗",
+            orangeDisplayedMinutes = 5
+        )
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf("Class · T−5:00 · 掲揚 · 短音"),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), configured.map { it.secondsAfterStart })
+        assertEquals(listOf("橙", "級", "P"), SignalSequence.flagsAtEvents(configured, 360.0).filter { it.raised }.map { it.id }.sorted())
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 540 }.hornPulses)
+        assertEquals(emptyList<Int>(), configured.first { it.secondsAfterStart == 840 }.hornPulses)
+    }
+
+    @Test
+    fun savedStartTimeAndRaceDelayChangeTheGeneratedTimeline() {
+        val base = SignalSequence.events()
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf("Class · T−4:00 · 掲揚 · 長音"),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 360, 420, 600, 660, 900), configured.map { it.secondsAfterStart })
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 360 }.hornPulses)
+    }
+
     @Test
     fun activeRowAdvancesAtElapsedEventBoundary() {
         val offsets = listOf(0, 300, 360, 540, 600, 1200)
