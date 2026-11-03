@@ -83,8 +83,8 @@ class SignalSequenceTest {
     @Test
     fun refreshWaitsForTheNextCorrectedWholeSecond() {
         assertEquals(400L, SignalTiming.millisUntilNextSecond(12_345_600L))
-        assertEquals(1L, SignalTiming.millisUntilNextSecond(12_345_699L))
-        assertEquals(1000L, SignalTiming.millisUntilNextSecond(12_345_700L))
+        assertEquals(1L, SignalTiming.millisUntilNextSecond(12_345_999L))
+        assertEquals(1000L, SignalTiming.millisUntilNextSecond(12_346_000L))
     }
 
     @Test
