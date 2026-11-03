@@ -353,10 +353,11 @@ object SignalSequence {
             }.forEach { custom ->
                 val (flag, color) = flagFor(custom.label)
                 val customTime = (raceStart - custom.secondsBeforeRace).coerceAtLeast(0)
+                val actionName = if (custom.raised) "掲揚" else "降下"
                 timeline += SignalEvent(
                     id = timeline.size,
                     secondsAfterStart = customTime,
-                    title = "${flag}を${if (custom.raised) "掲揚" else "降下"}（設定信号）",
+                    title = "${flag}を${actionName}（設定信号）",
                     color = color,
                     raised = custom.raised,
                     flag = flag,
@@ -372,10 +373,11 @@ object SignalSequence {
         orangeActions.forEach { action ->
             val (flag, color) = flagFor(action.label)
             val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
+            val actionName = if (action.raised) "掲揚" else "降下"
             timeline += SignalEvent(
                 id = timeline.size,
                 secondsAfterStart = at,
-                title = "${flag}を${if (action.raised) "掲揚" else "降下"}（設定信号）",
+                title = "${flag}を${actionName}（設定信号）",
                 color = color,
                 raised = action.raised,
                 flag = flag,
