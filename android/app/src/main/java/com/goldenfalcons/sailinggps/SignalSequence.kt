@@ -55,6 +55,15 @@ object SignalSequence {
     fun startReferenceOffset(profileId: String, orangeEnabled: Boolean, orangeDisplayedMinutes: Int): Int =
         if (profileId == "standard-start") ((if (orangeEnabled) orangeDisplayedMinutes.coerceIn(0, 30) else 0) + 5) * 60 else 0
 
+    /** The race-start zero is the final non-orange flag lowering in the start sequence. */
+    fun raceStartEventIndex(events: List<SignalEvent>): Int? {
+        events.indexOfLast {
+            !it.raised &&
+                it.flag !in setOf("橙", "orange") &&
+                (it.title.contains("スタート") || it.title.contains("降下"))
+        }.takeIf { it >= 0 }
+    }
+
     private fun resolvedClassFlagId(value: String): String = when {
         value == "クラス旗" -> "級"
         value.startsWith("intl:") -> value
