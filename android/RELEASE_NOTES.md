@@ -1,3 +1,7 @@
+## 1.8.30
+- 保存済みのフリートスタート設定をシグナル進行へ反映するよう更新しました。
+- 旗のイベント時刻、レース開始基準、実時刻に沿った秒更新を調整しました。
+
 ## 1.8.24
 - Added all 26 alphabet flags, 10 numeral pennants, 3 substitutes, and the answering pennant as bundled offline images for iPhone, Apple Watch, and Android.
 - Updated the signal flag gallery to the complete International Code of Signals set.
