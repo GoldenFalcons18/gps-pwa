@@ -86,6 +86,12 @@ struct SignalSequence {
         return flagCatalog[0]
     }
 
+    /// Anchor the one-second UI/audio event tick to the corrected wall-clock second.
+    static func nextAlignedTickDate(after now: Date, clockOffset: Double) -> Date {
+        let correctedNow = now.timeIntervalSince1970 + clockOffset
+        return Date(timeIntervalSince1970: floor(correctedNow) + 1 - clockOffset)
+    }
+
     /// Align sequence zero to the next real clock minute boundary, respecting the minimum lead time.
     static func nextMinuteBoundary(at now: Double, minimumLeadSeconds: Int) -> Double {
         let minute = 60.0
