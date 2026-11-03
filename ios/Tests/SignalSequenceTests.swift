@@ -231,4 +231,21 @@ final class SignalSequenceTests: XCTestCase {
     func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
         XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
     }
+
+    func testRaceCountdownUsesClassLoweringAsTheRealZero() {
+        let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
+
+        XCTAssertEqual(SignalSequence.raceStartEventIndex(in: events), 4)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 0), 600)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 77), 523)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 601), -1)
+    }
+
+    func testVideoSequencesUseTheirOwnClassLoweringAsRaceStart() {
+        let videoA = SignalSequence.events(profileID: "video-20")
+        let videoB = SignalSequence.events(profileID: "video-13")
+
+        XCTAssertEqual(videoA[SignalSequence.raceStartEventIndex(in: videoA)!].secondsAfterStart, 600)
+        XCTAssertEqual(videoB[SignalSequence.raceStartEventIndex(in: videoB)!].secondsAfterStart, 540)
+    }
 }
