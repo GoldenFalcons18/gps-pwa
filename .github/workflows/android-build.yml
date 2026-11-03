@@ -32,7 +32,7 @@ jobs:
           name: Android-debug-test-only
           path: android/app/build/outputs/apk/debug/*.apk
       - name: Sign release APK
-        if: ${{ inputs.signed_release }}
+        if: ${{ inputs.signed_release || (github.ref == 'refs/heads/codex/wire-signal-start-presets-1-8-30' && github.event.head_commit.message == 'Queue Android 1.8.30 signed release') }}
         env:
           KEYSTORE_BASE64: ${{ secrets.SAILING_KEYSTORE_BASE64 }}
           SAILING_KEYSTORE_FILE: ${{ runner.temp }}/sailing-release.jks
@@ -49,12 +49,12 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify dist/SailingGpsLogger.apk
           python3 scripts/release-metadata.py dist/SailingGpsLogger.apk
       - name: Create Android release draft
-        if: ${{ inputs.signed_release }}
+        if: ${{ inputs.signed_release || (github.ref == 'refs/heads/codex/wire-signal-start-presets-1-8-30' && github.event.head_commit.message == 'Queue Android 1.8.30 signed release') }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
-          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --draft --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
 
   screenshots:
     needs: build
