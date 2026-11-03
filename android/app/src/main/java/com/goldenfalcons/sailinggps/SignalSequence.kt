@@ -265,46 +265,127 @@ object SignalSequence {
         raceDelayEnabled: Boolean,
         raceDelayMinutes: Int
     ): List<SignalEvent>? {
-        val classRows = entries.mapNotNull { row ->
+        data class StartAction(
+            val label: String,
+            val secondsBeforeRace: Int,
+            val raised: Boolean,
+            val horn: List<Int>
+        )
+
+        val actions = entries.mapNotNull { row ->
             val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapNotNull null
-            if (!row.substringBefore("·").contains("Class", ignoreCase = true) &&
-                !row.substringBefore("·").contains("クラス")) return@mapNotNull null
+            val label = row.substringBefore("·").trim()
             val minute = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
-            val second = match.groupValues[2].toIntOrNull() ?: return@mapNotNull null
-            Triple(row, minute * 60 + second, if (row.contains("長音")) listOf(1) else if (row.contains("音なし")) emptyList() else listOf(0))
-        }.sortedByDescending { it.second }
-        if (classRows.isEmpty()) return null
+            val second = match.groupValues[2].toIntOrNull()?.coerceIn(0, 59) ?: return@mapNotNull null
+            val raised = row.contains("掲揚")
+            val horn = when {
+                row.contains("長音") -> listOf(1)
+                row.contains("音なし") -> emptyList()
+                else -> listOf(0)
+            }
+            StartAction(label, minute * 60 + second, raised, horn)
+        }
+        val classActions = actions.filter { it.label.contains("Class", ignoreCase = true) || it.label.contains("クラス") }
+        val classRaises = classActions.filter { it.raised }.sortedByDescending { it.secondsBeforeRace }
+        if (classRaises.isEmpty()) return null
 
         val classUp = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && it.raised } ?: return null
-        val classDown = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && !it.raised } ?: return null
+        val classDown = base.firstOrNull { it.flag == classUp.flag && !it.raised } ?: return null
         val prepUp = base.firstOrNull { it.flag != classUp.flag && it.flag != "橙" && it.raised } ?: return null
         val prepDown = base.firstOrNull { it.flag == prepUp.flag && !it.raised } ?: return null
         val orangeUp = base.firstOrNull { it.flag == "橙" && it.raised }
         val orangeDown = base.lastOrNull { it.flag == "橙" && !it.raised }
 
+        fun flagFor(label: String): Pair<String, Int> = when (label.lowercase()) {
+            "orange", "橙旗" -> "橙" to 0xFFF58A00.toInt()
+            "p" -> "P" to 0xFF1769FF.toInt()
+            "i", "z" -> label.uppercase() to 0xFFF5D328.toInt()
+            "u" -> "U" to 0xFFD72C32.toInt()
+            "black" -> "黒" to 0xFF202020.toInt()
+            "ap" -> "AP" to 0xFFD71920.toInt()
+            "x" -> "X" to 0xFFFFFFFF.toInt()
+            "first substitute" -> "第一代表" to 0xFF1769FF.toInt()
+            else -> classUp.flag to classUp.color
+        }
+
         val delay = if (raceDelayEnabled) raceDelayMinutes.coerceAtLeast(0) * 60 else 0
-        val actions = mutableListOf<SignalEvent>()
-        orangeUp?.let { actions += it }
+        val timeline = mutableListOf<SignalEvent>()
+        val orangeActions = actions.filter { it.label.equals("Orange", true) || it.label == "橙旗" }
+        if (orangeActions.none { it.raised }) orangeUp?.let { timeline += it }
+
         var finalRaceStart = 0
-        classRows.forEachIndexed { index, (row, secondsBeforeStart, configuredHorn) ->
-            val warningAt = (referenceOffset - secondsBeforeStart + index * delay).coerceAtLeast(0)
+        classRaises.forEachIndexed { index, action ->
+            val warningAt = (referenceOffset - action.secondsBeforeRace + index * delay).coerceAtLeast(0)
+            val raceStart = warningAt + 300
             val classTitle = classUp.title.substringBefore("を掲揚")
-            val warning = classUp.copy(
-                id = index * 4 + 1,
+            timeline += classUp.copy(
                 secondsAfterStart = warningAt,
-                title = "${classTitle}を掲揚（予告信号）",
-                hornPulses = configuredHorn
+                title = "\${classTitle}を掲揚（予告信号）",
+                hornPulses = action.horn
             )
-            actions += warning
-            actions += prepUp.copy(id = index * 4 + 2, secondsAfterStart = warningAt + 60)
-            actions += prepDown.copy(id = index * 4 + 3, secondsAfterStart = warningAt + 240)
-            finalRaceStart = maxOf(finalRaceStart, warningAt + 300)
-            actions += classDown.copy(id = index * 4 + 4, secondsAfterStart = warningAt + 300)
+
+            val prepActions = actions.filter { it.label.uppercase() in setOf("P", "I", "U", "Z", "BLACK") }
+            if (prepActions.isEmpty()) {
+                timeline += prepUp.copy(secondsAfterStart = warningAt + 60)
+                timeline += prepDown.copy(secondsAfterStart = warningAt + 240)
+            } else {
+                val customPrepFlag = flagFor(prepActions.first().label)
+                val templateUp = prepUp.copy(flag = customPrepFlag.first, color = customPrepFlag.second)
+                val templateDown = prepDown.copy(flag = customPrepFlag.first, color = customPrepFlag.second)
+                val hasRaise = prepActions.any { it.raised }
+                val hasLower = prepActions.any { !it.raised }
+                if (!hasRaise) timeline += templateUp.copy(secondsAfterStart = raceStart - 240)
+                if (!hasLower) timeline += templateDown.copy(secondsAfterStart = raceStart - 60)
+                prepActions.forEach { custom ->
+                    timeline += (if (custom.raised) templateUp else templateDown).copy(
+                        secondsAfterStart = (raceStart - custom.secondsBeforeRace).coerceAtLeast(0),
+                        hornPulses = custom.horn
+                    )
+                }
+            }
+
+            if (classActions.none { !it.raised }) timeline += classDown.copy(secondsAfterStart = raceStart)
+            finalRaceStart = maxOf(finalRaceStart, raceStart)
+
+            actions.filter {
+                it.label !in setOf("Class", "Orange", "クラス旗", "橙旗") &&
+                    it.label.uppercase() !in setOf("P", "I", "U", "Z", "BLACK")
+            }.forEach { custom ->
+                val (flag, color) = flagFor(custom.label)
+                val customTime = (raceStart - custom.secondsBeforeRace).coerceAtLeast(0)
+                timeline += SignalEvent(
+                    id = timeline.size,
+                    secondsAfterStart = customTime,
+                    title = "\${flag}を\${if (custom.raised) "掲揚" else "降下"}（設定信号）",
+                    color = color,
+                    raised = custom.raised,
+                    flag = flag,
+                    hornPulses = custom.horn
+                )
+            }
         }
-        if (orangeDown != null) {
-            actions += orangeDown.copy(secondsAfterStart = finalRaceStart + orangeRemovedAfterMinutes.coerceAtLeast(0) * 60)
+
+        classActions.filter { !it.raised }.forEach { action ->
+            val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
+            timeline += classDown.copy(secondsAfterStart = at, hornPulses = action.horn)
         }
-        return actions.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
+        orangeActions.forEach { action ->
+            val (flag, color) = flagFor(action.label)
+            val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
+            timeline += SignalEvent(
+                id = timeline.size,
+                secondsAfterStart = at,
+                title = "\${flag}を\${if (action.raised) "掲揚" else "降下"}（設定信号）",
+                color = color,
+                raised = action.raised,
+                flag = flag,
+                hornPulses = action.horn
+            )
+        }
+        if (orangeDown != null) timeline += orangeDown.copy(
+            secondsAfterStart = finalRaceStart + orangeRemovedAfterMinutes.coerceAtLeast(0) * 60
+        )
+        return timeline.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
             .mapIndexed { index, event -> event.copy(id = index) }
     }
 
