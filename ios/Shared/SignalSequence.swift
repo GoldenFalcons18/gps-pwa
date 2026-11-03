@@ -361,18 +361,33 @@ struct SignalSequence {
                 "橙旗を降下（スタート後）", [flag("orange")], false)
         }
 
-        let grouped = Dictionary(grouping: scheduled) { "\($0.secondsAfterStart)|\($0.raised)|\($0.hornPulses)" }
-        let merged = grouped.values.map { group -> Event in
-            let first = group[0]
-            var unique: [String: Flag] = [:]
-            for event in group { for item in event.flags { unique[item.id] = item } }
-            let names = Array(NSOrderedSet(array: group.map(\.title))) as? [String] ?? [first.title]
-            return Event(id: first.id, secondsAfterStart: first.secondsAfterStart,
-                         title: names.joined(separator: "・"),
-                         flags: unique.values.sorted { $0.id < $1.id },
-                         raised: first.raised, hornPulses: first.hornPulses)
-        }.sorted {
-            $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart
+        var grouped: [String: [Event]] = [:]
+        for event in scheduled {
+            let key = "\(event.secondsAfterStart)|\(event.raised)|\(event.hornPulses)"
+            grouped[key, default: []].append(event)
+        }
+        var merged: [Event] = []
+        for group in grouped.values {
+            guard let first = group.first else { continue }
+            var uniqueFlags: [String: Flag] = [:]
+            var titles: [String] = []
+            for event in group {
+                for item in event.flags { uniqueFlags[item.id] = item }
+                if !titles.contains(event.title) { titles.append(event.title) }
+            }
+            merged.append(Event(
+                id: first.id,
+                secondsAfterStart: first.secondsAfterStart,
+                title: titles.joined(separator: "・"),
+                flags: uniqueFlags.values.sorted { $0.id < $1.id },
+                raised: first.raised,
+                hornPulses: first.hornPulses
+            ))
+        }
+        merged.sort {
+            $0.secondsAfterStart == $1.secondsAfterStart
+                ? $0.id < $1.id
+                : $0.secondsAfterStart < $1.secondsAfterStart
         }
         return merged.enumerated().map { index, event in
             Event(id: index, secondsAfterStart: event.secondsAfterStart, title: event.title,
