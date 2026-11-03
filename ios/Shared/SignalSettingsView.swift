@@ -243,6 +243,9 @@ private struct SignalFleetPresetEditor: View {
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
     @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
     @AppStorage("signalOrangeRemovedAfterMinutes") private var activeOrangeRemoval = 4
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
+    @AppStorage("signalRaceDelayEnabled") private var activeRaceDelayEnabled = false
+    @AppStorage("signalRaceDelayMinutes") private var activeRaceDelayMinutes = 0
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
 
@@ -307,9 +310,11 @@ private struct SignalFleetPresetEditor: View {
                         SignalFlagSwatch(flagID: start.flagID)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(start.title)
-                            TextField("時刻（分）", value: $start.minute, format: .number)
-                                .keyboardType(.numberPad)
-                                .font(.caption)
+                            HStack(spacing: 4) {
+                                TextField("分", value: $start.minute, format: .number).keyboardType(.numberPad).frame(width: 36)
+                                Text(":")
+                                TextField("秒", value: $start.second, format: .number).keyboardType(.numberPad).frame(width: 36)
+                            }.font(.caption).monospacedDigit()
                         }
                         Spacer()
                         Toggle("有効", isOn: $start.enabled).labelsHidden()
@@ -353,6 +358,15 @@ private struct SignalFleetPresetEditor: View {
                     activeOrangeEnabled = preset.orangeEnabled
                     activeOrangeDisplayed = preset.orangeDisplayedMinutes
                     activeOrangeRemoval = preset.orangeRemovedMinutes
+                    activeRaceDelayEnabled = preset.raceDelayEnabled
+                    activeRaceDelayMinutes = preset.raceDelayMinutes
+                    var runtimeStarts = preset.starts
+                    if runtimeStarts.count == 1 && runtimeStarts[0].flagID == "class-4" {
+                        runtimeStarts[0].flagID = preset.classFlagID
+                    }
+                    if let encoded = try? JSONEncoder().encode(runtimeStarts) {
+                        activeStartActionsJSON = String(data: encoded, encoding: .utf8) ?? "[]"
+                    }
                     dismiss()
                 }.tint(.orange)
             }
