@@ -242,7 +242,20 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testVideoSequencesUseTheirOwnClassLoweringAsRaceStart() {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(10, forKey: "signalOrangeRemovedAfterMinutes")
         let videoA = SignalSequence.events(profileID: "video-20")
+        defaults.set(4, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
         let videoB = SignalSequence.events(profileID: "video-13")
 
         XCTAssertEqual(videoA[SignalSequence.raceStartEventIndex(in: videoA)!].secondsAfterStart, 600)
