@@ -163,6 +163,36 @@ class SignalSequenceTest {
         assertEquals(listOf(1), configured.first { it.secondsAfterStart == 360 }.hornPulses)
     }
 
+
+    @Test
+    fun savedPrepAndIndividualSignalRowsControlTheirOwnTimesAndHorns() {
+        val base = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "クラス旗",
+            orangeDisplayedMinutes = 5
+        )
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf(
+                "Class · T−5:00 · 掲揚 · 短音",
+                "I · T−4:00 · 掲揚 · 短音",
+                "I · T−1:00 · 降下 · 長音",
+                "X · T−0:30 · 掲揚 · 短音"
+            ),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 300, 360, 540, 570, 600, 840), configured.map { it.secondsAfterStart })
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 540 }.hornPulses)
+        assertEquals("X", configured.first { it.secondsAfterStart == 570 }.flag)
+    }
+
     @Test
     fun activeRowAdvancesAtElapsedEventBoundary() {
         val offsets = listOf(0, 300, 360, 540, 600, 1200)
