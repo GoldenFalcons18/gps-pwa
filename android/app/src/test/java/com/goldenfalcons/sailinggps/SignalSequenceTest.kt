@@ -232,4 +232,27 @@ class SignalSequenceTest {
         assertEquals(185_000L, SignalTiming.restartWarningAt(125_000L))
     }
 
+
+    @Test
+    fun raceStartCountdownTargetsTheClassLoweringAtRealZero() {
+        val standard = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "クラス旗",
+            orangeDisplayedMinutes = 5
+        )
+        val index = SignalSequence.raceStartEventIndex(standard)
+        assertEquals(4, index)
+        val raceStartSeconds = standard[index!!].secondsAfterStart
+        assertEquals(600, raceStartSeconds)
+        assertEquals(523, raceStartSeconds - 77)
+
+        val videoA = SignalSequence.profiles.first { it.id == "video-20" }.events
+        val videoB = SignalSequence.profiles.first { it.id == "video-13" }.events
+        assertEquals(600, videoA[SignalSequence.raceStartEventIndex(videoA)!!].secondsAfterStart)
+        assertEquals(540, videoB[SignalSequence.raceStartEventIndex(videoB)!!].secondsAfterStart)
+    }
 }
