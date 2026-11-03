@@ -200,9 +200,9 @@ final class SignalSequenceTests: XCTestCase {
             raceDelayMinutes: 0
         )!
 
-        XCTAssertEqual(events.map(\\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
-        XCTAssertEqual(events.map(\\.hornPulses), [[0], [0], [0], [1], [0], []])
-        XCTAssertEqual(SignalSequence.raisedFlags(events: events, elapsed: 360).map(\\.id).sorted(), ["P", "class-4", "orange"])
+        XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: events, elapsed: 360).map(\.id).sorted(), ["P", "class-4", "orange"])
     }
 
     func testFleetStartTimeMovesSignalsAndOrangeCanBeAbsent() {
@@ -218,7 +218,7 @@ final class SignalSequenceTests: XCTestCase {
             raceDelayMinutes: 0
         )!
 
-        XCTAssertEqual(events.map(\\.secondsAfterStart), [60, 120, 300, 360])
+        XCTAssertEqual(events.map(\.secondsAfterStart), [60, 120, 300, 360])
         XCTAssertEqual(events.first?.hornPulses, [1])
         XCTAssertFalse(events.contains { $0.flags.contains(where: { $0.id == "orange" }) })
     }
