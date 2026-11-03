@@ -36,7 +36,7 @@
                 <TextView android:id="@+id/tvSignalStartAt" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TBD" android:gravity="end" android:textColor="#111111" android:textSize="14sp" android:fontFamily="monospace" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/tvSignalTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:visibility="gone" android:textColor="#111111" android:textSize="12sp" />
+                <TextView android:id="@+id/tvSignalTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:maxLines="2" android:textColor="#111111" android:textSize="12sp" />
                 <TextView android:id="@+id/tvSignalCountdown" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="--:--" android:gravity="center" android:textColor="#111111" android:textSize="42sp" android:fontFamily="monospace" />
                 <TextView android:id="@+id/tvSignalNextLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
                 <ImageView android:layout_width="42dp" android:layout_height="42dp" android:src="@android:drawable/ic_lock_idle_alarm" android:tint="#999999" android:contentDescription="経過タイマー" />

@@ -271,4 +271,28 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(videoA[SignalSequence.raceStartEventIndex(in: videoA)!].secondsAfterStart, 600)
         XCTAssertEqual(videoB[SignalSequence.raceStartEventIndex(in: videoB)!].secondsAfterStart, 540)
     }
+
+    func testFrozenSignalPlanRoundTripsWithoutFollowingLaterOrangeSettings() throws {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let frozen = SignalSequence.events(profileID: "standard-start")
+        let snapshot = try JSONEncoder().encode(frozen)
+        defaults.set(8, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(9, forKey: "signalOrangeRemovedAfterMinutes")
+        let changed = SignalSequence.events(profileID: "standard-start")
+        let restored = try JSONDecoder().decode([SignalSequence.Event].self, from: snapshot)
+
+        XCTAssertEqual(restored, frozen)
+        XCTAssertNotEqual(changed.map(\.secondsAfterStart), restored.map(\.secondsAfterStart))
+        XCTAssertEqual(restored[SignalSequence.raceStartEventIndex(in: restored)!].secondsAfterStart, 600)
+    }
 }

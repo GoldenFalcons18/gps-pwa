@@ -1,6 +1,7 @@
 package com.goldenfalcons.sailinggps
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class SignalSequenceTest {
@@ -261,5 +262,17 @@ class SignalSequenceTest {
         val videoB = SignalSequence.profiles.first { it.id == "video-13" }.events
         assertEquals(600, videoA[SignalSequence.raceStartEventIndex(videoA)!!].secondsAfterStart)
         assertEquals(540, videoB[SignalSequence.raceStartEventIndex(videoB)!!].secondsAfterStart)
+    }
+
+    @Test
+    fun frozenSignalPlanRoundTripsWithoutFollowingLaterOrangeSettings() {
+        val frozen = SignalSequence.events(14, 0, orangeEnabled = true, orangeRemovedAfterMinutes = 4, orangeDisplayedMinutes = 5)
+        val saved = SignalSequence.encodeEvents(frozen)
+        val laterConfiguration = SignalSequence.events(14, 0, orangeEnabled = true, orangeRemovedAfterMinutes = 9, orangeDisplayedMinutes = 8)
+        val restored = SignalSequence.decodeEvents(saved)
+
+        assertEquals(frozen, restored)
+        assertNotEquals(laterConfiguration.map { it.secondsAfterStart }, restored!!.map { it.secondsAfterStart })
+        assertEquals(600, restored[SignalSequence.raceStartEventIndex(restored)!!].secondsAfterStart)
     }
 }

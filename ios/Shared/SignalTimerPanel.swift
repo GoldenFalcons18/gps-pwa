@@ -8,7 +8,9 @@ struct SignalTimerPanel: View {
     var compact = false
     @AppStorage("signalVideoStartAt") private var startAt = 0.0
     @AppStorage("signalVideoPausedSeconds") private var pausedSeconds = 0.0
+    @AppStorage("signalVideoPausedAt") private var pausedAt = 0.0
     @AppStorage("signalVideoStarted") private var hasStarted = false
+    @AppStorage("signalRunEventsJSON") private var runEventsJSON = ""
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalMinimumTimeToFirstAction") private var minimumTimeToFirstAction = 15
     @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
@@ -46,7 +48,7 @@ struct SignalTimerPanel: View {
     @State private var scheduleValidationMessage = ""
 
     private let durationMinutes = 20
-    private var events: [SignalSequence.Event] {
+    private var configuredEvents: [SignalSequence.Event] {
         let base = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
         let all = SignalSequence.configuredStartEvents(
             json: activeStartActionsJSON,
@@ -60,11 +62,24 @@ struct SignalTimerPanel: View {
         ) ?? base
         return skipFinalEvent && all.count > 1 ? Array(all.dropLast()) : all
     }
+    private var events: [SignalSequence.Event] {
+        if hasStarted, let data = runEventsJSON.data(using: .utf8),
+           let frozen = try? JSONDecoder().decode([SignalSequence.Event].self, from: data), !frozen.isEmpty {
+            return frozen
+        }
+        return configuredEvents
+    }
+    private func freezeConfiguredEvents() {
+        guard let data = try? JSONEncoder().encode(configuredEvents),
+              let value = String(data: data, encoding: .utf8) else { return }
+        runEventsJSON = value
+    }
     private var recallRestartEvents: [SignalSequence.Event] {
         SignalSequence.recallRestartEvents(classFlagID: classFlagID, prepFlagID: prepFlagID)
     }
     private func pauseForManualSignal(at date: Date) {
         if startAt > 0 {
+            pausedAt = max(startAt, date.timeIntervalSince1970 + clockOffset)
             pausedSeconds = elapsed(at: date)
             startAt = 0
         }
@@ -136,6 +151,7 @@ struct SignalTimerPanel: View {
         let retryEnd = restartWarningAt + Double(recallRestartEvents.last?.secondsAfterStart ?? 300)
         if restartWarningAt > 0 && correctedNow >= retryEnd {
             reset()
+            freezeConfiguredEvents()
             startAt = SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
             hasStarted = true
             return
@@ -147,15 +163,18 @@ struct SignalTimerPanel: View {
         let value = elapsed(at: date)
         if running(at: date) {
             pausedSeconds = value
+            pausedAt = correctedNow
             startAt = 0
             hasStarted = true
         } else {
             let completed = hasStarted && value >= Double(events.last?.secondsAfterStart ?? 1200)
             let wasPaused = hasStarted && !completed
             if completed { pausedSeconds = 0 }
+            if !wasPaused { freezeConfiguredEvents() }
             startAt = wasPaused && pausedSeconds > 0
                 ? correctedNow - pausedSeconds
                 : SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
+            if startAt > 0 { pausedAt = 0 }
             if !wasPaused {
                 pausedSeconds = 0
                 hasStarted = true
@@ -165,7 +184,9 @@ struct SignalTimerPanel: View {
     private func reset() {
         startAt = 0
         pausedSeconds = 0
+        pausedAt = 0
         hasStarted = false
+        runEventsJSON = ""
         individualRecallFlagUp = false
         generalRecallFlagUp = false
         postponementFlagUp = false
@@ -195,15 +216,14 @@ struct SignalTimerPanel: View {
         return prefix + String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 
-    private func eventTimeText(_ event: SignalSequence.Event, restart: Bool = false) -> String {
-        guard flagProfile == "standard-start" || restart else {
-            return String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60)
+    private func eventTimeText(_ event: SignalSequence.Event, baseTime: Double?, sequenceEvents: [SignalSequence.Event], restart: Bool = false) -> String {
+        if let baseTime {
+            return SignalSequence.clockText(Date(timeIntervalSince1970: baseTime + Double(event.secondsAfterStart)))
         }
-        let startOffset = restart ? 300 : SignalSequence.startReferenceOffset(profileID: flagProfile)
-        let offset = event.secondsAfterStart - startOffset
+        let zero = restart ? 300 : Double(sequenceEvents[SignalSequence.raceStartEventIndex(in: sequenceEvents) ?? 0].secondsAfterStart)
+        let offset = event.secondsAfterStart - Int(zero)
         let time = String(format: "%02d:%02d", abs(offset) / 60, abs(offset) % 60)
-        if offset == 0 { return "T+00:00" }
-        return offset < 0 ? "T−\(time)" : "T+\(time)"
+        return offset == 0 ? "T+00:00" : (offset < 0 ? "T−" : "T+") + time
     }
 
     private func activeEventIndex(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double, spent: Double) -> Int {
@@ -213,7 +233,7 @@ struct SignalTimerPanel: View {
             return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
         }
         if hasStarted {
-            return SignalSequence.activeEventIndex(elapsed: spent, durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
+            return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= spent } ?? -1
         }
         return -1
     }
@@ -260,7 +280,7 @@ struct SignalTimerPanel: View {
             let raceStartIndex = SignalSequence.raceStartEventIndex(in: sequenceEvents)
             let raceStartEvent = raceStartIndex.flatMap { sequenceEvents.indices.contains($0) ? sequenceEvents[$0] : nil }
             let raceStartOffset = Double(raceStartEvent?.secondsAfterStart ?? 0)
-            let runBaseTime: Double? = retryTimeline ? restartWarningAt : (startAt > 0 ? startAt : (hasStarted ? correctedNow - spent : nil))
+            let runBaseTime: Double? = retryTimeline ? restartWarningAt : (startAt > 0 ? startAt : (hasStarted ? pausedAt - spent : nil))
             let raceStartTime = raceStartEvent.flatMap { _ in runBaseTime.map { $0 + raceStartOffset } }
             let secondsUntilRaceStart = raceStartTime.map { $0 - correctedNow }
             let raceStartPending = secondsUntilRaceStart.map { $0 > 0 } ?? false
@@ -291,7 +311,7 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(raceStartEvent != nil ? "スタート時刻" : (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻")))).foregroundStyle(.black)
+                    Text(raceStartEvent.map { "\($0.flags.first?.name ?? "") スタート時刻" } ?? (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "スタート時刻")))).foregroundStyle(.black)
                     Spacer()
                     Text(raceStartTime.map { SignalSequence.clockText(Date(timeIntervalSince1970: $0)) } ?? "TBD")
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
@@ -301,7 +321,7 @@ struct SignalTimerPanel: View {
                     Text(raceStartPending && raceStartEvent != nil ? "↓" : (waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓"))).font(.title3.bold()).foregroundStyle(.black)
                     Text(raceStartPending && raceStartEvent != nil ? "スタートまで" : (waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title)).font(.caption).lineLimit(1)
                     Spacer()
-                    Text((hasStarted || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
+                    Text((raceStartTime != nil || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
@@ -321,7 +341,7 @@ struct SignalTimerPanel: View {
                             }
                             Circle().fill(.black).frame(width: 6, height: 6)
                             Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(eventTimeText(event, restart: retryTimeline))
+                            Text(eventTimeText(event, baseTime: runBaseTime, sequenceEvents: sequenceEvents, restart: retryTimeline))
                                 .font(.system(size: compact ? 10 : 12, design: .monospaced))
                             Text(event.hornPulses.map { $0 == 0 ? "●" : "━" }.joined())
                                 .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
@@ -484,8 +504,11 @@ struct SignalTimerPanel: View {
             scheduleValidationMessage = "選択した時刻は過ぎているか、シーケンス開始に必要な先行時間がありません。未来の時刻を選んでください。"
             return
         }
+        skipFinalEvent = false
+        freezeConfiguredEvents()
         startAt = scheduledStart.timeIntervalSince1970
         pausedSeconds = 0
+        pausedAt = 0
         hasStarted = true
         restartWarningAt = 0
         individualRecallFlagUp = false
@@ -494,7 +517,6 @@ struct SignalTimerPanel: View {
         abandonFlagUp = false
         orangeManualOverride = false
         orangeManualUp = false
-        skipFinalEvent = false
         showSchedule = false
     }
 

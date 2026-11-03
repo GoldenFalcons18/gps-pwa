@@ -4,7 +4,7 @@ import Foundation
 /// with the orange starting-line flag, five minutes before the warning signal.
 /// Video profiles remain available as alternate reference sequences.
 struct SignalSequence {
-    struct Flag: Identifiable, Equatable {
+    struct Flag: Identifiable, Equatable, Codable {
         let id: String
         let name: String
         let style: String
@@ -13,7 +13,7 @@ struct SignalSequence {
         var artworkName: String? = nil
     }
 
-    struct Event: Identifiable, Equatable {
+    struct Event: Identifiable, Equatable, Codable {
         let id: Int
         let secondsAfterStart: Int
         let title: String

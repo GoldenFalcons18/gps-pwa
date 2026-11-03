@@ -52,6 +52,24 @@ data class SignalFlagState(
 )
 
 object SignalSequence {
+    fun encodeEvents(events:List<SignalEvent>):String = org.json.JSONArray().apply {
+        events.forEach { event -> put(org.json.JSONObject().apply {
+            put("id",event.id);put("seconds",event.secondsAfterStart);put("title",event.title);put("color",event.color.toLong());put("raised",event.raised);put("flag",event.flag)
+            put("pulses",org.json.JSONArray(event.hornPulses))
+            put("additional",org.json.JSONArray().apply { event.additionalFlags.forEach { mark -> put(org.json.JSONObject().put("id",mark.id).put("color",mark.color.toLong()).put("white",mark.whiteSquare)) } })
+        }) }
+    }.toString()
+
+    fun decodeEvents(raw:String?):List<SignalEvent>? = runCatching {
+        val array=org.json.JSONArray(raw ?: return null)
+        (0 until array.length()).map { index ->
+            val item=array.getJSONObject(index);val pulseArray=item.getJSONArray("pulses");val additional=item.getJSONArray("additional")
+            SignalEvent(item.getInt("id"),item.getInt("seconds"),item.getString("title"),item.getLong("color").toInt(),item.getBoolean("raised"),item.getString("flag"),
+                (0 until pulseArray.length()).map { pulseArray.getInt(it) },
+                (0 until additional.length()).map { extra -> additional.getJSONObject(extra).let { SignalFlagMark(it.getString("id"),it.getLong("color").toInt(),it.optBoolean("white",false)) } })
+        }
+    }.getOrNull()
+
     fun startReferenceOffset(profileId: String, orangeEnabled: Boolean, orangeDisplayedMinutes: Int): Int =
         if (profileId == "standard-start") ((if (orangeEnabled) orangeDisplayedMinutes.coerceIn(0, 30) else 0) + 5) * 60 else 0
 
