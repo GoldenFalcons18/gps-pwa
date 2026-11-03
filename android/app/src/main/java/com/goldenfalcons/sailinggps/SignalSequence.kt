@@ -266,7 +266,7 @@ object SignalSequence {
         raceDelayMinutes: Int
     ): List<SignalEvent>? {
         val classRows = entries.mapNotNull { row ->
-            val match = Regex("""T[−-](\\d+):(\\d+)""").find(row) ?: return@mapNotNull null
+            val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapNotNull null
             if (!row.substringBefore("·").contains("Class", ignoreCase = true) &&
                 !row.substringBefore("·").contains("クラス")) return@mapNotNull null
             val minute = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
