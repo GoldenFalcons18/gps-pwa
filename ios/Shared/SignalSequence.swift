@@ -141,6 +141,22 @@ struct SignalSequence {
         max(0, Int(ceil(remaining)))
     }
 
+    /// Finds the class-flag lowering that defines the actual race-start zero.
+    static func raceStartEventIndex(in events: [Event]) -> Int? {
+        events.firstIndex {
+            !$0.raised &&
+            $0.title.contains("スタート") &&
+            $0.flags.contains(where: { $0.id.hasPrefix("class-") })
+        } ?? events.firstIndex {
+            !$0.raised && $0.title.contains("スタート")
+        }
+    }
+
+    static func secondsUntilRaceStart(in events: [Event], sequenceElapsed: Double) -> Double? {
+        guard let index = raceStartEventIndex(in: events) else { return nil }
+        return Double(events[index].secondsAfterStart) - sequenceElapsed
+    }
+
     private static func e(_ id: Int, _ seconds: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) -> Event {
         Event(id: id, secondsAfterStart: seconds, title: title, flags: flags, raised: raised, hornPulses: pulses)
     }
