@@ -706,6 +706,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val prepFlag=displayPrefs.getString("signalPrepFlag","P") ?: "P"
         val events=currentSignalEvents()
         val totalSeconds=events.lastOrNull()?.secondsAfterStart ?: 0
+        val raceStartIndex=SignalSequence.raceStartEventIndex(events)
+        val raceStartOffsetMs=events.getOrNull(raceStartIndex ?: -1)?.secondsAfterStart?.times(1000L) ?: 0L
         val normalStartAt=displayPrefs.getLong("signalElapsedStartAt",0L)
         val normalPaused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
         val waitingForFirstSignal=!restartMode && normalStartAt>now
@@ -719,6 +721,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         val elapsedSeconds=elapsedMs/1000.0
         val started=restartMode || normalStartAt>0L || normalPaused>=0L
+        val raceStartAt=when {
+            restartMode && restartAt>0L -> restartAt+raceStartOffsetMs
+            restartMode && restartPaused>=0L -> now+raceStartOffsetMs-restartPaused
+            normalStartAt>0L -> normalStartAt+raceStartOffsetMs
+            normalPaused>=0L -> now+raceStartOffsetMs-normalPaused
+            else -> 0L
+        }
+        val raceStartPending=started && raceStartAt>now
         val running=if(waitingForRestart) false else if(restartMode) restartAt>0L && elapsedSeconds<totalSeconds else normalStartAt>0L && elapsedSeconds<totalSeconds
         val completed=started && !waitingForRestart && elapsedSeconds>=totalSeconds
         val active=when {
@@ -726,7 +736,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             waitingForFirstSignal || !started -> -1
             else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
         }
-        val highlighted=if(waitingForFirstSignal || !started) SignalSequence.initialEventIndex(profileIndex) else active
+        val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
         val event=events[active.coerceAtLeast(0)]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.flag=="橙") {
             displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
@@ -741,18 +751,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             else -> 0L
         }
         b.tvSignalClock.text=clock
-        b.tvSignalStartAt.text="Start at  " + if(started) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(displayedStart)) else "TBD"
-        b.tvSignalTitle.text=if(waitingForFirstSignal) "分00秒待ち · ${event.title}" else event.title
+        b.tvSignalStartAt.text="Start at  " + if(started && raceStartAt>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else "TBD"
+        b.tvSignalTitle.text=if(raceStartPending) "スタートまで" else if(waitingForFirstSignal) "分00秒待ち · ${event.title}" else event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
-        val shownSeconds=when {
-            waitingForRestart -> (restartAt-now).coerceAtLeast(0L)/1000.0
-            waitingForFirstSignal -> (normalStartAt-now).coerceAtLeast(0L)/1000.0
-            else -> elapsedSeconds
+        val raceDeltaMs=if(raceStartAt>0L) raceStartAt-now else 0L
+        val raceWholeSeconds=when {
+            raceDeltaMs>0L -> SignalTiming.countdownSeconds(raceDeltaMs/1000.0)
+            raceDeltaMs<0L -> (-raceDeltaMs/1000L).toInt().coerceAtLeast(0)
+            else -> 0
         }
-        val shownWholeSeconds=if(waitingForRestart||waitingForFirstSignal) SignalTiming.countdownSeconds(shownSeconds) else shownSeconds.toInt().coerceAtLeast(0)
-        b.tvSignalCountdown.text=if(!started) "--:--" else "%02d:%02d".format(shownWholeSeconds/60,shownWholeSeconds%60)
-        b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
+        val raceSign=when {
+            raceDeltaMs>=1000L -> "−"
+            raceDeltaMs<=-1000L -> "+"
+            else -> ""
+        }
+        b.tvSignalCountdown.text=if(!started) "--:--" else raceSign+"%02d:%02d".format(raceWholeSeconds/60,raceWholeSeconds%60)
+        b.tvSignalNextLabel.text=when {raceStartPending->"スタートまで";waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止";else->"レース経過"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
             waitingForRestart || waitingForFirstSignal || !started -> mutableListOf()
