@@ -245,7 +245,7 @@ struct SignalTimerPanel: View {
     }
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
+        TimelineView(.periodic(from: SignalSequence.nextAlignedTickDate(after: .now, clockOffset: clockOffset), by: 1)) { context in
             let now = context.date
             let spent = elapsed(at: now)
             let correctedNow = now.timeIntervalSince1970 + clockOffset
