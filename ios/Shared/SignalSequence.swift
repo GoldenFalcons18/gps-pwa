@@ -295,6 +295,91 @@ struct SignalSequence {
         }
     }
 
+    private struct StoredStartAction: Codable {
+        var id: String?
+        var flagID: String
+        var minute: Int
+        var second: Int
+        var raised: Bool
+        var enabled: Bool
+        var horn: String
+    }
+
+    /// Build the live Rule 26 timeline from the fleet's saved start rows.
+    /// Each row's minute/second is the time before the race start (T-minus).
+    /// With the default Class T-5 row, the result is the familiar 0/5/6/9/10 minute sequence.
+    static func configuredStartEvents(
+        json: String,
+        profileID: String,
+        prepFlagID: String,
+        orangeEnabled: Bool,
+        orangeDisplayedMinutes: Int,
+        orangeRemovedMinutes: Int,
+        raceDelayEnabled: Bool,
+        raceDelayMinutes: Int
+    ) -> [Event]? {
+        guard profileID == "standard-start",
+              let data = json.data(using: .utf8),
+              let stored = try? JSONDecoder().decode([StoredStartAction].self, from: data) else { return nil }
+        let starts = stored.filter { $0.enabled && $0.flagID.hasPrefix("class-") }
+        guard !starts.isEmpty else { return nil }
+
+        let orangeLead = orangeEnabled ? max(0, orangeDisplayedMinutes) : 0
+        let startReference = (orangeLead + 5) * 60
+        let delay = raceDelayEnabled ? max(0, raceDelayMinutes) * 60 : 0
+        let classFlags = starts.map { flag($0.flagID) }
+        let prep = flag(prepFlagID)
+        var scheduled: [Event] = []
+        func add(_ second: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) {
+            scheduled.append(Event(id: scheduled.count, secondsAfterStart: max(0, second), title: title,
+                                   flags: flags, raised: raised, hornPulses: pulses))
+        }
+
+        if orangeEnabled {
+            add(0, "橙旗を掲揚（シーケンス開始）", [flag("orange")], true, [0])
+        }
+        var finalRaceStart = 0
+        for (index, action) in starts.enumerated() {
+            let timeToStart = max(0, action.minute * 60 + action.second)
+            let warningAt = max(0, startReference - timeToStart + index * delay)
+            let classFlag = flag(action.flagID)
+            if action.raised {
+                let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])
+                add(warningAt, "\(classFlag.name)を掲揚（予告信号）", [classFlag], true, pulses)
+                add(warningAt + 60, "\(prep.name)を掲揚（準備信号）", [prep], true, [0])
+                add(warningAt + 240, "\(prep.name)を降下（スタート1分前）", [prep], false, [1])
+                let raceStart = warningAt + 300
+                add(raceStart, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0])
+                finalRaceStart = max(finalRaceStart, raceStart)
+            } else {
+                let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])
+                add(warningAt, "\(classFlag.name)を降下", [classFlag], false, pulses)
+            }
+        }
+        if orangeEnabled {
+            add(finalRaceStart + max(0, orangeRemovedMinutes) * 60,
+                "橙旗を降下（スタート後）", [flag("orange")], false)
+        }
+
+        let grouped = Dictionary(grouping: scheduled) { "\($0.secondsAfterStart)|\($0.raised)|\($0.hornPulses)" }
+        let merged = grouped.values.map { group -> Event in
+            let first = group[0]
+            var unique: [String: Flag] = [:]
+            for event in group { for item in event.flags { unique[item.id] = item } }
+            let names = Array(NSOrderedSet(array: group.map(\.title))) as? [String] ?? [first.title]
+            return Event(id: first.id, secondsAfterStart: first.secondsAfterStart,
+                         title: names.joined(separator: "・"),
+                         flags: unique.values.sorted { $0.id < $1.id },
+                         raised: first.raised, hornPulses: first.hornPulses)
+        }.sorted {
+            $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart
+        }
+        return merged.enumerated().map { index, event in
+            Event(id: index, secondsAfterStart: event.secondsAfterStart, title: event.title,
+                  flags: event.flags, raised: event.raised, hornPulses: event.hornPulses)
+        }
+    }
+
     /// Select the pre-start row highlighted in each reference recording.
     static func initialEventIndex(durationMinutes: Int = 20, profileID: String = "standard-start") -> Int {
         let list = events(durationMinutes: durationMinutes, profileID: profileID)
