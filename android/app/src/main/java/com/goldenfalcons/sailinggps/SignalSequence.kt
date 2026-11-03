@@ -292,7 +292,7 @@ object SignalSequence {
             val warning = classUp.copy(
                 id = index * 4 + 1,
                 secondsAfterStart = warningAt,
-                title = "$classTitleを掲揚（予告信号）",
+                title = "${classTitle}を掲揚（予告信号）",
                 hornPulses = configuredHorn
             )
             actions += warning
