@@ -143,7 +143,7 @@ class SignalSequenceTest {
             raceDelayMinutes = 0
         )!!
         assertEquals(listOf(0, 300, 360, 540, 600, 840), configured.map { it.secondsAfterStart })
-        assertEquals(listOf("橙", "級", "P"), SignalSequence.flagsAtEvents(configured, 360.0).filter { it.raised }.map { it.id }.sorted())
+        assertEquals(listOf("P", "橙", "級"), SignalSequence.flagsAtEvents(configured, 360.0).filter { it.raised }.map { it.id }.sorted())
         assertEquals(listOf(1), configured.first { it.secondsAfterStart == 540 }.hornPulses)
         assertEquals(emptyList<Int>(), configured.first { it.secondsAfterStart == 840 }.hornPulses)
     }
