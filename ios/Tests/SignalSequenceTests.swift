@@ -91,6 +91,16 @@ final class SignalSequenceTests: XCTestCase {
         }
     }
 
+    func testTimerRefreshAlignsToCorrectedWholeSecond() {
+        let now = Date(timeIntervalSince1970: 123.456)
+        let next = SignalSequence.nextAlignedTickDate(after: now, clockOffset: 0.25)
+        XCTAssertEqual(next.timeIntervalSince1970, 123.75, accuracy: 0.001)
+
+        let atBoundary = Date(timeIntervalSince1970: 123.75)
+        let following = SignalSequence.nextAlignedTickDate(after: atBoundary, clockOffset: 0.25)
+        XCTAssertEqual(following.timeIntervalSince1970, 124.75, accuracy: 0.001)
+    }
+
     func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
         XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
