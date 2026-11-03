@@ -184,6 +184,17 @@ struct SignalTimerPanel: View {
         return String(format: "%02d:%02d", value / 60, value % 60)
     }
 
+    private func raceCountdownText(_ secondsUntilStart: Double) -> String {
+        if abs(secondsUntilStart) < 1 {
+            return "00:00"
+        }
+        let seconds = secondsUntilStart > 0
+            ? SignalSequence.countdownSeconds(secondsUntilStart)
+            : Int(floor(-secondsUntilStart))
+        let prefix = secondsUntilStart > 0 ? "−" : "+"
+        return prefix + String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
     private func eventTimeText(_ event: SignalSequence.Event, restart: Bool = false) -> String {
         guard flagProfile == "standard-start" || restart else {
             return String(format: "%02d:%02d", event.secondsAfterStart / 60, event.secondsAfterStart % 60)
@@ -246,12 +257,20 @@ struct SignalTimerPanel: View {
             let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
             let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
             let retrySequenceComplete = useRetrySequence && sequenceElapsed >= Double(sequenceEvents.last?.secondsAfterStart ?? 300)
-            let highlighted = retryTimeline ? active : ((waitingForFirstSignal || !hasStarted) ? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile) : active)
+            let raceStartIndex = SignalSequence.raceStartEventIndex(in: sequenceEvents)
+            let raceStartEvent = raceStartIndex.flatMap { sequenceEvents.indices.contains($0) ? sequenceEvents[$0] : nil }
+            let raceStartOffset = Double(raceStartEvent?.secondsAfterStart ?? 0)
+            let runBaseTime: Double? = retryTimeline ? restartWarningAt : (startAt > 0 ? startAt : (hasStarted ? correctedNow - spent : nil))
+            let raceStartTime = raceStartEvent.flatMap { _ in runBaseTime.map { $0 + raceStartOffset } }
+            let secondsUntilRaceStart = raceStartTime.map { $0 - correctedNow }
+            let raceStartPending = secondsUntilRaceStart.map { $0 > 0 } ?? false
+            let initialTarget = raceStartIndex ?? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
+            let highlighted = retryPending ? active : ((raceStartPending || !hasStarted) ? initialTarget : active)
             let current = sequenceEvents[max(0, active)]
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
                 : running(at: now)
-            let displaySeconds = retryPending ? max(0, restartWarningAt - correctedNow) : (waitingForFirstSignal ? max(0, startAt - correctedNow) : sequenceElapsed)
+            let raceCountdown = secondsUntilRaceStart.map(raceCountdownText)
             let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
@@ -272,21 +291,17 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻"))).foregroundStyle(.black)
+                    Text(raceStartEvent != nil ? "スタート時刻" : (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "オレンジ旗を上げる時刻")))).foregroundStyle(.black)
                     Spacer()
-                    Text(retryPending
-                         ? countdownText(displaySeconds)
-                         : (hasStarted
-                            ? SignalSequence.clockText(Date(timeIntervalSince1970: useRetrySequence ? restartWarningAt : (startAt > 0 ? startAt : now.timeIntervalSince1970 + clockOffset - pausedSeconds)))
-                            : "TBD"))
+                    Text(raceStartTime.map { SignalSequence.clockText(Date(timeIntervalSince1970: $0)) } ?? "TBD")
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
                 }
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
                 HStack(spacing: 8) {
-                    Text(waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓")).font(.title3.bold()).foregroundStyle(.black)
-                    Text(waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title).font(.caption).lineLimit(1)
+                    Text(raceStartPending && raceStartEvent != nil ? "↓" : (waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓"))).font(.title3.bold()).foregroundStyle(.black)
+                    Text(raceStartPending && raceStartEvent != nil ? "スタートまで" : (waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title)).font(.caption).lineLimit(1)
                     Spacer()
-                    Text((hasStarted || restartWarningAt > 0) ? ((waitingForFirstSignal || retryPending) ? countdownText(displaySeconds) : elapsedText(displaySeconds)) : "--:--")
+                    Text((hasStarted || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
