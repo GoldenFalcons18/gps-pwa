@@ -214,13 +214,21 @@ object SignalSequence {
     val postponementLower = e(-5, 0, "回答旗（AP）を降下", "AP", 0xFFD71920.toInt(), false, 0)
 
     fun restartEvents(prepFlag: String = "P", orangeEnabled: Boolean = true, orangeRemovedAfterMinutes: Int = 4, className: String = "クラス旗"): List<SignalEvent> {
-        val rows = listOf(
+        val rows = mutableListOf(
             e(0, 0, "${classFlagLabel(className)}を掲揚（再予告信号）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), true, 0),
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
             e(3, 300, "${classFlagLabel(className)}を降下（スタート）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), false, 0),
         )
-        return rows
+        if (orangeEnabled) {
+            // Restart begins at the warning, while the orange flag has been
+            // raised during AP handling and remains up. This state row has no
+            // second horn/raise action.
+            rows += e(-1, 0, "橙旗掲揚中", "橙", 0xFFF58A00.toInt(), true)
+            rows += e(4, 300 + orangeRemovedAfterMinutes.coerceAtLeast(0) * 60, "橙旗を降下（スタート後の設定時間）", "橙", 0xFFF58A00.toInt(), false)
+        }
+        return rows.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
+            .mapIndexed { index, event -> event.copy(id = index) }
     }
 
     fun events(
@@ -341,7 +349,8 @@ object SignalSequence {
             StartAction(label, minute * 60 + second, raised, horn)
         }
         val classActions = actions.filter { it.label.contains("Class", ignoreCase = true) || it.label.contains("クラス") }
-        val classRaises = classActions.filter { it.raised }.sortedByDescending { it.secondsBeforeRace }
+        val classRaises = classActions.filter { it.raised }
+            .sortedWith(compareByDescending<StartAction> { it.secondsBeforeRace }.thenBy { it.label })
         if (classRaises.isEmpty()) return null
 
         val classUp = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && it.raised } ?: return null
@@ -363,15 +372,20 @@ object SignalSequence {
             else -> classUp.flag to classUp.color
         }
 
-        val delay = if (raceDelayEnabled) raceDelayMinutes.coerceAtLeast(0) * 60 else 0
+        // A zero-minute interval means simultaneous starts. Positive saved
+        // intervals always apply; the former enable switch silently ignored them.
+        val delay = raceDelayMinutes.coerceAtLeast(0) * 60
         val timeline = mutableListOf<SignalEvent>()
         val orangeActions = actions.filter { it.label.equals("Orange", true) || it.label == "橙旗" }
         if (orangeActions.none { it.raised }) orangeUp?.let { timeline += it }
 
         var finalRaceStart = 0
-        classRaises.forEachIndexed { index, action ->
-            val warningAt = (referenceOffset - action.secondsBeforeRace + index * delay).coerceAtLeast(0)
-            val raceStart = warningAt + 300
+        var previousRaceStart: Int? = null
+        classRaises.forEach { action ->
+            val nominalRaceStart = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0) + 300
+            val raceStart = previousRaceStart?.let { maxOf(nominalRaceStart, it + delay) } ?: nominalRaceStart
+            val warningAt = (raceStart - 300).coerceAtLeast(0)
+            previousRaceStart = raceStart
             val classTitle = classUp.title.substringBefore("を掲揚")
             timeline += classUp.copy(
                 secondsAfterStart = warningAt,
@@ -384,7 +398,9 @@ object SignalSequence {
             timeline += prepUp.copy(secondsAfterStart = warningAt + 60)
             timeline += prepDown.copy(secondsAfterStart = warningAt + 240)
 
-            if (classActions.none { !it.raised }) timeline += classDown.copy(secondsAfterStart = raceStart)
+            // Every raised class start has its own automatic start-time lowering.
+            // A separately configured lowering must not suppress this event.
+            timeline += classDown.copy(secondsAfterStart = raceStart)
             finalRaceStart = maxOf(finalRaceStart, raceStart)
 
             actions.filter {

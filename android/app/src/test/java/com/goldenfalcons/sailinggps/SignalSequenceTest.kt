@@ -2,6 +2,7 @@ package com.goldenfalcons.sailinggps
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SignalSequenceTest {
@@ -102,10 +103,21 @@ class SignalSequenceTest {
         )
         assertEquals(listOf(0, 420, 480, 660, 720, 900), longerOrange.map { it.secondsAfterStart })
 
-        val restart = SignalSequence.restartEvents()
-        assertEquals(listOf("級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
+        val restart = SignalSequence.restartEvents(orangeRemovedAfterMinutes = 4)
+        assertEquals(setOf("橙", "級"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id }.toSet())
+        assertEquals(listOf(0, 0, 60, 240, 300, 540), restart.map { it.secondsAfterStart })
+        assertEquals(listOf("橙"), SignalSequence.flagsAtEvents(restart, 539.0).filter { it.raised }.map { it.id })
+        assertEquals(emptyList<String>(), SignalSequence.flagsAtEvents(restart, 540.0).filter { it.raised }.map { it.id })
         assertEquals(listOf("第一代表"), SignalSequence.generalRecallRaise.flagMarks.map { it.id })
         assertEquals(listOf("AP"), SignalSequence.postponementRaise.flagMarks.map { it.id })
+    }
+
+    @Test
+    fun apRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
+        assertEquals(1_200_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 900_000L, 5, true))
+        assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 700_000L, 5, true))
+        assertEquals(1_300_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, true))
+        assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, false))
     }
 
     @Test
@@ -162,8 +174,8 @@ class SignalSequenceTest {
         assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
         assertEquals("I", SignalSequence.events(14, 0, "I")[2].flag)
         assertEquals(0xFFF5D328.toInt(), SignalSequence.events(14, 0, "I")[2].color)
-        assertEquals(listOf(0, 60, 240, 300), SignalSequence.restartEvents().map { it.secondsAfterStart })
-        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0)), SignalSequence.restartEvents().map { it.hornPulses })
+        assertEquals(listOf(0, 0, 60, 240, 300, 540), SignalSequence.restartEvents().map { it.secondsAfterStart })
+        assertEquals(listOf(emptyList<Int>(), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()), SignalSequence.restartEvents().map { it.hornPulses })
         assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
         assertEquals(listOf(0, 0), SignalSequence.generalRecallRaise.hornPulses)
         assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
@@ -212,6 +224,29 @@ class SignalSequenceTest {
         )!!
         assertEquals(listOf(0, 360, 420, 600, 660, 900), configured.map { it.secondsAfterStart })
         assertEquals(listOf(1), configured.first { it.secondsAfterStart == 360 }.hornPulses)
+    }
+
+    @Test
+    fun fleetIntervalAppliesWithoutSwitchAndKeepsAutomaticClassLowerings() {
+        val configured = SignalSequence.configuredStandardEvents(
+            base = SignalSequence.events(),
+            entries = setOf(
+                "Class · T−5:00 · 掲揚 · 短音",
+                "Class · T−4:00 · 掲揚 · 短音",
+                "Class · T−1:00 · 降下 · 長音"
+            ),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 2
+        )!!
+
+        assertTrue(configured.any { it.secondsAfterStart == 300 && it.raised && it.title.contains("予告信号") })
+        assertTrue(configured.any { it.secondsAfterStart == 420 && it.raised && it.title.contains("予告信号") })
+        assertTrue(configured.any { it.secondsAfterStart == 540 && !it.raised && it.hornPulses == listOf(1) })
+        assertTrue(configured.any { it.secondsAfterStart == 600 && !it.raised && it.title.contains("スタート") })
+        assertTrue(configured.any { it.secondsAfterStart == 720 && !it.raised && it.title.contains("スタート") })
+        assertTrue(configured.any { it.secondsAfterStart == 960 && !it.raised && it.flag == "橙" })
     }
 
 

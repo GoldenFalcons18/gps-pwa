@@ -37,16 +37,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("次の分00秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
-        row("時刻同期（ntp.nict.jp）", "同期") {
-            NictClock.query { result -> runOnUiThread {
-                result.onSuccess { offset ->
-                    prefs.edit().putLong("signalClockOffsetMs", offset).apply()
-                    Toast.makeText(this, "時刻同期しました（差 ${if (offset >= 0) "+" else ""}${offset} ms）", Toast.LENGTH_LONG).show()
-                }.onFailure {
-                    Toast.makeText(this, "時刻同期に失敗しました。端末時刻を使用します", Toast.LENGTH_LONG).show()
-                }
-            } }
-        }
+        row("時間合わせ", if (prefs.getString("signalClockAlignmentMode", "manual") == "nict") "NICT同期" else "端末時刻で0秒合わせ") { clockAlignment() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
         switch("BuoyZone", "signalBuoyZoneLinked", false)
@@ -92,6 +83,31 @@ class SignalSettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("キャンセル",null).setPositiveButton("保存") { _,_ ->
             prefs.edit().putInt(key,(input.text.toString().toIntOrNull()?:default).coerceIn(min,max)).apply(); build()
         }.show()
+    }
+    private fun clockAlignment() {
+        val modes = arrayOf("端末時刻で0秒合わせ", "ntp.nict.jpと同期")
+        val current = if (prefs.getString("signalClockAlignmentMode", "manual") == "nict") 1 else 0
+        AlertDialog.Builder(this).setTitle("時間合わせ")
+            .setSingleChoiceItems(modes, current) { dialog, which ->
+                if (which == 0) {
+                    prefs.edit().putString("signalClockAlignmentMode", "manual").putLong("signalClockOffsetMs", 0L).apply()
+                    Toast.makeText(this, "端末の実時刻を基準に0秒へ合わせます", Toast.LENGTH_LONG).show()
+                    dialog.dismiss(); build()
+                } else {
+                    prefs.edit().putString("signalClockAlignmentMode", "nict").apply()
+                    dialog.dismiss()
+                    NictClock.query { result -> runOnUiThread {
+                        result.onSuccess { offset ->
+                            prefs.edit().putLong("signalClockOffsetMs", offset).apply()
+                            Toast.makeText(this, "NICTと同期しました（差 ${if (offset >= 0) "+" else ""}${offset} ms）", Toast.LENGTH_LONG).show()
+                        }.onFailure {
+                            prefs.edit().putString("signalClockAlignmentMode", "manual").putLong("signalClockOffsetMs", 0L).apply()
+                            Toast.makeText(this, "同期に失敗しました。端末時刻を使用します", Toast.LENGTH_LONG).show()
+                        }
+                        build()
+                    } }
+                }
+            }.setNegativeButton("キャンセル", null).show()
     }
     private fun choose(title:String,items:List<String>,key:String) {
         AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
@@ -150,7 +166,6 @@ class SignalSettingsActivity : AppCompatActivity() {
         val orangeEnabled=CheckBox(this).apply { text="Orange flag enabled"; setTextColor(white); isChecked=prefs.getBoolean("signalOrangeEnabled",true); content.addView(this) }
         val orangeMinutes=field("Orange flag: raise to warning interval (minutes)",prefs.getInt("signalOrangeDisplayedMinutes",5).toString())
         val orangeRemove=field("Lower orange flag after start (minutes)",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString())
-        val delayEnabled=CheckBox(this).apply { text="Custom race delay"; setTextColor(white); isChecked=prefs.getBoolean("signalRaceDelayEnabled",false); content.addView(this) }
         val delay=field("Time between races (minutes)",prefs.getInt("signalRaceDelayMinutes",0).toString())
         val limitEnabled=CheckBox(this).apply { text="Time limit enabled"; setTextColor(white); isChecked=prefs.getBoolean("signalTimeLimitEnabled",false); content.addView(this) }
         val raceLimit=field("Race limit (minutes)",prefs.getInt("signalRaceLimitMinutes",50).toString())
@@ -179,7 +194,7 @@ class SignalSettingsActivity : AppCompatActivity() {
                 .putBoolean("signalOrangeEnabled",orangeEnabled.isChecked)
                 .putInt("signalOrangeDisplayedMinutes",orangeMinutes.text.toString().toIntOrNull()?.coerceIn(0,30)?:5)
                 .putInt("signalOrangeRemovedAfterMinutes",orangeRemove.text.toString().toIntOrNull()?.coerceIn(0,30)?:4)
-                .putBoolean("signalRaceDelayEnabled",delayEnabled.isChecked)
+                .putBoolean("signalRaceDelayEnabled",(delay.text.toString().toIntOrNull() ?: 0) > 0)
                 .putInt("signalRaceDelayMinutes",delay.text.toString().toIntOrNull()?.coerceIn(0,60)?:0)
                 .putBoolean("signalTimeLimitEnabled",limitEnabled.isChecked)
                 .putInt("signalRaceLimitMinutes",raceLimit.text.toString().toIntOrNull()?.coerceIn(1,300)?:50)

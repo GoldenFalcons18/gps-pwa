@@ -180,6 +180,11 @@ struct SignalSequence {
     /// Restart warning is exactly one minute after AP, N, or first-substitute is lowered.
     static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
 
+    static func postponementRestartWarningTime(loweredAt: Double, orangeRaisedAt: Double?, orangeDisplayedMinutes: Int, orangeEnabled: Bool) -> Double {
+        guard orangeEnabled else { return restartWarningTime(loweredAt: loweredAt) }
+        return max(loweredAt + 60, (orangeRaisedAt ?? loweredAt) + Double(max(0, orangeDisplayedMinutes) * 60))
+    }
+
     static func countdownSeconds(_ remaining: Double) -> Int {
         max(0, Int(ceil(remaining)))
     }
@@ -238,13 +243,21 @@ struct SignalSequence {
 
     /// After a general recall or postponement, the restarted warning signal is
     /// made one minute after the recall/postponement flag is lowered.
-    private static func recallRestart(classFlag: Flag, prepFlag: Flag) -> [Event] {
-        [
+    private static func recallRestart(classFlag: Flag, prepFlag: Flag, orangeEnabled: Bool, orangeRemovedMinutes: Int) -> [Event] {
+        var events = [
             e(0, 0, "\(classFlag.name)を掲揚（再予告信号）", [classFlag], true, [0]),
             e(1, 60, "\(prepFlag.name)を掲揚（準備信号）", [prepFlag], true, [0]),
             e(2, 240, "\(prepFlag.name)を降下（スタート1分前）", [prepFlag], false, [1]),
             e(3, 300, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0])
         ]
+        if orangeEnabled {
+            // The restart timeline begins at the warning. Orange was raised
+            // during AP handling and remains visibly up; this is state, not
+            // another audible raise action.
+            events.append(e(-1, 0, "橙旗掲揚中", [orange], true))
+            events.append(e(4, 300 + max(0, orangeRemovedMinutes) * 60, "\u6a59\u65d7\u3092\u964d\u4e0b\uff08\u30b9\u30bf\u30fc\u30c8\u5f8c\u306e\u8a2d\u5b9a\u6642\u9593\uff09", [orange], false))
+        }
+        return events.sorted { $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart }
     }
 
     private static var orangeFlagEnabled: Bool {
@@ -296,8 +309,8 @@ struct SignalSequence {
         }.sorted { $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart }
     }
 
-    static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P") -> [Event] {
-        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID))
+    static func recallRestartEvents(classFlagID: String = "class-4", prepFlagID: String = "P", orangeEnabled: Bool = true, orangeRemovedMinutes: Int = 4) -> [Event] {
+        recallRestart(classFlag: flag(classFlagID), prepFlag: flag(prepFlagID), orangeEnabled: orangeEnabled, orangeRemovedMinutes: orangeRemovedMinutes)
     }
 
     /// Exact 0/5/6/9/10/20-minute sequence visible in 20261026.MP4.
@@ -384,13 +397,23 @@ struct SignalSequence {
         guard profileID == "standard-start",
               let data = json.data(using: .utf8),
               let stored = try? JSONDecoder().decode([StoredStartAction].self, from: data) else { return nil }
-        let starts = stored.filter { $0.enabled && $0.flagID.hasPrefix("class-") }
+        // Fleet entries are chronological by their configured T-minus time.
+        // Disabled rows and manual lowering rows must not consume a race-delay slot.
+        let starts = stored.enumerated()
+            .filter { $0.element.enabled && $0.element.raised && $0.element.flagID.hasPrefix("class-") }
+            .sorted {
+                let lhs = $0.element.minute * 60 + $0.element.second
+                let rhs = $1.element.minute * 60 + $1.element.second
+                return lhs == rhs ? $0.offset < $1.offset : lhs > rhs
+            }
+            .map(\.element)
         guard !starts.isEmpty else { return nil }
 
         let orangeLead = orangeEnabled ? max(0, orangeDisplayedMinutes) : 0
         let startReference = (orangeLead + 5) * 60
-        let delay = raceDelayEnabled ? max(0, raceDelayMinutes) * 60 : 0
-        let classFlags = starts.map { flag($0.flagID) }
+        // A zero-minute interval means simultaneous starts. A positive saved
+        // interval always applies; the old extra enable switch hid this setting.
+        let delay = max(0, raceDelayMinutes) * 60
         let prep = flag(prepFlagID)
         var scheduled: [Event] = []
         func add(_ second: Int, _ title: String, _ flags: [Flag], _ raised: Bool, _ pulses: [Int] = []) {
@@ -402,22 +425,31 @@ struct SignalSequence {
             add(0, "橙旗を掲揚（シーケンス開始）", [flag("orange")], true, [0])
         }
         var finalRaceStart = 0
-        for (index, action) in starts.enumerated() {
+        var previousRaceStart: Int?
+        for action in starts {
             let timeToStart = max(0, action.minute * 60 + action.second)
-            let warningAt = max(0, startReference - timeToStart + index * delay)
+            let nominalRaceStart = max(0, startReference - timeToStart) + 300
+            let raceStart = previousRaceStart.map { max(nominalRaceStart, $0 + delay) } ?? nominalRaceStart
+            let warningAt = max(0, raceStart - 300)
+            previousRaceStart = raceStart
             let classFlag = flag(action.flagID)
             if action.raised {
                 let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])
                 add(warningAt, "\(classFlag.name)を掲揚（予告信号）", [classFlag], true, pulses)
                 add(warningAt + 60, "\(prep.name)を掲揚（準備信号）", [prep], true, [0])
                 add(warningAt + 240, "\(prep.name)を降下（スタート1分前）", [prep], false, [1])
-                let raceStart = warningAt + 300
                 add(raceStart, "\(classFlag.name)を降下（スタート）", [classFlag], false, [0])
                 finalRaceStart = max(finalRaceStart, raceStart)
-            } else {
-                let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])
-                add(warningAt, "\(classFlag.name)を降下", [classFlag], false, pulses)
             }
+        }
+        // Explicit class-flag lowering rows are independent actions. They do
+        // not create another race and therefore must not shift later starts.
+        for action in stored where action.enabled && !action.raised && action.flagID.hasPrefix("class-") {
+            let timeToStart = max(0, action.minute * 60 + action.second)
+            let at = max(0, startReference - timeToStart)
+            let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])
+            let classFlag = flag(action.flagID)
+            add(at, "\(classFlag.name)を降下", [classFlag], false, pulses)
         }
         if orangeEnabled {
             add(finalRaceStart + max(0, orangeRemovedMinutes) * 60,

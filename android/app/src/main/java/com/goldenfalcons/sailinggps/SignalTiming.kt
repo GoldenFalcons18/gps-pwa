@@ -20,6 +20,12 @@ object SignalTiming {
 
     fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
 
+    fun postponementRestartWarningAt(loweredAtMs: Long, orangeRaisedAtMs: Long?, orangeDisplayedMinutes: Int, orangeEnabled: Boolean): Long {
+        if (!orangeEnabled) return restartWarningAt(loweredAtMs)
+        val orangeDeadline = (orangeRaisedAtMs ?: loweredAtMs) + orangeDisplayedMinutes.coerceAtLeast(0) * 60_000L
+        return maxOf(restartWarningAt(loweredAtMs), orangeDeadline)
+    }
+
     /** Delay the next refresh until the next whole corrected-clock second. */
     fun millisUntilNextSecond(nowMillis: Long): Long = 1000L - Math.floorMod(nowMillis, 1000L)
 

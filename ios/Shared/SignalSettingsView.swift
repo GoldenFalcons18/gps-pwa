@@ -116,11 +116,12 @@ struct SignalSettingsView: View {
     @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
     @AppStorage("signalRadioFriendly") private var radioFriendly = true
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
+    @AppStorage("signalClockAlignmentMode") private var clockAlignmentMode = "manual"
     @AppStorage("signalExternalDisplayEnabled") private var externalDisplay = true
     @AppStorage("signalRemoteFlagsEnabled") private var remoteFlags = false
     @AppStorage("signalBuoyZoneLinked") private var buoyZoneLinked = false
     @AppStorage("signalLogEnabled") private var logEnabled = true
-    @State private var timeSyncMessage = "端末時刻を使用中"
+    @State private var timeSyncMessage = ""
     @State private var isSyncingTime = false
     @Environment(\.dismiss) private var dismiss
 
@@ -143,21 +144,34 @@ struct SignalSettingsView: View {
                         Text("端末の標準音声").tag("端末の標準音声")
                     }
                     NavigationLink("Notifications") { SignalNotificationsView() }
-                    Button {
-                        Task { await syncTime() }
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("時刻同期（ntp.nict.jp）")
-                                Text(timeSyncMessage.isEmpty
-                                     ? (clockOffset == 0 ? "端末時刻を使用中" : "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）")
-                                     : timeSyncMessage)
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if isSyncingTime { ProgressView() } else { Text("同期").foregroundStyle(.blue) }
+                    Picker("時間合わせ", selection: $clockAlignmentMode) {
+                        Text("端末時刻で0秒合わせ").tag("manual")
+                        Text("ntp.nict.jpと同期").tag("nict")
+                    }
+                    .onChange(of: clockAlignmentMode) { _, mode in
+                        if mode == "manual" {
+                            clockOffset = 0
+                            timeSyncMessage = "端末の実時刻を基準にします"
+                        } else {
+                            Task { await syncTime() }
                         }
-                    }.disabled(isSyncingTime)
+                    }
+                    if clockAlignmentMode == "nict" {
+                        Button {
+                            Task { await syncTime() }
+                        } label: {
+                            HStack {
+                                Text(timeSyncMessage.isEmpty
+                                     ? (clockOffset == 0 ? "未同期" : "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）")
+                                     : timeSyncMessage)
+                                Spacer()
+                                if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
+                            }
+                        }.disabled(isSyncingTime)
+                    } else {
+                        Text("各信号は端末の実時刻のn分00秒を基準に動作します。開始時は設定した最短時間を確保して、次の分00秒に合わせます。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
                     Toggle("BuoyZoneと連携", isOn: $buoyZoneLinked)
@@ -191,6 +205,7 @@ struct SignalSettingsView: View {
             clockOffset = serverTime.timeIntervalSinceNow
             timeSyncMessage = "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）"
         } catch {
+            clockOffset = 0
             timeSyncMessage = "同期失敗・端末時刻を使用中"
         }
     }
@@ -292,8 +307,7 @@ private struct SignalFleetPresetEditor: View {
                         Text(SignalSequence.flag(preset.classFlagID).name).foregroundStyle(.secondary)
                     }
                 }
-                Stepper("次のレースまで：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
-                Toggle("Custom Race Delay", isOn: $preset.raceDelayEnabled)
+                Stepper("Time between races：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
             }
             Section("Time Limits") {
                 Toggle("Enable", isOn: $preset.timeLimitEnabled)
@@ -357,7 +371,7 @@ private struct SignalFleetPresetEditor: View {
                     activeOrangeEnabled = preset.orangeEnabled
                     activeOrangeDisplayed = preset.orangeDisplayedMinutes
                     activeOrangeRemoval = preset.orangeRemovedMinutes
-                    activeRaceDelayEnabled = preset.raceDelayEnabled
+                    activeRaceDelayEnabled = preset.raceDelayMinutes > 0
                     activeRaceDelayMinutes = preset.raceDelayMinutes
                     // A fleet preset has one selected class flag. Apply it to
                     // every class-flag action, including presets previously

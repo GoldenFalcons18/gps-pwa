@@ -87,7 +87,20 @@ struct SignalTimerPanel: View {
         return (start, rebased)
     }
     private var recallRestartEvents: [SignalSequence.Event] {
-        SignalSequence.recallRestartEvents(classFlagID: classFlagID, prepFlagID: prepFlagID)
+        SignalSequence.recallRestartEvents(classFlagID: classFlagID, prepFlagID: prepFlagID, orangeEnabled: orangeEnabled, orangeRemovedMinutes: orangeRemovedMinutes)
+    }
+    private func orangeRaiseTime(at date: Date) -> Double? {
+        if orangeManualOverride { return orangeManualUp && orangeRaisedAt > 0 ? orangeRaisedAt : nil }
+        let correctedNow = date.timeIntervalSince1970 + clockOffset
+        let restart = restartWarningAt > 0
+        let base = restart ? restartWarningAt : (startAt > 0 ? startAt : (hasStarted ? pausedAt - pausedSeconds : 0))
+        guard base > 0 else { return nil }
+        if !restart && startAt > correctedNow { return nil }
+        let elapsed = restart ? max(0, correctedNow - restartWarningAt) : elapsed(at: date)
+        let timeline = restart ? recallRestartEvents : events
+        guard let raise = timeline.first(where: { $0.raised && $0.flags.contains(where: { $0.id == "orange" }) }),
+              Double(raise.secondsAfterStart) <= elapsed else { return nil }
+        return base + Double(raise.secondsAfterStart)
     }
     private func pauseForManualSignal(at date: Date) {
         if startAt > 0 {
@@ -143,10 +156,33 @@ struct SignalTimerPanel: View {
         if !postponementFlagUp && (generalRecallFlagUp || abandonFlagUp) { return }
         if postponementFlagUp {
             postponementFlagUp = false
+            let loweredAt = date.timeIntervalSince1970 + clockOffset
+            var orangeAt = orangeRaiseTime(at: date)
+            let raiseOrangeNow = orangeEnabled && orangeAt == nil
+            if orangeEnabled {
+                if orangeAt == nil {
+                    orangeAt = loweredAt
+                }
+                orangeManualOverride = true
+                orangeManualUp = true
+                orangeRaisedAt = orangeAt ?? loweredAt
+            }
+            restartWarningAt = SignalSequence.postponementRestartWarningTime(
+                loweredAt: loweredAt,
+                orangeRaisedAt: orangeAt,
+                orangeDisplayedMinutes: orangeDisplayedMinutes,
+                orangeEnabled: orangeEnabled
+            )
             playHorn(pulses: SignalSequence.postponementLower.hornPulses)
-            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
+            if raiseOrangeNow { playHorn(pulses: [0]) }
         } else {
+            let orangeAt = orangeRaiseTime(at: date)
             pauseForManualSignal(at: date)
+            if let orangeAt {
+                orangeManualOverride = true
+                orangeManualUp = true
+                orangeRaisedAt = orangeAt
+            }
             individualRecallFlagUp = false
             generalRecallFlagUp = false
             restartWarningAt = 0
@@ -332,6 +368,8 @@ struct SignalTimerPanel: View {
                 : running(at: now)
             let raceCountdown = secondsUntilRaceStart.map(raceCountdownText)
             let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
+            let raisedFlagIDs = Set(raisedFlags.map(\.id))
+            let highlightedEventID = sequenceEvents.indices.contains(highlighted) ? sequenceEvents[highlighted].id : nil
             let raceSignalControlsEnabled = SignalSequence.canOperateRaceSignals(
                 hasStarted: hasStarted,
                 firstActionPending: waitingForFirstSignal || raceStartPending,
@@ -372,8 +410,8 @@ struct SignalTimerPanel: View {
                 }
                 .foregroundStyle(.black)
                 VStack(spacing: 1) {
-                    ForEach(sequenceEvents) { event in
-                        let isActive = event.id == highlighted
+                    ForEach(sequenceEvents.filter { !($0.raised && $0.flags.contains(where: { $0.id == "orange" }) && raisedFlagIDs.contains("orange")) }) { event in
+                        let isActive = event.id == highlightedEventID
                         HStack(spacing: 5) {
                             Text(event.raised ? "↑" : "↓").frame(width: 14)
                             HStack(spacing: 2) {
