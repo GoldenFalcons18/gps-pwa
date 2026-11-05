@@ -255,7 +255,7 @@ struct SignalSequence {
             // during AP handling and remains visibly up; this is state, not
             // another audible raise action.
             events.append(e(-1, 0, "橙旗掲揚中", [orange], true))
-            events.append(e(4, 300 + max(0, orangeRemovedMinutes) * 60, "\u6a59\u65d7\u3092\u964d\u4e0b\uff08\u30b9\u30bf\u30fc\u30c8\u5f8c\u306e\u8a2d\u5b9a\u6642\u9593\uff09", [orange], false))
+            events.append(e(4, 300 + max(0, orangeRemovedMinutes) * 60, "橙旗を降下（スタート後の設定時間）", [orange], false))
         }
         return events.sorted { $0.secondsAfterStart == $1.secondsAfterStart ? $0.id < $1.id : $0.secondsAfterStart < $1.secondsAfterStart }
     }

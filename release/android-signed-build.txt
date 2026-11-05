@@ -1,1 +1,1 @@
-1.8.39 versionCode 65 pending validation
+1.8.40 versionCode 66 pending validation
