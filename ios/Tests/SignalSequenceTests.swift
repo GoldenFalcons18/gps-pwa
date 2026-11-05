@@ -289,11 +289,13 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testFleetRaceIntervalAppliesWithoutEnableSwitchAndKeepsAutomaticClassLowering() {
-        let json = #"[
+        let json = #"""
+        [
           {"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"},
           {"flagID":"class-420","minute":4,"second":0,"raised":true,"enabled":true,"horn":"short"},
           {"flagID":"class-420","minute":1,"second":0,"raised":false,"enabled":true,"horn":"short"}
-        ]"#
+        ]
+        """#
         let events = SignalSequence.configuredStartEvents(
             json: json,
             profileID: "standard-start",
@@ -305,11 +307,19 @@ final class SignalSequenceTests: XCTestCase {
             raceDelayMinutes: 2
         )!
 
-        XCTAssertTrue(events.contains { $0.secondsAfterStart == 300 && $0.raised && $0.flags.contains(where: { $0.id == "class-4" }) })
-        XCTAssertTrue(events.contains { $0.secondsAfterStart == 420 && $0.raised && $0.flags.contains(where: { $0.id == "class-420" }) })
-        XCTAssertTrue(events.contains { $0.secondsAfterStart == 600 && !$0.raised && $0.title.contains("スタート") && $0.flags.contains(where: { $0.id == "class-4" }) })
-        XCTAssertTrue(events.contains { $0.secondsAfterStart == 720 && !$0.raised && $0.title.contains("スタート") && $0.flags.contains(where: { $0.id == "class-420" }) })
-        XCTAssertTrue(events.contains { $0.secondsAfterStart == 960 && !$0.raised && $0.flags.contains(where: { $0.id == "orange" }) })
+        func hasEvent(at second: Int, raised: Bool, flagID: String, titleFragment: String? = nil) -> Bool {
+            events.contains { event in
+                guard event.secondsAfterStart == second,
+                      event.raised == raised,
+                      event.flags.contains(where: { $0.id == flagID }) else { return false }
+                return titleFragment.map { event.title.contains($0) } ?? true
+            }
+        }
+        XCTAssertTrue(hasEvent(at: 300, raised: true, flagID: "class-4"))
+        XCTAssertTrue(hasEvent(at: 420, raised: true, flagID: "class-420"))
+        XCTAssertTrue(hasEvent(at: 600, raised: false, flagID: "class-4", titleFragment: "スタート"))
+        XCTAssertTrue(hasEvent(at: 720, raised: false, flagID: "class-420", titleFragment: "スタート"))
+        XCTAssertTrue(hasEvent(at: 960, raised: false, flagID: "orange"))
     }
 
     func testDefaultScheduleDateIsRoundedToAFullMinute() {
