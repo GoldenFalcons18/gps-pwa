@@ -51,9 +51,64 @@ data class SignalFlagState(
     }
 )
 
+object SignalMastLayout {
+    private val nonOrangePoles = intArrayOf(0, 2, 3, 4)
+
+    fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int =
+        if (flagId == "橙" || flagId == "orange") 1
+        else nonOrangePoles[otherFlagOrdinal.coerceIn(0, nonOrangePoles.lastIndex)]
+
+    fun canOperateRaceSignals(hasStarted: Boolean, firstActionPending: Boolean, restartPending: Boolean): Boolean =
+        hasStarted && !firstActionPending && !restartPending
+}
+
 object SignalSequence {
+    fun preparationFlagForStartRule(rule: String): String = when (rule) {
+        "P", "I", "U", "Z" -> rule
+        "Black" -> "black"
+        else -> "P"
+    }
+
+    fun eventsStartingAtFirstClassWarning(events: List<SignalEvent>): List<SignalEvent>? {
+        val warningIndex = events.indexOfFirst { event ->
+            event.raised && event.title.contains("予告信号") && event.flagMarks.any { it.style == "classLogo" }
+        }
+        if (warningIndex < 0) return null
+        val warningOffset = events[warningIndex].secondsAfterStart
+        return events.drop(warningIndex).mapIndexed { index, event ->
+            event.copy(id = index, secondsAfterStart = event.secondsAfterStart - warningOffset)
+        }
+    }
+
+    fun encodeEvents(events:List<SignalEvent>):String = org.json.JSONArray().apply {
+        events.forEach { event -> put(org.json.JSONObject().apply {
+            put("id",event.id);put("seconds",event.secondsAfterStart);put("title",event.title);put("color",event.color.toLong());put("raised",event.raised);put("flag",event.flag)
+            put("pulses",org.json.JSONArray(event.hornPulses))
+            put("additional",org.json.JSONArray().apply { event.additionalFlags.forEach { mark -> put(org.json.JSONObject().put("id",mark.id).put("color",mark.color.toLong()).put("white",mark.whiteSquare)) } })
+        }) }
+    }.toString()
+
+    fun decodeEvents(raw:String?):List<SignalEvent>? = runCatching {
+        val array=org.json.JSONArray(raw ?: return null)
+        (0 until array.length()).map { index ->
+            val item=array.getJSONObject(index);val pulseArray=item.getJSONArray("pulses");val additional=item.getJSONArray("additional")
+            SignalEvent(item.getInt("id"),item.getInt("seconds"),item.getString("title"),item.getLong("color").toInt(),item.getBoolean("raised"),item.getString("flag"),
+                (0 until pulseArray.length()).map { pulseArray.getInt(it) },
+                (0 until additional.length()).map { extra -> additional.getJSONObject(extra).let { SignalFlagMark(it.getString("id"),it.getLong("color").toInt(),it.optBoolean("white",false)) } })
+        }
+    }.getOrNull()
+
     fun startReferenceOffset(profileId: String, orangeEnabled: Boolean, orangeDisplayedMinutes: Int): Int =
         if (profileId == "standard-start") ((if (orangeEnabled) orangeDisplayedMinutes.coerceIn(0, 30) else 0) + 5) * 60 else 0
+
+    /** The race-start zero is the final non-orange flag lowering in the start sequence. */
+    fun raceStartEventIndex(events: List<SignalEvent>): Int? {
+        return events.indexOfLast {
+            !it.raised &&
+                it.flag !in setOf("橙", "orange") &&
+                (it.title.contains("スタート") || it.title.contains("降下"))
+        }.takeIf { it >= 0 }
+    }
 
     private fun resolvedClassFlagId(value: String): String = when {
         value == "クラス旗" -> "級"
@@ -159,13 +214,21 @@ object SignalSequence {
     val postponementLower = e(-5, 0, "回答旗（AP）を降下", "AP", 0xFFD71920.toInt(), false, 0)
 
     fun restartEvents(prepFlag: String = "P", orangeEnabled: Boolean = true, orangeRemovedAfterMinutes: Int = 4, className: String = "クラス旗"): List<SignalEvent> {
-        val rows = listOf(
+        val rows = mutableListOf(
             e(0, 0, "${classFlagLabel(className)}を掲揚（再予告信号）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), true, 0),
             e(1, 60, "準備信号を掲揚", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), true, 0),
             e(2, 240, "準備信号を降下（スタート1分前）", prepFlag, if (prepFlag == "I") 0xFFF5D328.toInt() else 0xFF1769FF.toInt(), false, 1),
             e(3, 300, "${classFlagLabel(className)}を降下（スタート）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), false, 0),
         )
-        return rows
+        if (orangeEnabled) {
+            // Restart begins at the warning, while the orange flag has been
+            // raised during AP handling and remains up. This state row has no
+            // second horn/raise action.
+            rows += e(-1, 0, "橙旗掲揚中", "橙", 0xFFF58A00.toInt(), true)
+            rows += e(4, 300 + orangeRemovedAfterMinutes.coerceAtLeast(0) * 60, "橙旗を降下（スタート後の設定時間）", "橙", 0xFFF58A00.toInt(), false)
+        }
+        return rows.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
+            .mapIndexed { index, event -> event.copy(id = index) }
     }
 
     fun events(
@@ -251,6 +314,138 @@ object SignalSequence {
     /** Flag state at a point in the elapsed sequence, with one mast per distinct flag. */
     fun flagsAt(elapsedSeconds: Double, durationMinutes: Int = 14, profileIndex: Int = 0, prepFlag: String = "P"): List<SignalFlagState> =
         flagsAtEvents(events(durationMinutes, profileIndex, prepFlag), elapsedSeconds)
+
+    /**
+     * Applies saved fleet-start rows to the live standard sequence.
+     * Rows use the settings format: Class · T−5:00 · 掲揚 · 短音.
+     * Other profiles remain tied to their recorded/reference timeline.
+     */
+    fun configuredStandardEvents(
+        base: List<SignalEvent>,
+        entries: Set<String>,
+        referenceOffset: Int,
+        orangeRemovedAfterMinutes: Int,
+        raceDelayEnabled: Boolean,
+        raceDelayMinutes: Int
+    ): List<SignalEvent>? {
+        data class StartAction(
+            val label: String,
+            val secondsBeforeRace: Int,
+            val raised: Boolean,
+            val horn: List<Int>
+        )
+
+        val actions = entries.mapNotNull { row ->
+            val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapNotNull null
+            val label = row.substringBefore("·").trim()
+            val minute = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
+            val second = match.groupValues[2].toIntOrNull()?.coerceIn(0, 59) ?: return@mapNotNull null
+            val raised = row.contains("掲揚")
+            val horn = when {
+                row.contains("長音") -> listOf(1)
+                row.contains("音なし") -> emptyList()
+                else -> listOf(0)
+            }
+            StartAction(label, minute * 60 + second, raised, horn)
+        }
+        val classActions = actions.filter { it.label.contains("Class", ignoreCase = true) || it.label.contains("クラス") }
+        val classRaises = classActions.filter { it.raised }
+            .sortedWith(compareByDescending<StartAction> { it.secondsBeforeRace }.thenBy { it.label })
+        if (classRaises.isEmpty()) return null
+
+        val classUp = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && it.raised } ?: return null
+        val classDown = base.firstOrNull { it.flag == classUp.flag && !it.raised } ?: return null
+        val prepUp = base.firstOrNull { it.flag != classUp.flag && it.flag != "橙" && it.raised } ?: return null
+        val prepDown = base.firstOrNull { it.flag == prepUp.flag && !it.raised } ?: return null
+        val orangeUp = base.firstOrNull { it.flag == "橙" && it.raised }
+        val orangeDown = base.lastOrNull { it.flag == "橙" && !it.raised }
+
+        fun flagFor(label: String): Pair<String, Int> = when (label.lowercase()) {
+            "orange", "橙旗" -> "橙" to 0xFFF58A00.toInt()
+            "p" -> "P" to 0xFF1769FF.toInt()
+            "i", "z" -> label.uppercase() to 0xFFF5D328.toInt()
+            "u" -> "U" to 0xFFD72C32.toInt()
+            "black" -> "黒" to 0xFF202020.toInt()
+            "ap" -> "AP" to 0xFFD71920.toInt()
+            "x" -> "X" to 0xFFFFFFFF.toInt()
+            "first substitute" -> "第一代表" to 0xFF1769FF.toInt()
+            else -> classUp.flag to classUp.color
+        }
+
+        // A zero-minute interval means simultaneous starts. Positive saved
+        // intervals always apply; the former enable switch silently ignored them.
+        val delay = raceDelayMinutes.coerceAtLeast(0) * 60
+        val timeline = mutableListOf<SignalEvent>()
+        val orangeActions = actions.filter { it.label.equals("Orange", true) || it.label == "橙旗" }
+        if (orangeActions.none { it.raised }) orangeUp?.let { timeline += it }
+
+        var finalRaceStart = 0
+        var previousRaceStart: Int? = null
+        classRaises.forEach { action ->
+            val nominalRaceStart = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0) + 300
+            val raceStart = previousRaceStart?.let { maxOf(nominalRaceStart, it + delay) } ?: nominalRaceStart
+            val warningAt = (raceStart - 300).coerceAtLeast(0)
+            previousRaceStart = raceStart
+            val classTitle = classUp.title.substringBefore("を掲揚")
+            timeline += classUp.copy(
+                secondsAfterStart = warningAt,
+                title = "${classTitle}を掲揚（予告信号）",
+                hornPulses = action.horn
+            )
+
+            // The selected start rule is also the preparation signal. Do not
+            // let stale fleet rows override that paired setting.
+            timeline += prepUp.copy(secondsAfterStart = warningAt + 60)
+            timeline += prepDown.copy(secondsAfterStart = warningAt + 240)
+
+            // Every raised class start has its own automatic start-time lowering.
+            // A separately configured lowering must not suppress this event.
+            timeline += classDown.copy(secondsAfterStart = raceStart)
+            finalRaceStart = maxOf(finalRaceStart, raceStart)
+
+            actions.filter {
+                it.label !in setOf("Class", "Orange", "クラス旗", "橙旗") &&
+                    it.label.uppercase() !in setOf("P", "I", "U", "Z", "BLACK")
+            }.forEach { custom ->
+                val (flag, color) = flagFor(custom.label)
+                val customTime = (raceStart - custom.secondsBeforeRace).coerceAtLeast(0)
+                val actionName = if (custom.raised) "掲揚" else "降下"
+                timeline += SignalEvent(
+                    id = timeline.size,
+                    secondsAfterStart = customTime,
+                    title = "${flag}を${actionName}（設定信号）",
+                    color = color,
+                    raised = custom.raised,
+                    flag = flag,
+                    hornPulses = custom.horn
+                )
+            }
+        }
+
+        classActions.filter { !it.raised }.forEach { action ->
+            val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
+            timeline += classDown.copy(secondsAfterStart = at, hornPulses = action.horn)
+        }
+        orangeActions.forEach { action ->
+            val (flag, color) = flagFor(action.label)
+            val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
+            val actionName = if (action.raised) "掲揚" else "降下"
+            timeline += SignalEvent(
+                id = timeline.size,
+                secondsAfterStart = at,
+                title = "${flag}を${actionName}（設定信号）",
+                color = color,
+                raised = action.raised,
+                flag = flag,
+                hornPulses = action.horn
+            )
+        }
+        if (orangeDown != null) timeline += orangeDown.copy(
+            secondsAfterStart = finalRaceStart + orangeRemovedAfterMinutes.coerceAtLeast(0) * 60
+        )
+        return timeline.sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
+            .mapIndexed { index, event -> event.copy(id = index) }
+    }
 
     fun flagsAtEvents(list: List<SignalEvent>, elapsedSeconds: Double): List<SignalFlagState> {
         val transitions = list.flatMap { event ->

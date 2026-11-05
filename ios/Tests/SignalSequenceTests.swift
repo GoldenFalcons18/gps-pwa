@@ -2,6 +2,52 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
+    func testOrangeFlagAlwaysUsesOrangeMastAndOtherFlagsStayOffIt() {
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 0), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 2), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "class-420", otherFlagOrdinal: 0), 0)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "P", otherFlagOrdinal: 1), 2)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 2), 3)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "first-sub", otherFlagOrdinal: 3), 4)
+    }
+
+    func testRecallAndAbandonControlsWaitForSequenceStart() {
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: false, firstActionPending: false, restartPending: false))
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: true, restartPending: false))
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: false, restartPending: true))
+        XCTAssertTrue(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: false, restartPending: false))
+    }
+    func testStartRuleSelectsItsMatchingPreparationSignal() {
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "P"), "P")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "I"), "I")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "U"), "U")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Z"), "Z")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Black"), "black")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Default"), "P")
+    }
+
+    func testManualOrangeRaiseCanRebaseTimelineAtClassWarning() throws {
+        let actions = #"[{"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"}]"#
+        let configured = try XCTUnwrap(SignalSequence.configuredStartEvents(
+            json: actions,
+            profileID: "standard-start",
+            prepFlagID: "P",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        ))
+        let anchored = try XCTUnwrap(SignalSequence.eventsStartingAtFirstClassWarning(configured))
+        XCTAssertEqual(anchored.map(\.secondsAfterStart), [0, 60, 240, 300, 540])
+        XCTAssertTrue(anchored.first?.title.contains("予告信号") == true)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 65)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 50, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 60)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 15), 110)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 300, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 300)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 301)
+    }
+
     func testStartReferenceOffsetTracksOrangePhaseSettings() {
         let defaults = UserDefaults.standard
         let oldEnabled = defaults.object(forKey: "signalOrangeEnabled")
@@ -75,8 +121,8 @@ final class SignalSequenceTests: XCTestCase {
         )
         defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
         defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
-        let restart = SignalSequence.recallRestartEvents()
-        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 0).map(\.id), ["class-4"])
+        let restart = SignalSequence.recallRestartEvents(orangeRemovedMinutes: 4)
+        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 0).map(\.id), ["class-4", "orange"])
         XCTAssertEqual(SignalSequence.flag("AP").artworkName, "Answering Pennant")
         XCTAssertEqual(SignalSequence.flag("first-sub").artworkName, "First Substitute")
     }
@@ -89,6 +135,16 @@ final class SignalSequenceTests: XCTestCase {
             XCTAssertEqual(events[3].flags.first?.id, flagID)
             XCTAssertEqual(events[2].colorHex, events[3].colorHex)
         }
+    }
+
+    func testTimerRefreshAlignsToCorrectedWholeSecond() {
+        let now = Date(timeIntervalSince1970: 123.456)
+        let next = SignalSequence.nextAlignedTickDate(after: now, clockOffset: 0.25)
+        XCTAssertEqual(next.timeIntervalSince1970, 123.75, accuracy: 0.001)
+
+        let atBoundary = Date(timeIntervalSince1970: 123.75)
+        let following = SignalSequence.nextAlignedTickDate(after: atBoundary, clockOffset: 0.25)
+        XCTAssertEqual(following.timeIntervalSince1970, 124.75, accuracy: 0.001)
     }
 
     func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
@@ -127,10 +183,19 @@ final class SignalSequenceTests: XCTestCase {
 
     func testRecallRestartAndOrangeFlagRemovalTimes() {
         let restart = SignalSequence.recallRestartEvents(classFlagID: "class-4", prepFlagID: "P")
-        XCTAssertEqual(restart.map(\.secondsAfterStart), [0, 60, 240, 300])
-        XCTAssertEqual(restart.map(\.hornPulses), [[0], [0], [1], [0]])
+        XCTAssertEqual(restart.map(\.secondsAfterStart), [0, 0, 60, 240, 300, 540])
+        XCTAssertEqual(restart.map(\.hornPulses), [[], [0], [0], [1], [0], []])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 539).map(\.id), ["orange"])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 540), [])
         XCTAssertEqual(SignalSequence.flags(elapsed: 839, profileID: "standard-start").map(\.id), ["orange"])
         XCTAssertEqual(SignalSequence.flags(elapsed: 840, profileID: "standard-start"), [])
+    }
+
+    func testAPRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 900, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_200)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 700, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_060)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_300)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: false), 1_060)
     }
 
     func testRecallAndPostponementUseRequestedShortHornCounts() {
@@ -186,6 +251,77 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "custom-five", orangeEnabled: true), 300)
     }
 
+
+    func testSavedFleetStartsGenerateTheRule26TimelineUsedByTimer() {
+        let json = #"[{"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "P",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: events, elapsed: 360).map(\.id).sorted(), ["P", "class-4", "orange"])
+    }
+
+    func testFleetStartTimeMovesSignalsAndOrangeCanBeAbsent() {
+        let json = #"[{"flagID":"class-420","minute":4,"second":0,"raised":true,"enabled":true,"horn":"long"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "I",
+            orangeEnabled: false,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\.secondsAfterStart), [60, 120, 300, 360])
+        XCTAssertEqual(events.first?.hornPulses, [1])
+        XCTAssertFalse(events.contains { $0.flags.contains(where: { $0.id == "orange" }) })
+    }
+
+    func testFleetRaceIntervalAppliesWithoutEnableSwitchAndKeepsAutomaticClassLowering() {
+        let json = #"""
+        [
+          {"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"},
+          {"flagID":"class-420","minute":4,"second":0,"raised":true,"enabled":true,"horn":"short"},
+          {"flagID":"class-420","minute":1,"second":0,"raised":false,"enabled":true,"horn":"short"}
+        ]
+        """#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "I",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 2
+        )!
+
+        func hasEvent(at second: Int, raised: Bool, flagID: String, titleFragment: String? = nil) -> Bool {
+            events.contains { event in
+                guard event.secondsAfterStart == second,
+                      event.raised == raised,
+                      event.flags.contains(where: { $0.id == flagID }) else { return false }
+                return titleFragment.map { event.title.contains($0) } ?? true
+            }
+        }
+        XCTAssertTrue(hasEvent(at: 300, raised: true, flagID: "class-4"))
+        XCTAssertTrue(hasEvent(at: 420, raised: true, flagID: "class-420"))
+        XCTAssertTrue(hasEvent(at: 600, raised: false, flagID: "class-4", titleFragment: "スタート"))
+        XCTAssertTrue(hasEvent(at: 720, raised: false, flagID: "class-420", titleFragment: "スタート"))
+        XCTAssertTrue(hasEvent(at: 960, raised: false, flagID: "orange"))
+    }
+
     func testDefaultScheduleDateIsRoundedToAFullMinute() {
         let date = SignalSequence.defaultScheduledDate(now: Date(timeIntervalSince1970: 17), minimumLeadSeconds: 120)
         XCTAssertEqual(date.timeIntervalSince1970, 180, accuracy: 0.001)
@@ -193,5 +329,59 @@ final class SignalSequenceTests: XCTestCase {
 
     func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
         XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
+    }
+
+    func testRaceCountdownUsesClassLoweringAsTheRealZero() {
+        let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
+
+        XCTAssertEqual(SignalSequence.raceStartEventIndex(in: events), 4)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 0), 600)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 77), 523)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 601), -1)
+    }
+
+    func testVideoSequencesUseTheirOwnClassLoweringAsRaceStart() {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(10, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoA = SignalSequence.events(profileID: "video-20")
+        defaults.set(4, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoB = SignalSequence.events(profileID: "video-13")
+
+        XCTAssertEqual(videoA[SignalSequence.raceStartEventIndex(in: videoA)!].secondsAfterStart, 600)
+        XCTAssertEqual(videoB[SignalSequence.raceStartEventIndex(in: videoB)!].secondsAfterStart, 540)
+    }
+
+    func testFrozenSignalPlanRoundTripsWithoutFollowingLaterOrangeSettings() throws {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let frozen = SignalSequence.events(profileID: "standard-start")
+        let snapshot = try JSONEncoder().encode(frozen)
+        defaults.set(8, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(9, forKey: "signalOrangeRemovedAfterMinutes")
+        let changed = SignalSequence.events(profileID: "standard-start")
+        let restored = try JSONDecoder().decode([SignalSequence.Event].self, from: snapshot)
+
+        XCTAssertEqual(restored, frozen)
+        XCTAssertNotEqual(changed.map(\.secondsAfterStart), restored.map(\.secondsAfterStart))
+        XCTAssertEqual(restored[SignalSequence.raceStartEventIndex(in: restored)!].secondsAfterStart, 600)
     }
 }

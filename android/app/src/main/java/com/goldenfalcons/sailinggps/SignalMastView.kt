@@ -75,7 +75,8 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
 
         flags.forEachIndexed { index, state ->
             if (!state.raised && previous.getOrNull(index)?.raised != true) return@forEachIndexed
-            val poleIndex = when (index) { 0 -> 1; 1 -> 3; 2 -> 2; 3 -> 4; else -> 0 }
+            val otherFlagOrdinal = flags.take(index).count { it.id != "橙" && it.id != "orange" }
+            val poleIndex = SignalMastLayout.poleIndex(state.id, otherFlagOrdinal)
             val mastX = poleXs[poleIndex]
             val flagWidth = w * 0.18f
             val flagHeight = h * 0.24f

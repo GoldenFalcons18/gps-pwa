@@ -11,10 +11,26 @@ object SignalClassLogoAssets {
     private var encodedImages: JSONObject? = null
     private val bitmapCache = mutableMapOf<String, Bitmap>()
 
+    fun availableClassNames(context: Context): List<String> {
+        val keys = imageMap(context).keys()
+        val names = mutableListOf("420")
+        while (keys.hasNext()) names += keys.next()
+        return names.distinct().sortedBy { it.lowercase() }
+    }
+
     @Synchronized
     fun bitmap(context: Context, className: String): Bitmap? {
         val key = assetKey(className)
         bitmapCache[key]?.let { return it }
+        if (key == "420") {
+            val logo = runCatching {
+                context.assets.open("signal-class-420.png").use { BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+            if (logo != null) {
+                bitmapCache[key] = logo
+                return logo
+            }
+        }
         val encoded = findEncodedImage(imageMap(context), key) ?: return null
         val bytes = runCatching { Base64.decode(encoded, Base64.DEFAULT) }.getOrNull() ?: return null
         val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
