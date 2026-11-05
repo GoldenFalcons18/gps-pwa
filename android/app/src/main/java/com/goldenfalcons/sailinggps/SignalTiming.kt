@@ -9,6 +9,12 @@ object SignalTiming {
         return if (remainder == 0L) earliest else earliest + minute - remainder
     }
 
+    fun startAfterOrangeRaise(nowMillis: Long, orangeRaisedAtMillis: Long, intervalMinutes: Int, minimumLeadSeconds: Int): Long {
+        val earliestByLead = nowMillis + minimumLeadSeconds.coerceAtLeast(0) * 1000L
+        val earliestByOrange = orangeRaisedAtMillis + intervalMinutes.coerceAtLeast(0) * 60_000L
+        return scheduledStartAt(maxOf(earliestByLead, earliestByOrange), 0)
+    }
+
     fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
 
     /** Delay the next refresh until the next whole corrected-clock second. */

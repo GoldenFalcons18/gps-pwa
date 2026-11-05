@@ -1,379 +1,149 @@
-package com.goldenfalcons.sailinggps
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×myé:-jZ.¶›­–)Ş³^ÜXÚØYÙHÛÛK™ÛÛ[™˜[ÛÛœËœØZ[[™ÙÜÃBƒBš[\Ü[™›ÚY˜ÛÛ[ÛÛ^Bš[\Ü[™›ÚY™Ü˜\XÜËÛÛÜƒBš[\Ü[™›ÚY›ÜË[™CBš[\Ü[™›ÚYšY]Ë‘Ü˜]š]CBš[\Ü[™›ÚYšY]Ë•šY]ÃBš[\Ü[™›ÚYÚYÙ]ŠƒBš[\Ü[™›ÚY˜\ÛÛ\]˜\[\X[ÙÃBš[\Ü[™›ÚY˜\ÛÛ\]˜\\ÛÛ\]Xİ]š]CBƒB˜Û\ÜÈÚYÛ˜[Ù][™ÜĞXİ]š]Hˆ\ÛÛ\]Xİ]š]J
+HÃBˆš]˜]H˜[™YœÈH^HÈÙ]Ú\™Y™Y™\™[˜Ù\Ê™\Ü^H‹ÛÛ^“SÑWÔ’UUJHCBˆš]˜]H]Z[š]˜\ˆ\İˆ[™X\“^[İ]Bˆš]˜]H˜[Ú]HHÛÛÜ‹•ÒUCBˆš]˜]H˜[Ü˜[™ÙHH‘‘‘PLÒ[
 
-import android.content.Context
-import android.graphics.Color
-import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.widget.*
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+CBƒBˆİ™\œšYH[ˆÛÜ™X]JØ]™Y[œİ[˜ÙTİ]Nˆ[™OÊHÃBˆİ\\‹›ÛÜ™X]JØ]™Y[œİ[˜ÙTİ]JCBˆÚ[™İËœİ]\Ğ˜\ÛÛÜˆH‘ŒLLLLLKÒ[
 
-class SignalSettingsActivity : AppCompatActivity() {
-    private val prefs by lazy { getSharedPreferences("display", Context.MODE_PRIVATE) }
-    private lateinit var list: LinearLayout
-    private val white = Color.WHITE
-    private val orange = 0xFFFFAA00.toInt()
+CBˆ˜[YÙHH[™X\“^[İ]
+\ÊK˜\HÈÜšY[][ÛˆH[™X\“^[İ]•‘T•PĞSÈÙ]˜XÚÙÜ›İ[™ÛÛÜŠ‘ŒPÌPÌQKÒ[
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        window.statusBarColor = 0xFF111111.toInt()
-        val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF1C1C1E.toInt()) }
-        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(16, 8, 16, 8) }
-        header.addView(Button(this).apply { text = "â€¹"; textSize = 24f; setOnClickListener { finish() } })
-        header.addView(TextView(this).apply { text = "Settings"; textSize = 22f; setTextColor(white); gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(0,-2,1f) })
-        header.addView(Button(this).apply { text = "å®Œäº†"; setTextColor(orange); setOnClickListener { finish() } })
-        page.addView(header)
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12, 0, 12, 20) }
-        page.addView(ScrollView(this).apply { addView(list) })
-        setContentView(page)
-        build()
-    }
+JHCBˆ˜[XY\ˆH[™X\“^[İ]
+\ÊK˜\HÈÜ˜]š]HHÜ˜]š]KÑS•T—Õ‘T•PĞSÈÙ]Y[™ÊM‹M‹
+HCBˆXY\‹˜YšY]Ê]ÛŠ\ÊK˜\HÈ^H¸ .HÈ^Ú^™HHÈÙ]ÛÛXÚÓ\İ[™\ˆÈš[š\Ú
 
-    private fun build() {
-        list.removeAllViews()
-        section("General Settings")
-        row("Mode", "Fleet") {}
-        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("æ¬¡ã®åˆ†00ç§’ã¾ã§ã®æœ€çŸ­æ™‚é–“", "signalMinimumTimeToFirstAction", 15, 0, 120) }
-        row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "ç«¯æœ«ã®æ¨™æº–éŸ³å£°"), "signalVoiceName") }
-        row("Notifications", "Management (Radio)") { notifications() }
-        row("Time Sync", "ntp.nict.jp / ã‚¼ãƒ­åˆã‚ã›") { AlertDialog.Builder(this).setMessage("ã‚·ã‚°ãƒŠãƒ«ç”»é¢ã®NTPåŒæœŸã¨ã‚¼ãƒ­åˆã‚ã›ã‚’ä½¿ç”¨ã—ã¾ã™ã€‚").setPositiveButton("OK", null).show() }
-        row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
-        switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
-        switch("BuoyZone", "signalBuoyZoneLinked", false)
-        switch("External Display", "signalExternalDisplayEnabled", true)
-        row("Log", "è¨˜éŒ²è¨­å®š") { simpleSwitch("Log", "signalLogEnabled", true) }
+HHJCBˆXY\‹˜YšY]Ê^šY]Ê\ÊK˜\HÈ^H”Ù][™ÜÈÈ^Ú^™HHŒ™ÈÙ]^ÛÛÜŠÚ]JNÈÜ˜]š]HHÜ˜]š]KÑS•TÈ^[İ]\˜[\ÈH[™X\“^[İ]“^[İ]\˜[\ÊL‹YŠHJCBˆXY\‹˜YšY]Ê]ÛŠ\ÊK˜\HÈ^H¹k£9.¡ˆÈÙ]^ÛÛÜŠÜ˜[™ÙJNÈÙ]ÛÛXÚÓ\İ[™\ˆÈš[š\Ú
 
-        section("Fleet Start Sequences")
-        val names = prefs.getStringSet("signalFleetPresetNames", setOf("OP Au Bp")) ?: setOf("OP Au Bp")
-        names.sorted().forEach { row(it, "ç·¨é›†") { fleet(it) } }
-        row("ï¼‹ Fleet Start", "Add") { addFleet() }
+HHJCBˆYÙK˜YšY]ÊXY\ŠCBˆ\İH[™X\“^[İ]
+\ÊK˜\HÈÜšY[][ÛˆH[™X\“^[İ]•‘T•PĞSÈÙ]Y[™ÊL‹L‹Œ
+HCBˆYÙK˜YšY]ÊØÜ›ÛšY]Ê\ÊK˜\HÈYšY]Ê\İ
+HJCBˆÙ]ÛÛ[šY]ÊYÙJCBˆZ[
 
-        section("Start 1")
-        row("Start Sequence", selectedProfile()) { choose("Start Sequence", SignalSequence.profiles.map { it.name }, "signalProfileName") }
-        val activePrepRule=when(prefs.getString("signalPrepFlag","P") ?: "P") { "black" -> "Black"; else -> prefs.getString("signalPrepFlag","P") ?: "P" }
-        row("Start Rule", activePrepRule) { choose("Start Rule", listOf("P","I","U","Z","Black","Default"), "signalStartRule") }
-        row("Classes", prefs.getString("signalSelectedClassName", "ã‚¯ãƒ©ã‚¹æ——") ?: "ã‚¯ãƒ©ã‚¹æ——") { classGallery() }
-        switch("Custom Race Delay", "signalRaceDelayEnabled", false)
-        row("Time between races", prefs.getInt("signalRaceDelayMinutes", 0).toString()+"åˆ†") { number("ãƒ¬ãƒ¼ã‚¹é–“éš”", "signalRaceDelayMinutes", 0, 0, 60) }
+CBˆCBƒBˆš]˜]H[ˆZ[
 
-        section("Time Limits")
-        switch("Enable", "signalTimeLimitEnabled", false)
-        row("Race Limit", prefs.getInt("signalRaceLimitMinutes",50).toString()+"åˆ†") { number("Race Limit", "signalRaceLimitMinutes",50,1,300) }
-        row("Finish Window", prefs.getInt("signalFinishWindowMinutes",20).toString()+"åˆ†") { number("Finish Window","signalFinishWindowMinutes",20,1,120) }
-        section("Rule 42 Override"); switch("Enable","signalRule42Override",false)
+HÃBˆ\İœ™[[İ™P[šY]ÜÊ
+CBˆÙXİ[ÛŠ‘Ù[™\˜[Ù][™ÜÈŠCBˆ›İÊ“[ÙH‹‘›Y]ŠHßCBˆ›İÊ“Z[š[][HXY[YHÈ™\›È‹™YœË™Ù][
+œÚYÛ˜[Z[š[][U[YUÑš\œİXİ[Ûˆ‹MJKÔİš[™Ê
+H
+ÈœÈŠHÈ[X™\Š¹«(xàk¹b!Œ9éä¸ào¸àiøàk¹§ 9çëy¦`ºe¤È‹œÚYÛ˜[Z[š[][U[YUÑš\œİXİ[Ûˆ‹MKLŒ
+HCBˆ›İÊ•›ÚXÙH‹™YœË™Ù]İš[™ÊœÚYÛ˜[›ÚXÙS˜[YH‹’Ş[ÚÛÈ
+[š[˜ÙY
+HŠHÎˆˆŠHÈÚÛÜÙJ•›ÚXÙH‹\İÙŠ’Ş[ÚÛÈ
+[š[˜ÙY
+H‹¹êëù§*øàk¹ª&y®¥ºgìùhìŠKœÚYÛ˜[›ÚXÙS˜[YHŠHCBˆ›İÊ“›İYšXØ][ÛœÈ‹“X[˜YÙ[Y[
+˜Y[ÊHŠHÈ›İYšXØ][ÛœÊ
+HCBˆ›İÊ¹¦`¹b.ùd#9§'ûï"›šXİšœ;ï"H‹¹d#9§'ÈŠHÃBˆšXİÛØÚËœ]Y\HÈ™\İ[Oˆ[“Û•ZU™XYÃBˆ™\İ[›Û”İXØÙ\ÜÈÈÙ™œÙ]OƒBˆ™YœË™Y]
 
-        val orangeProfile=SignalSequence.profiles.getOrElse(prefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}
-        val orangeDisplayDefault=if(orangeProfile.id=="video-13") 4 else 5
-        val orangeRemovalDefault=if(orangeProfile.id=="video-20") 10 else 4
-        section("Orange Flag")
-        switch("Enable","signalOrangeEnabled",true)
-        row("æ©™æ——æ²æšã‹ã‚‰äºˆå‘Šä¿¡å·ã¾ã§",prefs.getInt("signalOrangeDisplayedMinutes",orangeDisplayDefault).toString()+"åˆ†") { number("æ©™æ——æ²æšã‹ã‚‰äºˆå‘Šä¿¡å·ã¾ã§ï¼ˆåˆ†ï¼‰","signalOrangeDisplayedMinutes",orangeDisplayDefault,0,30) }
-        row("ã‚¹ã‚¿ãƒ¼ãƒˆå¾Œã€æ©™æ——ã‚’é™ä¸‹ã™ã‚‹ã¾ã§",prefs.getInt("signalOrangeRemovedAfterMinutes",orangeRemovalDefault).toString()+"åˆ†") { number("ã‚¹ã‚¿ãƒ¼ãƒˆå¾Œã€æ©™æ——ã‚’é™ä¸‹ã™ã‚‹ã¾ã§ï¼ˆåˆ†ï¼‰","signalOrangeRemovedAfterMinutes",orangeRemovalDefault,0,30) }
-        list.addView(TextView(this).apply { text="å¾…æ©Ÿä¸­ã¯æ©™æ——ã‚’é™ä¸‹ã—ã¾ã™ã€‚æœ‰åŠ¹ã«ã™ã‚‹ã¨ã€åŒæœŸã—ãŸã‚·ãƒ¼ã‚±ãƒ³ã‚¹é–‹å§‹æ™‚ã«è‡ªå‹•æ²æšã—ã¾ã™ã€‚äºˆå‘Šä¿¡å·ã¨ã‚¹ã‚¿ãƒ¼ãƒˆã®æ™‚åˆ»ã¯æ©™æ——ã®æ²æšæ™‚é–“ã«å¿œã˜ã¦è¡¨ç¤ºã—ã¾ã™ã€‚æ©™æ——ã¯è¨­å®šã—ãŸæ™‚é–“å¾Œã«é™ä¸‹ã—ã€æ²æšãƒ»é™ä¸‹ã¯æ‰‹å‹•ã§ã‚‚æ“ä½œã§ãã¾ã™ã€‚å‹•ç”»Aã®æ—¢å®šã¯ã‚¹ã‚¿ãƒ¼ãƒˆå¾Œ10åˆ†ã€ã»ã‹ã¯4åˆ†ã§ã™ã€‚"; setTextColor(0xFFAAAAAA.toInt()); setPadding(6,4,6,12) })
-        section("Starts")
-        val starts=prefs.getStringSet("signalStartEntries",setOf("Class Â· Tâˆ’5:00 Â· æ²æš Â· çŸ­éŸ³")) ?: emptySet()
-        starts.forEach { row(it,"âˆ’") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
-        row("ï¼‹ Add Startâ€¦","â€º") { addStart() }
-        section("Class Flags")
-        row("ã‚¯ãƒ©ã‚¹æ——ã‚’ç·¨é›†","ç·¨é›†") { flagEditor() }
-        row("International Flag","ä¸€è¦§") { internationalFlags() }
-    }
+Kœ]Û™ÊœÚYÛ˜[ÛØÚÓÙ™œÙ]\È‹Ù™œÙ]
+K˜\J
+CBˆØ\İ›XZÙU^
+\Ë¹¦`¹b.ùd#9§'øàeøào¸àeøàgûï"9mëˆ	ÚYˆ
+Ù™œÙ]H
+HŠÈˆ[ÙHˆŸIÛÙ™œÙ]H\ûï"H‹Ø\İ“S‘ÕÓÓ‘ÊKœÚİÊ
+CBˆK›Û‘˜Z[\™HÃBˆØ\İ›XZÙU^
+\Ë¹¦`¹b.ùd#9§'øàjùi,y¥eøàeøào¸àeøàgøà ¹êëù§*ù¦`¹b.øà¤¹/oùå*8àeøào¸àfH‹Ø\İ“S‘ÕÓÓ‘ÊKœÚİÊ
+CBˆCBˆHCBˆCBˆ›İÊ’Ü›ˆ‹Yˆ
+™YœË™Ù]›ÛÛX[ŠœÚYÛ˜[Ü›‘[˜X›Y‹YJJH•š\X[ˆ[ÙH‘\ØX›YŠHÈÜ›Š
+HCBˆİÚ]Ú
+”™[[İH›YÜÈ
+[JH‹œÚYÛ˜[™[[İQ›YÜÑ[˜X›Y‹˜[ÙJCBˆİÚ]Ú
+[ŞV›Û™H‹œÚYÛ˜[[ŞV›Û™S[šÙY‹˜[ÙJCBˆİÚ]Ú
+‘^\›˜[\Ü^H‹œÚYÛ˜[^\›˜[\Ü^Q[˜X›Y‹YJCBˆ›İÊ“ÙÈ‹º*&:c,º*+yk¦ˆŠHÈÚ[\TİÚ]Ú
+“ÙÈ‹œÚYÛ˜[ÙÑ[˜X›Y‹YJHCBƒBˆÙXİ[ÛŠ‘›Y]İ\Ù\]Y[˜Ù\ÈŠCBˆ˜[˜[Y\ÈH™YœË™Ù]İš[™ÔÙ]
+œÚYÛ˜[›Y]™\Ù]˜[Y\È‹Ù]ÙŠ“Ô]HœŠJHÎˆÙ]ÙŠ“Ô]HœŠCBˆ˜[Xİ]™Q›Y]H™YœË™Ù]İš[™ÊœÚYÛ˜[›Y]İ\˜[YH‹“Ô]HœŠHÎˆ“Ô]HœƒBˆ˜[Y\ËœÛÜY
 
-    private fun section(title: String) {
-        list.addView(TextView(this).apply { text=title; textSize=17f; setTextColor(0xFFB0B0B5.toInt()); setPadding(6,20,4,8) })
-    }
-    private fun row(title: String, value: String, click: () -> Unit) {
-        val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; minimumHeight=50; setPadding(6,4,4,4) }
-        r.addView(TextView(this).apply { text=title; textSize=15f; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
-        r.addView(TextView(this).apply { text=value+"  â€º"; textSize=14f; setTextColor(0xFFAAAAAA.toInt()) })
-        r.setOnClickListener { click() }; list.addView(r)
-        list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) },LinearLayout.LayoutParams(-1,1))
-    }
-    private fun switch(title:String,key:String,default:Boolean) {
-        val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; minimumHeight=50; setPadding(6,4,4,4) }
-        r.addView(TextView(this).apply { text=title; textSize=15f; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
-        r.addView(android.widget.Switch(this).apply { isChecked=prefs.getBoolean(key,default); setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean(key,v).apply() } })
-        list.addView(r); list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) },LinearLayout.LayoutParams(-1,1))
-    }
-    private fun number(title:String,key:String,default:Int,min:Int,max:Int) {
-        val input=EditText(this).apply { setText(prefs.getInt(key,default).toString()); inputType=2; setTextColor(white) }
-        AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("ä¿å­˜") { _,_ ->
-            prefs.edit().putInt(key,(input.text.toString().toIntOrNull()?:default).coerceIn(min,max)).apply(); build()
-        }.show()
-    }
-    private fun choose(title:String,items:List<String>,key:String) {
-        AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
-            prefs.edit().putString(key,items[i]).apply()
-            if(key=="signalProfileName") {
-                val index=SignalSequence.profiles.indexOfFirst { it.name==items[i] }.coerceAtLeast(0)
-                val profile=SignalSequence.profiles[index]
-                val displayed=if(profile.id=="video-13") 4 else 5
-                val removed=if(profile.id=="video-20") 10 else 4
-                prefs.edit().putInt("signalFlagProfileIndex",index).putString("signalFlagProfile",profile.id)
-                    .putInt("signalOrangeDisplayedMinutes",displayed)
-                    .putInt("signalOrangeRemovedAfterMinutes",removed).apply()
-            }
-            if(key=="signalStartRule") {
-                val prep=when(items[i]) { "P","I","U","Z" -> items[i]; "Black" -> "black"; else -> "P" }
-                prefs.edit().putString("signalPrepFlag",prep).apply()
-            }
-            build()
-        }.show()
-    }
-    private fun choosePrep() {
-        AlertDialog.Builder(this).setTitle("æº–å‚™ä¿¡å·").setItems(arrayOf("P","I","U","Z","Black")) { _,i ->
-            val value=listOf("P","I","U","Z","black")[i]; prefs.edit().putString("signalPrepFlag",value).apply(); build()
-        }.show()
-    }
-    private fun selectedProfile() = SignalSequence.profiles.getOrElse(prefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}.name
-    private fun simpleSwitch(title:String,key:String,default:Boolean) {
-        val cb=CheckBox(this).apply { text=title; setTextColor(white); isChecked=prefs.getBoolean(key,default) }
-        AlertDialog.Builder(this).setTitle(title).setView(cb).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("ä¿å­˜"){_,_->prefs.edit().putBoolean(key,cb.isChecked).apply()}.show()
-    }
-    private fun addFleet() {
-        val input=EditText(this).apply { hint="Fleet Start name"; setTextColor(white) }
-        AlertDialog.Builder(this).setTitle("æ–°è¦ãƒ•ãƒªãƒ¼ãƒˆæ‰‹é †").setView(input).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("ä½œæˆ"){_,_->
-            val name=input.text.toString().trim().ifEmpty{"Fleet Start"}
-            val names=prefs.getStringSet("signalFleetPresetNames",setOf("OP Au Bp"))?.toMutableSet()?:mutableSetOf()
-            names.add(name); prefs.edit().putStringSet("signalFleetPresetNames",names).putString("signalFleetStartName",name).apply(); build()
-        }.show()
-    }
-    private fun fleet(name:String) {
-        prefs.edit().putString("signalFleetStartName",name).apply()
-        val input=EditText(this).apply { setText(name); setTextColor(white) }
-        AlertDialog.Builder(this).setTitle("Fleet Start").setView(input).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("Save"){_,_->
-            val updated=input.text.toString().trim().ifEmpty{name}; val names=prefs.getStringSet("signalFleetPresetNames",setOf(name))?.toMutableSet()?:mutableSetOf()
-            names.remove(name); names.add(updated); prefs.edit().putStringSet("signalFleetPresetNames",names).putString("signalFleetStartName",updated).apply(); build()
-        }.show()
-    }
-    private fun addStart() {
-        val flags=listOf("Class","Orange","P","I","U","Z","Black","AP","X","First Substitute")
-        AlertDialog.Builder(this).setTitle("Add Startâ€¦").setItems(flags.toTypedArray()){_,i->
-            val items=prefs.getStringSet("signalStartEntries",emptySet())?.toMutableSet()?:mutableSetOf()
-            items.add(flags[i]+" Â· Tâˆ’5:00 Â· æ²æš Â· çŸ­éŸ³"); prefs.edit().putStringSet("signalStartEntries",items).apply(); build()
-        }.show()
-    }
-    private fun classGallery() {
-        val groups = linkedMapOf(
-            "Multihull" to listOf("A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"),
-            "Keelboat" to listOf("10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"),
-            "Board" to listOf("Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"),
-            "Centerboard" to listOf("29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J/14","Jollyboat","Laser","Laser 4.7","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling")
-        )
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(12, 4, 12, 12)
-        }
-        var dialog: AlertDialog? = null
-        val density = resources.displayMetrics.density
-        groups.forEach { (category, classes) ->
-            content.addView(TextView(this).apply {
-                text = category
-                textSize = 17f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                setTextColor(0xFFB0B0B5.toInt())
-                setPadding(4, 18, 4, 8)
-            })
-            val grid = GridView(this).apply {
-                numColumns = 3
-                horizontalSpacing = (8 * density).toInt()
-                verticalSpacing = (8 * density).toInt()
-                stretchMode = GridView.STRETCH_COLUMN_WIDTH
-                adapter = object : BaseAdapter() {
-                    override fun getCount() = classes.size
-                    override fun getItem(position: Int) = classes[position]
-                    override fun getItemId(position: Int) = position.toLong()
-                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
-                        val name = classes[position]
-                        return LinearLayout(this@SignalSettingsActivity).apply {
-                            orientation = LinearLayout.VERTICAL
-                            gravity = Gravity.CENTER
-                            setPadding(4, 5, 4, 5)
-                            val logoBitmap = SignalClassLogoAssets.bitmap(this@SignalSettingsActivity, name)
-                            val markBox = FrameLayout(this@SignalSettingsActivity).apply {
-                                setBackgroundColor(Color.WHITE)
-                                if (logoBitmap != null) {
-                                    addView(ImageView(this@SignalSettingsActivity).apply {
-                                        setImageBitmap(logoBitmap)
-                                        scaleType = ImageView.ScaleType.FIT_CENTER
-                                        setPadding((5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt())
-                                    }, FrameLayout.LayoutParams(-1, -1))
-                                } else {
-                                    addView(TextView(this@SignalSettingsActivity).apply {
-                                        text = classMark(name)
-                                        textSize = 23f
-                                        typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
-                                        gravity = Gravity.CENTER
-                                        isSingleLine = true
-                                        setTextColor(Color.BLACK)
-                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
-                                            setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
-                                        }
-                                    }, FrameLayout.LayoutParams(-1, -1))
-                                }
-                            }
-                            addView(markBox, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
-                            addView(TextView(this@SignalSettingsActivity).apply {
-                                text = name
-                                textSize = 12f
-                                gravity = Gravity.CENTER
-                                setTextColor(white)
-                                setPadding(0, 4, 0, 0)
-                                maxLines = 2
-                            })
-                        }
-                    }
-                }
-                setOnItemClickListener { _, _, index, _ ->
-                    val selected = classes[index]
-                    prefs.edit()
-                        .putString("signalSelectedClassName", selected)
-                        .putString("signalCustomClassFlag", "class-$selected")
-                        .apply()
-                    dialog?.dismiss()
-                    build()
-                }
-            }
-            val rows = (classes.size + 2) / 3
-            content.addView(grid, LinearLayout.LayoutParams(-1, rows * (82 * density).toInt()))
-        }
-        val scroll = ScrollView(this).apply { addView(content) }
-        dialog = AlertDialog.Builder(this)
-            .setTitle("ã‚¯ãƒ©ã‚¹æ——ã‚’é¸æŠ")
-            .setView(scroll)
-            .setNegativeButton("é–‰ã˜ã‚‹", null)
-            .create()
-        dialog?.show()
-    }
-    private fun classMark(name:String):String = when(name) {
-        "A-Cat" -> "AÌ²"; "Optimist" -> "â“„"; "Starling" -> "â˜…"; "ILCA" -> "ILCA"
-        "49er FX" -> "49er FX"; "J/22" -> "J\n22"; "J/24" -> "J\n24"; "J/70" -> "J\n70"; "J/80" -> "J\n80"
-        "J/105" -> "J\n105"; "420" -> "420"; "470" -> "470"; else -> name
-    }
-    private fun internationalFlags() {
-        val flags=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute")
-        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=10; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
-            override fun getCount()=flags.size
-            override fun getItem(position:Int)=flags[position]
-            override fun getItemId(position:Int)=position.toLong()
-            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
-                val name=flags[position]
-                return LinearLayout(this@SignalSettingsActivity).apply {
-                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER
-                    addView(SignalFlagArtworkView(this@SignalSettingsActivity,name),LinearLayout.LayoutParams(-1,72))
-                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
-                }
-            }
-        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedInternationalFlag",flags[i]).apply(); (tag as? AlertDialog)?.dismiss(); build() } }
-        val dialog=AlertDialog.Builder(this).setTitle("International Signal Flags").setView(ScrollView(this).apply { addView(grid) }).setNegativeButton("é–‰ã˜ã‚‹",null).create()
-        grid.tag=dialog; dialog.show()
-    }
-    private fun flagEditor() {
-        val classNames=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
-        val flagNames=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu")
-        val input=EditText(this).apply { hint="æ——ã®åå‰"; setText(prefs.getString("signalCustomFlagName","Class Flag")); setTextColor(white) }
-        val types=listOf("ã‚¯ãƒ©ã‚¹æ——","æ–‡å­—æ——","å›½éš›ä¿¡å·æ——")
-        val type=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,types) }
-        val classes=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,classNames) }
-        val flags=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,flagNames) }
-        classes.setSelection(classNames.indexOf(prefs.getString("signalSelectedClassName","29er")).coerceAtLeast(0))
-        flags.setSelection(flagNames.indexOf(prefs.getString("signalSelectedInternationalFlag","Alpha")).coerceAtLeast(0))
-        val layouts=listOf("å…¨é¢è‰²","ä¸Šä¸‹åˆ†å‰²","å·¦å³åˆ†å‰²","æ–œã‚åˆ†å‰²","é€†æ–œã‚")
-        val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
-        layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
-        var logoColor = prefs.getInt("signalClassLogoTextColor", Color.BLACK)
-        var logoBackground = prefs.getInt("signalClassLogoBackgroundColor", Color.WHITE)
-        val logoColorButton = Button(this).apply { text = "ãƒ­ã‚´è‰²ã‚’é¸æŠ"; setTextColor(logoColor) }
-        val backgroundColorButton = Button(this).apply { text = "èƒŒæ™¯è‰²ã‚’é¸æŠ"; setTextColor(logoBackground) }
-        val preview=FrameLayout(this).apply { setBackgroundColor(logoBackground) }
-        val box=LinearLayout(this).apply {
-            orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
-            addView(input); addView(type); addView(classes); addView(flags); addView(layout);
-            addView(logoColorButton); addView(backgroundColorButton); addView(preview,LinearLayout.LayoutParams(-1,96))
-        }
-        fun updatePreview() {
-            val isInternational=type.selectedItemPosition==2
-            classes.visibility=if(type.selectedItemPosition==0)View.VISIBLE else View.GONE
-            flags.visibility=if(isInternational)View.VISIBLE else View.GONE
-            layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
-            preview.removeAllViews()
-            preview.setBackgroundColor(logoBackground)
-            logoColorButton.text = "ãƒ­ã‚´è‰²: ${String.format("#%06X", 0xFFFFFF and logoColor)}"
-            backgroundColorButton.text = "èƒŒæ™¯è‰²: ${String.format("#%06X", 0xFFFFFF and logoBackground)}"
-            logoColorButton.setTextColor(logoColor)
-            backgroundColorButton.setTextColor(if (Color.luminance(logoBackground) > 0.45f) Color.BLACK else Color.WHITE)
-            val label = when(type.selectedItemPosition){0->classes.selectedItem.toString();1->input.text.toString().ifBlank{"æ——"};else->flagNames[flags.selectedItemPosition]}
-            val logo = if(type.selectedItemPosition==0) SignalClassLogoAssets.bitmap(this, label) else null
-            if (logo != null) {
-                preview.addView(ImageView(this).apply {
-                    setImageBitmap(logo); scaleType=ImageView.ScaleType.FIT_CENTER
-                    setColorFilter(logoColor, android.graphics.PorterDuff.Mode.SRC_IN)
-                    setPadding(8,8,8,8)
-                }, FrameLayout.LayoutParams(-1,-1))
-            } else {
-                preview.addView(TextView(this).apply {
-                    text=if(type.selectedItemPosition==0) classMark(label) else label
-                    gravity=Gravity.CENTER; textSize=22f; setTextColor(logoColor)
-                }, FrameLayout.LayoutParams(-1,-1))
-            }
-        }
-        val paletteNames = arrayOf("é»’","ç™½","èµ¤","æ©™","é»„","ç·‘","é’","ç´«")
-        val paletteColors = intArrayOf(Color.BLACK, Color.WHITE, 0xFFE32636.toInt(), 0xFFF58A00.toInt(), 0xFFF5D328.toInt(), 0xFF00B83F.toInt(), 0xFF1769FF.toInt(), 0xFF7A35A8.toInt())
-        logoColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("ãƒ­ã‚´è‰²").setItems(paletteNames) { _, i -> logoColor=paletteColors[i]; updatePreview() }.show() }
-        backgroundColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("èƒŒæ™¯è‰²").setItems(paletteNames) { _, i -> logoBackground=paletteColors[i]; updatePreview() }.show() }
-        type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
-            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
-            override fun onNothingSelected(parent:AdapterView<*>?) {}
-        }
-        classes.onItemSelectedListener=type.onItemSelectedListener
-        flags.onItemSelectedListener=type.onItemSelectedListener
-        input.addTextChangedListener(object:android.text.TextWatcher{
-            override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
-            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) updatePreview()}
-            override fun afterTextChanged(s:android.text.Editable?){}
-        })
-        AlertDialog.Builder(this).setTitle("ã‚¯ãƒ©ã‚¹æ——ãƒ»ä¿¡å·æ——ã®è¨­å®š").setView(box).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("ä¿å­˜"){_,_->
-            val editor=prefs.edit().putString("signalCustomFlagName",input.text.toString()).putInt("signalCustomFlagStyle",type.selectedItemPosition).putInt("signalCustomFlagLayoutIndex",layout.selectedItemPosition)
-                .putInt("signalClassLogoTextColor", logoColor).putInt("signalClassLogoBackgroundColor", logoBackground)
-            when(type.selectedItemPosition){
-                0->{val selected=classNames[classes.selectedItemPosition];editor.putString("signalSelectedClassName",selected).putString("signalCustomClassFlag","class-$selected")}
-                1->{val label=input.text.toString().trim().ifEmpty{"æ——"};editor.putString("signalSelectedClassName","text:$label").putString("signalCustomFlagText",label)}
-                2->{val selected=flagNames[flags.selectedItemPosition];editor.putString("signalSelectedInternationalFlag",selected).putString("signalSelectedClassName","intl:$selected")}
-            }
-            editor.apply()
-            build()
-        }.show()
-    }
-    private fun notifications() {
-        val items=listOf("ASAP","Every minute*","1 minute","30 seconds","20 seconds","Countdown","On Time","Race: Every minute","Race: Every 5 minutes","Time Limit","Zone alerts")
-        val modes=arrayOf("Time","Full","Sound","None")
-        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(16,0,16,0) }
-        val radio=CheckBox(this).apply { text="Radio Friendly"; setTextColor(white); isChecked=prefs.getBoolean("signalRadioFriendly",true) }; box.addView(radio)
-        val controls=mutableMapOf<String,Spinner>()
-        items.forEach { label ->
-            val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
-            r.addView(TextView(this@SignalSettingsActivity).apply { text=label; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
-            val s=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,modes); setSelection(modes.indexOf(prefs.getString("notify_"+label,"None")).coerceAtLeast(0)) }
-            r.addView(s,LinearLayout.LayoutParams(120,-2)); box.addView(r); controls[label]=s
-        }
-        AlertDialog.Builder(this).setTitle("Notifications").setView(ScrollView(this).apply{addView(box)}).setNegativeButton("ã‚­ãƒ£ãƒ³ã‚»ãƒ«",null).setPositiveButton("Save"){_,_->
-            val e=prefs.edit().putBoolean("signalRadioFriendly",radio.isChecked); controls.forEach{(k,v)->e.putString("notify_"+k,v.selectedItem.toString())};e.apply()
-        }.show()
-    }
-    private fun horn() {
-        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(16,0,16,0) }
-        val enabled=CheckBox(this).apply { text="Virtual"; setTextColor(white); isChecked=prefs.getBoolean("signalHornEnabled",true) }; box.addView(enabled)
-        fun slider(label:String,key:String,def:Int,max:Int) {
-            box.addView(TextView(this).apply { text=label; setTextColor(white) })
-            val seek=SeekBar(this).apply { this.max=max; progress=prefs.getInt(key,def).coerceIn(0,max) }
-            seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
-                override fun onProgressChanged(s:SeekBar?,v:Int,fromUser:Boolean){prefs.edit().putInt(key,v).apply()}
-                override fun onStartTrackingTouch(s:SeekBar?){}; override fun onStopTrackingTouch(s:SeekBar?){}
-            }); box.addView(seek)
-        }
-        slider("Volume","signalHornVolume",80,100);slider("Short Sound (ms)","signalShortHornMs",220,1000);slider("Long Sound (ms)","signalHornMs",700,5000);slider("Gap (ms)","signalGapMs",180,2000)
-        AlertDialog.Builder(this).setTitle("Remote Horn").setView(box).setPositiveButton("å®Œäº†"){_,_->prefs.edit().putBoolean("signalHornEnabled",enabled.isChecked).apply()}.show()
-    }
-    private fun showLog() = simpleSwitch("ãƒ­ã‚°ã‚’ä¿å­˜","signalLogEnabled",true)
-}
+K™›Ü‘XXÚÈ˜[YHOˆ›İÊ˜[YKYˆ
+˜[YHOHXİ]™Q›Y]
+H¹/oùå*9.+xàîùíê:fáˆˆ[ÙHº`n9¢§¸àîùíê:fáˆŠHÈ›Y]
+˜[YJHHCBˆ›İÊ»ï"È›Y]İ\‹YŠHÈY›Y]
+
+HCBƒBˆÙXİ[ÛŠ‰Xİ]™Q›Y]0­Èİ\ÈŠCBˆ˜[İÜ™Yİ\Ï\™YœË™Ù]İš[™ÔÙ]
+œÚYÛ˜[İ\[šY\È‹Ù]ÙŠÛ\ÜÈ0­È8¢$NŒ0­È9£¬¹£æˆ0­È9çëzgìÈŠJHÎˆ[\TÙ]
+
+CBˆ˜[ØœÛÛ]T™\›İÜÏ\Ù]ÙŠ”‹’H‹•H‹–ˆ‹“PÒÈŠCBˆ˜[İ\Ï\İÜ™Yİ\Ë™š[\“›İÈ]œİXœİš[™Ğ™Y›Ü™J°­ÈŠKš[J
+K\\˜Ø\ÙJ
+H[ˆØœÛÛ]T™\›İÜÈKÔÙ]
+
+CBˆYŠİ\ÈO\İÜ™Yİ\ÊH™YœË™Y]
+
+Kœ]İš[™ÔÙ]
+œÚYÛ˜[İ\[šY\È‹İ\ÊK˜\J
+CBˆİ\Ë™›Ü‘XXÚÈ›İÊ]¸¢$ˆŠHÈ˜[ÛÜO\İ\ËÓ]]X›TÙ]
+
+NÈÛÜKœ™[[İ™J]
+NÈ™YœË™Y]
+
+Kœ]İš[™ÔÙ]
+œÚYÛ˜[İ\[šY\È‹ÛÜJK˜\J
+NÈZ[
+
+HHCBˆ›İÊ»ï"ÈYİ\8 )ˆ‹¸ .ˆŠHÈYİ\
+
+HCBˆÙXİ[ÛŠÛ\ÜÈ›YÜÈŠCBˆ›İÊ¸à«øàêxà®y¥åøà¤¹íê:fáˆ‹¹íê:fáˆŠHÈ›YÑY]ÜŠ
+HCBˆ›İÊ’[\›˜][Û˜[›YÈ‹¹. :)©ÈŠHÈ[\›˜][Û˜[›YÜÊ
+HCBˆCBƒBˆš]˜]H[ˆÙXİ[ÛŠ]Nˆİš[™ÊHÃBˆ\İ˜YšY]Ê^šY]Ê\ÊK˜\HÈ^]]NÈ^Ú^™OLMÙÈÙ]^ÛÛÜŠ‘ŒŒKÒ[
+
+JNÈÙ]Y[™Ê‹Œ
+HJCBˆCBˆš]˜]H[ˆ›İÊ]Nˆİš[™Ë˜[YNˆİš[™ËÛXÚÎˆ
+
+HOˆ[š]
+HÃBˆ˜[S[™X\“^[İ]
+\ÊK˜\HÈÜšY[][ÛS[™X\“^[İ]’Ô’V“Ó•SÈÜ˜]š]OQÜ˜]š]KÑS•T—Õ‘T•PĞSÈZ[š[][RZYÚMLÈÙ]Y[™Ê‹
+HCBˆ‹˜YšY]Ê^šY]Ê\ÊK˜\HÈ^]]NÈ^Ú^™OLMYÈÙ]^ÛÛÜŠÚ]JNÈ^[İ]\˜[\ÏS[™X\“^[İ]“^[İ]\˜[\ÊL‹YŠHJCBˆ‹˜YšY]Ê^šY]Ê\ÊK˜\HÈ^]˜[YJÈˆ8 .ˆÈ^Ú^™OLMÈÙ]^ÛÛÜŠ‘PPPPPKÒ[
+
+JHJCBˆ‹œÙ]ÛÛXÚÓ\İ[™\ˆÈÛXÚÊ
+HNÈ\İ˜YšY]ÊŠCBˆ\İ˜YšY]ÊšY]Ê\ÊK˜\HÈÙ]˜XÚÙÜ›İ[™ÛÛÜŠ‘Ò[
+
+JHK[™X\“^[İ]“^[İ]\˜[\ÊLKJJCBˆCBˆš]˜]H[ˆİÚ]Ú
+]N”İš[™ËÙ^N”İš[™ËY˜][›ÛÛX[ŠHÃBˆ˜[S[™X\“^[İ]
+\ÊK˜\HÈÜšY[][ÛS[™X\“^[İ]’Ô’V“Ó•SÈÜ˜]š]OQÜ˜]š]KÑS•T—Õ‘T•PĞSÈZ[š[][RZYÚMLÈÙ]Y[™Ê‹
+HCBˆ‹˜YšY]Ê^šY]Ê\ÊK˜\HÈ^]]NÈ^Ú^™OLMYÈÙ]^ÛÛÜŠÚ]JNÈ^[İ]\˜[\ÏS[™X\“^[İ]“^[İ]\˜[\ÊL‹YŠHJCBˆ‹˜YšY]Ê[™›ÚYÚYÙ]”İÚ]Ú
+\ÊK˜\HÈ\ĞÚXÚÙY\™YœË™Ù]›ÛÛX[ŠÙ^KY˜][
+NÈÙ]ÛÚXÚÙYÚ[™ÙS\İ[™\ˆÈËˆOˆ™YœË™Y]
+
+Kœ]›ÛÛX[ŠÙ^KŠK˜\J
+HHJCBˆ\İ˜YšY]ÊŠNÈ\İ˜YšY]ÊšY]Ê\ÊK˜\HÈÙ]˜XÚÙÜ›İ[™ÛÛÜŠ‘Ò[
+
+JHK[™X\“^[İ]“^[İ]\˜[\ÊLKJJCBˆCBˆš]˜]H[ˆ[X™\Š]N”İš[™ËÙ^N”İš[™ËY˜][’[Z[’[X^’[
+HÃBˆ˜[[œ]QY]^
+\ÊK˜\HÈÙ]^
+™YœË™Ù][
+Ù^KY˜][
+KÔİš[™Ê
+JNÈ[œ]\OLÈÙ]^ÛÛÜŠÚ]JHCBˆ[\X[ÙËZ[\Š\ÊKœÙ]]J]JKœÙ]šY]Ê[œ]
+KœÙ]™YØ]]™P]ÛŠ¸à«xàèøàìøà®øàêÈ‹[
+KœÙ]ÜÚ]]™P]ÛŠ¹/çykfŠHÈËÈOƒBˆ™YœË™Y]
+
+Kœ][
+Ù^K
+[œ]^Ôİš[™Ê
+KÒ[Ü“[
+
+OÎ™Y˜][
+K˜ÛÙ\˜ÙR[ŠZ[‹X^
+JK˜\J
+NÈZ[
+
+CBˆKœÚİÊ
+CBˆCBˆš]˜]H[ˆÚÛÜÙJ]N”İš[™Ë][\Î“\İİš[™Ï‹Ù^N”İš[™ÊHÃBˆ[\X[ÙËZ[\Š\ÊKœÙ]]J]JKœÙ]][\Ê][\ËÕ\Y\œ˜^J
+JHÈËHOƒBˆ™YœË™Y]
+
+Kœ]İš[™ÊÙ^K][\ÖÚWJK˜\J
+CBˆYŠÙ^OOHœÚYÛ˜[İ\[HŠHÃBˆ˜[™\TÚYÛ˜[Ù\]Y[˜ÙKœ™\\˜][Û‘›YÑ›Ü”İ\[J][\ÖÚWJCBˆ™YœË™Y]
+
+Kœ]İš[™ÊœÚYÛ˜[™\›YÈ‹™\
+K˜\J
+CBˆCBˆZ[
+
+CBˆKœÚİÊ
+CBˆCBˆš]˜]H[ˆÚ[\TİÚ]Ú
+]N”İš[™ËÙ^N”İš[™ËY˜][›ÛÛX[ŠHÃBˆ˜[ØPÚXÚĞ›Ş
+\ÊK˜\HÈ^]]NÈÙ]^ÛÛÜŠÚ]JNÈ\ĞÚXÚÙY\™YœË™Ù]›ÛÛX[ŠÙ^KY˜][
+HCBˆ[\X[ÙËZ[\Š\ÊKœÙ]]J]JKœÙ]šY]ÊØŠKœÙ]™YØ]]™P]ÛŠ¸à«xàèøàìøà®øàêÈ‹[
+KœÙ]ÜÚ]]™P]ÛŠ¹/çykfŠ^×ËËOœ™YœË™Y]
+
+Kœ]›ÛÛX[ŠÙ^KØ‹š\ĞÚXÚÙY
+K˜\J
+_KœÚİÊ
+CBˆCBˆš]˜]H[ˆY›Y]
+
+HÃBˆ˜[[œ]QY]^
+\ÊK˜\HÈ[H‘›Y]İ\˜[YHÈÙ]^ÛÛÜŠÚ]JHCBˆ½yêÚ$z{-®éÜj×÷$'WGFöâ“²FEf–Wr‡&Wf–WrÄÆ–æV$Æ–÷WBäÆ–÷WE&×2‚ÓÃ“b’Ğ¢ĞĞ¢gVâWFFU&Wf–Wr‚’°Ğ¢fÂ—4–çFW&æF–öæÃ×G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ Ğ¢6Æ76W2çf—6–&–Æ—G“Ö–b‡G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ•f–Wråd•4”$ÄRVÇ6Rf–WrätôäPĞ¢fÆw2çf—6–&–Æ—G“Ö–b†—4–çFW&æF–öæÂ•f–Wråd•4”$ÄRVÇ6Rf–WrätôäPĞ¢Æ–÷WBçf—6–&–Æ—G“Ö–b‡G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ•f–Wråd•4”$ÄRVÇ6Rf–WrätôäPĞ¢&Wf–Wrç&VÖ÷fTÆÅf–Ww2‚Ğ¢&Wf–Wrç6WD&6¶w&÷VæD6öÆ÷"†Æövô&6¶w&÷VæBĞ¢Æövô6öÆ÷$'WGFöâçFW‡BÒ.8:Ş8+Nˆ›#¢Gµ7G&–æræf÷&ÖB‚"2Se‚"Â„dddddbæBÆövô6öÆ÷"—Ò Ğ¢&6¶w&÷VæD6öÆ÷$'WGFöâçFW‡BÒ.ˆ8Îišşˆ›#¢Gµ7G&–æræf÷&ÖB‚"2Se‚"Â„dddddbæBÆövô&6¶w&÷VæB—Ò Ğ¢Æövô6öÆ÷$'WGFöâç6WEFW‡D6öÆ÷"†Æövô6öÆ÷"Ğ¢&6¶w&÷VæD6öÆ÷$'WGFöâç6WEFW‡D6öÆ÷"†–b„6öÆ÷"æÇVÖ–ææ6R†Æövô&6¶w&÷VæB’âãCVb’6öÆ÷"ä$Ä4²VÇ6R6öÆ÷"åt„•DRĞ¢fÂÆ&VÂÒv†Vâ‡G—Rç6VÆV7FVD—FVÕ÷6—F–öâ—³Óæ6Æ76W2ç6VÆV7FVD—FVÒçFõ7G&–ær‚“³Óæ–çWBçFW‡BçFõ7G&–ær‚’æ–d&Ææ·².iyr'Ó¶VÇ6RÓæfÆtæÖW5¶fÆw2ç6VÆV7FVD—FVÕ÷6—F–öå×ĞĞ¢fÂÆövòÒ–b‡G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ’6–væÄ6Æ74Æövô76WG2æ&—FÖ‡F†—2ÂÆ&VÂ’VÇ6RçVÆÀĞ¢–b†ÆövòÒçVÆÂ’°Ğ¢&Wf–WræFEf–Wr„–ÖvUf–Wr‡F†—2’æÇ’°Ğ¢6WD–ÖvT&—FÖ†Æövò“²66ÆUG—SÔ–ÖvUf–Wrå66ÆUG—Räd•Eô4TåDU Ğ¢6WD6öÆ÷$f–ÇFW"†Æövô6öÆ÷"ÂæG&ö–Bæw&†–72å÷'FW$GVfbäÖöFRå5$5ô”âĞ¢6WEFF–ærƒ‚Ã‚Ã‚Ã‚Ğ¢ÒÂg&ÖTÆ–÷WBäÆ–÷WE&×2‚ÓÂÓ’Ğ¢ÒVÇ6R°Ğ¢&Wf–WræFEf–Wr…FW‡Ef–Wr‡F†—2’æÇ’°Ğ¢FW‡CÖ–b‡G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ’6Æ74Ö&²†Æ&VÂ’VÇ6RÆ&VÀĞ¢w&f—G“Ôw&f—G’ä4TåDU#²FW‡E6—¦SÓ#&c²6WEFW‡D6öÆ÷"†Æövô6öÆ÷"Ğ¢ÒÂg&ÖTÆ–÷WBäÆ–÷WE&×2‚ÓÂÓ’Ğ¢ĞĞ¢ĞĞ¢fÂÆWGFTæÖW2Ò'&”öb‚.›¹""Â.y›Ò"Â.‹ZB"Â.j™’"Â.›¸B"Â.{y"Â.™Ù""Â.{J²"Ğ¢fÂÆWGFT6öÆ÷'2Ò–çD'&”öb„6öÆ÷"ä$Ä4²Â6öÆ÷"åt„•DRÂ„ddS3#c3bçFô–çB‚’Â„ddcS„çFô–çB‚’Â„ddcTC3#‚çFô–çB‚’Â„dc#ƒ4bçFô–çB‚’Â„dcsc”dbçFô–çB‚’Â„dct3T‚çFô–çB‚’Ğ¢Æövô6öÆ÷$'WGFöâç6WDöä6Æ–6´Æ—7FVæW"²ÆW'DF–Æörä'V–ÆFW"‡F†—2’ç6WEF—FÆR‚.8:Ş8+Nˆ›""’ç6WD—FV×2‡ÆWGFTæÖW2’²òÂ’ÓâÆövô6öÆ÷#×ÆWGFT6öÆ÷'5¶•Ó²WFFU&Wf–Wr‚’Òç6†÷r‚’ĞĞ¢&6¶w&÷VæD6öÆ÷$'WGFöâç6WDöä6Æ–6´Æ—7FVæW"²ÆW'DF–Æörä'V–ÆFW"‡F†—2’ç6WEF—FÆR‚.ˆ8Îišşˆ›""’ç6WD—FV×2‡ÆWGFTæÖW2’²òÂ’ÓâÆövô&6¶w&÷VæC×ÆWGFT6öÆ÷'5¶•Ó²WFFU&Wf–Wr‚’Òç6†÷r‚’ĞĞ¢G—Ræöä—FVÕ6VÆV7FVDÆ—7FVæW#Öö&¦V7C¤FFW%f–Wräöä—FVÕ6VÆV7FVDÆ—7FVæW'°Ğ¢÷fW'&–FRgVâöä—FVÕ6VÆV7FVB‡&VçC¤FFW%f–WsÂ£ãòÇf–Ws¥f–WsòÇ÷6—F–öã¤–çBÆ–C¤Æöær“×WFFU&Wf–Wr‚Ğ¢÷fW'&–FRgVâöäæ÷F†–æu6VÆV7FVB‡&VçC¤FFW%f–WsÂ£ãò’·ĞĞ¢ĞĞ¢6Æ76W2æöä—FVÕ6VÆV7FVDÆ—7FVæW#×G—Ræöä—FVÕ6VÆV7FVDÆ—7FVæW Ğ¢fÆw2æöä—FVÕ6VÆV7FVDÆ—7FVæW#×G—Ræöä—FVÕ6VÆV7FVDÆ—7FVæW Ğ¢–çWBæFEFW‡D6†ævVDÆ—7FVæW"†ö&¦V7C¦æG&ö–BçFW‡BåFW‡EvF6†W'°Ğ¢÷fW'&–FRgVâ&Vf÷&UFW‡D6†ævVB‡3¤6†%6WVVæ6SòÇ7F'C¤–çBÆ6÷VçC¤–çBÆgFW#¤–çB—·ĞĞ¢÷fW'&–FRgVâöåFW‡D6†ævVB‡3¤6†%6WVVæ6SòÇ7F'C¤–çBÆ&Vf÷&S¤–çBÆ6÷VçC¤–çB—¶–b‡G—Rç6VÆV7FVD—FVÕ÷6—F–öãÓÓ’WFFU&Wf–Wr‚—ĞĞ¢÷fW'&–FRgVâgFW%FW‡D6†ævVB‡3¦æG&ö–BçFW‡BäVF—F&ÆSò—·ĞĞ¢ÒĞ¢ÆW'DF–Æörä'V–ÆFW"‡F†—2’ç6WEF—FÆR‚.8*ş8:8+iy~8;¾KúXû~iy~8îŠŠŞZé¢"’ç6WEf–Wr†&÷‚’ç6WDæVvF—fT'WGFöâ‚.8*Ş8:>8;>8+¾8:²"ÆçVÆÂ’ç6WE÷6—F—fT'WGFöâ‚.KùŞZÙ‚"—µòÅòÓàĞ¢fÂVF—F÷#×&Vg2æVF—B‚’çWE7G&–ær‚'6–væÄ7W7FöÔfÆtæÖR"Æ–çWBçFW‡BçFõ7G&–ær‚’’çWD–çB‚'6–væÄ7W7FöÔfÆu7G–ÆR"ÇG—Rç6VÆV7FVD—FVÕ÷6—F–öâ’çWD–çB‚'6–væÄ7W7FöÔfÆtÆ–÷WD–æFW‚"ÆÆ–÷WBç6VÆV7FVD—FVÕ÷6—F–öâĞ¢çWD–çB‚'6–væÄ6Æ74ÆövõFW‡D6öÆ÷""ÂÆövô6öÆ÷"’çWD–çB‚'6–væÄ6Æ74Æövô&6¶w&÷VæD6öÆ÷""ÂÆövô&6¶w&÷VæBĞ¢v†Vâ‡G—Rç6VÆV7FVD—FVÕ÷6—F–öâ—°Ğ¢Óç·fÂ6VÆV7FVCÖ6Æ74æÖW5¶6Æ76W2ç6VÆV7FVD—FVÕ÷6—F–öåÓ¶VF—F÷"çWE7G&–ær‚'6–væÅ6VÆV7FVD6Æ74æÖR"Ç6VÆV7FVB’çWE7G&–ær‚'6–væÄ7W7FöÔ6Æ74fÆr"Â&6Æ72ÒG6VÆV7FVB"—ĞĞ¢Óç·fÂÆ&VÃÖ–çWBçFW‡BçFõ7G&–ær‚’çG&–Ò‚’æ–dV×G—².iyr'Ó¶VF—F÷"çWE7G&–ær‚'6–væÅ6VÆV7FVD6Æ74æÖR"Â'FW‡C¢FÆ&VÂ"’çWE7G&–ær‚'6–væÄ7W7FöÔfÆuFW‡B"ÆÆ&VÂ—ĞĞ¢"Óç·fÂ6VÆV7FVCÖfÆtæÖW5¶fÆw2ç6VÆV7FVD—FVÕ÷6—F–öåÓ¶VF—F÷"çWE7G&–ær‚'6–væÅ6VÆV7FVD–çFW&æF–öæÄfÆr"Ç6VÆV7FVB’çWE7G&–ær‚'6–væÅ6VÆV7FVD6Æ74æÖR"Â&–çFÃ¢G6VÆV7FVB"—ĞĞ¢ĞĞ¢VF—F÷"æÇ’‚Ğ¢'V–ÆB‚Ğ¢Òç6†÷r‚Ğ¢ĞĞ¢&—fFRgVâæ÷F–f–6F–öç2‚’°Ğ¢fÂ—FV×3ÖÆ—7Döb‚$4"Â$WfW'’Ö–çWFR¢"Â#Ö–çWFR"Â#36V6öæG2"Â##6V6öæG2"Â$6÷VçFF÷vâ"Â$öâF–ÖR"Â%&6S¢WfW'’Ö–çWFR"Â%&6S¢WfW'’RÖ–çWFW2"Â%F–ÖRÆ–Ö—B"Â%¦öæRÆW'G2"Ğ¢fÂÖöFW3Ö'&”öb‚%F–ÖR"Â$gVÆÂ"Â%6÷VæB"Â$æöæR"Ğ¢fÂ&÷ƒÔÆ–æV$Æ–÷WB‡F†—2’æÇ’²÷&–VçFF–öãÔÆ–æV$Æ–÷WBådU%D”4Ã²6WEFF–ærƒbÃÃbÃ’ĞĞ¢fÂ&F–óÔ6†V6´&÷‚‡F†—2’æÇ’²FW‡CÒ%&F–òg&–VæFÇ’#²6WEFW‡D6öÆ÷"‡v†—FR“²—46†V6¶VC×&Vg2ævWD&ööÆVâ‚'6–væÅ&F–ôg&–VæFÇ’"ÇG'VR’Ó²&÷‚æFEf–Wr‡&F–òĞ¢fÂ6öçG&öÇ3Ö×WF&ÆTÖöcÅ7G&–ærÅ7–ææW#â‚Ğ¢—FV×2æf÷$V6‚²Æ&VÂÓàĞ¢fÂ#ÔÆ–æV$Æ–÷WB‡F†—2’æÇ’²÷&–VçFF–öãÔÆ–æV$Æ–÷WBä„õ$•¤ôåDÃ²w&f—G“Ôw&f—G’ä4TåDU%õdU%D”4ÂĞĞ¢"æFEf–Wr…FW‡Ef–Wr‡F†—46–væÅ6WGF–æw47F—f—G’’æÇ’²FW‡CÖÆ&VÃ²6WEFW‡D6öÆ÷"‡v†—FR“²Æ–÷WE&×3ÔÆ–æV$Æ–÷WBäÆ–÷WE&×2ƒÂÓ"Ãb’ÒĞ¢fÂ3Õ7–ææW"‡F†—2’æÇ’²FFW#Ô'&”FFW"‡F†—46–væÅ6WGF–æw47F—f—G’ÆæG&ö–Bå"æÆ–÷WBç6–×ÆU÷7–ææW%öG&÷F÷våö—FVÒÆÖöFW2“²6WE6VÆV7F–öâ†ÖöFW2æ–æFW„öb‡&Vg2ævWE7G&–ær‚&æ÷F–g•ò"¶Æ&VÂÂ$æöæR"’’æ6öW&6TDÆV7Bƒ’’ĞĞ¢"æFEf–Wr‡2ÄÆ–æV$Æ–÷WBäÆ–÷WE&×2ƒ#ÂÓ"’“²&÷‚æFEf–Wr‡"“²6öçG&öÇ5¶Æ&VÅÓ×0Ğ¢ĞĞ¢ÆW'DF–Æörä'V–ÆFW"‡F†—2’ç6WEF—FÆR‚$æ÷F–f–6F–öç2"’ç6WEf–Wr…67&öÆÅf–Wr‡F†—2’æÇ—¶FEf–Wr†&÷‚—Ò’ç6WDæVvF—fT'WGFöâ‚.8*Ş8:>8;>8+¾8:²"ÆçVÆÂ’ç6WE÷6—F—fT'WGFöâ‚%6fR"—µòÅòÓàĞ¢fÂS×&Vg2æVF—B‚’çWD&ööÆVâ‚'6–væÅ&F–ôg&–VæFÇ’"Ç&F–òæ—46†V6¶VB“²6öçG&öÇ2æf÷$V6‡²†²Çb’ÓæRçWE7G&–ær‚&æ÷F–g•ò"¶²Çbç6VÆV7FVD—FVÒçFõ7G&–ær‚’—Ó¶RæÇ’‚Ğ¢Òç6†÷r‚Ğ¢ĞĞ¢&—fFRgVâ†÷&â‚’°Ğ¢fÂ&÷ƒÔÆ–æV$Æ–÷WB‡F†—2’æÇ’²÷&–VçFF–öãÔÆ–æV$Æ–÷WBådU%D”4Ã²6WEFF–ærƒbÃÃbÃ’ĞĞ¢fÂVæ&ÆVCÔ6†V6´&÷‚‡F†—2’æÇ’²FW‡CÒ%f—'GVÂ#²6WEFW‡D6öÆ÷"‡v†—FR“²—46†V6¶VC×&Vg2ævWD&ööÆVâ‚'6–væÄ†÷&äVæ&ÆVB"ÇG'VR’Ó²&÷‚æFEf–Wr†Væ&ÆVBĞ¢gVâ6Æ–FW"†Æ&VÃ¥7G&–ærÆ¶W“¥7G&–ærÆFVc¤–çBÆÖƒ¤–çB’°Ğ¢&÷‚æFEf–Wr…FW‡Ef–Wr‡F†—2’æÇ’²FW‡CÖÆ&VÃ²6WEFW‡D6öÆ÷"‡v†—FR’ÒĞ¢fÂ6VV³Õ6VV´&"‡F†—2’æÇ’²F†—2æÖƒÖÖƒ²&öw&W73×&Vg2ævWD–çB†¶W’ÆFVb’æ6öW&6T–âƒÆÖ‚’ĞĞ¢6VV²ç6WDöå6VV´&$6†ævTÆ—7FVæW"†ö&¦V7C¥6VV´&"äöå6VV´&$6†ævTÆ—7FVæW'°Ğ¢÷fW'&–FRgVâöå&öw&W746†ævVB‡3¥6VV´&#òÇc¤–çBÆg&öÕW6W#¤&ööÆVâ—·&Vg2æVF—B‚’çWD–çB†¶W’Çb’æÇ’‚—ĞĞ¢÷fW'&–FRgVâöå7F'EG&6¶–æuF÷V6‚‡3¥6VV´&#ò—·Ó²÷fW'&–FRgVâöå7F÷G&6¶–æuF÷V6‚‡3¥6VV´&#ò—·ĞĞ¢Ò“²&÷‚æFEf–Wr‡6VV²Ğ¢ĞĞ¢6Æ–FW"‚%föÇVÖR"Â'6–væÄ†÷&åföÇVÖR"ÃƒÃ“·6Æ–FW"‚%6†÷'B6÷VæB†×2’"Â'6–væÅ6†÷'D†÷&ä×2"Ã##Ã“·6Æ–FW"‚$Æöær6÷VæB†×2’"Â'6–væÄ†÷&ä×2"ÃsÃS“·6Æ–FW"‚$v†×2’"Â'6–væÄv×2"ÃƒÃ#Ğ¢ÆW'DF–Æörä'V–ÆFW"‡F†—2’ç6WEF—FÆR‚%&VÖ÷FR†÷&â"’ç6WEf–Wr†&÷‚’ç6WE÷6—F—fT'WGFöâ‚.ZèÎK¨b"—µòÅòÓç&Vg2æVF—B‚’çWD&ööÆVâ‚'6–væÄ†÷&äVæ&ÆVB"ÆVæ&ÆVBæ—46†V6¶VB’æÇ’‚—Òç6†÷r‚Ğ¢ĞĞ¢&—fFRgVâ6†÷tÆör‚’Ò6–×ÆU7v—F6‚‚.8:Ş8+8).KùŞZÙ‚"Â'6–væÄÆötVæ&ÆVB"ÇG'VRĞ§ĞĞ

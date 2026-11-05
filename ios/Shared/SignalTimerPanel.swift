@@ -1,538 +1,40 @@
-import SwiftUI
-import AVFoundation
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×n´å:-jZ.¶›­–)Ş³^Ú[\ÜİÚYRCBš[\ÜU‘›İ[™][ÛƒBƒB‹ËÈ™XZ[šYÙÙ\ˆ›ÜˆÙÛÈÛÛÜˆÛÛ›ÛÃBƒB‹ËËÈÚYÛ˜[[Y\ˆÚ]HÛÈ[\ÙY][YHÙ\]Y[˜Ù\È˜[œØÜšX™Yœ›ÛHHİ\YYšY[ÜËƒBœİXİÚYÛ˜[[Y\”[™[ˆšY]ÈÃBˆ˜\ˆÛÛ\XİH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[šY[Ôİ\]ŠHš]˜]H˜\ˆİ\]HŒBˆ\İÜ˜YÙJœÚYÛ˜[šY[Ô]\ÙYÙXÛÛ™ÈŠHš]˜]H˜\ˆ]\ÙYÙXÛÛ™ÈHŒBˆ\İÜ˜YÙJœÚYÛ˜[šY[Ô]\ÙY]ŠHš]˜]H˜\ˆ]\ÙY]HŒBˆ\İÜ˜YÙJœÚYÛ˜[šY[Ôİ\YŠHš]˜]H˜\ˆ\Ôİ\YH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[[‘]™[Ò”ÓÓˆŠHš]˜]H˜\ˆ[‘]™[Ò”ÓÓˆHˆƒBˆ\İÜ˜YÙJœÚYÛ˜[ÛØÚÓÙ™œÙ]ŠHš]˜]H˜\ˆÛØÚÓÙ™œÙ]HŒBˆ\İÜ˜YÙJœÚYÛ˜[Z[š[][U[YUÑš\œİXİ[ÛˆŠHš]˜]H˜\ˆZ[š[][U[YUÑš\œİXİ[ÛˆHMCBˆ\İÜ˜YÙJœÚYÛ˜[Ü›”ÙXÛÛ™ÈŠHš]˜]H˜\ˆÜ›”ÙXÛÛ™ÈHÃBˆ\İÜ˜YÙJœÚYÛ˜[ÚÜÜ›”ÙXÛÛ™ÈŠHš]˜]H˜\ˆÚÜÜ›”ÙXÛÛ™ÈHŒŒƒBˆ\İÜ˜YÙJœÚYÛ˜[Ü›‘Ø\ÙXÛÛ™ÈŠHš]˜]H˜\ˆÜ›‘Ø\ÙXÛÛ™ÈHŒNBˆ\İÜ˜YÙJœÚYÛ˜[Ü›•›Û[YHŠHš]˜]H˜\ˆÜ›•›Û[YHHBˆ\İÜ˜YÙJœÚYÛ˜[Ü›‘[˜X›YŠHš]˜]H˜\ˆÜ›‘[˜X›YHYCBˆ\İÜ˜YÙJœÚYÛ˜[›YÔ›Ùš[HŠHš]˜]H˜\ˆ›YÔ›Ùš[HHœİ[™\™\İ\ƒBˆ\İÜ˜YÙJœÚYÛ˜[Ù\]Y[˜ÙU[Z[™Õ™\œÚ[ÛˆŠHš]˜]H˜\ˆÙ\]Y[˜ÙU[Z[™Õ™\œÚ[ÛˆHBˆ\İÜ˜YÙJœÚYÛ˜[İ\İÛPÛ\ÜÑ›YÈŠHš]˜]H˜\ˆÛ\ÜÑ›YÒQH˜Û\ÜËMƒBˆ\İÜ˜YÙJœÚYÛ˜[İ\İÛT™\›YÈŠHš]˜]H˜\ˆ™\›YÒQH”ƒBˆ\İÜ˜YÙJœÚYÛ˜[Xİ]™Tİ\Xİ[ÛœÒ”ÓÓˆŠHš]˜]H˜\ˆXİ]™Tİ\Xİ[ÛœÒ”ÓÓˆH–×HƒBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙQ[˜X›YŠHš]˜]H˜\ˆÜ˜[™ÙQ[˜X›YHYCBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙQ\Ü^YYZ[]\ÈŠHš]˜]H˜\ˆÜ˜[™ÙQ\Ü^YYZ[]\ÈHCBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙT™[[İ™YY\“Z[]\ÈŠHš]˜]H˜\ˆÜ˜[™ÙT™[[İ™YZ[]\ÈHBˆ\İÜ˜YÙJœÚYÛ˜[˜XÙQ[^Q[˜X›YŠHš]˜]H˜\ˆ˜XÙQ[^Q[˜X›YH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[˜XÙQ[^SZ[]\ÈŠHš]˜]H˜\ˆ˜XÙQ[^SZ[]\ÈHBˆ\İÜ˜YÙJœÚYÛ˜[[™]šYX[™XØ[›YÕ\ŠHš]˜]H˜\ˆ[™]šYX[™XØ[›YÕ\H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[X˜[™Û‘›YÕ\ŠHš]˜]H˜\ˆX˜[™Û‘›YÕ\H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[ÚÚ\š[˜[]™[ŠHš]˜]H˜\ˆÚÚ\š[˜[]™[H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[Ù[™\˜[™XØ[›YÕ\ŠHš]˜]H˜\ˆÙ[™\˜[™XØ[›YÕ\H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[ÜİÛ™[Y[›YÕ\ŠHš]˜]H˜\ˆÜİÛ™[Y[›YÕ\H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙSX[X[İ™\œšYHŠHš]˜]H˜\ˆÜ˜[™ÙSX[X[İ™\œšYHH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙSX[X[\ŠHš]˜]H˜\ˆÜ˜[™ÙSX[X[\H˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[Ü˜[™ÙT˜Z\ÙY]ŠHš]˜]H˜\ˆÜ˜[™ÙT˜Z\ÙY]HŒBˆ\İÜ˜YÙJœÚYÛ˜[™\İ\Ø\›š[™Ğ]ŠHš]˜]H˜\ˆ™\İ\Ø\›š[™Ğ]HŒBˆİ]Hš]˜]H˜\ˆÜ›”^Y\ˆU]Y[Ô^Y\ÃBˆİ]Hš]˜]H˜\ˆÚİÔÙ][™ÜÈH˜[ÙCBˆİ]Hš]˜]H˜\ˆÚİÒ[\œ\Ü[ÛœÈH˜[ÙCBˆİ]Hš]˜]H˜\ˆÚİÔØÚY[HH˜[ÙCBˆİ]Hš]˜]H˜\ˆØÚY[Y]HHÚYÛ˜[Ù\]Y[˜ÙK™Y˜][ØÚY[Y]J
+CBˆİ]Hš]˜]H˜\ˆØÚY[S[ÙHHBˆİ]Hš]˜]H˜\ˆØÚY[U˜[Y][Û“Y\ÜØYÙHHˆƒBƒBˆš]˜]H]\˜][Û“Z[]\ÈHŒBˆš]˜]H˜\ˆÛÛ™šYİ\™Y]™[ÎˆÔÚYÛ˜[Ù\]Y[˜ÙK‘]™[HÃBˆ]˜\ÙHHÚYÛ˜[Ù\]Y[˜ÙK™]™[Ê\˜][Û“Z[]\Îˆ\˜][Û“Z[]\Ë›Ùš[RQˆ›YÔ›Ùš[KÛ\ÜÑ›YÒQˆÛ\ÜÑ›YÒQ™\›YÒQˆ™\›YÒQ
+CBˆ][HÚYÛ˜[Ù\]Y[˜ÙK˜ÛÛ™šYİ\™Yİ\]™[ÊBˆœÛÛˆXİ]™Tİ\Xİ[ÛœÒ”ÓÓ‹Bˆ›Ùš[RQˆ›YÔ›Ùš[KBˆ™\›YÒQˆ™\›YÒQBˆÜ˜[™ÙQ[˜X›YˆÜ˜[™ÙQ[˜X›YBˆÜ˜[™ÙQ\Ü^YYZ[]\ÎˆÜ˜[™ÙQ\Ü^YYZ[]\ËBˆÜ˜[™ÙT™[[İ™YZ[]\ÎˆÜ˜[™ÙT™[[İ™YZ[]\ËBˆ˜XÙQ[^Q[˜X›Yˆ˜XÙQ[^Q[˜X›YBˆ˜XÙQ[^SZ[]\Îˆ˜XÙQ[^SZ[]\ÃBˆ
+HÏÈ˜\ÙCBˆ™]\›ˆÚÚ\š[˜[]™[	‰ˆ[˜Ûİ[ˆHÈ\œ˜^J[™›Ü\İ
 
-// Rebuild trigger for logo color controls
-
-/// Signal timer with the two elapsed-time sequences transcribed from the supplied videos.
-struct SignalTimerPanel: View {
-    var compact = false
-    @AppStorage("signalVideoStartAt") private var startAt = 0.0
-    @AppStorage("signalVideoPausedSeconds") private var pausedSeconds = 0.0
-    @AppStorage("signalVideoPausedAt") private var pausedAt = 0.0
-    @AppStorage("signalVideoStarted") private var hasStarted = false
-    @AppStorage("signalRunEventsJSON") private var runEventsJSON = ""
-    @AppStorage("signalClockOffset") private var clockOffset = 0.0
-    @AppStorage("signalMinimumTimeToFirstAction") private var minimumTimeToFirstAction = 15
-    @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
-    @AppStorage("signalShortHornSeconds") private var shortHornSeconds = 0.22
-    @AppStorage("signalHornGapSeconds") private var hornGapSeconds = 0.18
-    @AppStorage("signalHornVolume") private var hornVolume = 0.8
-    @AppStorage("signalHornEnabled") private var hornEnabled = true
-    @AppStorage("signalFlagProfile") private var flagProfile = "standard-start"
-    @AppStorage("signalSequenceTimingVersion") private var sequenceTimingVersion = 0
-    @AppStorage("signalCustomClassFlag") private var classFlagID = "class-4"
-    @AppStorage("signalCustomPrepFlag") private var prepFlagID = "P"
-    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
-    @AppStorage("signalOrangeEnabled") private var orangeEnabled = true
-    @AppStorage("signalOrangeDisplayedMinutes") private var orangeDisplayedMinutes = 5
-    @AppStorage("signalOrangeRemovedAfterMinutes") private var orangeRemovedMinutes = 4
-    @AppStorage("signalRaceDelayEnabled") private var raceDelayEnabled = false
-    @AppStorage("signalRaceDelayMinutes") private var raceDelayMinutes = 0
-    @AppStorage("signalIndividualRecallFlagUp") private var individualRecallFlagUp = false
-    @AppStorage("signalAbandonFlagUp") private var abandonFlagUp = false
-    @AppStorage("signalSkipFinalEvent") private var skipFinalEvent = false
-    @AppStorage("signalGeneralRecallFlagUp") private var generalRecallFlagUp = false
-    @AppStorage("signalPostponementFlagUp") private var postponementFlagUp = false
-    @AppStorage("signalOrangeManualOverride") private var orangeManualOverride = false
-    @AppStorage("signalOrangeManualUp") private var orangeManualUp = false
-    @AppStorage("signalRestartWarningAt") private var restartWarningAt = 0.0
-    @State private var syncing = false
-    @State private var syncMessage = ""
-    @State private var hornPlayer: AVAudioPlayer?
-    @State private var showSettings = false
-    @State private var showInterruptOptions = false
-    @State private var showSchedule = false
-    @State private var showClassPicker = false
-    @State private var scheduledDate = SignalSequence.defaultScheduledDate()
-    @State private var scheduleMode = 0
-    @State private var scheduleValidationMessage = ""
-
-    private let durationMinutes = 20
-    private var configuredEvents: [SignalSequence.Event] {
-        let base = SignalSequence.events(durationMinutes: durationMinutes, profileID: flagProfile, classFlagID: classFlagID, prepFlagID: prepFlagID)
-        let all = SignalSequence.configuredStartEvents(
-            json: activeStartActionsJSON,
-            profileID: flagProfile,
-            prepFlagID: prepFlagID,
-            orangeEnabled: orangeEnabled,
-            orangeDisplayedMinutes: orangeDisplayedMinutes,
-            orangeRemovedMinutes: orangeRemovedMinutes,
-            raceDelayEnabled: raceDelayEnabled,
-            raceDelayMinutes: raceDelayMinutes
-        ) ?? base
-        return skipFinalEvent && all.count > 1 ? Array(all.dropLast()) : all
-    }
-    private var events: [SignalSequence.Event] {
-        if hasStarted, let data = runEventsJSON.data(using: .utf8),
-           let frozen = try? JSONDecoder().decode([SignalSequence.Event].self, from: data), !frozen.isEmpty {
-            return frozen
-        }
-        return configuredEvents
-    }
-    private func freezeConfiguredEvents() {
-        guard let data = try? JSONEncoder().encode(configuredEvents),
-              let value = String(data: data, encoding: .utf8) else { return }
-        runEventsJSON = value
-    }
-    private var recallRestartEvents: [SignalSequence.Event] {
-        SignalSequence.recallRestartEvents(classFlagID: classFlagID, prepFlagID: prepFlagID)
-    }
-    private func pauseForManualSignal(at date: Date) {
-        if startAt > 0 {
-            pausedAt = max(startAt, date.timeIntervalSince1970 + clockOffset)
-            pausedSeconds = elapsed(at: date)
-            startAt = 0
-        }
-        if startAt > 0 || hasStarted { hasStarted = true }
-    }
-    private func toggleAbandon(at date: Date) {
-        if abandonFlagUp {
-            abandonFlagUp = false
-            playHorn(pulses: SignalSequence.abandonLower.hornPulses)
-            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
-        } else {
-            pauseForManualSignal(at: date)
-            individualRecallFlagUp = false
-            generalRecallFlagUp = false
-            postponementFlagUp = false
-            abandonFlagUp = true
-            playHorn(pulses: SignalSequence.abandonRaise.hornPulses)
-        }
-    }
-    private func toggleIndividualRecall(at date: Date) {
-        if !individualRecallFlagUp && (generalRecallFlagUp || postponementFlagUp || abandonFlagUp) { return }
-        if individualRecallFlagUp {
-            individualRecallFlagUp = false
-        } else {
-            individualRecallFlagUp = true
-            playHorn(pulses: SignalSequence.individualRecallRaise.hornPulses)
-        }
-    }
-    private func toggleGeneralRecall(at date: Date) {
-        if !generalRecallFlagUp && abandonFlagUp { return }
-        if generalRecallFlagUp {
-            generalRecallFlagUp = false
-            playHorn(pulses: SignalSequence.generalRecallLower.hornPulses)
-            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
-        } else {
-            pauseForManualSignal(at: date)
-            individualRecallFlagUp = false
-            postponementFlagUp = false
-            abandonFlagUp = false
-            restartWarningAt = 0
-            generalRecallFlagUp = true
-            playHorn(pulses: SignalSequence.generalRecallRaise.hornPulses)
-        }
-    }
-    private func togglePostponement(at date: Date) {
-        if !postponementFlagUp && (generalRecallFlagUp || abandonFlagUp) { return }
-        if postponementFlagUp {
-            postponementFlagUp = false
-            playHorn(pulses: SignalSequence.postponementLower.hornPulses)
-            restartWarningAt = SignalSequence.restartWarningTime(loweredAt: date.timeIntervalSince1970 + clockOffset)
-        } else {
-            pauseForManualSignal(at: date)
-            individualRecallFlagUp = false
-            generalRecallFlagUp = false
-            restartWarningAt = 0
-            postponementFlagUp = true
-            playHorn(pulses: SignalSequence.postponementRaise.hornPulses)
-        }
-    }
-    private func elapsed(at date: Date) -> Double {
-        if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
-        return hasStarted ? max(0, pausedSeconds) : 0
-    }
-    private func running(at date: Date) -> Bool {
-        startAt > 0 && elapsed(at: date) < Double(events.last?.secondsAfterStart ?? 1200)
-    }
-    private func startOrPause(at date: Date) {
-        let correctedNow = date.timeIntervalSince1970 + clockOffset
-        let retryEnd = restartWarningAt + Double(recallRestartEvents.last?.secondsAfterStart ?? 300)
-        if restartWarningAt > 0 && correctedNow >= retryEnd {
-            reset()
-            freezeConfiguredEvents()
-            startAt = SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
-            hasStarted = true
-            return
-        }
-        if startAt > correctedNow {
-            reset()
-            return
-        }
-        let value = elapsed(at: date)
-        if running(at: date) {
-            pausedSeconds = value
-            pausedAt = correctedNow
-            startAt = 0
-            hasStarted = true
-        } else {
-            let completed = hasStarted && value >= Double(events.last?.secondsAfterStart ?? 1200)
-            let wasPaused = hasStarted && !completed
-            if completed { pausedSeconds = 0 }
-            if !wasPaused { freezeConfiguredEvents() }
-            startAt = wasPaused && pausedSeconds > 0
-                ? correctedNow - pausedSeconds
-                : SignalSequence.nextMinuteBoundary(at: correctedNow, minimumLeadSeconds: minimumTimeToFirstAction)
-            if startAt > 0 { pausedAt = 0 }
-            if !wasPaused {
-                pausedSeconds = 0
-                hasStarted = true
-            }
-        }
-    }
-    private func reset() {
-        startAt = 0
-        pausedSeconds = 0
-        pausedAt = 0
-        hasStarted = false
-        runEventsJSON = ""
-        individualRecallFlagUp = false
-        generalRecallFlagUp = false
-        postponementFlagUp = false
-        abandonFlagUp = false
-        restartWarningAt = 0
-        orangeManualOverride = false
-        orangeManualUp = false
-        skipFinalEvent = false
-    }
-    private func elapsedText(_ seconds: Double) -> String {
-        let value = max(0, Int(seconds))
-        return String(format: "%02d:%02d", value / 60, value % 60)
-    }
-    private func countdownText(_ seconds: Double) -> String {
-        let value = SignalSequence.countdownSeconds(seconds)
-        return String(format: "%02d:%02d", value / 60, value % 60)
-    }
-
-    private func raceCountdownText(_ secondsUntilStart: Double) -> String {
-        if abs(secondsUntilStart) < 1 {
-            return "00:00"
-        }
-        let seconds = secondsUntilStart > 0
-            ? SignalSequence.countdownSeconds(secondsUntilStart)
-            : Int(floor(-secondsUntilStart))
-        let prefix = secondsUntilStart > 0 ? "âˆ’" : "+"
-        return prefix + String(format: "%02d:%02d", seconds / 60, seconds % 60)
-    }
-
-    private func eventTimeText(_ event: SignalSequence.Event, baseTime: Double?, sequenceEvents: [SignalSequence.Event], restart: Bool = false) -> String {
-        if let baseTime {
-            return SignalSequence.clockText(Date(timeIntervalSince1970: baseTime + Double(event.secondsAfterStart)))
-        }
-        let zero = restart ? 300 : Double(sequenceEvents[SignalSequence.raceStartEventIndex(in: sequenceEvents) ?? 0].secondsAfterStart)
-        let offset = event.secondsAfterStart - Int(zero)
-        let time = String(format: "%02d:%02d", abs(offset) / 60, abs(offset) % 60)
-        return offset == 0 ? "T+00:00" : (offset < 0 ? "Tâˆ’" : "T+") + time
-    }
-
-    private func activeEventIndex(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double, spent: Double) -> Int {
-        if retryPending { return 0 }
-        if waitingForFirstSignal { return -1 }
-        if useRetrySequence {
-            return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= sequenceElapsed } ?? 0
-        }
-        if hasStarted {
-            return sequenceEvents.lastIndex { Double($0.secondsAfterStart) <= spent } ?? -1
-        }
-        return -1
-    }
-
-    private func displayedFlags(retryPending: Bool, useRetrySequence: Bool, waitingForFirstSignal: Bool, sequenceEvents: [SignalSequence.Event], sequenceElapsed: Double) -> [SignalSequence.Flag] {
-        // During AP/N/first-substitute restart delay and the restarted warning
-        // sequence, the orange flag stays down unless the user raises it manually.
-        var visible = retryPending
-            ? []
-            : ((hasStarted || useRetrySequence) && !waitingForFirstSignal
-                ? SignalSequence.raisedFlags(events: sequenceEvents, elapsed: sequenceElapsed)
-                : [])
-        if generalRecallFlagUp {
-            visible = [SignalSequence.flag("first-sub")]
-        } else if postponementFlagUp {
-            visible = [SignalSequence.flag("AP")]
-        } else if abandonFlagUp {
-            visible = [SignalSequence.flag("N")]
-        } else if individualRecallFlagUp {
-            visible.append(SignalSequence.flag("X"))
-        }
-        if orangeManualOverride {
-            visible.removeAll { $0.id == "orange" }
-            if orangeManualUp { visible.append(SignalSequence.flag("orange")) }
-        }
-        var unique: [String: SignalSequence.Flag] = [:]
-        for flag in visible { unique[flag.id] = flag }
-        return unique.values.sorted { $0.id < $1.id }
-    }
-
-    var body: some View {
-        TimelineView(.periodic(from: SignalSequence.nextAlignedTickDate(after: .now, clockOffset: clockOffset), by: 1)) { context in
-            let now = context.date
-            let spent = elapsed(at: now)
-            let correctedNow = now.timeIntervalSince1970 + clockOffset
-            let retryTimeline = restartWarningAt > 0
-            let retryPending = retryTimeline && restartWarningAt > correctedNow
-            let useRetrySequence = retryTimeline && !retryPending
-            let waitingForFirstSignal = !retryTimeline && startAt > correctedNow
-            let sequenceEvents = retryTimeline ? recallRestartEvents : events
-            let sequenceElapsed = retryPending ? 0 : (useRetrySequence ? max(0, correctedNow - restartWarningAt) : spent)
-            let active = activeEventIndex(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed, spent: spent)
-            let retrySequenceComplete = useRetrySequence && sequenceElapsed >= Double(sequenceEvents.last?.secondsAfterStart ?? 300)
-            let raceStartIndex = SignalSequence.raceStartEventIndex(in: sequenceEvents)
-            let raceStartEvent = raceStartIndex.flatMap { sequenceEvents.indices.contains($0) ? sequenceEvents[$0] : nil }
-            let raceStartOffset = Double(raceStartEvent?.secondsAfterStart ?? 0)
-            let runBaseTime: Double? = retryTimeline ? restartWarningAt : (startAt > 0 ? startAt : (hasStarted ? pausedAt - spent : nil))
-            let raceStartTime = raceStartEvent.flatMap { _ in runBaseTime.map { $0 + raceStartOffset } }
-            let secondsUntilRaceStart = raceStartTime.map { $0 - correctedNow }
-            let raceStartPending = secondsUntilRaceStart.map { $0 > 0 } ?? false
-            let initialTarget = raceStartIndex ?? SignalSequence.initialEventIndex(durationMinutes: durationMinutes, profileID: flagProfile)
-            let highlighted = retryPending ? active : ((raceStartPending || !hasStarted) ? initialTarget : active)
-            let current = sequenceEvents[max(0, active)]
-            let isRunning = useRetrySequence
-                ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
-                : running(at: now)
-            let raceCountdown = secondsUntilRaceStart.map(raceCountdownText)
-            let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
-            VStack(spacing: compact ? 4 : 8) {
-                HStack(spacing: 5) {
-                    Text("âš‘").foregroundStyle(.purple)
-                    Spacer()
-                    Text(SignalSequence.clockText(now, offset: clockOffset))
-                        .font(.system(size: compact ? 14 : 22, weight: .medium, design: .monospaced))
-                    Spacer()
-                    if !compact {
-                        #if os(iOS)
-                        Button { showSettings = true } label: { Image(systemName: "gearshape.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.orange)
-                        #endif
-                        Button(syncing ? "â€¦" : "â—‰") { Task { await syncClock() } }
-                            .buttonStyle(.plain).foregroundStyle(.blue)
-                    }
-                }
-                MastBoard(flags: raisedFlags, compact: compact)
-                    .frame(height: compact ? 60 : 112)
-                HStack {
-                    Text(raceStartEvent.map { "\($0.flags.first?.name ?? "") ã‚¹ã‚¿ãƒ¼ãƒˆæ™‚åˆ»" } ?? (retryPending ? "æ¬¡ã®äºˆå‘Šä¿¡å·ã¾ã§" : (waitingForFirstSignal ? "æ¬¡ã®åˆ†00ç§’ã¾ã§" : (useRetrySequence ? "å†äºˆå‘Šä¿¡å·æ™‚åˆ»" : "ã‚¹ã‚¿ãƒ¼ãƒˆæ™‚åˆ»")))).foregroundStyle(.black)
-                    Spacer()
-                    Text(raceStartTime.map { SignalSequence.clockText(Date(timeIntervalSince1970: $0)) } ?? "TBD")
-                        .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
-                }
-                .font(.system(size: compact ? 12 : 16, weight: .medium))
-                HStack(spacing: 8) {
-                    Text(raceStartPending && raceStartEvent != nil ? "â†“" : (waitingForFirstSignal ? "â—·" : (current.raised ? "â†‘" : "â†“"))).font(.title3.bold()).foregroundStyle(.black)
-                    Text(raceStartPending && raceStartEvent != nil ? "ã‚¹ã‚¿ãƒ¼ãƒˆã¾ã§" : (waitingForFirstSignal ? "åˆ†00ç§’å¾…ã¡ Â· " + current.title : current.title)).font(.caption).lineLimit(1)
-                    Spacer()
-                    Text((raceStartTime != nil || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
-                        .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
-                        .monospacedDigit()
-                    Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
-                        .overlay(Image(systemName: "timer").foregroundStyle(.white))
-                }
-                .foregroundStyle(.black)
-                VStack(spacing: 1) {
-                    ForEach(sequenceEvents) { event in
-                        let isActive = event.id == highlighted
-                        HStack(spacing: 5) {
-                            Text(event.raised ? "â†‘" : "â†“").frame(width: 14)
-                            HStack(spacing: 2) {
-                                ForEach(event.flags) { flag in
-                                    SignalFlagView(flag: flag)
-                                        .frame(width: compact ? 16 : 22, height: compact ? 12 : 16)
-                                }
-                            }
-                            Circle().fill(.black).frame(width: 6, height: 6)
-                            Text(event.title).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
-                            Text(eventTimeText(event, baseTime: runBaseTime, sequenceEvents: sequenceEvents, restart: retryTimeline))
-                                .font(.system(size: compact ? 10 : 12, design: .monospaced))
-                            Text(event.hornPulses.map { $0 == 0 ? "â—" : "â”" }.joined())
-                                .font(.system(size: compact ? 9 : 11, weight: .bold)).frame(width: 22)
-                        }
-                        .font(.system(size: compact ? 9 : 12))
-                        .padding(.horizontal, 3).padding(.vertical, compact ? 1 : 2)
-                        .background(isActive ? Color.green.opacity(0.65) : Color.white)
-                        .foregroundStyle(.black)
-                    }
-                }
-                HStack(spacing: compact ? 8 : 22) {
-                    Button("ä¸­æ–­â€¦") { showInterruptOptions = true }
-                        .disabled(!hasStarted && restartWarningAt == 0).foregroundStyle(.gray)
-                    Button(waitingForFirstSignal ? "åˆ†00ç§’åˆã‚ã›ä¸­ï¼ˆå–æ¶ˆï¼‰" : (retrySequenceComplete ? "é–‹å§‹" : (isRunning ? "ä¸€æ™‚åœæ­¢" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "å†é–‹" : "é–‹å§‹")))) { startOrPause(at: now) }
-                        .disabled(retryPending || (useRetrySequence && !retrySequenceComplete) || generalRecallFlagUp || postponementFlagUp)
-                        .foregroundStyle(.blue).fontWeight(.semibold)
-                    #if os(iOS)
-                    Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
-                    #else
-                    Button { reset() } label: { Image(systemName: "stopwatch").foregroundStyle(.blue) }
-                    #endif
-                }
-                .font(.system(size: compact ? 12 : 16))
-                HStack(spacing: compact ? 4 : 10) {
-                    Button(raisedFlags.contains(where: { $0.id == "orange" }) ? "æ©™æ—— é™ä¸‹" : "æ©™æ—— æ²æš") {
-                        let raise = !raisedFlags.contains(where: { $0.id == "orange" })
-                        orangeManualUp = raise
-                        orangeManualOverride = true
-                        if raise { playHorn(pulses: [0]) }
-                    }
-                    Button(individualRecallFlagUp ? "Xæ—— é™ä¸‹" : "å€‹åˆ¥ãƒªã‚³ãƒ¼ãƒ« Xæ——") { toggleIndividualRecall(at: now) }
-                        .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp)
-                    Button(generalRecallFlagUp ? "ç¬¬ä¸€ä»£è¡¨æ—— é™ä¸‹" : "ã‚¼ãƒãƒ©ãƒ«ãƒªã‚³ãƒ¼ãƒ«") { toggleGeneralRecall(at: now) }
-                        .disabled(postponementFlagUp || abandonFlagUp)
-                    Button(postponementFlagUp ? "AP é™ä¸‹" : "AP æ²æš") { togglePostponement(at: now) }
-                        .disabled(generalRecallFlagUp || abandonFlagUp)
-                    Button(abandonFlagUp ? "Næ—— é™ä¸‹" : "ã™ã¹ã¦ä¸­æ­¢ Næ——") { toggleAbandon(at: now) }
-                }
-                .font(.system(size: compact ? 9 : 12, weight: .semibold))
-                .buttonStyle(.bordered)
-                #if os(iOS)
-                if !compact {
-                    VStack(spacing: 4) {
-                        Picker("ã‚¹ã‚¿ãƒ¼ãƒˆæ‰‹é †", selection: $flagProfile) {
-                            ForEach(SignalSequence.profiles.filter { !["class-p", "class-i"].contains($0.id) }) { Text($0.name).tag($0.id) }
-                        }.pickerStyle(.menu)
-                        if flagProfile == "custom-five" || flagProfile == "standard-start" || flagProfile == "video-13" {
-                            HStack(spacing: 8) {
-                                Button { showClassPicker = true } label: {
-                                    HStack {
-                                        Text("ã‚¯ãƒ©ã‚¹æ——")
-                                        Text(SignalSequence.flag(classFlagID).name).foregroundStyle(.secondary)
-                                        Image(systemName: "chevron.down").font(.caption)
-                                    }
-                                }.buttonStyle(.plain)
-                                Picker("æº–å‚™æ——", selection: $prepFlagID) {
-                                    ForEach(SignalSequence.flagCatalog.filter { ["P", "I", "U", "Z", "black"].contains($0.id) }) { Text($0.name).tag($0.id) }
-                                }.pickerStyle(.menu)
-                            }
-                        }
-                        DisclosureGroup("ãƒ›ãƒ¼ãƒ³è¨­å®š") {
-                            Toggle("ä»®æƒ³ãƒ›ãƒ¼ãƒ³ã‚’æœ‰åŠ¹ã«ã™ã‚‹", isOn: $hornEnabled)
-                            signalSlider("éŸ³é‡", value: $hornVolume, range: 0...1, step: 0.05, format: "%.0f%%", scale: 100)
-                            signalSlider("çŸ­éŸ³", value: $shortHornSeconds, range: 0.1...1.0, step: 0.05, format: "%.2fç§’", scale: 1)
-                            signalSlider("é•·éŸ³", value: $hornSeconds, range: 0.1...5.0, step: 0.1, format: "%.1fç§’", scale: 1)
-                            signalSlider("é€£ç™ºé–“éš”", value: $hornGapSeconds, range: 0.1...2.0, step: 0.05, format: "%.2fç§’", scale: 1)
-                        }
-                        .font(.caption)
-                    }
-                    if !syncMessage.isEmpty { Text(syncMessage).font(.caption2).foregroundStyle(.secondary) }
-                }
-                #endif
-            }
-            .padding(compact ? 4 : 8)
-            .background(Color.white)
-            .foregroundStyle(.black)
-            #if os(iOS)
-            .sheet(isPresented: $showSettings) { SignalSettingsView() }
-            .sheet(isPresented: $showClassPicker) {
-                NavigationStack {
-                    SignalClassPicker(selection: $classFlagID)
-                        .navigationTitle("ã‚¯ãƒ©ã‚¹æ——")
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("å®Œäº†") { showClassPicker = false }.tint(.orange)
-                            }
-                        }
-                }
-                .preferredColorScheme(.dark)
-            }
-            .sheet(isPresented: $showSchedule) {
-                NavigationStack {
-                    Form {
-                        Picker("è¨­å®šã™ã‚‹æ™‚åˆ»", selection: $scheduleMode) {
-                            Text("ã‚·ãƒ¼ã‚±ãƒ³ã‚¹é–‹å§‹").tag(0)
-                            Text("ã‚¹ã‚¿ãƒ¼ãƒˆä¿¡å·").tag(1)
-                        }.pickerStyle(.segmented)
-                            .onChange(of: scheduleMode) { _, _ in scheduleValidationMessage = "" }
-                        DatePicker(scheduleMode == 0 ? "ã‚·ãƒ¼ã‚±ãƒ³ã‚¹é–‹å§‹æ™‚åˆ»" : "ã‚¹ã‚¿ãƒ¼ãƒˆæ™‚åˆ»", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
-                            .onChange(of: scheduledDate) { _, _ in scheduleValidationMessage = "" }
-                        Text("æ™‚åˆ»ã¯åˆ†å˜ä½ã§äºˆç´„ã—ã€ç§’ã¯00ç§’ã«æƒãˆã¾ã™ã€‚ã‚¹ã‚¿ãƒ¼ãƒˆæ™‚åˆ»ã‚’é¸ã¶ã¨ã€é¸æŠä¸­ã®ã‚·ãƒ¼ã‚±ãƒ³ã‚¹ã«å¿…è¦ãªå…ˆè¡Œæ™‚é–“ã‚’å·®ã—å¼•ãã¾ã™ã€‚").font(.footnote).foregroundStyle(.secondary)
-                        if !scheduleValidationMessage.isEmpty {
-                            Text(scheduleValidationMessage).font(.footnote).foregroundStyle(.red)
-                        }
-                    }
-                    .navigationTitle("é–‹å§‹æ™‚åˆ»ã‚’äºˆç´„")
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) { Button("ã‚­ãƒ£ãƒ³ã‚»ãƒ«") { showSchedule = false } }
-                        ToolbarItem(placement: .confirmationAction) { Button("äºˆç´„") { scheduleSignalStart() } }
-                    }
-                }.preferredColorScheme(.dark)
-            }
-            .confirmationDialog("ä¸­æ–­", isPresented: $showInterruptOptions, titleVisibility: .visible) {
-                Button("åœæ­¢ï¼ˆå¾…æ©ŸçŠ¶æ…‹ã¸æˆ»ã‚‹ï¼‰", role: .destructive) { reset() }
-                Button("å»¶æœŸï¼ˆAPæ——ï¼‰") { togglePostponement(at: Date()) }
-                Button("æœ€å¾Œã®ã‚¹ã‚¿ãƒ¼ãƒˆã‚’å†å®Ÿæ–½ï¼ˆNæ——ï¼‰") { toggleAbandon(at: Date()) }
-                Button("ä¸­æ­¢ã—ãŸã‚¹ã‚¿ãƒ¼ãƒˆã‚’å†å®Ÿæ–½ï¼ˆNæ——ï¼‰") { toggleAbandon(at: Date()) }
-                Button("ãƒ¬ãƒ¼ã‚¹ã‚’ç¶šè¡Œ") { if !isRunning && !waitingForFirstSignal { startOrPause(at: Date()) } }
-                Button("ã‚­ãƒ£ãƒ³ã‚»ãƒ«", role: .cancel) {}
-            }
-            #endif
-            .onAppear {
-                if sequenceTimingVersion < 2 {
-                    flagProfile = "standard-start"
-                    sequenceTimingVersion = 2
-                }
-                if flagProfile == "class-p" || flagProfile == "class-i" {
-                    prepFlagID = flagProfile == "class-p" ? "P" : "I"
-                    classFlagID = "class-1"
-                    flagProfile = "custom-five"
-                }
-            }
-            .onChange(of: useRetrySequence) { oldValue, newValue in
-                guard !oldValue, newValue else { return }
-                playHorn(pulses: sequenceEvents.first?.hornPulses ?? [0])
-            }
-            .onChange(of: active) { oldValue, newValue in
-                guard newValue > oldValue else { return }
-                let crossed = (oldValue + 1)...newValue
-                if crossed.contains(where: { sequenceEvents.indices.contains($0) && sequenceEvents[$0].flags.contains(where: { $0.id == "orange" }) }) {
-                    orangeManualOverride = false
-                    orangeManualUp = false
-                }
-                guard isRunning else { return }
-                for index in crossed where sequenceEvents.indices.contains(index) {
-                    playHorn(pulses: sequenceEvents[index].hornPulses)
-                }
-            }
-        }
-    }
-
-    private func scheduleSignalStart() {
-        let scheduledStart = SignalSequence.scheduledSequenceStart(
-            selectedDate: scheduledDate,
-            clockOffset: clockOffset,
-            scheduleAtRaceStart: scheduleMode == 1,
-            profileID: flagProfile
-        )
-        guard scheduledStart.timeIntervalSince1970 > Date().timeIntervalSince1970 + clockOffset else {
-            scheduleValidationMessage = "é¸æŠã—ãŸæ™‚åˆ»ã¯éãã¦ã„ã‚‹ã‹ã€ã‚·ãƒ¼ã‚±ãƒ³ã‚¹é–‹å§‹ã«å¿…è¦ãªå…ˆè¡Œæ™‚é–“ãŒã‚ã‚Šã¾ã›ã‚“ã€‚æœªæ¥ã®æ™‚åˆ»ã‚’é¸ã‚“ã§ãã ã•ã„ã€‚"
-            return
-        }
-        skipFinalEvent = false
-        freezeConfiguredEvents()
-        startAt = scheduledStart.timeIntervalSince1970
-        pausedSeconds = 0
-        pausedAt = 0
-        hasStarted = true
-        restartWarningAt = 0
-        individualRecallFlagUp = false
-        generalRecallFlagUp = false
-        postponementFlagUp = false
-        abandonFlagUp = false
-        orangeManualOverride = false
-        orangeManualUp = false
-        showSchedule = false
-    }
-
-    private func signalSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double, format: String, scale: Double) -> some View {
-        HStack(spacing: 6) {
-            Text(title).frame(width: 72, alignment: .leading)
-            Slider(value: value, in: range, step: step)
-            Text(String(format: format, value.wrappedValue * scale))
-                .font(.system(.caption2, design: .monospaced)).frame(width: 48, alignment: .trailing)
-        }
-    }
-
-    private func playHorn(pulses: [Int]) {
-        guard hornEnabled, !pulses.isEmpty else { return }
-        #if os(iOS)
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+JHˆ[BˆCBˆš]˜]H˜\ˆ]™[ÎˆÔÚYÛ˜[Ù\]Y[˜ÙK‘]™[HÃBˆYˆ\Ôİ\Y]]HH[‘]™[Ò”ÓÓ‹™]J\Ú[™Îˆ]
+KBˆ]œ›Ş™[ˆHOÈ”ÓÓ‘XÛÙ\Š
+K™XÛÙJÔÚYÛ˜[Ù\]Y[˜ÙK‘]™[KœÙ[‹œ›ÛNˆ]JKYœ›Ş™[‹š\Ñ[\HÃBˆ™]\›ˆœ›Ş™[ƒBˆCBˆ™]\›ˆÛÛ™šYİ\™Y]™[ÃBˆCBˆš]˜]H[˜Èœ™Y^™PÛÛ™šYİ\™Y]™[Ê
+HÃBˆİX\™]]HHOÈ”ÓÓ‘[˜ÛÙ\Š
+K™[˜ÛÙJÛÛ™šYİ\™Y]™[ÊKBˆ]˜[YHHİš[™Ê]Nˆ]K[˜ÛÙ[™Îˆ]
+H[ÙHÈ™]\›ˆCBˆ[‘]™[Ò”ÓÓˆH˜[YCBˆCBˆš]˜]H[˜ÈX[X[Ü˜[™ÙP[˜ÚÜ™Y[Š]ÛÜœ™XİY›İÎˆİX›JHOˆ
+İ\ˆİX›K]™[ÎˆÔÚYÛ˜[Ù\]Y[˜ÙK‘]™[JOÈÃBˆİX\™Ü˜[™ÙSX[X[İ™\œšYKÜ˜[™ÙSX[X[\Ü˜[™ÙT˜Z\ÙY]ˆBˆ]™X˜\ÙYHÚYÛ˜[Ù\]Y[˜ÙK™]™[Ôİ\[™Ğ]š\œİÛ\ÜÕØ\›š[™ÊÛÛ™šYİ\™Y]™[ÊKBˆ]]HHOÈ”ÓÓ‘[˜ÛÙ\Š
+K™[˜ÛÙJ™X˜\ÙY
+KBˆ]˜[YHHİš[™Ê]Nˆ]K[˜ÛÙ[™Îˆ]
+H[ÙHÈ™]\›ˆš[CBˆ[‘]™[Ò”ÓÓˆH˜[YCBˆ]İ\HÚYÛ˜[Ù\]Y[˜ÙKœİ\Y\“Ü˜[™ÙT˜Z\ÙJBˆ›İÎˆÛÜœ™XİY›İËBˆÜ˜[™ÙT˜Z\ÙY]ˆÜ˜[™ÙT˜Z\ÙY]Bˆ[\˜[Z[]\ÎˆÜ˜[™ÙQ\Ü^YYZ[]\ËBˆZ[š[][SXYÙXÛÛ™ÎˆZ[š[][U[YUÑš\œİXİ[ÛƒBˆ
+CBˆ™]\›ˆ
+İ\™X˜\ÙY
+CBˆCBˆš]˜]H˜\ˆ™XØ[™\İ\]™[ÎˆÔÚYÛ˜[Ù\]Y[˜ÙK‘]™[HÃBˆÚYÛ˜[Ù\]Y[˜ÙKœ™XØ[™\İ\]™[ÊÛ\ÜÑ›YÒQˆÛ\ÜÑ›YÒQ™\›YÒQˆ™\›YÒQ
+CBˆCBˆš]˜]H[˜È]\ÙQ›Ü“X[X[ÚYÛ˜[
+]]Nˆ]JHÃBˆYˆİ\]ˆÃBˆ]\ÙY]HX^
+İ\]]K[YR[\˜[Ú[˜ÙLNMÌ
+ÈÛØÚÓÙ™œÙ]
+CBˆ]\ÙYÙXÛÛ™ÈH[\ÙY
+]ˆ]JCBˆİ\]HBˆCBˆYˆİ\]ˆ\Ôİ\YÈ\Ôİ\YHYHCBˆCBˆš]˜]H[˜ÈÙÙÛPX˜[™ÛŠ]]Nˆ]JHÃBˆYˆX˜[™Û‘›YÕ\ÃBˆX˜[™Û‘›YÕ\H˜[ÙCBˆ^RÜ›Š[Ù\ÎˆÚYÛ˜[Ù\]Y[˜ÙK˜X˜[™Û“İÙ\‹šÜ›”[Ù\ÊCBˆ™\İ\Ø\›š[™Ğ]HÚYÛ˜[Ù\]Y[˜ÙKœ™\İ\Ø\›š[™Õ[YJİÙ\™Y]ˆ]K[YR[\˜[Ú[˜ÙLNMÌ
+ÈÛØÚÓÙ™œÙ]
+CBˆH[ÙHÃBˆ]\ÙQ›Ü“X[X[ÚYÛ˜[
+]ˆ]JCBˆ[™]šYX[™XØ[›YÕ\H˜[ÙCBˆÙ[™\˜[™XØ[›YÕ\H˜[ÙCBˆÜİÛ™[Y[›YÕ\H˜[ÙCBˆX˜[™Û‘›YÕ\HYCBˆ^RÜ›Š[Ù\ÎˆÚYÛ˜[Ù\]Y[˜ÙK˜X˜[™Û”˜Z\ÙKšÜ›”[Ù\ÊCBˆCBˆCBˆš]˜]H[˜ÈÙÙÛR[™]šYX[™XØ[
+]]Nˆ]JHÃBˆYˆZ[™]šYX[™XØ[›YÕ\	‰ˆ
+Ù[™\˜[™XØ[›YÕ\ÜİÛ™[Y[›YÕ\X˜[™Û‘›YÕ\
+HÈ™]\›ˆCBˆYˆ[™]šYX[™XØ[›YÕ\ÃBˆ[™]šYX[™XØ[›YÕ\H˜[ÙCBˆH[ÙHÃBˆ[™]šYX[™XØ[›YÕ\HYCBˆ^RÜ›Š[Ù\ÎˆÚYÛ˜[Ù\]Y[˜ÙKš[™]šYX[™XØ[˜Z\ÙKšÜ›”[Ù\ÊCBˆCBˆCBˆš]˜]H[˜ÈÙÙÛQÙ[™\˜[™XØ[
+]]Nˆ]JHÃBˆYˆYÙ[™\˜[™XØ[›YÕ\	‰ˆX˜[™Û‘›YÕ\È™]\›ˆCBˆYˆÙ[™\˜[™XØ[›YÕ\ÃBˆÙ[™\˜[™XØ[›YÕ\H˜[ÙCBˆ^RÜ›Š[Ù\ÎˆÚYÛ˜[Ù\]Y[˜ÙK™Ù[™\˜[™XØ[İÙ\‹šÜ›”[Ù\ÊCBˆ™\İ\Ø\›š[™Ğ]HÚYÛ˜[Ù\]Y[˜ÙKœ™\İ\Ø\›š[™Õ[YJİÙ\™Y]ˆ]K[YR[\˜[Ú[˜ÙLNMÌ
+ÈÛØÚÓÙ™œÙ]
+CBˆH[ÙHÃBˆ]\ÙQ›Ü“X[X[ÚYÛ˜[
+]ˆ]JCBˆ[™]šYX[™XØ[›YÕ\H˜[ÙCBˆÜİÛ™[Y[›YÕ\H˜[ÙCBˆX˜[™Û‘›YÕ\H˜[ÙCBˆ™\İ\Ø\›š[™Ğ]HBˆÙ[™\˜[™XØ[›YÕ\HYCBˆ^RÜ›Š[Ù\ÎˆÚYÛ˜[Ù\]Y[˜ÙK™Ù[™\˜[™XØ[˜Z\ÙKšÜ›”[Ù\ÊCBˆCBˆCBˆš]˜]H[˜ÈÙÙÛTÜİÛ™[Y[
+]]Nˆ]JHÃBˆYˆ\ÜİÛ™[Y[›YÕ\	‰ˆ
+Ù[™\˜[™XØ[›YÕ\X˜[™Û‘›YÕ\
+HÈ™]\›ˆCBˆYˆÜİÛ™[Y[›¾´æÚ$z{-®éÜj×: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
         #endif
         let rate = 22_050.0
@@ -558,17 +60,6 @@ struct SignalTimerPanel: View {
         hornPlayer?.play()
     }
 
-    @MainActor private func syncClock() async {
-        syncing = true
-        defer { syncing = false }
-        do {
-            let data = try await NICTClock.query()
-            clockOffset = data.timeIntervalSinceNow
-            syncMessage = "ntp.nict.jp åŒæœŸæ¸ˆã¿ï¼ˆå·® \(String(format: "%+.3f", clockOffset)) ç§’ï¼‰"
-        } catch {
-            syncMessage = "NTPåŒæœŸã§ãã¾ã›ã‚“ã€‚ç«¯æœ«æ™‚åˆ»ã‚’ä½¿ç”¨ã—ã¾ã™"
-        }
-    }
 }
 
 private struct MastBoard: View {

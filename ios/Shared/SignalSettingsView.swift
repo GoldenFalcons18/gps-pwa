@@ -1,746 +1,63 @@
-import SwiftUI
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×^:í:-jZ.¶›­–)Ş³^š[\ÜİÚYRCBƒBˆÚYˆÜÊSÔÊCBš[\Ü]Y[ÕÛÛ›ŞBƒBœš]˜]HİXİÚYÛ˜[İ\Xİ[ÛˆY[YšXX›KÛÙX›K\ÚX›HÃBˆ˜\ˆYHURQ
 
-#if os(iOS)
-import AudioToolbox
+CBˆ˜\ˆ›YÒQH˜Û\ÜËMƒBˆ˜\ˆZ[]HHCBˆ˜\ˆÙXÛÛ™HBˆ˜\ˆ˜Z\ÙYHYCBˆ˜\ˆ[˜X›YHYCBˆ˜\ˆÜ›ˆHœÚÜƒBƒBˆ˜\ˆ]Nˆİš[™ÈÃBˆ—
+ÚYÛ˜[Ù\]Y[˜ÙK™›YÊ›YÒQ
+K›˜[YJxà¤—
+˜Z\ÙYÈ¹£¬¹£æˆˆˆºfcy."ÈŠHƒBˆCBŸCBƒBœš]˜]HİXİÚYÛ˜[›Y]™\Ù]ˆY[YšXX›KÛÙX›K\ÚX›HÃBˆ˜\ˆYHURQ
 
-private struct SignalStartAction: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var flagID = "class-4"
-    var minute = 5
-    var second = 0
-    var raised = true
-    var enabled = true
-    var horn = "short"
+CBˆ˜\ˆ˜[YHH“Ô]HœƒBˆ˜\ˆÙ\]Y[˜ÙHHœİ[™\™\İ\ƒBˆ˜\ˆİ\[HH”ƒBˆ˜\ˆÛ\ÜÑ›YÒQH˜Û\ÜËMƒBˆ˜\ˆ™\›YÒQH”ƒBˆ˜\ˆ˜XÙQ[^Q[˜X›YH˜[ÙCBˆ˜\ˆ˜XÙQ[^SZ[]\ÈHBˆ˜\ˆ[YS[Z][˜X›YH˜[ÙCBˆ˜\ˆ˜XÙS[Z]Z[]\ÈHLBˆ˜\ˆš[š\ÚÚ[™İÓZ[]\ÈHŒBˆ˜\ˆ[M“İ™\œšYHH˜[ÙCBˆ˜\ˆÜ˜[™ÙQ[˜X›YHYCBˆ˜\ˆÜ˜[™ÙQ\Ü^YYZ[]\ÈHCBˆ˜\ˆÜ˜[™ÙT™[[İ™YZ[]\ÈHBˆ˜\ˆİ\ÎˆÔÚYÛ˜[İ\Xİ[Û—HHÃBˆÚYÛ˜[İ\Xİ[ÛŠ›YÒQˆ˜Û\ÜËM‹Z[]NˆK˜Z\ÙYˆYKÜ›ˆœÚÜŠCBˆCBƒBˆİ]XÈ]İ\\ˆHÚYÛ˜[›Y]™\Ù]
 
-    var title: String {
-        "\(SignalSequence.flag(flagID).name)ã‚’\(raised ? "æ²æš" : "é™ä¸‹")"
-    }
-}
+CBˆİ]XÈ[˜ÈØY
+œ›ÛH˜[YNˆİš[™ÊHOˆÔÚYÛ˜[›Y]™\Ù]HÃBˆİX\™]]HH˜[YK™]J\Ú[™Îˆ]
+KBˆ]Ø]™YHOÈ”ÓÓ‘XÛÙ\Š
+K™XÛÙJÔÚYÛ˜[›Y]™\Ù]KœÙ[‹œ›ÛNˆ]JKBˆ\Ø]™Yš\Ñ[\H[ÙHÈ™]\›ˆËœİ\\—HCBˆ™]\›ˆØ]™Y›X\È™\Ù][ƒBˆ˜\ˆZYÜ˜]YH™\Ù]BˆZYÜ˜]YœÙ\]Y[˜ÙHHœİ[™\™\İ\ƒBˆZYÜ˜]Yœ™\›YÒQHÚYÛ˜[Ù\]Y[˜ÙKœ™\\˜][Û‘›YÒQ
+›Ü”İ\[NˆZYÜ˜]Yœİ\[JCBˆ™]\›ˆZYÜ˜]YBˆCBˆCBˆİ]XÈ[˜È[˜ÛÙJÈ˜[YNˆÔÚYÛ˜[›Y]™\Ù]JHOˆİš[™ÈÃBˆİX\™]]HHOÈ”ÓÓ‘[˜ÛÙ\Š
+K™[˜ÛÙJ˜[YJH[ÙHÈ™]\›ˆ–×HˆCBˆ™]\›ˆİš[™Ê]Nˆ]K[˜ÛÙ[™Îˆ]
+HÏÈ–×HƒBˆCBŸCBƒBœš]˜]HİXİÚYÛ˜[İ\İÛQ›YÎˆY[YšXX›KÛÙX›K\ÚX›HÃBˆ˜\ˆYHURQ
 
-private struct SignalFleetPreset: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var name = "OP Au Bp"
-    var sequence = "standard-start"
-    var startRule = "P"
-    var classFlagID = "class-4"
-    var prepFlagID = "P"
-    var raceDelayEnabled = false
-    var raceDelayMinutes = 0
-    var timeLimitEnabled = false
-    var raceLimitMinutes = 50
-    var finishWindowMinutes = 20
-    var rule42Override = false
-    var orangeEnabled = true
-    var orangeDisplayedMinutes = 5
-    var orangeRemovedMinutes = 4
-    var starts: [SignalStartAction] = [
-        SignalStartAction(flagID: "class-4", minute: 5, raised: true, horn: "short")
-    ]
-
-    static let starter = SignalFleetPreset()
-    static func load(from value: String) -> [SignalFleetPreset] {
-        guard let data = value.data(using: .utf8),
-              let saved = try? JSONDecoder().decode([SignalFleetPreset].self, from: data),
-              !saved.isEmpty else { return [.starter] }
-        return saved.map { preset in
-            var migrated = preset
-            // Earlier builds stored 4 as the default but did not apply this setting.
-            // Keep the 4-minute video-B preset; restore the five-minute default elsewhere.
-            if migrated.orangeDisplayedMinutes == 4 && migrated.sequence != "video-13" {
-                migrated.orangeDisplayedMinutes = 5
-            }
-            return migrated
-        }
-    }
-    static func encode(_ value: [SignalFleetPreset]) -> String {
-        guard let data = try? JSONEncoder().encode(value) else { return "[]" }
-        return String(data: data, encoding: .utf8) ?? "[]"
-    }
-}
-
-private struct SignalCustomFlag: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var name = ""
-    var style = "text"
-    var layout = "solid"
-    var flagColor = "#FFFFFF"
-    var text = ""
-    var textColor = "#111111"
-    var logoID = "class-4"
-    var internationalFlag = "Alpha"
-}
-
-private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
-private struct SignalColorChoice: Identifiable {
-    let name: String
-    let color: Color
-    let hex: String
-    var id: String { name }
-}
-
-private struct SignalFlagChoice: Identifiable, Hashable {
-    let id: String
-    let name: String
-    let category: String
-    var symbol: String { id.hasPrefix("class-") ? String(id.dropFirst(6)) : name }
-}
-
-private struct SignalFlagSwatch: View {
-    let flagID: String
-    private var flag: SignalSequence.Flag { SignalSequence.flag(flagID) }
-    private var fill: Color {
-        let value = flag.colors.first ?? 0xFFFFFF
-        return Color(red: Double((value >> 16) & 0xFF) / 255,
-                     green: Double((value >> 8) & 0xFF) / 255,
-                     blue: Double(value & 0xFF) / 255)
-    }
-    var body: some View {
-        Group {
-            if flag.style == "internationalFlag" {
-                SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
-            } else if flagID.hasPrefix("class-") {
-                SignalClassLogoMark(name: String(flagID.dropFirst(6)))
-            } else {
-                ZStack {
-                    fill
-                    Text(flag.symbol.isEmpty ? flag.name : flag.symbol)
-                        .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(fill == .white ? .black : .white)
-                        .minimumScaleFactor(0.5)
-                }
-            }
-        }
-        .frame(width: 44, height: 30)
-        .clipShape(RoundedRectangle(cornerRadius: 3))
-    }
-}
-
-struct SignalSettingsView: View {
-    @AppStorage("signalMinimumTimeToFirstAction") private var minimumTime = 15
-    @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
-    @AppStorage("signalRadioFriendly") private var radioFriendly = true
-    @AppStorage("signalClockOffset") private var clockOffset = 0.0
-    @AppStorage("signalExternalDisplayEnabled") private var externalDisplay = true
-    @AppStorage("signalRemoteFlagsEnabled") private var remoteFlags = false
-    @AppStorage("signalBuoyZoneLinked") private var buoyZoneLinked = false
-    @AppStorage("signalLogEnabled") private var logEnabled = true
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    LabeledContent("Mode", value: "Fleet")
-                }
-                Section("General Settings") {
-                    Stepper(value: $minimumTime, in: 0...120, step: 5) {
-                        VStack(alignment: .leading) {
-                            LabeledContent("æ¬¡ã®åˆ†00ç§’ã¾ã§ã®æœ€çŸ­æ™‚é–“", value: "\(minimumTime)ç§’")
-                            Text("é–‹å§‹ãƒœã‚¿ãƒ³ã‹ã‚‰å®Ÿæ™‚é–“ã®æ¬¡ã®åˆ†00ç§’ã¾ã§ã«ç¢ºä¿ã™ã‚‹æœ€çŸ­é–“éš”ã§ã™ã€‚å„ä¿¡å·ã¯ã‚·ãƒ¼ã‚±ãƒ³ã‚¹ã®nåˆ†00ç§’ã§å‹•ä½œã—ã¾ã™ã€‚APãƒ»Næ——ã¯æ™‚åˆ»ã‚’å›ºå®šã›ãšæ‰‹å‹•ã§æ²æšã—ã¾ã™ã€‚").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    Picker("Voice", selection: $voiceName) {
-                        Text("Kyoko (Enhanced)").tag("Kyoko (Enhanced)")
-                        Text("Siri Japanese").tag("Siri Japanese")
-                        Text("ç«¯æœ«ã®æ¨™æº–éŸ³å£°").tag("ç«¯æœ«ã®æ¨™æº–éŸ³å£°")
-                    }
-                    NavigationLink("Notifications") { SignalNotificationsView() }
-                    LabeledContent("Time Sync", value: String(format: "%.0fç§’", clockOffset))
-                    NavigationLink("Horn") { SignalHornSettingsView() }
-                    Toggle("Remote Flags", isOn: $remoteFlags)
-                    Toggle("BuoyZoneã¨é€£æº", isOn: $buoyZoneLinked)
-                    Toggle("External Display", isOn: $externalDisplay)
-                    NavigationLink("Log") { SignalLogSettingsView(enabled: $logEnabled) }
-                }
-                Section("Fleet Start Sequences") {
-                    NavigationLink("ãƒ•ãƒªãƒ¼ãƒˆæ‰‹é †ã‚’ç®¡ç†") { SignalFleetSequencesView() }
-                }
-                Section("æ——ã®è¨­å®š") {
-                    NavigationLink("ã‚¯ãƒ©ã‚¹æ——ã‚’ç·¨é›†") { SignalClassFlagSettingsView() }
-                    NavigationLink("å›½éš›ä¿¡å·æ——") { SignalInternationalFlagGallery() }
-                }
-            }
-            .navigationTitle("Settings")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("å®Œäº†") { dismiss() }.tint(.orange)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
-private struct SignalLogSettingsView: View {
-    @Binding var enabled: Bool
-    @AppStorage("signalLogRetentionDays") private var retentionDays = 14
-    var body: some View {
-        Form {
-            Toggle("ãƒ­ã‚°ã‚’ä¿å­˜", isOn: $enabled)
-            Stepper("ä¿å­˜æœŸé–“ï¼š\(retentionDays)æ—¥", value: $retentionDays, in: 1...90)
-            Text("è¨˜éŒ²ã—ãŸä¿¡å·ã€æ“ä½œã€åŒæœŸçŠ¶æ…‹ã‚’ç«¯æœ«å†…ã«ä¿å­˜ã—ã¾ã™ã€‚")
-                .font(.footnote).foregroundStyle(.secondary)
-        }
-        .navigationTitle("Log")
-        .preferredColorScheme(.dark)
-    }
-}
-
-private struct SignalFleetSequencesView: View {
-    @AppStorage("signalFleetPresetsJSON") private var savedJSON = ""
-    @State private var presets: [SignalFleetPreset] = [.starter]
-    @State private var loaded = false
-
-    var body: some View {
-        List {
-            ForEach($presets) { $preset in
-                NavigationLink {
-                    SignalFleetPresetEditor(preset: $preset)
-                } label: {
-                    HStack {
-                        Image(systemName: "circle")
-                            .foregroundStyle(.orange)
-                        VStack(alignment: .leading) {
-                            Text(preset.name)
-                            Text("\(preset.starts.count) starts Â· \(sequenceName(preset.sequence))")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            .onDelete { presets.remove(atOffsets: $0); save() }
-            Button {
-                var next = SignalFleetPreset()
-                next.name = "Fleet Start \(presets.count + 1)"
-                presets.append(next)
-                save()
-            } label: {
-                Label("ãƒ•ãƒªãƒ¼ãƒˆæ‰‹é †ã‚’è¿½åŠ ", systemImage: "plus.circle.fill")
-            }
-        }
-        .navigationTitle("Fleet Start Sequences")
-        .toolbar { EditButton() }
-        .onAppear {
-            guard !loaded else { return }
-            presets = SignalFleetPreset.load(from: savedJSON)
-            loaded = true
-        }
-        .onChange(of: presets) { _, _ in save() }
-        .preferredColorScheme(.dark)
-    }
-
-    private func save() { savedJSON = SignalFleetPreset.encode(presets) }
-    private func sequenceName(_ id: String) -> String {
-        SignalSequence.profiles.first(where: { $0.id == id })?.name ?? "5åˆ†ã‚·ãƒ¼ã‚±ãƒ³ã‚¹"
-    }
-}
-
-private struct SignalFleetPresetEditor: View {
-    @Binding var preset: SignalFleetPreset
-    @AppStorage("signalFlagProfile") private var activeSequence = "standard-start"
-    @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
-    @AppStorage("signalCustomPrepFlag") private var activePrepFlag = "P"
-    @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
-    @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
-    @AppStorage("signalOrangeRemovedAfterMinutes") private var activeOrangeRemoval = 4
-    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
-    @AppStorage("signalRaceDelayEnabled") private var activeRaceDelayEnabled = false
-    @AppStorage("signalRaceDelayMinutes") private var activeRaceDelayMinutes = 0
-    @Environment(\.dismiss) private var dismiss
-    @State private var showingAddFlag = false
-
-    private let sequences: [SignalSequenceChoice] = [
-        SignalSequenceChoice(id: "standard-start", name: "Rule 26ãƒ»5åˆ†ï¼ˆæ©™æ——ã¯åˆ¥è¨­å®šï¼‰"),
-        SignalSequenceChoice(id: "video-20", name: "å‹•ç”»A Â· 20åˆ†"),
-        SignalSequenceChoice(id: "video-13", name: "å‹•ç”»B Â· 13åˆ†"),
-        SignalSequenceChoice(id: "custom-five", name: "ã‚«ã‚¹ã‚¿ãƒ  Â· 5åˆ†")
-    ]
-    private let rules = ["P", "I", "U", "Z", "Black", "Default"]
-
-    var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $preset.name)
-            }
-            Section("Defaults") {
-                Picker("Start Sequence", selection: $preset.sequence) {
-                    ForEach(sequences) { Text($0.name).tag($0.id) }
-                }
-                Picker("Start Rule", selection: $preset.startRule) {
-                    ForEach(rules, id: \.self) { Text($0).tag($0) }
-                }
-                NavigationLink {
-                    SignalClassPicker(selection: $preset.classFlagID)
-                } label: {
-                    HStack {
-                        Text("Classes")
-                        Spacer()
-                        Text(SignalSequence.flag(preset.classFlagID).name).foregroundStyle(.secondary)
-                    }
-                }
-                Picker("æº–å‚™ä¿¡å·", selection: $preset.prepFlagID) {
-                    ForEach(["P", "I", "U", "Z", "black"], id: \.self) { Text($0 == "black" ? "é»’æ——" : "\($0)æ——").tag($0) }
-                }
-                Stepper("æ¬¡ã®ãƒ¬ãƒ¼ã‚¹ã¾ã§ï¼š\(preset.raceDelayMinutes)åˆ†", value: $preset.raceDelayMinutes, in: 0...60)
-                Toggle("Custom Race Delay", isOn: $preset.raceDelayEnabled)
-            }
-            Section("Time Limits") {
-                Toggle("Enable", isOn: $preset.timeLimitEnabled)
-                Stepper("Race Limitï¼š\(preset.raceLimitMinutes):00", value: $preset.raceLimitMinutes, in: 1...300)
-                    .disabled(!preset.timeLimitEnabled)
-                Stepper("Finish Windowï¼š\(preset.finishWindowMinutes):00", value: $preset.finishWindowMinutes, in: 1...120)
-                    .disabled(!preset.timeLimitEnabled)
-            }
-            Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
-            Section("æ©™æ——") {
-                Toggle("ã‚·ãƒ¼ã‚±ãƒ³ã‚¹ã«æ©™æ——ã‚’å«ã‚ã‚‹", isOn: $preset.orangeEnabled)
-                Stepper("æ©™æ——æ²æšã‹ã‚‰äºˆå‘Šä¿¡å·ã¾ã§ï¼š\(preset.orangeDisplayedMinutes)åˆ†", value: $preset.orangeDisplayedMinutes, in: 0...30)
-                    .disabled(!preset.orangeEnabled)
-                Stepper("ã‚¹ã‚¿ãƒ¼ãƒˆå¾Œã€æ©™æ——ã‚’é™ä¸‹ã™ã‚‹ã¾ã§ï¼š\(preset.orangeRemovedMinutes)åˆ†", value: $preset.orangeRemovedMinutes, in: 0...30)
-                    .disabled(!preset.orangeEnabled)
-                Text("å¾…æ©Ÿä¸­ã¯æ©™æ——ã‚’é™ä¸‹ã—ã¾ã™ã€‚æœ‰åŠ¹æ™‚ã¯åŒæœŸã—ãŸã‚·ãƒ¼ã‚±ãƒ³ã‚¹é–‹å§‹æ™‚ã«è‡ªå‹•æ²æšã—ã¾ã™ã€‚äºˆå‘Šä¿¡å·ã¨ã‚¹ã‚¿ãƒ¼ãƒˆã®æ™‚åˆ»ã¯æ©™æ——ã®æ²æšæ™‚é–“ã«å¿œã˜ã¦è¡¨ç¤ºã—ã¾ã™ã€‚æ©™æ——ã¯è¨­å®šæ™‚é–“å¾Œã«é™ä¸‹ã—ã€æ²æšãƒ»é™ä¸‹ã¯æ‰‹å‹•ã§ã‚‚æ“ä½œã§ãã¾ã™ã€‚å‹•ç”»Aã®æ—¢å®šã¯ã‚¹ã‚¿ãƒ¼ãƒˆå¾Œ10åˆ†ã€ã»ã‹ã¯4åˆ†ã§ã™ã€‚")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Starts") {
-                ForEach($preset.starts) { $start in
-                    HStack(spacing: 8) {
-                        Button(role: .destructive) {
-                            preset.starts.removeAll { $0.id == start.id }
-                        } label: { Image(systemName: "minus.circle.fill") }
-                        SignalFlagSwatch(flagID: start.flagID)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(start.title)
-                            HStack(spacing: 4) {
-                                TextField("åˆ†", value: $start.minute, format: .number).keyboardType(.numberPad).frame(width: 36)
-                                Text(":")
-                                TextField("ç§’", value: $start.second, format: .number).keyboardType(.numberPad).frame(width: 36)
-                            }.font(.caption).monospacedDigit()
-                        }
-                        Spacer()
-                        Toggle("æœ‰åŠ¹", isOn: $start.enabled).labelsHidden()
-                        Menu {
-                            Button("æ²æš") { start.raised = true }
-                            Button("é™ä¸‹") { start.raised = false }
-                            Divider()
-                            Button("çŸ­éŸ³") { start.horn = "short" }
-                            Button("é•·éŸ³") { start.horn = "long" }
-                            Button("éŸ³ãªã—") { start.horn = "none" }
-                        } label: { Image(systemName: "line.3.horizontal") }
-                    }
-                }
-                Button { showingAddFlag = true } label: {
-                    Label("Add Startâ€¦", systemImage: "plus.circle.fill")
-                }
-            }
-        }
-        .onChange(of: preset.sequence) { _, sequence in
-            switch sequence {
-            case "video-13":
-                preset.orangeDisplayedMinutes = 4
-                preset.orangeRemovedMinutes = 4
-            case "video-20":
-                preset.orangeDisplayedMinutes = 5
-                preset.orangeRemovedMinutes = 10
-            default:
-                preset.orangeDisplayedMinutes = 5
-                preset.orangeRemovedMinutes = 4
-            }
-        }
-        .navigationTitle("Fleet Start")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Save") {
-                    activeSequence = preset.sequence
-                    activeClassFlag = preset.classFlagID
-                    activePrepFlag = ["P", "I", "U", "Z"].contains(preset.startRule)
-                        ? preset.startRule
-                        : (preset.startRule == "Black" ? "black" : preset.prepFlagID)
-                    activeOrangeEnabled = preset.orangeEnabled
-                    activeOrangeDisplayed = preset.orangeDisplayedMinutes
-                    activeOrangeRemoval = preset.orangeRemovedMinutes
-                    activeRaceDelayEnabled = preset.raceDelayEnabled
-                    activeRaceDelayMinutes = preset.raceDelayMinutes
-                    var runtimeStarts = preset.starts
-                    if runtimeStarts.count == 1 && runtimeStarts[0].flagID == "class-4" {
-                        runtimeStarts[0].flagID = preset.classFlagID
-                    }
-                    if let encoded = try? JSONEncoder().encode(runtimeStarts) {
-                        activeStartActionsJSON = String(data: encoded, encoding: .utf8) ?? "[]"
-                    }
-                    dismiss()
-                }.tint(.orange)
-            }
-        }
-        .sheet(isPresented: $showingAddFlag) {
-            NavigationStack {
-                SignalClassPicker(selection: Binding(
-                    get: { preset.classFlagID },
-                    set: { value in
-                        preset.starts.append(SignalStartAction(flagID: value, minute: 5, raised: true, horn: "short"))
-                    }
-                ))
-                .navigationTitle("Classes")
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("å®Œäº†") { showingAddFlag = false } } }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
-struct SignalClassPicker: View {
-    @Binding var selection: String
-    private let categories = ["Multihull", "Keelboat", "Board", "Centerboard"]
-    private let classFlags: [SignalFlagChoice] =
-        ["A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Multihull") } +
-        ["10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Keelboat") } +
-        ["Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Board") } +
-        ["29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J14","Jollyboat","Laser","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Centerboard") }
-
-    var body: some View {
-        List {
-            ForEach(categories, id: \.self) { category in
-                Section(category) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 86), spacing: 12)], spacing: 12) {
-                        ForEach(classFlags.filter { $0.category == category }) { flag in
-                            Button { selection = flag.id } label: {
-                                VStack(spacing: 7) {
-                                    SignalClassLogoMark(name: flag.name)
-                                        .overlay(selection == flag.id ? RoundedRectangle(cornerRadius: 5).stroke(Color.orange, lineWidth: 3) : nil)
-                                    Text(flag.name).font(.caption).lineLimit(2).multilineTextAlignment(.center)
-                                }
-                            }.buttonStyle(.plain)
-                        }
-                    }.padding(.vertical, 4)
-                }
-            }
-        }
-        .navigationTitle("Classes")
-        .preferredColorScheme(.dark)
-    }
-}
-
-private struct SignalClassFlagSettingsView: View {
-    @AppStorage("signalUserFlagsJSON") private var savedJSON = "[]"
-    @State private var flags: [SignalCustomFlag] = []
-    @State private var loaded = false
-
-    var body: some View {
-        List {
-            ForEach($flags) { $flag in
-                NavigationLink {
-                    SignalCustomFlagEditor(flag: $flag)
-                } label: {
-                    HStack {
-                        SignalFlagPreview(flag: flag).frame(width: 44, height: 30)
-                        Text(flag.name.isEmpty ? "Class Flag" : flag.name)
-                    }
-                }
-            }.onDelete { flags.remove(atOffsets: $0); save() }
-            Button {
-                flags.append(SignalCustomFlag())
-            } label: { Label("ã‚¯ãƒ©ã‚¹æ——ã‚’è¿½åŠ ", systemImage: "plus.circle.fill") }
-            NavigationLink("å›½éš›ä¿¡å·æ——ä¸€è¦§") { SignalInternationalFlagGallery() }
-        }
-        .navigationTitle("Class Flags")
-        .toolbar { EditButton() }
-        .onAppear {
-            guard !loaded else { return }
-            if let data = savedJSON.data(using: .utf8),
-               let value = try? JSONDecoder().decode([SignalCustomFlag].self, from: data) { flags = value }
-            loaded = true
-        }
-        .onChange(of: flags) { _, _ in save() }
-        .preferredColorScheme(.dark)
-    }
-
-    private func save() {
-        guard let data = try? JSONEncoder().encode(flags) else { return }
-        savedJSON = String(data: data, encoding: .utf8) ?? "[]"
-    }
-}
-
-private struct SignalCustomFlagEditor: View {
-    @Binding var flag: SignalCustomFlag
-    @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
-    @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
-    @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
-    @Environment(\.dismiss) private var dismiss
-    private let layouts = ["solid", "horizontal", "vertical", "diagonal", "reverseDiagonal"]
-    private let colors: [SignalColorChoice] = [
-        SignalColorChoice(name: "White", color: .white, hex: "#FFFFFF"),
-        SignalColorChoice(name: "Black", color: .black, hex: "#111111"),
-        SignalColorChoice(name: "Red", color: .red, hex: "#E32636"),
-        SignalColorChoice(name: "Yellow", color: .yellow, hex: "#F5D328"),
-        SignalColorChoice(name: "Blue", color: .blue, hex: "#1769FF"),
-        SignalColorChoice(name: "Green", color: .green, hex: "#00B83F"),
-        SignalColorChoice(name: "Orange", color: .orange, hex: "#F58A00"),
-        SignalColorChoice(name: "Purple", color: .purple, hex: "#7A35A8")
-    ]
-
-    var body: some View {
-        Form {
-            Section {
-                TextField("Name", text: $flag.name)
-                Picker("è¡¨ç¤ºå½¢å¼", selection: $flag.style) {
-                    Text("Logo").tag("logo")
-                    Text("Text").tag("text")
-                    Text("International Flag").tag("international")
-                }.pickerStyle(.segmented)
-            }
-            Section("Background Layout") {
-                Picker("Layout", selection: $flag.layout) {
-                    Text("å…¨é¢").tag("solid")
-                    Text("ä¸Šä¸‹").tag("horizontal")
-                    Text("å·¦å³").tag("vertical")
-                    Text("æ–œã‚").tag("diagonal")
-                    Text("é€†æ–œã‚").tag("reverseDiagonal")
-                }.pickerStyle(.segmented)
-            }
-            Section("Flag Color") {
-                colorPicker("æ——ã®è‰²", selection: $flag.flagColor)
-            }
-            if flag.style == "text" {
-                Section("Text") {
-                    TextField("è¡¨ç¤ºã™ã‚‹æ–‡å­—", text: $flag.text)
-                    colorPicker("æ–‡å­—è‰²", selection: $flag.textColor)
-                }
-            } else if flag.style == "international" {
-                Section("International Flag") {
-                    NavigationLink("ä¿¡å·æ——ã‚’é¸æŠ") { SignalInternationalFlagGallery(selection: $flag.internationalFlag) }
-                    Text("å›½éš›ä¿¡å·æ——ã®ä¸€è¦§ã‹ã‚‰è¡¨ç¤ºã™ã‚‹æ——ã‚’é¸ã³ã¾ã™ã€‚")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-            } else {
-                Section("Logo") {
-                    NavigationLink("ã‚¯ãƒ©ã‚¹ã®ãƒ­ã‚´ã‚’é¸æŠ") { SignalClassPicker(selection: $flag.logoID) }
-                    colorPicker("ãƒ­ã‚´è‰²", selection: $flag.textColor)
-                }
-            }
-            Section("Preview") {
-                SignalFlagPreview(flag: flag).frame(height: 110).frame(maxWidth: .infinity)
-            }
-        }
-        .navigationTitle(flag.name.isEmpty ? "Class Flag" : flag.name)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("ã“ã®æ——ã‚’ä½¿ç”¨") {
-                    switch flag.style {
-                    case "logo":
-                        activeClassFlag = flag.logoID
-                        activeLogoColor = flag.textColor
-                        activeLogoBackground = flag.flagColor
-                    case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
-                    default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
-                    }
-                    dismiss()
-                }.tint(.orange)
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-
-    private func colorPicker(_ title: String, selection: Binding<String>) -> some View {
-        Picker(title, selection: selection) {
-            ForEach(colors) { item in
-                HStack { Circle().fill(item.color).frame(width: 20, height: 20); Text(item.name) }.tag(item.hex)
-            }
-        }.pickerStyle(.menu)
-    }
-}
-
-private struct SignalFlagPreview: View {
-    let flag: SignalCustomFlag
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                if flag.style == "international" {
-                    SignalInternationalFlagArtwork(name: flag.internationalFlag)
-                } else {
-                    Color(hex: flag.flagColor)
-                    if flag.layout == "horizontal" {
-                        VStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
-                    } else if flag.layout == "vertical" {
-                        HStack(spacing: 0) { Color(hex: flag.flagColor); Color.white }
-                    } else if flag.layout == "diagonal" || flag.layout == "reverseDiagonal" {
-                        Canvas { context, size in
-                            let path = Path { p in
-                                p.move(to: .zero); p.addLine(to: CGPoint(x: size.width, y: 0))
-                                p.addLine(to: CGPoint(x: size.width, y: size.height)); p.closeSubpath()
-                            }
-                            context.fill(path, with: .color(.white))
-                        }
-                    }
-                    if flag.style == "text" {
-                        Text(flag.text).font(.system(size: geo.size.height * 0.55, weight: .bold))
-                            .foregroundStyle(Color(hex: flag.textColor))
-                    } else {
-                        SignalClassLogoMark(name: flag.text.isEmpty ? flag.logoID.replacingOccurrences(of: "class-", with: "") : flag.text,
-                                            color: Color(hex: flag.textColor),
-                                            backgroundColor: Color(hex: flag.flagColor))
-                    }
-                }
-            }.frame(width: geo.size.width, height: geo.size.height)
-        }.clipShape(RoundedRectangle(cornerRadius: 3))
-    }
-}
-
-private struct SignalInternationalFlagGallery: View {
-    @AppStorage("signalSelectedInternationalFlag") private var storedSelection = "Alpha"
-    private let selection: Binding<String>?
-    init(selection: Binding<String>? = nil) { self.selection = selection }
-    private var selectedFlag: Binding<String> { selection ?? $storedSelection }
-    private let flags = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute"]
-
-    var body: some View {
-        List {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 78), spacing: 10)], spacing: 14) {
-                ForEach(flags, id: \.self) { name in
-                    Button { selectedFlag.wrappedValue = name } label: {
-                        VStack(spacing: 6) {
-                            ZStack {
-                                SignalInternationalFlagArtwork(name: name)
-                                if selectedFlag.wrappedValue == name {
-                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                                }
-                            }.frame(height: 48)
-                            Text(name).font(.caption2).lineLimit(2).multilineTextAlignment(.center)
-                        }
-                    }.buttonStyle(.plain)
-                }
-            }.padding(.vertical)
-        }
-        .navigationTitle("Flag")
-        .preferredColorScheme(.dark)
-    }
-}
-
-private struct SignalNotificationsView: View {
-    @AppStorage("signalRadioFriendly") private var radioFriendly = true
-    @AppStorage("signalNotificationPreferencesJSON") private var saved = ""
-    @State private var values: [String: String] = [:]
-    @State private var loaded = false
-
-    private let actionRows = ["ASAP", "Every minute*", "1 minute", "30 seconds", "20 seconds", "Countdown", "On Time"]
-    private let raceRows = ["Every minute", "Every 5 minutes", "Time Limit"]
-    private let choices = ["Time", "Full", "Sound", "None"]
-
-    var body: some View {
-        Form {
-            Section {
-                Toggle("Radio Friendly", isOn: $radioFriendly)
-                Text("ä¿¡å·åã§ã¯ãªãã€æ“ä½œå†…å®¹ã‚’èª­ã¿ä¸Šã’ã¾ã™ã€‚")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("TO ACTION") {
-                ForEach(actionRows, id: \.self) { row in
-                    notificationPicker(row)
-                }
-            }
-            Section("Race") {
-                ForEach(raceRows, id: \.self) { row in
-                    notificationPicker(row)
-                }
-            }
-            Section("Other") {
-                notificationPicker("GPS status")
-                notificationPicker("Zone alerts")
-            }
-        }
-        .navigationTitle("Notifications")
-        .onAppear { load() }
-        .onChange(of: values) { _, _ in persist() }
-        .preferredColorScheme(.dark)
-    }
-
-    private func notificationPicker(_ title: String) -> some View {
-        Picker(title, selection: Binding(
-            get: { values[title] ?? (title == "ASAP" ? "Full" : "None") },
-            set: { values[title] = $0 }
-        )) {
-            ForEach(choices, id: \.self) { Text($0).tag($0) }
-        }.pickerStyle(.menu)
-    }
-    private func load() {
-        guard !loaded else { return }
-        if let data = saved.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) { values = decoded }
-        loaded = true
-    }
-    private func persist() {
-        guard loaded, let data = try? JSONEncoder().encode(values) else { return }
-        saved = String(data: data, encoding: .utf8) ?? "{}"
-    }
-}
-
-private struct SignalHornSettingsView: View {
-    @AppStorage("signalHornEnabled") private var enabled = true
-    @AppStorage("signalHornVolume") private var volume = 0.8
-    @AppStorage("signalShortHornSeconds") private var shortSound = 0.22
-    @AppStorage("signalHornSeconds") private var longSound = 0.7
-    @AppStorage("signalHornGapSeconds") private var gap = 0.18
-
-    var body: some View {
-        Form {
-            Section("Mode") {
-                Picker("Mode", selection: Binding(
-                    get: { enabled ? "Virtual" : "Disabled" },
-                    set: { enabled = $0 == "Virtual" }
-                )) {
-                    Text("Disabled").tag("Disabled")
-                    Text("Virtual").tag("Virtual")
-                    Text("Remote").tag("Remote")
-                }.pickerStyle(.segmented)
-            }
-            Section("General") { Toggle("Horn for first finisher", isOn: .constant(false)) }
-            Section("Virtual Horn") {
-                slider("Volume", value: $volume, range: 0...1, step: 0.05, suffix: "%", multiplier: 100)
-            }
-            Section("Remote Settings") {
-                slider("Short Sound", value: $shortSound, range: 0.1...1, step: 0.05, suffix: "s")
-                slider("Long Sound", value: $longSound, range: 0.1...5, step: 0.1, suffix: "s")
-                slider("Gap", value: $gap, range: 0.1...2, step: 0.05, suffix: "s")
-            }
-            Section("Preview") {
-                Button("çŸ­éŸ³ã‚’è©¦ã™") { SignalSettingsSound.preview(seconds: shortSound) }
-                Button("é•·éŸ³ã‚’è©¦ã™") { SignalSettingsSound.preview(seconds: longSound) }
-            }
-        }
-        .navigationTitle("Remote Horn")
-        .preferredColorScheme(.dark)
-    }
-
-    private func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double, suffix: String, multiplier: Double = 1) -> some View {
-        VStack(alignment: .leading) {
-            HStack {
-                Text(title)
-                Spacer()
-                Text(String(format: "%.1f%@", value.wrappedValue * multiplier, suffix))
-                    .foregroundStyle(.secondary).monospacedDigit()
-            }
-            Slider(value: value, in: range, step: step)
-        }
-    }
-}
-
-private enum SignalSettingsSound {
-    static func preview(seconds: Double) {
-        AudioServicesPlaySystemSound(1104)
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(0.1, seconds)) {
-            AudioServicesPlaySystemSound(1104)
-        }
-    }
-}
-
-private extension Color {
-    init(hex: String) {
-        let digits = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        let value = UInt64(digits, radix: 16) ?? 0xFFFFFF
-        self.init(.sRGB,
-                  red: Double((value >> 16) & 0xFF) / 255,
-                  green: Double((value >> 8) & 0xFF) / 255,
-                  blue: Double(value & 0xFF) / 255,
-                  opacity: 1)
-    }
-}
-
-#endif
+CBˆ˜\ˆ˜[YHHˆƒBˆ˜\ˆİ[HH^ƒBˆ˜\ˆ^[İ]HœÛÛYƒBˆ˜\ˆ›YĞÛÛÜˆHˆÑ‘‘‘‘‘ˆƒBˆ˜\ˆ^HˆƒBˆ˜\ˆ^ÛÛÜˆHˆÌLLLLLHƒBˆ˜\ˆÙÛÒQH˜Û\ÜËMƒBˆ˜\ˆ[\›˜][Û˜[›YÈH[HƒBŸCBƒBœš]˜]HİXİÚYÛ˜[ÛÛÜÚÚXÙNˆY[YšXX›HÃBˆ]˜[YNˆİš[™ÃBˆ]ÛÛÜˆÛÛÜƒBˆ]^ˆİš[™ÃBˆ˜\ˆYˆİš[™ÈÈ˜[YHCBŸCBƒBœš]˜]HİXİÚYÛ˜[›YĞÚÚXÙNˆY[YšXX›K\ÚX›HÃBˆ]Yˆİš[™ÃBˆ]˜[YNˆİš[™ÃBˆ]Ø]YÛÜNˆİš[™ÃBˆ˜\ˆŞ[X›Ûˆİš[™ÈÈYš\Ô™Yš^
+˜Û\ÜËHŠHÈİš[™ÊY™›Üš\œİ
+ŠJHˆ˜[YHCBŸCBƒBœš]˜]HİXİÚYÛ˜[›YÔİØ]ÚˆšY]ÈÃBˆ]›YÒQˆİš[™ÃBˆš]˜]H˜\ˆ›YÎˆÚYÛ˜[Ù\]Y[˜ÙK‘›YÈÈÚYÛ˜[Ù\]Y[˜ÙK™›YÊ›YÒQ
+HCBˆš]˜]H˜\ˆš[ˆÛÛÜˆÃBˆ]˜[YHH›YË˜ÛÛÜœË™š\œİÏÈ‘‘‘‘‘ƒBˆ™]\›ˆÛÛÜŠ™YˆİX›J
+˜[YHˆMŠH	ˆ‘ŠHÈMKBˆÜ™Y[ˆİX›J
+˜[YHˆ
+H	ˆ‘ŠHÈMKBˆ›YNˆİX›J˜[YH	ˆ‘ŠHÈMJCBˆCBˆ˜\ˆ›ÙNˆÛÛYHšY]ÈÃBˆÜ›İ\ÃBˆYˆ›YËœİ[HOHš[\›˜][Û˜[›YÈˆÃBˆÚYÛ˜[[\›˜][Û˜[›YĞ\ÛÜšÊ˜[YNˆ›YË˜\ÛÜšÓ˜[YHÏÈ›YË›˜[YJCBˆH[ÙHYˆ›YÒQš\Ô™Yš^
+˜Û\ÜËHŠHÃBˆÚYÛ˜[Û\ÜÓÙÛÓX\šÊ˜[YNˆİš[™Ê›YÒQ™›Üš\œİ
+ŠJJCBˆH[ÙHÃBˆ”İXÚÈÃBˆš[Bˆ^
+›YËœŞ[X›Ûš\Ñ[\HÈ›YË›˜[YHˆ›YËœŞ[X›Û
+CBˆ™›Û
+œŞ\İ[JÚ^™NˆLËÙZYÚˆ˜›XÚÊJCBˆ™›Ü™YÜ›İ[™İ[Jš[OHÚ]HÈ˜›XÚÈˆÚ]JCBˆ›Z[š[][TØØ[Q˜XİÜŠJCBˆCBˆCBˆCBˆ™œ˜[YJÚYˆZYÚˆÌ
+CBˆ˜Û\Ú\J›İ[™Y™Xİ[™ÛJÛÜ›™\”˜Y]\ÎˆÊJCBˆCBŸCBƒBœİXİÚYÛ˜[Ù][™ÜÕšY]ÎˆšY]ÈÃBˆ\İÜ˜YÙJœÚYÛ˜[Z[š[][U[YUÑš\œİXİ[ÛˆŠHš]˜]H˜\ˆZ[š[][U[YHHMCBˆ\İÜ˜YÙJœÚYÛ˜[›ÚXÙS˜[YHŠHš]˜]H˜\ˆ›ÚXÙS˜[YHH’Ş[ÚÛÈ
+[š[˜ÙY
+HƒBˆ\İÜ˜YÙJœÚYÛ˜[˜Y[ÑœšY[™HŠHš]˜]H˜\ˆ˜Y[ÑœšY[™HHYCBˆ\İÜ˜YÙJœÚYÛ˜[ÛØÚÓÙ™œÙ]ŠHš]˜]H˜\ˆÛØÚÓÙ™œÙ]HŒBˆ\İÜ˜YÙJœÚYÛ˜[^\›˜[\Ü^Q[˜X›YŠHš]˜]H˜\ˆ^\›˜[\Ü^HHYCBˆ\İÜ˜YÙJœÚYÛ˜[™[[İQ›YÜÑ[˜X›YŠHš]˜]H˜\ˆ™[[İQ›YÜÈH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[[ŞV›Û™S[šÙYŠHš]˜]H˜\ˆ[ŞV›Û™S[šÙYH˜[ÙCBˆ\İÜ˜YÙJœÚYÛ˜[ÙÑ[˜X›YŠHš]˜]H˜\ˆÙÑ[˜X›YHYCBˆİ]Hš]˜]H˜\ˆ[YTŞ[˜ÓY\ÜØYÙHH¹êëù§*ù¦`¹b.øà¤¹/oùå*9.+HƒBˆİ]Hš]˜]H˜\ˆ\ÔŞ[˜Ú[™Õ[YHH˜[ÙCBˆ[š\›Û›Y[
+™\ÛZ\ÜÊHš]˜]H˜\ˆ\ÛZ\ÜÃBƒBˆ˜\ˆ›ÙNˆÛÛYHšY]ÈÃBˆ˜]šYØ][Û”İXÚÈÃBˆ\İÃBˆÙXİ[ÛˆÃBˆX™[YÛÛ[
+“[ÙH‹˜[YNˆ‘›Y]ŠCBˆCBˆÙXİ[ÛŠ‘Ù[™\˜[Ù][™ÜÈŠHÃBˆİ\\Š˜[YNˆ	Z[š[][U[YK[ˆ‹‹ŒLŒİ\ˆJHÃBˆ”İXÚÊ[YÛ›Y[ˆ›XY[™ÊHÃBˆX™[YÛÛ[
+¹«(xàk¹b!Œ9éä¸ào¸àiøàk¹§ 9çëy¦`ºe¤È‹˜[YNˆ—
+Z[š[][U[YJyéäˆŠCBˆ^
+ºe¢ùiâøàç8à¯øàìøàbøà¢yk§ù¦`ºe¤øàk¹«(xàk¹b!Œ9éä¸ào¸àiøàjùè®¹/çxàfxà¢ù§ 9çëze¤úf¥8àiøàfxà ¹d!9/èycíøàkøà­øàï8à¬xàìøà®xàk›¹b!Œ9éä¸àiùbåy/g8àeøào¸àfxà T8àîÓ¹¥åøàkù¦`¹b.øà¤¹fî¹k¦¸àføàf¹¢bùbåxàiù£¬¹£æ¸àeøào¸àfxà ˆŠK™›Û
+˜Ø\[ÛŠK™›Ü™YÜ›İ[™İ[JœÙXÛÛ™\JCBˆCBˆCBˆXÚÙ\Š•›ÚXÙH‹Ù[Xİ[Ûˆ	›ÚXÙS˜[YJHÃBˆ^
+’Ş[ÚÛÈ
+[š[˜ÙY
+HŠKYÊ’Ş[ÚÛÈ
+[š[˜ÙY
+HŠCBˆ^
+”Ú\šH˜\[™\ÙHŠKYÊ”Ú\šH˜\[™\ÙHŠCBˆ^
+¹êëù§*øàk¹ª&y®¥ºgìùhìŠKYÊ¹êëù§*øàk¹ª&y®¥ºgìùhìŠCBˆCBˆ˜]šYØ][Û“[šÊ“›İYšXØ][ÛœÈŠHÈÚYÛ˜[›İYšXØ][ÛœÕšY]Ê
+HCBˆ]ÛˆÃBˆ\ÚÈÈ]ØZ]Ş[˜Õ[YJ
+HCBˆHX™[ˆÃBˆİXÚÈÃBˆ”İXÚÊ[YÛ›Y[ˆ›XY[™ËÜXÚ[™ÎˆÊHÃBˆ^
+¹¦`¹b.ùd#9§'ûï"›šXİšœ;ï"HŠCBˆ^
+[YTŞ[˜ÓY\ÜØYÙKš\Ñ[\CBˆÈ
+ÛØÚÓÙ™œÙ]OHÈ¹êëù§*ù¦`¹b.øà¤¹/oùå*9.+Hˆˆ¹d#9§'ù®"8àoûï"9mëˆ
+İš[™Ê›Ü›X]ˆ‰JËŒÙˆ‹ÛØÚÓÙ™œÙ]
+JH9éä»ï"HŠCBˆˆ[YTŞ[˜ÓY\ÜØYÙJCBˆ™›Û
+˜Ø\[ÛŠK™›Ü™YÜ›İ[™İ[JœÙXÛÛ™\JCBˆCBˆÜXÙ\Š
+CBˆYˆ\ÔŞ[˜Ú[™Õ[YHÈ›ÙÜ™\ÜÕšY]Ê
+HH[ÙHÈ^
+¹d#9§'ÈŠK™›Ü™YÜ›İ[™İ[J˜›YJHCBˆCBˆK™\ØX›Y
+\ÔŞ[˜Ú[™Õ[YJCBˆ˜]šYØ][Û“[šÊ’Ü›ˆŠHÈÚYÛ˜[Ü›”Ù][™ÜÕšY]Ê
+HCBˆÙÙÛJ”™[[İH›YÜÈ‹\ÓÛˆ	™[[İQ›YÜÊCBˆÙÙÛJ[ŞV›Û™xàj:`(ù¤.ˆ‹\ÓÛˆ	[ŞV›Û™S[šÙY
+CBˆÙÙÛJ‘^\›˜[\Ü^H‹\ÓÛˆ	^\›˜[\Ü^JCBˆ˜]šYØ][Û“[šÊ“ÙÈŠHÈÚYÛ˜[ÙÔÙ][™ÜÕšY]Ê[˜X›Yˆ	ÙÑ[˜X›Y
+HCBˆCBˆÙXİ[ÛŠ‘›Y]İ\Ù\]Y[˜Ù\ÈŠHÃBˆ˜]šYØ][Û“[šÊ¸àåxàê¸àï8àâ9¢búh!¸à¤¹ë¨yä!ˆŠHÈÚYÛ˜[›Y]Ù\]Y[˜Ù\ÕšY]Ê
+HCBˆCBˆÙXİ[ÛŠ¹¥åøàkº*+yk¦ˆŠHÃBˆ˜]šYØ][Û“[šÊ¸à«øàêxà®y¥åøà¤¹íê:fáˆŠHÈÚYÛ˜[Û\ÜÑ›YÔÙ][™ÜÕšY]Ê
+HCBˆ˜]šYØ][Û“[šÊ¹fïzf¦ù/èycíù¥åÈŠHÈÚYÛ˜[[\›˜][Û˜[›YÑØ[\J
+HCBˆCBˆCBˆ®:îÚ$z{-®éÜj×&6¶w&÷VæD6öÆ÷#¢6öÆ÷"††Wƒ¢fÆræfÆt6öÆ÷"’Ğ¢ĞĞ¢ĞĞ¢Òæg&ÖR‡v–GFƒ¢vVòç6—¦Rçv–GF‚Â†V–v‡C¢vVòç6—¦Ræ†V–v‡BĞ¢Òæ6Æ—6†R…&÷VæFVE&V7FævÆR†6÷&æW%&F—W3¢2’Ğ¢ĞĞ§ĞĞ Ğ§&—fFR7G'V7B6–væÄ–çFW&æF–öæÄfÆtvÆÆW'“¢f–Wr°Ğ¢7F÷&vR‚'6–væÅ6VÆV7FVD–çFW&æF–öæÄfÆr"’&—fFRf"7F÷&VE6VÆV7F–öâÒ$Ç† Ğ¢&—fFRÆWB6VÆV7F–öã¢&–æF–æsÅ7G&–æsãğĞ¢–æ—B‡6VÆV7F–öã¢&–æF–æsÅ7G&–æsãòÒæ–Â’²6VÆbç6VÆV7F–öâÒ6VÆV7F–öâĞĞ¢&—fFRf"6VÆV7FVDfÆs¢&–æF–æsÅ7G&–æsâ²6VÆV7F–öâóòG7F÷&VE6VÆV7F–öâĞĞ¢&—fFRÆWBfÆw2Ò²$Ç†"Â$'&fò"Â$6†&Æ–R"Â$FVÇF"Â$V6†ò"Â$f÷‡G&÷B"Â$vöÆb"Â$†÷FVÂ"Â$–æF–"Â$§VÆ–WGB"Â$¶–Æò"Â$Æ–Ö"Â$Ö–¶R"Â$æ÷fVÖ&W""Â$÷66""Â%"Â%VV&V2"Â%&öÖVò"Â%6–W'&"Â%Fævò"Â%Væ–f÷&Ò"Â%f–7F÷""Â%v†—6¶W’"Â%‚Õ&’"Â%–æ¶VR"Â%§VÇR"Â%VææçB"Â%VææçB"Â%VææçB""Â%VææçB2"Â%VææçBB"Â%VææçBR"Â%VææçBb"Â%VææçBr"Â%VææçB‚"Â%VææçB’"Â$ç7vW&–ærVææçB"Â$f—'7B7V'7F—GWFR"Â%6V6öæB7V'7F—GWFR"Â%F†—&B7V'7F—GWFR%ĞĞ Ğ¢f"&öG“¢6öÖRf–Wr°Ğ¢Æ—7B°Ğ¢Æ§•dw&–B†6öÇVÖç3¢´w&–D—FVÒ‚æFF—fR†Ö–æ–×VÓ¢s‚’Â76–æs¢•ÒÂ76–æs¢B’°Ğ¢f÷$V6‚†fÆw2Â–C¢Âç6VÆb’²æÖR–àĞ¢'WGFöâ²6VÆV7FVDfÆrçw&VEfÇVRÒæÖRÒÆ&VÃ¢°Ğ¢e7F6²‡76–æs¢b’°Ğ¢¥7F6²°Ğ¢6–væÄ–çFW&æF–öæÄfÆt'Gv÷&²†æÖS¢æÖRĞ¢–b6VÆV7FVDfÆrçw&VEfÇVRÓÒæÖR°Ğ¢–ÖvR‡7—7FVÔæÖS¢&6†V6¶Ö&²æ6—&6ÆRæf–ÆÂ"’æf÷&Vw&÷VæE7G–ÆR‚æw&VVâ’æg&ÖR†Ö…v–GFƒ¢æ–æf–æ—G’ÂÖ„†V–v‡C¢æ–æf–æ—G’ÂÆ–væÖVçC¢çF÷G&–Æ–ærĞ¢ĞĞ¢Òæg&ÖR††V–v‡C¢C‚Ğ¢FW‡B†æÖR’æföçB‚æ6F–öã"’æÆ–æTÆ–Ö—Bƒ"’æ×VÇF–Æ–æUFW‡DÆ–væÖVçB‚æ6VçFW"Ğ¢ĞĞ¢Òæ'WGFöå7G–ÆR‚çÆ–âĞ¢ĞĞ¢ÒçFF–ær‚çfW'F–6ÂĞ¢ĞĞ¢ææf–vF–öåF—FÆR‚$fÆr"Ğ¢ç&VfW'&VD6öÆ÷%66†VÖR‚æF&²Ğ¢ĞĞ§ĞĞ Ğ§&—fFR7G'V7B6–væÄæ÷F–f–6F–öç5f–Ws¢f–Wr°Ğ¢7F÷&vR‚'6–væÅ&F–ôg&–VæFÇ’"’&—fFRf"&F–ôg&–VæFÇ’ÒG'VPĞ¢7F÷&vR‚'6–væÄæ÷F–f–6F–öå&VfW&Væ6W4¥4ôâ"’&—fFRf"6fVBÒ" Ğ¢7FFR&—fFRf"fÇVW3¢µ7G&–æs¢7G&–æuÒÒ³¥ĞĞ¢7FFR&—fFRf"ÆöFVBÒfÇ6PĞ Ğ¢&—fFRÆWB7F–öå&÷w2Ò²$4"Â$WfW'’Ö–çWFR¢"Â#Ö–çWFR"Â#36V6öæG2"Â##6V6öæG2"Â$6÷VçFF÷vâ"Â$öâF–ÖR%ĞĞ¢&—fFRÆWB&6U&÷w2Ò²$WfW'’Ö–çWFR"Â$WfW'’RÖ–çWFW2"Â%F–ÖRÆ–Ö—B%ĞĞ¢&—fFRÆWB6†ö–6W2Ò²%F–ÖR"Â$gVÆÂ"Â%6÷VæB"Â$æöæR%ĞĞ Ğ¢f"&öG“¢6öÖRf–Wr°Ğ¢f÷&Ò°Ğ¢6V7F–öâ°Ğ¢FövvÆR‚%&F–òg&–VæFÇ’"Â—4öã¢G&F–ôg&–VæFÇ’Ğ¢FW‡B‚.KúXû~YŞ8~8ş8®8ş8i8ŞKÙÎXh^Zë8).ŠªŞ8şKˆ®8.8î88""Ğ¢æföçB‚æfö÷Fæ÷FR’æf÷&Vw&÷VæE7G–ÆR‚ç6V6öæF'’Ğ¢ĞĞ¢6V7F–öâ‚%Dò5D”ôâ"’°Ğ¢f÷$V6‚†7F–öå&÷w2Â–C¢Âç6VÆb’²&÷r–àĞ¢æ÷F–f–6F–öå–6¶W"‡&÷rĞ¢ĞĞ¢ĞĞ¢6V7F–öâ‚%&6R"’°Ğ¢f÷$V6‚‡&6U&÷w2Â–C¢Âç6VÆb’²&÷r–àĞ¢æ÷F–f–6F–öå–6¶W"‡&÷rĞ¢ĞĞ¢ĞĞ¢6V7F–öâ‚$÷F†W""’°Ğ¢æ÷F–f–6F–öå–6¶W"‚$u27FGW2"Ğ¢æ÷F–f–6F–öå–6¶W"‚%¦öæRÆW'G2"Ğ¢ĞĞ¢ĞĞ¢ææf–vF–öåF—FÆR‚$æ÷F–f–6F–öç2"Ğ¢æöäV"²ÆöB‚’ĞĞ¢æöä6†ævR†öc¢fÇVW2’²òÂò–âW'6—7B‚’ĞĞ¢ç&VfW'&VD6öÆ÷%66†VÖR‚æF&²Ğ¢ĞĞ Ğ¢&—fFRgVæ2æ÷F–f–6F–öå–6¶W"…òF—FÆS¢7G&–ær’Óâ6öÖRf–Wr°Ğ¢–6¶W"‡F—FÆRÂ6VÆV7F–öã¢&–æF–ær€Ğ¢vWC¢²fÇVW5·F—FÆUÒóò‡F—FÆRÓÒ$4"ò$gVÆÂ"¢$æöæR"’ÒÀĞ¢6WC¢²fÇVW5·F—FÆUÒÒCĞĞ¢’’°Ğ¢f÷$V6‚†6†ö–6W2Â–C¢Âç6VÆb’²FW‡B‚C’çFr‚C’ĞĞ¢Òç–6¶W%7G–ÆR‚æÖVçRĞ¢ĞĞ¢&—fFRgVæ2ÆöB‚’°Ğ¢wV&BÆöFVBVÇ6R²&WGW&âĞĞ¢–bÆWBFFÒ6fVBæFF‡W6–æs¢çWFc‚’ÀĞ¢ÆWBFV6öFVBÒG'“ò¥4ôäFV6öFW"‚’æFV6öFR…µ7G&–æs¢7G&–æuÒç6VÆbÂg&öÓ¢FF’²fÇVW2ÒFV6öFVBĞĞ¢ÆöFVBÒG'VPĞ¢ĞĞ¢&—fFRgVæ2W'6—7B‚’°Ğ¢wV&BÆöFVBÂÆWBFFÒG'“ò¥4ôäVæ6öFW"‚’æVæ6öFR‡fÇVW2’VÇ6R²&WGW&âĞĞ¢6fVBÒ7G&–ær†FF¢FFÂVæ6öF–æs¢çWFc‚’óò'·Ò Ğ¢ĞĞ§ĞĞ Ğ§&—fFR7G'V7B6–væÄ†÷&å6WGF–æw5f–Ws¢f–Wr°Ğ¢7F÷&vR‚'6–væÄ†÷&äVæ&ÆVB"’&—fFRf"Væ&ÆVBÒG'VPĞ¢7F÷&vR‚'6–væÄ†÷&åföÇVÖR"’&—fFRf"föÇVÖRÒã€Ğ¢7F÷&vR‚'6–væÅ6†÷'D†÷&å6V6öæG2"’&—fFRf"6†÷'E6÷VæBÒã# Ğ¢7F÷&vR‚'6–væÄ†÷&å6V6öæG2"’&—fFRf"Æöæu6÷VæBÒãpĞ¢7F÷&vR‚'6–væÄ†÷&äv6V6öæG2"’&—fFRf"vÒã€Ğ Ğ¢f"&öG“¢6öÖRf–Wr°Ğ¢f÷&Ò°Ğ¢6V7F–öâ‚$ÖöFR"’°Ğ¢–6¶W"‚$ÖöFR"Â6VÆV7F–öã¢&–æF–ær€Ğ¢vWC¢²Væ&ÆVBò%f—'GVÂ"¢$F—6&ÆVB"ÒÀĞ¢6WC¢²Væ&ÆVBÒCÓÒ%f—'GVÂ"ĞĞ¢’’°Ğ¢FW‡B‚$F—6&ÆVB"’çFr‚$F—6&ÆVB"Ğ¢FW‡B‚%f—'GVÂ"’çFr‚%f—'GVÂ"Ğ¢FW‡B‚%&VÖ÷FR"’çFr‚%&VÖ÷FR"Ğ¢Òç–6¶W%7G–ÆR‚ç6VvÖVçFVBĞ¢ĞĞ¢6V7F–öâ‚$vVæW&Â"’²FövvÆR‚$†÷&âf÷"f—'7Bf–æ—6†W""Â—4öã¢æ6öç7FçB†fÇ6R’’ĞĞ¢6V7F–öâ‚%f—'GVÂ†÷&â"’°Ğ¢6Æ–FW"‚%föÇVÖR"ÂfÇVS¢GföÇVÖRÂ&ævS¢ââãÂ7FW¢ãRÂ7Vff—ƒ¢"R"Â×VÇF—Æ–W#¢Ğ¢ĞĞ¢6V7F–öâ‚%&VÖ÷FR6WGF–æw2"’°Ğ¢6Æ–FW"‚%6†÷'B6÷VæB"ÂfÇVS¢G6†÷'E6÷VæBÂ&ævS¢ãââãÂ7FW¢ãRÂ7Vff—ƒ¢'2"Ğ¢6Æ–FW"‚$Æöær6÷VæB"ÂfÇVS¢FÆöæu6÷VæBÂ&ævS¢ãââãRÂ7FW¢ãÂ7Vff—ƒ¢'2"Ğ¢6Æ–FW"‚$v"ÂfÇVS¢FvÂ&ævS¢ãââã"Â7FW¢ãRÂ7Vff—ƒ¢'2"Ğ¢ĞĞ¢6V7F–öâ‚%&Wf–Wr"’°Ğ¢'WGFöâ‚.yúŞ™û>8).Ššn8’"’²6–væÅ6WGF–æw56÷VæBç&Wf–Wr‡6V6öæG3¢6†÷'E6÷VæB’ĞĞ¢'WGFöâ‚.™[~™û>8).Ššn8’"’²6–væÅ6WGF–æw56÷VæBç&Wf–Wr‡6V6öæG3¢Æöæu6÷VæB’ĞĞ¢ĞĞ¢ĞĞ¢ææf–vF–öåF—FÆR‚%&VÖ÷FR†÷&â"Ğ¢ç&VfW'&VD6öÆ÷%66†VÖR‚æF&²Ğ¢ĞĞ Ğ¢&—fFRgVæ26Æ–FW"…òF—FÆS¢7G&–ærÂfÇVS¢&–æF–æsÄF÷V&ÆSâÂ&ævS¢6Æ÷6VE&ævSÄF÷V&ÆSâÂ7FW¢F÷V&ÆRÂ7Vff—ƒ¢7G&–ærÂ×VÇF—Æ–W#¢F÷V&ÆRÒ’Óâ6öÖRf–Wr°Ğ¢e7F6²†Æ–væÖVçC¢æÆVF–ær’°Ğ¢…7F6²°Ğ¢FW‡B‡F—FÆRĞ¢76W"‚Ğ¢FW‡B…7G&–ær†f÷&ÖC¢"RãbT"ÂfÇVRçw&VEfÇVR¢×VÇF—Æ–W"Â7Vff—‚’Ğ¢æf÷&Vw&÷VæE7G–ÆR‚ç6V6öæF'’’æÖöæ÷76VDF–v—B‚Ğ¢ĞĞ¢6Æ–FW"‡fÇVS¢fÇVRÂ–ã¢&ævRÂ7FW¢7FWĞ¢ĞĞ¢ĞĞ§ĞĞ Ğ§&—fFRVçVÒ6–væÅ6WGF–æw56÷VæB°Ğ¢7FF–2gVæ2&Wf–Wr‡6V6öæG3¢F÷V&ÆR’°Ğ¢VF–õ6W'f–6W5Æ•7—7FVÕ6÷VæBƒBĞ¢F—7F6…VWVRæÖ–âæ7–æ4gFW"†FVFÆ–æS¢ææ÷r‚’²Ö‚ƒãÂ6V6öæG2’’°Ğ¢VF–õ6W'f–6W5Æ•7—7FVÕ6÷VæBƒBĞ¢ĞĞ¢ĞĞ§ĞĞ Ğ§&—fFRW‡FVç6–öâ6öÆ÷"°Ğ¢–æ—B††Wƒ¢7G&–ær’°Ğ¢ÆWBF–v—G2Ò†W‚çG&–ÖÖ–æt6†&7FW'2†–ã¢6†&7FW%6WBæÇ†çVÖW&–72æ–çfW'FVBĞ¢ÆWBfÇVRÒT–çCcB†F–v—G2Â&F—ƒ¢b’óò„ddddd`Ğ¢6VÆbæ–æ—B‚ç5$t"ÀĞ¢&VC¢F÷V&ÆR‚‡fÇVRãâb’b„db’ò#SRÀĞ¢w&VVã¢F÷V&ÆR‚‡fÇVRãâ‚’b„db’ò#SRÀĞ¢&ÇVS¢F÷V&ÆR‡fÇVRb„db’ò#SRÀĞ¢÷6—G“¢Ğ¢ĞĞ§ĞĞ Ğ¢6VæF–`Ğ

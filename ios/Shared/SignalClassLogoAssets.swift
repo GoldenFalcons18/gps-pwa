@@ -4,6 +4,19 @@ import ImageIO
 
 /// Bundled Wikimedia Commons sail emblems. Images are decoded once and remain available offline.
 enum SignalClassLogoAssets {
+    static let availableClassNames: [String] = {
+        let resources = ["signal-class-logos"] + (1...7).map { "signal-class-logos-extra-\($0)" }
+        var names = Set<String>()
+        for resource in resources {
+            guard let url = resourceURL(for: resource),
+                  let data = try? Data(contentsOf: url),
+                  let catalog = try? JSONSerialization.jsonObject(with: data) as? [String: String] else { continue }
+            names.formUnion(catalog.keys)
+        }
+        names.insert("420")
+        return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }()
+
     private static let imageData: [String: Data] = {
         var images: [String: Data] = [:]
         let resourceNames = [
