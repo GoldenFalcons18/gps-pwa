@@ -2,6 +2,21 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
+    func testOrangeFlagAlwaysUsesOrangeMastAndOtherFlagsStayOffIt() {
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 0), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 2), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "class-420", otherFlagOrdinal: 0), 0)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "P", otherFlagOrdinal: 1), 2)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 2), 3)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "first-sub", otherFlagOrdinal: 3), 4)
+    }
+
+    func testRecallAndAbandonControlsWaitForSequenceStart() {
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: false, firstActionPending: false, restartPending: false))
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: true, restartPending: false))
+        XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: false, restartPending: true))
+        XCTAssertTrue(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: false, restartPending: false))
+    }
     func testStartRuleSelectsItsMatchingPreparationSignal() {
         XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "P"), "P")
         XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "I"), "I")
@@ -26,10 +41,11 @@ final class SignalSequenceTests: XCTestCase {
         let anchored = try XCTUnwrap(SignalSequence.eventsStartingAtFirstClassWarning(configured))
         XCTAssertEqual(anchored.map(\.secondsAfterStart), [0, 60, 240, 300, 540])
         XCTAssertTrue(anchored.first?.title.contains("予告信号") == true)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 0), 120)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 0), 120)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 300, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 0), 300)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 0), 360)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 65)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 50, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 60)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 15), 110)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 300, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 300)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 301)
     }
 
     func testStartReferenceOffsetTracksOrangePhaseSettings() {

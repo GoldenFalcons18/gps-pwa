@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.Surface
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
@@ -344,6 +345,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalIndividualRecall.setOnClickListener { toggleIndividualRecall() }
         b.btnSignalNFlag.setOnClickListener { toggleAbandonFlag() }
         b.btnSignalInterrupt.setOnClickListener { showSignalInterruptDialog() }
+        b.btnSignalStop.setOnClickListener { resetSignalSequence() }
         b.btnSignalGeneralRecall.setOnClickListener { toggleGeneralRecall() }
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
@@ -512,6 +514,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun toggleAbandonFlag() {
         val wasUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp) {
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
@@ -569,6 +572,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun toggleIndividualRecall() {
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         val wasUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp) {
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",true).apply()
             playSignalHorn(SignalSequence.individualRecallRaise.hornPulses)
@@ -578,6 +582,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun toggleGeneralRecall() {
         val wasUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp && displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         if(!wasUp) {
             pauseSignalForManualEvent()
@@ -606,6 +611,31 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.postponementLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
+    }
+
+    private fun canOperateRaceSignals():Boolean {
+        val now=signalNow()
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        val mainStart=displayPrefs.getLong("signalElapsedStartAt",0L)
+        val restartStart=displayPrefs.getLong("signalRestartAt",0L)
+        val mainPaused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
+        val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
+        val hasStarted=mainStart>0L || mainPaused>=0L || restartStart>0L || restartPaused>=0L
+        val eventList=currentSignalEvents()
+        val raceStartOffset=(eventList.getOrNull(SignalSequence.raceStartEventIndex(eventList) ?: -1)?.secondsAfterStart ?: 0)*1000L
+        val sequenceBase=when {
+            restartMode && restartStart>0L -> restartStart
+            restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
+            mainStart>0L -> mainStart
+            mainPaused>=0L -> displayPrefs.getLong("signalPausedAtMs",now)-mainPaused
+            else -> 0L
+        }
+        val raceStartPending=sequenceBase>0L && sequenceBase+raceStartOffset>now
+        return SignalMastLayout.canOperateRaceSignals(
+            hasStarted=hasStarted,
+            firstActionPending=mainStart>now || raceStartPending,
+            restartPending=restartStart>now
+        )
     }
 
     private fun resetSignalSequence() {
@@ -735,6 +765,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             waitingForFirstSignal || !started -> -1
             else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
         }
+        val raceSignalControlsEnabled=SignalMastLayout.canOperateRaceSignals(
+            hasStarted=started,
+            firstActionPending=waitingForFirstSignal || raceStartPending,
+            restartPending=waitingForRestart
+        )
         val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
         val event=events[active.coerceAtLeast(0)]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.flag=="橙") {
@@ -755,7 +790,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             signalRowTimeViews.getOrNull(index)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+event.secondsAfterStart*1000L)) else signalEventTimeLabel(event,restartMode)
         }
         b.tvSignalClock.text=clock
-        b.tvSignalTitle.text=if(raceStartPending) "スタートまで" else if(waitingForFirstSignal) "分00秒待ち · ${event.title}" else event.title
+        b.tvSignalTitle.text=if(raceStartPending) "スタートまで" else if(waitingForFirstSignal) "クラス旗掲揚待ち · ${event.title}" else event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
         val raceDeltaMs=if(raceStartAt>0L) raceStartAt-now else 0L
@@ -770,7 +805,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             else -> ""
         }
         b.tvSignalCountdown.text=if(raceStartAt>0L) raceSign+"%02d:%02d".format(raceWholeSeconds/60,raceWholeSeconds%60) else "--:--"
-        b.tvSignalNextLabel.text=when {raceStartPending->"スタートまで";waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止";else->"レース経過"}
+        b.tvSignalNextLabel.text=when {raceStartPending->"スタートまで";waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"クラス旗掲揚まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止";else->"レース経過"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
             waitingForRestart || waitingForFirstSignal || !started -> mutableListOf()
@@ -788,18 +823,34 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if(displayPrefs.getBoolean("signalOrangeManualUp",false)) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
         }
         b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
+        b.btnSignalOrange.visibility=View.VISIBLE
         b.signalMast.show(raised,true)
-        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"分00秒合わせ中（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
-        b.btnSignalStart.isEnabled=!waitingForRestart && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalInterrupt.isEnabled=started
-        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalNFlag.text=if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) "N旗 降下" else "N旗（中止）"
-        b.btnSignalIndividualRecall.text=if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) "X旗 降下" else "個別リコール X旗（$prepFlag）"
-        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalGeneralRecall.text=if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) "第一代表旗 降下" else "ゼネラルリコール"
-        b.btnSignalPostponement.text=if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) "AP 降下" else "AP 掲揚"
-        b.btnSignalGeneralRecall.isEnabled=!displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalPostponement.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"クラス旗待ち（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
+        val xUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
+        val generalUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        val apUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
+        val nUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        val canRaiseX=raceSignalControlsEnabled && prepFlag in listOf("P","I") && !generalUp && !apUp && !nUp
+        val canRaiseGeneral=raceSignalControlsEnabled && !apUp && !nUp
+        val canRaiseAp=!generalUp && !nUp
+        val canRaiseN=raceSignalControlsEnabled
+        b.btnSignalStart.isEnabled=!waitingForRestart && !generalUp && !apUp && !nUp
+        b.btnSignalStart.visibility=if(b.btnSignalStart.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalInterrupt.isEnabled=started || waitingForRestart
+        b.btnSignalInterrupt.visibility=if(b.btnSignalInterrupt.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalStop.visibility=if(started || waitingForRestart) View.VISIBLE else View.GONE
+        b.btnSignalIndividualRecall.text=if(xUp) "X旗 降下" else "個別リコール X旗（$prepFlag）"
+        b.btnSignalIndividualRecall.isEnabled=xUp || canRaiseX
+        b.btnSignalIndividualRecall.visibility=if(b.btnSignalIndividualRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalGeneralRecall.text=if(generalUp) "第一代表旗 降下" else "ゼネラルリコール"
+        b.btnSignalGeneralRecall.isEnabled=generalUp || canRaiseGeneral
+        b.btnSignalGeneralRecall.visibility=if(b.btnSignalGeneralRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalPostponement.text=if(apUp) "AP 降下" else "AP 掲揚"
+        b.btnSignalPostponement.isEnabled=apUp || canRaiseAp
+        b.btnSignalPostponement.visibility=if(b.btnSignalPostponement.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalNFlag.text=if(nUp) "N旗 降下" else "N旗（中止）"
+        b.btnSignalNFlag.isEnabled=nUp || canRaiseN
+        b.btnSignalNFlag.visibility=if(b.btnSignalNFlag.isEnabled) View.VISIBLE else View.GONE
 
         val lastFired=displayPrefs.getInt("signalLastFiredIndex",-1)
         if(running && active>lastFired) {

@@ -98,6 +98,7 @@ struct SignalTimerPanel: View {
         if startAt > 0 || hasStarted { hasStarted = true }
     }
     private func toggleAbandon(at date: Date) {
+        if !abandonFlagUp && !canOperateRaceSignals(at: date) { return }
         if abandonFlagUp {
             abandonFlagUp = false
             playHorn(pulses: SignalSequence.abandonLower.hornPulses)
@@ -112,6 +113,7 @@ struct SignalTimerPanel: View {
         }
     }
     private func toggleIndividualRecall(at date: Date) {
+        if !individualRecallFlagUp && !canOperateRaceSignals(at: date) { return }
         if !individualRecallFlagUp && (generalRecallFlagUp || postponementFlagUp || abandonFlagUp) { return }
         if individualRecallFlagUp {
             individualRecallFlagUp = false
@@ -121,6 +123,7 @@ struct SignalTimerPanel: View {
         }
     }
     private func toggleGeneralRecall(at date: Date) {
+        if !generalRecallFlagUp && !canOperateRaceSignals(at: date) { return }
         if !generalRecallFlagUp && abandonFlagUp { return }
         if generalRecallFlagUp {
             generalRecallFlagUp = false
@@ -154,6 +157,21 @@ struct SignalTimerPanel: View {
     private func elapsed(at date: Date) -> Double {
         if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
         return hasStarted ? max(0, pausedSeconds) : 0
+    }
+    private func canOperateRaceSignals(at date: Date) -> Bool {
+        let correctedNow = date.timeIntervalSince1970 + clockOffset
+        let sequenceHasStarted = self.hasStarted || startAt > 0 || pausedAt > 0 || restartWarningAt > 0
+        let sequenceEvents = restartWarningAt > 0 ? recallRestartEvents : events
+        let raceStartOffset = Double(sequenceEvents[SignalSequence.raceStartEventIndex(in: sequenceEvents) ?? 0].secondsAfterStart)
+        let sequenceBaseTime = restartWarningAt > 0
+            ? restartWarningAt
+            : (startAt > 0 ? startAt : (sequenceHasStarted ? pausedAt - pausedSeconds : 0))
+        let raceStartPending = sequenceBaseTime > 0 && sequenceBaseTime + raceStartOffset > correctedNow
+        return SignalSequence.canOperateRaceSignals(
+            hasStarted: sequenceHasStarted,
+            firstActionPending: startAt > correctedNow || raceStartPending,
+            restartPending: restartWarningAt > correctedNow
+        )
     }
     private func running(at date: Date) -> Bool {
         startAt > 0 && elapsed(at: date) < Double(events.last?.secondsAfterStart ?? 1200)
@@ -314,6 +332,11 @@ struct SignalTimerPanel: View {
                 : running(at: now)
             let raceCountdown = secondsUntilRaceStart.map(raceCountdownText)
             let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
+            let raceSignalControlsEnabled = SignalSequence.canOperateRaceSignals(
+                hasStarted: hasStarted,
+                firstActionPending: waitingForFirstSignal || raceStartPending,
+                restartPending: retryPending
+            )
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
@@ -331,7 +354,7 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(raceStartEvent.map { "\($0.flags.first?.name ?? "") スタート時刻" } ?? (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "次の分00秒まで" : (useRetrySequence ? "再予告信号時刻" : "スタート時刻")))).foregroundStyle(.black)
+                    Text(raceStartEvent.map { "\($0.flags.first?.name ?? "") スタート時刻" } ?? (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "クラス旗掲揚待ち" : (useRetrySequence ? "再予告信号時刻" : "スタート時刻")))).foregroundStyle(.black)
                     Spacer()
                     Text(raceStartTime.map { SignalSequence.clockText(Date(timeIntervalSince1970: $0)) } ?? "TBD")
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
@@ -339,7 +362,7 @@ struct SignalTimerPanel: View {
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
                 HStack(spacing: 8) {
                     Text(raceStartPending && raceStartEvent != nil ? "↓" : (waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓"))).font(.title3.bold()).foregroundStyle(.black)
-                    Text(raceStartPending && raceStartEvent != nil ? "スタートまで" : (waitingForFirstSignal ? "分00秒待ち · " + current.title : current.title)).font(.caption).lineLimit(1)
+                    Text(raceStartPending && raceStartEvent != nil ? "スタートまで" : (waitingForFirstSignal ? "クラス旗掲揚待ち · " + current.title : current.title)).font(.caption).lineLimit(1)
                     Spacer()
                     Text((raceStartTime != nil || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
@@ -373,11 +396,16 @@ struct SignalTimerPanel: View {
                     }
                 }
                 HStack(spacing: compact ? 8 : 22) {
-                    Button("中断…") { showInterruptOptions = true }
-                        .disabled(!hasStarted && restartWarningAt == 0).foregroundStyle(.gray)
-                    Button(waitingForFirstSignal ? "分00秒合わせ中（取消）" : (retrySequenceComplete ? "開始" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")))) { startOrPause(at: now) }
-                        .disabled(retryPending || (useRetrySequence && !retrySequenceComplete) || generalRecallFlagUp || postponementFlagUp)
-                        .foregroundStyle(.blue).fontWeight(.semibold)
+                    if hasStarted || restartWarningAt > 0 {
+                        Button("中断…") { showInterruptOptions = true }
+                            .foregroundStyle(.gray)
+                        Button("停止", role: .destructive) { reset() }
+                    }
+                    let canStartSequence = !retryPending && !(useRetrySequence && !retrySequenceComplete) && !generalRecallFlagUp && !postponementFlagUp
+                    if canStartSequence {
+                        Button(waitingForFirstSignal ? "クラス旗待ち（取消）" : (retrySequenceComplete ? "開始" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")))) { startOrPause(at: now) }
+                            .foregroundStyle(.blue).fontWeight(.semibold)
+                    }
                     #if os(iOS)
                     Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
                     #else
@@ -393,13 +421,18 @@ struct SignalTimerPanel: View {
                         orangeRaisedAt = raise ? now.timeIntervalSince1970 + clockOffset : 0
                         if raise { playHorn(pulses: [0]) }
                     }
-                    Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
-                        .disabled(!["P", "I"].contains(prepFlagID) || generalRecallFlagUp || postponementFlagUp)
-                    Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
-                        .disabled(postponementFlagUp || abandonFlagUp)
-                    Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
-                        .disabled(generalRecallFlagUp || abandonFlagUp)
-                    Button(abandonFlagUp ? "N旗 降下" : "すべて中止 N旗") { toggleAbandon(at: now) }
+                    if individualRecallFlagUp || (raceSignalControlsEnabled && ["P", "I"].contains(prepFlagID) && !generalRecallFlagUp && !postponementFlagUp && !abandonFlagUp) {
+                        Button(individualRecallFlagUp ? "X旗 降下" : "個別リコール X旗") { toggleIndividualRecall(at: now) }
+                    }
+                    if generalRecallFlagUp || (raceSignalControlsEnabled && !postponementFlagUp && !abandonFlagUp) {
+                        Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
+                    }
+                    if postponementFlagUp || (!generalRecallFlagUp && !abandonFlagUp) {
+                        Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
+                    }
+                    if abandonFlagUp || raceSignalControlsEnabled {
+                        Button(abandonFlagUp ? "N旗 降下" : "すべて中止 N旗") { toggleAbandon(at: now) }
+                    }
                 }
                 .font(.system(size: compact ? 9 : 12, weight: .semibold))
                 .buttonStyle(.bordered)
@@ -577,13 +610,19 @@ private struct MastPole: View {
     let flags: [SignalSequence.Flag]
     let height: CGFloat
 
+    private func assignedPole(for flagIndex: Int) -> Int {
+        let flag = flags[flagIndex]
+        let ordinal = flags.prefix(flagIndex).filter { $0.id != "orange" }.count
+        return SignalSequence.mastPoleIndex(flagID: flag.id, otherFlagOrdinal: ordinal)
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle()
                 .fill(poleIndex == 1 ? Color.orange : Color.gray.opacity(0.85))
                 .frame(width: 2, height: height * 0.94)
             ForEach(flags.indices, id: \.self) { flagIndex in
-                if [1, 3, 2, 4, 0][flagIndex % 5] == poleIndex {
+                if assignedPole(for: flagIndex) == poleIndex {
                     SignalFlagView(flag: flags[flagIndex])
                         .frame(width: 25, height: 18)
                         .offset(x: 2, y: CGFloat(flagIndex / 5) * 20 + 8)

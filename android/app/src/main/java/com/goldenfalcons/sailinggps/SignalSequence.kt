@@ -51,6 +51,17 @@ data class SignalFlagState(
     }
 )
 
+object SignalMastLayout {
+    private val nonOrangePoles = intArrayOf(0, 2, 3, 4)
+
+    fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int =
+        if (flagId == "橙" || flagId == "orange") 1
+        else nonOrangePoles[otherFlagOrdinal.coerceIn(0, nonOrangePoles.lastIndex)]
+
+    fun canOperateRaceSignals(hasStarted: Boolean, firstActionPending: Boolean, restartPending: Boolean): Boolean =
+        hasStarted && !firstActionPending && !restartPending
+}
+
 object SignalSequence {
     fun preparationFlagForStartRule(rule: String): String = when (rule) {
         "P", "I", "U", "Z" -> rule

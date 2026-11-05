@@ -6,6 +6,23 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
+    fun orangeFlagAlwaysUsesOrangePoleAndOtherFlagsUseDifferentPoles() {
+        assertEquals(1, SignalMastLayout.poleIndex("橙", 0))
+        assertEquals(1, SignalMastLayout.poleIndex("orange", 2))
+        assertEquals(0, SignalMastLayout.poleIndex("class-420", 0))
+        assertEquals(2, SignalMastLayout.poleIndex("P", 1))
+        assertEquals(3, SignalMastLayout.poleIndex("X", 2))
+        assertEquals(4, SignalMastLayout.poleIndex("第一代表", 3))
+    }
+
+    @Test
+    fun raceSignalControlsStayDisabledUntilFirstActionBegins() {
+        assertEquals(false, SignalMastLayout.canOperateRaceSignals(false, false, false))
+        assertEquals(false, SignalMastLayout.canOperateRaceSignals(true, true, false))
+        assertEquals(false, SignalMastLayout.canOperateRaceSignals(true, false, true))
+        assertEquals(true, SignalMastLayout.canOperateRaceSignals(true, false, false))
+    }
+    @Test
     fun startRuleSelectsItsMatchingPreparationSignal() {
         assertEquals("P", SignalSequence.preparationFlagForStartRule("P"))
         assertEquals("I", SignalSequence.preparationFlagForStartRule("I"))
@@ -25,10 +42,10 @@ class SignalSequenceTest {
         assertEquals(listOf(0, 60, 240, 300, 540), anchored.map { it.secondsAfterStart })
         assertEquals("クラス旗を掲揚（予告信号）", anchored.first().title)
         assertEquals("橙", anchored.last().flag)
-        assertEquals(300_000L, SignalTiming.startAfterOrangeRaise(300_000L, 0L, 5, 0))
-        assertEquals(360_000L, SignalTiming.startAfterOrangeRaise(301_000L, 0L, 5, 0))
-        assertEquals(120_000L, SignalTiming.startAfterOrangeRaise(65_000L, 0L, 1, 0))
-        assertEquals(120_000L, SignalTiming.startAfterOrangeRaise(65_000L, 50_000L, 1, 0))
+        assertEquals(300_000L, SignalTiming.startAfterOrangeRaise(300_000L, 0L, 5, 15))
+        assertEquals(301_000L, SignalTiming.startAfterOrangeRaise(301_000L, 0L, 5, 15))
+        assertEquals(60_000L, SignalTiming.startAfterOrangeRaise(50_000L, 0L, 1, 15))
+        assertEquals(110_000L, SignalTiming.startAfterOrangeRaise(65_000L, 50_000L, 1, 15))
     }
 
     @Test

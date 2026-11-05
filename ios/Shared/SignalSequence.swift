@@ -4,6 +4,17 @@ import Foundation
 /// with the orange starting-line flag, five minutes before the warning signal.
 /// Video profiles remain available as alternate reference sequences.
 struct SignalSequence {
+    private static let nonOrangeMastPoles = [0, 2, 3, 4]
+
+    static func mastPoleIndex(flagID: String, otherFlagOrdinal: Int) -> Int {
+        if flagID == "orange" { return 1 }
+        return nonOrangeMastPoles[min(max(0, otherFlagOrdinal), nonOrangeMastPoles.count - 1)]
+    }
+
+    static func canOperateRaceSignals(hasStarted: Bool, firstActionPending: Bool, restartPending: Bool) -> Bool {
+        hasStarted && !firstActionPending && !restartPending
+    }
+
     static func preparationFlagID(forStartRule rule: String) -> String {
         switch rule {
         case "P", "I", "U", "Z": return rule
@@ -24,8 +35,10 @@ struct SignalSequence {
     }
 
     static func startAfterOrangeRaise(now: Double, orangeRaisedAt: Double, intervalMinutes: Int, minimumLeadSeconds: Int) -> Double {
-        let earliest = max(now + Double(max(0, minimumLeadSeconds)), orangeRaisedAt + Double(max(0, intervalMinutes) * 60))
-        return nextMinuteBoundary(at: earliest, minimumLeadSeconds: 0)
+        // The manual orange raise is the timing anchor. Start immediately when
+        // its interval has elapsed, otherwise wait only for the exact deadline.
+        // This path must not inherit the generic minimum lead or minute rounding.
+        max(now, orangeRaisedAt + Double(max(0, intervalMinutes) * 60))
     }
 
     struct Flag: Identifiable, Equatable, Codable {
