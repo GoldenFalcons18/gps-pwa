@@ -1,149 +1,467 @@
-Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌ◊myÈ:-jZ.∂õ≠ñ)ﬁ≥^‹X⁄ÿYŸH€€Kô€€[ôò[€€úÀúÿZ[[ôŸ‹√BÉBö[\‹ù[ôõ⁄Yò€€ù[ùê€€ù^Bö[\‹ù[ôõ⁄Yô‹ò\X‹Àê€€‹ÉBö[\‹ù[ôõ⁄Yõ‹Àêù[ôCBö[\‹ù[ôõ⁄YùöY]Àë‹ò]ö]CBö[\‹ù[ôõ⁄YùöY]ÀïöY]√Bö[\‹ù[ôõ⁄Yù⁄YŸ]äÉBö[\‹ù[ôõ⁄Yò\€€\]ò\ê[\ùX[Ÿ√Bö[\‹ù[ôõ⁄Yò\€€\]ò\ê\€€\]X›]ö]CBÉBò€\‹»⁄Y€ò[Ÿ][ô‹–X›]ö]Hà\€€\]X›]ö]J
-H√Bàö]ò]Hò[ôYú»ûH^ûH»Ÿ]⁄\ôYôYô\ô[òŸ\ ô\‹^Hã€€ù^ìS—W‘íUêUJHCBàö]ò]H]Z[ö]ò\à\›à[ôX\ì^[›]Bàö]ò]Hò[⁄]HH€€‹ãï“UCBàö]ò]Hò[‹ò[ôŸHHëëëêPLù“[ù
+package com.goldenfalcons.sailinggps
 
-CBÉBà›ô\úöYHù[à€ê‹ôX]Jÿ]ôY[ú›[òŸT›]Nàù[ôO H√Bà›\\ãõ€ê‹ôX]Jÿ]ôY[ú›[òŸT›]JCBà⁄[ô›Àú›]\–ò\ê€€‹àHëåLLLLLKù“[ù
+import android.content.Context
+import android.graphics.Color
+import android.os.Bundle
+import android.view.Gravity
+import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 
-CBàò[YŸHH[ôX\ì^[›]
-\ Kò\H»‹öY[ù][€àH[ôX\ì^[›]ïëTïP–S»Ÿ]òX⁄Ÿ‹õ›[ô€€‹äëåPÃPÃQKù“[ù
+class SignalSettingsActivity : AppCompatActivity() {
+    private val prefs by lazy { getSharedPreferences("display", Context.MODE_PRIVATE) }
+    private lateinit var list: LinearLayout
+    private val white = Color.WHITE
+    private val orange = 0xFFFFAA00.toInt()
 
-JHCBàò[XY\àH[ôX\ì^[›]
-\ Kò\H»‹ò]ö]HH‹ò]ö]Kê—SïTó’ëTïP–S»Ÿ]Y[ô MãMã
-HCBàXY\ãòYöY] ù]€ä\ Kò\H»^H∏†.Hé»^⁄^ôHHçé»Ÿ]€ê€X⁄”\›[ô\à»ö[ö\⁄
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        window.statusBarColor = 0xFF111111.toInt()
+        val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF1C1C1E.toInt()) }
+        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(16, 8, 16, 8) }
+        header.addView(Button(this).apply { text = "‚Äπ"; textSize = 24f; setOnClickListener { finish() } })
+        header.addView(TextView(this).apply { text = "Settings"; textSize = 22f; setTextColor(white); gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(0,-2,1f) })
+        header.addView(Button(this).apply { text = "ÂÆå‰∫Ü"; setTextColor(orange); setOnClickListener { finish() } })
+        page.addView(header)
+        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12, 0, 12, 20) }
+        page.addView(ScrollView(this).apply { addView(list) })
+        setContentView(page)
+        build()
+    }
 
-HHJCBàXY\ãòYöY] ^öY] \ Kò\H»^HîŸ][ô‹»é»^⁄^ôHHåôé»Ÿ]^€€‹ä⁄]JN»‹ò]ö]HH‹ò]ö]Kê—SïTé»^[›]\ò[\»H[ôX\ì^[›]ì^[›]\ò[\ LãYäHJCBàXY\ãòYöY] ù]€ä\ Kò\H»^Hπk£9.°àé»Ÿ]^€€‹ä‹ò[ôŸJN»Ÿ]€ê€X⁄”\›[ô\à»ö[ö\⁄
+    private fun build() {
+        list.removeAllViews()
+        section("General Settings")
+        row("Mode", "Fleet") {}
+        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("Ê¨°„ÅÆÂàÜ00Áßí„Åæ„Åß„ÅÆÊúÄÁü≠ÊôÇÈñì", "signalMinimumTimeToFirstAction", 15, 0, 120) }
+        row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "Á´ØÊú´„ÅÆÊ®ôÊ∫ñÈü≥Â£∞"), "signalVoiceName") }
+        row("Notifications", "Management (Radio)") { notifications() }
+        row("ÊôÇÂàªÂêåÊúüÔºàntp.nict.jpÔºâ", "ÂêåÊúü") {
+            NictClock.query { result -> runOnUiThread {
+                result.onSuccess { offset ->
+                    prefs.edit().putLong("signalClockOffsetMs", offset).apply()
+                    Toast.makeText(this, "ÊôÇÂàªÂêåÊúü„Åó„Åæ„Åó„ÅüÔºàÂ∑Æ ${if (offset >= 0) "+" else ""}${offset} msÔºâ", Toast.LENGTH_LONG).show()
+                }.onFailure {
+                    Toast.makeText(this, "ÊôÇÂàªÂêåÊúü„Å´Â§±Êïó„Åó„Åæ„Åó„Åü„ÄÇÁ´ØÊú´ÊôÇÂàª„Çí‰ΩøÁî®„Åó„Åæ„Åô", Toast.LENGTH_LONG).show()
+                }
+            } }
+        }
+        row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
+        switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
+        switch("BuoyZone", "signalBuoyZoneLinked", false)
+        switch("External Display", "signalExternalDisplayEnabled", true)
+        row("Log", "Ë®òÈå≤Ë®≠ÂÆö") { simpleSwitch("Log", "signalLogEnabled", true) }
 
-HHJCBàYŸKòYöY] XY\äCBà\›H[ôX\ì^[›]
-\ Kò\H»‹öY[ù][€àH[ôX\ì^[›]ïëTïP–S»Ÿ]Y[ô LãLãå
-HCBàYŸKòYöY] ÿ‹õ€öY] \ Kò\H»YöY] \›
-HJCBàŸ]€€ù[ùöY] YŸJCBàùZ[
+        section("Fleet Start Sequences")
+        val names = prefs.getStringSet("signalFleetPresetNames", setOf("OP Au Bp")) ?: setOf("OP Au Bp")
+        val activeFleet = prefs.getString("signalFleetStartName", "OP Au Bp") ?: "OP Au Bp"
+        names.sorted().forEach { name -> row(name, if (name == activeFleet) "‰ΩøÁî®‰∏≠„ÉªÁ∑®ÈõÜ" else "ÈÅ∏Êäû„ÉªÁ∑®ÈõÜ") { fleet(name) } }
+        row("Ôºã Fleet Start", "Add") { addFleet() }
 
-CBàCBÉBàö]ò]Hù[àùZ[
+        section("$activeFleet ¬∑ Starts")
+        val storedStarts=prefs.getStringSet("signalStartEntries",setOf("Class ¬∑ T‚àí5:00 ¬∑ Êé≤Êèö ¬∑ Áü≠Èü≥")) ?: emptySet()
+        val obsoletePrepRows=setOf("P","I","U","Z","BLACK")
+        val starts=storedStarts.filterNot { it.substringBefore("¬∑").trim().uppercase() in obsoletePrepRows }.toSet()
+        if(starts!=storedStarts) prefs.edit().putStringSet("signalStartEntries",starts).apply()
+        starts.forEach { row(it,"‚àí") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
+        row("Ôºã Add Start‚Ä¶","‚Ä∫") { addStart() }
+        section("Class Flags")
+        row("„ÇØ„É©„ÇπÊóó„ÇíÁ∑®ÈõÜ","Á∑®ÈõÜ") { flagEditor() }
+        row("International Flag","‰∏ÄË¶ß") { internationalFlags() }
+    }
 
-H√Bà\›úô[[›ôP[öY]‹ 
-CBàŸX›[€äëŸ[ô\ò[Ÿ][ô‹»äCBàõ› ì[ŸHãëõY]äHﬂCBàõ› ìZ[ö[][HXY[YH»ô\õ»ãôYúÀôŸ][ù
-ú⁄Y€ò[Z[ö[][U[YU—ö\ú›X›[€àãMJKù‘›ö[ô 
-H
-»ú»äH»ù[Xô\äπ´(x‡kπb!å9È‰∏‡o∏‡i¯‡kπß 9ÁÎy¶`∫e§»ãú⁄Y€ò[Z[ö[][U[YU—ö\ú›X›[€àãMKLå
-HCBàõ› ïõ⁄XŸHãôYúÀôŸ]›ö[ô ú⁄Y€ò[õ⁄XŸSò[YHãíﬁ[⁄€»
-[ö[òŸY
-HäHŒààäH»⁄€‹ŸJïõ⁄XŸHã\›Ÿäíﬁ[⁄€»
-[ö[òŸY
-HãπÍÎ˘ß*¯‡kπ™&yÆ•∫gÏ˘hÏäKú⁄Y€ò[õ⁄XŸSò[YHäHCBàõ› ìõ›YöXÿ][€ú»ãìX[òYŸ[Y[ù
-òY[ HäH»õ›YöXÿ][€ú 
-HCBàõ› π¶`πb.˘d#9ß'˚Ô"ùõöX›öú;Ô"Hãπd#9ß'»äH√BàöX›€ÿ⁄Àú]Y\ûH»ô\›[Oàù[ì€ïZUôXY√Bàô\›[õ€î›XÿŸ\‹»»ŸôúŸ]OÉBàôYúÀôY]
+    private fun section(title: String) {
+        list.addView(TextView(this).apply { text=title; textSize=17f; setTextColor(0xFFB0B0B5.toInt()); setPadding(6,20,4,8) })
+    }
+    private fun row(title: String, value: String, click: () -> Unit) {
+        val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; minimumHeight=50; setPadding(6,4,4,4) }
+        r.addView(TextView(this).apply { text=title; textSize=15f; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
+        r.addView(TextView(this).apply { text=value+"  ‚Ä∫"; textSize=14f; setTextColor(0xFFAAAAAA.toInt()) })
+        r.setOnClickListener { click() }; list.addView(r)
+        list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) },LinearLayout.LayoutParams(-1,1))
+    }
+    private fun switch(title:String,key:String,default:Boolean) {
+        val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; minimumHeight=50; setPadding(6,4,4,4) }
+        r.addView(TextView(this).apply { text=title; textSize=15f; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
+        r.addView(android.widget.Switch(this).apply { isChecked=prefs.getBoolean(key,default); setOnCheckedChangeListener { _,v -> prefs.edit().putBoolean(key,v).apply() } })
+        list.addView(r); list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) },LinearLayout.LayoutParams(-1,1))
+    }
+    private fun number(title:String,key:String,default:Int,min:Int,max:Int) {
+        val input=EditText(this).apply { setText(prefs.getInt(key,default).toString()); inputType=2; setTextColor(white) }
+        AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("‰øùÂ≠ò") { _,_ ->
+            prefs.edit().putInt(key,(input.text.toString().toIntOrNull()?:default).coerceIn(min,max)).apply(); build()
+        }.show()
+    }
+    private fun choose(title:String,items:List<String>,key:String) {
+        AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
+            prefs.edit().putString(key,items[i]).apply()
+            if(key=="signalStartRule") {
+                val prep=SignalSequence.preparationFlagForStartRule(items[i])
+                prefs.edit().putString("signalPrepFlag",prep).apply()
+            }
+            build()
+        }.show()
+    }
+    private fun simpleSwitch(title:String,key:String,default:Boolean) {
+        val cb=CheckBox(this).apply { text=title; setTextColor(white); isChecked=prefs.getBoolean(key,default) }
+        AlertDialog.Builder(this).setTitle(title).setView(cb).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("‰øùÂ≠ò"){_,_->prefs.edit().putBoolean(key,cb.isChecked).apply()}.show()
+    }
+    private fun addFleet() {
+        val input=EditText(this).apply { hint="Fleet Start name"; setTextColor(white) }
+        AlertDialog.Builder(this).setTitle("Êñ∞Ë¶è„Éï„É™„Éº„ÉàÊâãÈ†Ü").setView(input).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("‰ΩúÊàê"){_,_->
+            val name=input.text.toString().trim().ifEmpty{"Fleet Start"}
+            val names=prefs.getStringSet("signalFleetPresetNames",setOf("OP Au Bp"))?.toMutableSet()?:mutableSetOf()
+            val current=prefs.getString("signalFleetStartName","OP Au Bp") ?: "OP Au Bp"
+            saveFleetConfig(current)
+            names.add(name); prefs.edit().putStringSet("signalFleetPresetNames",names).putString("signalFleetStartName",name).apply()
+            saveFleetConfig(name)
+            build()
+        }.show()
+    }
+    private fun fleet(name:String) {
+        val previous = prefs.getString("signalFleetStartName", "OP Au Bp") ?: "OP Au Bp"
+        if (name != previous) saveFleetConfig(previous)
+        loadFleetConfig(name)
+        prefs.edit().putString("signalFleetStartName",name).apply()
 
-Kú]€ô ú⁄Y€ò[€ÿ⁄”ŸôúŸ]\»ãŸôúŸ]
-Kò\J
-CBàÿ\›õXZŸU^
-\Àπ¶`πb.˘d#9ß'¯‡e¯‡o∏‡e¯‡g˚Ô"9mÎà	⁄Yà
-ŸôúŸ]èH
-Hä»à[ŸHàüI€ŸôúŸ]H\˚Ô"Hãÿ\›ìSë’””ë Kú⁄› 
-CBàKõ€ëòZ[\ôH√Bàÿ\›õXZŸU^
-\Àπ¶`πb.˘d#9ß'¯‡j˘i,y•e¯‡e¯‡o∏‡e¯‡g¯‡ πÍÎ˘ß*˘¶`πb.¯‡§π/o˘Â*8‡e¯‡o∏‡fHãÿ\›ìSë’””ë Kú⁄› 
-CBàCBàHCBàCBàõ› í‹õàãYà
-ôYúÀôŸ]õ€€X[äú⁄Y€ò[‹õë[òXõYãùYJJHïö\ùX[à[ŸHë\ÿXõYäH»‹õä
-HCBà›⁄]⁄
-îô[[›HõY‹»
-[JHãú⁄Y€ò[ô[[›QõY‹—[òXõYãò[ŸJCBà›⁄]⁄
-êù[ﬁVõ€ôHãú⁄Y€ò[ù[ﬁVõ€ôS[öŸYãò[ŸJCBà›⁄]⁄
-ë^\õò[\‹^Hãú⁄Y€ò[^\õò[\‹^Q[òXõYãùYJCBàõ› ìŸ»ã∫*&:c,∫*+yk¶àäH»⁄[\T›⁄]⁄
-ìŸ»ãú⁄Y€ò[Ÿ—[òXõYãùYJHCBÉBàŸX›[€äëõY]›\ùŸ\]Y[òŸ\»äCBàò[ò[Y\»HôYúÀôŸ]›ö[ô‘Ÿ]
-ú⁄Y€ò[õY]ô\Ÿ]ò[Y\»ãŸ]Ÿäì‘]HúäJHŒàŸ]Ÿäì‘]HúäCBàò[X›]ôQõY]HôYúÀôŸ]›ö[ô ú⁄Y€ò[õY]›\ùò[YHãì‘]HúäHŒàì‘]HúÉBàò[Y\Àú€‹ùY
+        val content = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(18,8,18,12) }
+        val scroller = ScrollView(this).apply { addView(content) }
+        fun label(text:String) { content.addView(TextView(this).apply { this.text=text; setTextColor(white); setPadding(0,10,0,4) }) }
+        fun field(title:String, value:String):EditText {
+            label(title)
+            return EditText(this).apply { setText(value); setTextColor(white); setSingleLine(true); content.addView(this) }
+        }
+        val nameField=field("Name",name)
+        label("Defaults ¬∑ Start sequence")
+        content.addView(TextView(this).apply { text="Rule 26 ¬∑ 5 min"; setTextColor(0xFFBBBBBB.toInt()); textSize=16f })
+        label("Start rule / preparation signal (paired)")
+        val ruleSpinner=Spinner(this)
+        val rules=listOf("P","I","U","Z","Black","Default")
+        ruleSpinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,rules)
+        val selectedRule=prefs.getString("signalStartRule","P") ?: "P"
+        ruleSpinner.setSelection(rules.indexOf(selectedRule).coerceAtLeast(0)); content.addView(ruleSpinner)
+        label("Class flag")
+        val classes=SignalClassLogoAssets.availableClassNames(this)
+        val classSpinner=Spinner(this)
+        classSpinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,classes)
+        val currentClass=prefs.getString("signalSelectedClassName", "420") ?: "420"
+        classSpinner.setSelection(classes.indexOf(currentClass).coerceAtLeast(0)); content.addView(classSpinner)
+        val orangeEnabled=CheckBox(this).apply { text="Orange flag enabled"; setTextColor(white); isChecked=prefs.getBoolean("signalOrangeEnabled",true); content.addView(this) }
+        val orangeMinutes=field("Orange flag: raise to warning interval (minutes)",prefs.getInt("signalOrangeDisplayedMinutes",5).toString())
+        val orangeRemove=field("Lower orange flag after start (minutes)",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString())
+        val delayEnabled=CheckBox(this).apply { text="Custom race delay"; setTextColor(white); isChecked=prefs.getBoolean("signalRaceDelayEnabled",false); content.addView(this) }
+        val delay=field("Time between races (minutes)",prefs.getInt("signalRaceDelayMinutes",0).toString())
+        val limitEnabled=CheckBox(this).apply { text="Time limit enabled"; setTextColor(white); isChecked=prefs.getBoolean("signalTimeLimitEnabled",false); content.addView(this) }
+        val raceLimit=field("Race limit (minutes)",prefs.getInt("signalRaceLimitMinutes",50).toString())
+        val finishWindow=field("Finish window (minutes)",prefs.getInt("signalFinishWindowMinutes",20).toString())
+        val rule42=CheckBox(this).apply { text="Rule 42 override"; setTextColor(white); isChecked=prefs.getBoolean("signalRule42Override",false); content.addView(this) }
+        val startRows=prefs.getStringSet("signalStartEntries",setOf("Class ¬∑ T‚àí5:00 ¬∑ Êé≤Êèö ¬∑ Áü≠Èü≥")) ?: emptySet()
+        label("Starts")
+        startRows.sorted().forEach { action ->
+            val actionRow=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; orientation=LinearLayout.HORIZONTAL }
+            actionRow.addView(TextView(this).apply { text="‚Ä¢ $action"; setTextColor(white); setPadding(0,4,0,4); layoutParams=LinearLayout.LayoutParams(0,-2,1f); setOnClickListener { addStart(action) } })
+            actionRow.addView(Button(this).apply { text="‚àí"; setOnClickListener { removeStart(action) } })
+            content.addView(actionRow)
+        }
+        content.addView(Button(this).apply { text="Ôºã Add Start‚Ä¶"; setOnClickListener { addStart() } })
 
-Kôõ‹ëXX⁄»ò[YHOàõ› ò[YKYà
-ò[YHOHX›]ôQõY]
-Hπ/o˘Â*9.+x‡Ó˘ÌÍ:f·àà[ŸH∫`n9¢ß∏‡Ó˘ÌÍ:f·àäH»õY]
-ò[YJHHCBàõ› ªÔ"»õY]›\ùãêYäH»YõY]
+        AlertDialog.Builder(this).setTitle("Fleet Start").setView(scroller).setNegativeButton("Cancel"){_,_->loadFleetConfig(previous); prefs.edit().putString("signalFleetStartName",previous).apply()}.setPositiveButton("Save"){_,_->
+            val updated=nameField.text.toString().trim().ifEmpty{name}
+            val rule=rules[ruleSpinner.selectedItemPosition]
+            val selectedClass=classes.getOrElse(classSpinner.selectedItemPosition){"420"}
+            val editor=prefs.edit()
+                .putString("signalFleetStartName",updated)
+                .putString("signalStartRule",rule)
+                .putString("signalPrepFlag",SignalSequence.preparationFlagForStartRule(rule))
+                .putString("signalSelectedClassName",selectedClass)
+                .putString("signalCustomClassFlag","class-$selectedClass")
+                .putBoolean("signalOrangeEnabled",orangeEnabled.isChecked)
+                .putInt("signalOrangeDisplayedMinutes",orangeMinutes.text.toString().toIntOrNull()?.coerceIn(0,30)?:5)
+                .putInt("signalOrangeRemovedAfterMinutes",orangeRemove.text.toString().toIntOrNull()?.coerceIn(0,30)?:4)
+                .putBoolean("signalRaceDelayEnabled",delayEnabled.isChecked)
+                .putInt("signalRaceDelayMinutes",delay.text.toString().toIntOrNull()?.coerceIn(0,60)?:0)
+                .putBoolean("signalTimeLimitEnabled",limitEnabled.isChecked)
+                .putInt("signalRaceLimitMinutes",raceLimit.text.toString().toIntOrNull()?.coerceIn(1,300)?:50)
+                .putInt("signalFinishWindowMinutes",finishWindow.text.toString().toIntOrNull()?.coerceIn(1,120)?:20)
+                .putBoolean("signalRule42Override",rule42.isChecked)
+            editor.apply()
+            if (updated != name) {
+                val names=prefs.getStringSet("signalFleetPresetNames",setOf(name))?.toMutableSet()?:mutableSetOf()
+                names.remove(name); names.add(updated); prefs.edit().putStringSet("signalFleetPresetNames",names).apply()
+            }
+            saveFleetConfig(updated)
+            build()
+        }.show()
+    }
 
-HCBÉBàŸX›[€äâX›]ôQõY]0≠»›\ù»äCBàò[›‹ôY›\ùœ\ôYúÀôŸ]›ö[ô‘Ÿ]
-ú⁄Y€ò[›\ù[ùöY\»ãŸ]Ÿäê€\‹»0≠»8¢$çNå0≠»9£¨π£Êà0≠»9ÁÎzgÏ»äJHŒà[\TŸ]
-
-CBàò[ÿú€€]Tô\õ›‹œ\Ÿ]ŸäîãíHãïHãñàãêìP“»äCBàò[›\ùœ\›‹ôY›\ùÀôö[\ìõ›»]ú›Xú›ö[ô–ôYõ‹ôJ∞≠»äKùö[J
-Kù\\òÿ\ŸJ
-H[àÿú€€]Tô\õ›‹»Kù‘Ÿ]
-
-CBàYä›\ù»O\›‹ôY›\ù HôYúÀôY]
-
-Kú]›ö[ô‘Ÿ]
-ú⁄Y€ò[›\ù[ùöY\»ã›\ù Kò\J
-CBà›\ùÀôõ‹ëXX⁄»õ› ]∏¢$àäH»ò[€‹O\›\ùÀù”]]XõTŸ]
-
-N»€‹Kúô[[›ôJ]
-N»ôYúÀôY]
-
-Kú]›ö[ô‘Ÿ]
-ú⁄Y€ò[›\ù[ùöY\»ã€‹JKò\J
-N»ùZ[
-
-HHCBàõ› ªÔ"»Y›\ù8†)àã∏†.àäH»Y›\ù
-
-HCBàŸX›[€äê€\‹»õY‹»äCBàõ› ∏‡´¯‡Íx‡Æy•Â¯‡§πÌÍ:f·àãπÌÍ:f·àäH»õY—Y]‹ä
-HCBàõ› í[ù\õò][€ò[õY»ãπ. :)©»äH»[ù\õò][€ò[õY‹ 
-HCBàCBÉBàö]ò]Hù[àŸX›[€ä]Nà›ö[ô H√Bà\›òYöY] ^öY] \ Kò\H»^]]N»^⁄^ôOLMŸé»Ÿ]^€€‹äëêååçKù“[ù
-
-JN»Ÿ]Y[ô ãå
-HJCBàCBàö]ò]Hù[àõ› ]Nà›ö[ôÀò[YNà›ö[ôÀ€X⁄Œà
-
-HOà[ö]
-H√Bàò[èS[ôX\ì^[›]
-\ Kò\H»‹öY[ù][€èS[ôX\ì^[›]í‘íVì”ïS»‹ò]ö]OQ‹ò]ö]Kê—SïTó’ëTïP–S»Z[ö[][RZY⁄ML»Ÿ]Y[ô ã
-HCBàãòYöY] ^öY] \ Kò\H»^]]N»^⁄^ôOLMYé»Ÿ]^€€‹ä⁄]JN»^[›]\ò[\œS[ôX\ì^[›]ì^[›]\ò[\ LãYäHJCBàãòYöY] ^öY] \ Kò\H»^]ò[YJ»à8†.àé»^⁄^ôOLMé»Ÿ]^€€‹äëêPPPPPKù“[ù
-
-JHJCBàãúŸ]€ê€X⁄”\›[ô\à»€X⁄ 
-HN»\›òYöY] äCBà\›òYöY] öY] \ Kò\H»Ÿ]òX⁄Ÿ‹õ›[ô€€‹äëçù“[ù
-
-JHK[ôX\ì^[›]ì^[›]\ò[\ LKJJCBàCBàö]ò]Hù[à›⁄]⁄
-]Nî›ö[ôÀŸ^Nî›ö[ôÀYò][êõ€€X[äH√Bàò[èS[ôX\ì^[›]
-\ Kò\H»‹öY[ù][€èS[ôX\ì^[›]í‘íVì”ïS»‹ò]ö]OQ‹ò]ö]Kê—SïTó’ëTïP–S»Z[ö[][RZY⁄ML»Ÿ]Y[ô ã
-HCBàãòYöY] ^öY] \ Kò\H»^]]N»^⁄^ôOLMYé»Ÿ]^€€‹ä⁄]JN»^[›]\ò[\œS[ôX\ì^[›]ì^[›]\ò[\ LãYäHJCBàãòYöY] [ôõ⁄Yù⁄YŸ]î›⁄]⁄
-\ Kò\H»\–⁄X⁄ŸY\ôYúÀôŸ]õ€€X[äŸ^KYò][
-N»Ÿ]€ê⁄X⁄ŸY⁄[ôŸS\›[ô\à»ÀàOàôYúÀôY]
-
-Kú]õ€€X[äŸ^KäKò\J
-HHJCBà\›òYöY] äN»\›òYöY] öY] \ Kò\H»Ÿ]òX⁄Ÿ‹õ›[ô€€‹äëçù“[ù
-
-JHK[ôX\ì^[›]ì^[›]\ò[\ LKJJCBàCBàö]ò]Hù[àù[Xô\ä]Nî›ö[ôÀŸ^Nî›ö[ôÀYò][í[ùZ[éí[ùX^í[ù
-H√Bàò[[ú]QY]^
-\ Kò\H»Ÿ]^
-ôYúÀôŸ][ù
-Ÿ^KYò][
-Kù‘›ö[ô 
-JN»[ú]\OLé»Ÿ]^€€‹ä⁄]JHCBà[\ùX[ŸÀêùZ[\ä\ KúŸ]]J]JKúŸ]öY] [ú]
-KúŸ]ôYÿ]]ôPù]€ä∏‡´x‡Ë¯‡Ï¯‡Æ¯‡Í»ãù[
-KúŸ]‹⁄]]ôPù]€äπ/ÁykfäH»À»OÉBàôYúÀôY]
-
-Kú][ù
-Ÿ^K
-[ú]ù^ù‘›ö[ô 
-Kù“[ù‹ìù[
-
-OŒôYò][
-Kò€Ÿ\òŸR[äZ[ãX^
-JKò\J
-N»ùZ[
-
-CBàKú⁄› 
-CBàCBàö]ò]Hù[à⁄€‹ŸJ]Nî›ö[ôÀ][\Œì\››ö[ôœãŸ^Nî›ö[ô H√Bà[\ùX[ŸÀêùZ[\ä\ KúŸ]]J]JKúŸ]][\ ][\Àù’\Y\úò^J
-JH»ÀHOÉBàôYúÀôY]
-
-Kú]›ö[ô Ÿ^K][\÷⁄WJKò\J
-CBàYäŸ^OOHú⁄Y€ò[›\ùù[HäH√Bàò[ô\T⁄Y€ò[Ÿ\]Y[òŸKúô\\ò][€ëõY—õ‹î›\ùù[J][\÷⁄WJCBàôYúÀôY]
-
-Kú]›ö[ô ú⁄Y€ò[ô\õY»ãô\
-Kò\J
-CBàCBàùZ[
-
-CBàKú⁄› 
-CBàCBàö]ò]Hù[à⁄[\T›⁄]⁄
-]Nî›ö[ôÀŸ^Nî›ö[ôÀYò][êõ€€X[äH√Bàò[ÿèP⁄X⁄–õﬁ
-\ Kò\H»^]]N»Ÿ]^€€‹ä⁄]JN»\–⁄X⁄ŸY\ôYúÀôŸ]õ€€X[äŸ^KYò][
-HCBà[\ùX[ŸÀêùZ[\ä\ KúŸ]]J]JKúŸ]öY] ÿäKúŸ]ôYÿ]]ôPù]€ä∏‡´x‡Ë¯‡Ï¯‡Æ¯‡Í»ãù[
-KúŸ]‹⁄]]ôPù]€äπ/Áykfä^◊ÀÀOúôYúÀôY]
-
-Kú]õ€€X[äŸ^Kÿãö\–⁄X⁄ŸY
-Kò\J
-_Kú⁄› 
-CBàCBàö]ò]Hù[àYõY]
-
-H√Bàò[[ú]QY]^
-\ Kò\H»[ùHëõY]›\ùò[YHé»Ÿ]^€€‹ä⁄]JHCBàΩyÍ⁄$z{-ÆÈ‹j◊ù˜$'WGFˆ‚ì≤FEfñWrá&WfñWrƒ∆ñÊV$∆ñ˜WB‰∆ñ˜WE&◊2Ç”√ìbíê–¢––¢gV‚WFFU&WfñWrÇí∞–¢f¬ó4ñÁFW&ÊFñˆÊ√◊GóRÁ6V∆V7FVDóFV’˜6óFñˆ„”” –¢6∆76W2Áfó6ñ&ñ∆óGì÷ñbáGóRÁ6V∆V7FVDóFV’˜6óFñˆ„””ïfñWrÂdï4î$ƒRV«6RfñWr‰tÙ‰P–¢f∆w2Áfó6ñ&ñ∆óGì÷ñbÜó4ñÁFW&ÊFñˆÊ¬ïfñWrÂdï4î$ƒRV«6RfñWr‰tÙ‰P–¢∆ñ˜WBÁfó6ñ&ñ∆óGì÷ñbáGóRÁ6V∆V7FVDóFV’˜6óFñˆ„””ïfñWrÂdï4î$ƒRV«6RfñWr‰tÙ‰P–¢&WfñWrÁ&V÷˜fT∆≈fñWw2Çê–¢&WfñWrÁ6WD&6∂w&˜VÊD6ˆ∆˜"Ü∆ˆvÙ&6∂w&˜VÊBê–¢∆ˆvÙ6ˆ∆˜$'WGFˆ‚ÁFWáB“.8:ﬁ8+Nàõ#¢Gµ7G&ñÊrÊf˜&÷BÇ"2SeÇ"¬ÑdddddbÊB∆ˆvÙ6ˆ∆˜"ó“ –¢&6∂w&˜VÊD6ˆ∆˜$'WGFˆ‚ÁFWáB“.à8Œiö˛àõ#¢Gµ7G&ñÊrÊf˜&÷BÇ"2SeÇ"¬ÑdddddbÊB∆ˆvÙ&6∂w&˜VÊBó“ –¢∆ˆvÙ6ˆ∆˜$'WGFˆ‚Á6WEFWáD6ˆ∆˜"Ü∆ˆvÙ6ˆ∆˜"ê–¢&6∂w&˜VÊD6ˆ∆˜$'WGFˆ‚Á6WEFWáD6ˆ∆˜"ÜñbÑ6ˆ∆˜"Ê«V÷ñÊÊ6RÜ∆ˆvÙ&6∂w&˜VÊBí‚„CVbí6ˆ∆˜"‰$ƒ4≤V«6R6ˆ∆˜"ÂtÑïDRê–¢f¬∆&V¬“vÜV‚áGóRÁ6V∆V7FVDóFV’˜6óFñˆ‚ó≥”Ê6∆76W2Á6V∆V7FVDóFV“ÁFı7G&ñÊrÇì≥”ÊñÁWBÁFWáBÁFı7G&ñÊrÇíÊñd&∆Ê∑≤.iyr'”∂V«6R”Êf∆tÊ÷W5∂f∆w2Á6V∆V7FVDóFV’˜6óFñˆÂ◊––¢f¬∆ˆvÚ“ñbáGóRÁ6V∆V7FVDóFV’˜6óFñˆ„””í6ñvÊƒ6∆74∆ˆvÙ76WG2Ê&óF÷áFÜó2¬∆&V¬íV«6RÁV∆¿–¢ñbÜ∆ˆvÚ“ÁV∆¬í∞–¢&WfñWrÊFEfñWrÑñ÷vUfñWráFÜó2íÊ«í∞–¢6WDñ÷vT&óF÷Ü∆ˆvÚì≤66∆UGóS‘ñ÷vUfñWrÂ66∆UGóR‰dïEÙ4TÂDU –¢6WD6ˆ∆˜$fñ«FW"Ü∆ˆvÙ6ˆ∆˜"¬ÊG&ˆñBÊw&Üñ72Â˜'FW$GVfb‰÷ˆFRÂ5$5Ùî‚ê–¢6WEFFñÊrÉÇ√Ç√Ç√Çê–¢“¬g&÷T∆ñ˜WB‰∆ñ˜WE&◊2Ç”¬”íê–¢“V«6R∞–¢&WfñWrÊFEfñWrÖFWáEfñWráFÜó2íÊ«í∞–¢FWáC÷ñbáGóRÁ6V∆V7FVDóFV’˜6óFñˆ„””í6∆74÷&≤Ü∆&V¬íV«6R∆&V¿–¢w&fóGì‘w&fóGí‰4TÂDU#≤FWáE6ó¶S”#&c≤6WEFWáD6ˆ∆˜"Ü∆ˆvÙ6ˆ∆˜"ê–¢“¬g&÷T∆ñ˜WB‰∆ñ˜WE&◊2Ç”¬”íê–¢––¢––¢f¬∆WGFTÊ÷W2“'&îˆbÇ.õπ""¬.yõ“"¬.ãZB"¬.jôí"¬.õ∏B"¬.{y"¬.ôŸ""¬.{J≤"ê–¢f¬∆WGFT6ˆ∆˜'2“ñÁD'&îˆbÑ6ˆ∆˜"‰$ƒ4≤¬6ˆ∆˜"ÂtÑïDR¬ÑddS3#c3bÁFÙñÁBÇí¬ÑddcSÑÁFÙñÁBÇí¬ÑddcTC3#ÇÁFÙñÁBÇí¬Ñdc#É4bÁFÙñÁBÇí¬ÑdcscîdbÁFÙñÁBÇí¬Ñdct3TÇÁFÙñÁBÇíê–¢∆ˆvÙ6ˆ∆˜$'WGFˆ‚Á6WDˆ‰6∆ñ6¥∆ó7FVÊW"≤∆W'DFñ∆ˆr‰'Vñ∆FW"áFÜó2íÁ6WEFóF∆RÇ.8:ﬁ8+Nàõ""íÁ6WDóFV◊2á∆WGFTÊ÷W2í≤Ú¬í”‚∆ˆvÙ6ˆ∆˜#◊∆WGFT6ˆ∆˜'5∂ï”≤WFFU&WfñWrÇí“Á6Ü˜rÇí––¢&6∂w&˜VÊD6ˆ∆˜$'WGFˆ‚Á6WDˆ‰6∆ñ6¥∆ó7FVÊW"≤∆W'DFñ∆ˆr‰'Vñ∆FW"áFÜó2íÁ6WEFóF∆RÇ.à8Œiö˛àõ""íÁ6WDóFV◊2á∆WGFTÊ÷W2í≤Ú¬í”‚∆ˆvÙ&6∂w&˜VÊC◊∆WGFT6ˆ∆˜'5∂ï”≤WFFU&WfñWrÇí“Á6Ü˜rÇí––¢GóRÊˆ‰óFV’6V∆V7FVD∆ó7FVÊW#÷ˆ&¶V7C§FFW%fñWr‰ˆ‰óFV’6V∆V7FVD∆ó7FVÊW'∞–¢˜fW'&ñFRgV‚ˆ‰óFV’6V∆V7FVBá&VÁC§FFW%fñWs¬£„Ú«fñWs•fñWsÚ«˜6óFñˆ„§ñÁB∆ñC§∆ˆÊrì◊WFFU&WfñWrÇê–¢˜fW'&ñFRgV‚ˆ‰Ê˜FÜñÊu6V∆V7FVBá&VÁC§FFW%fñWs¬£„Úí∑––¢––¢6∆76W2Êˆ‰óFV’6V∆V7FVD∆ó7FVÊW#◊GóRÊˆ‰óFV’6V∆V7FVD∆ó7FVÊW –¢f∆w2Êˆ‰óFV’6V∆V7FVD∆ó7FVÊW#◊GóRÊˆ‰óFV’6V∆V7FVD∆ó7FVÊW –¢ñÁWBÊFEFWáD6ÜÊvVD∆ó7FVÊW"Üˆ&¶V7C¶ÊG&ˆñBÁFWáBÂFWáEvF6ÜW'∞–¢˜fW'&ñFRgV‚&Vf˜&UFWáD6ÜÊvVBá3§6Ü%6WVVÊ6SÚ«7F'C§ñÁB∆6˜VÁC§ñÁB∆gFW#§ñÁBó∑––¢˜fW'&ñFRgV‚ˆÂFWáD6ÜÊvVBá3§6Ü%6WVVÊ6SÚ«7F'C§ñÁB∆&Vf˜&S§ñÁB∆6˜VÁC§ñÁBó∂ñbáGóRÁ6V∆V7FVDóFV’˜6óFñˆ„””íWFFU&WfñWrÇó––¢˜fW'&ñFRgV‚gFW%FWáD6ÜÊvVBá3¶ÊG&ˆñBÁFWáB‰VFóF&∆SÚó∑––¢“ê–¢∆W'DFñ∆ˆr‰'Vñ∆FW"áFÜó2íÁ6WEFóF∆RÇ.8*˛8:û8+ûiy~8;æK˙X˚~iy~8ÓääﬁZÈ¢"íÁ6WEfñWrÜ&˜ÇíÁ6WDÊVvFófT'WGFˆ‚Ç.8*ﬁ8:>8;>8+æ8:≤"∆ÁV∆¬íÁ6WE˜6óFófT'WGFˆ‚Ç.K˘ﬁZŸÇ"óµÚ≈Ú”‡–¢f¬VFóF˜#◊&Vg2ÊVFóBÇíÁWE7G&ñÊrÇ'6ñvÊƒ7W7Fˆ‘f∆tÊ÷R"∆ñÁWBÁFWáBÁFı7G&ñÊrÇííÁWDñÁBÇ'6ñvÊƒ7W7Fˆ‘f∆u7Gñ∆R"«GóRÁ6V∆V7FVDóFV’˜6óFñˆ‚íÁWDñÁBÇ'6ñvÊƒ7W7Fˆ‘f∆t∆ñ˜WDñÊFWÇ"∆∆ñ˜WBÁ6V∆V7FVDóFV’˜6óFñˆ‚ê–¢ÁWDñÁBÇ'6ñvÊƒ6∆74∆ˆvıFWáD6ˆ∆˜""¬∆ˆvÙ6ˆ∆˜"íÁWDñÁBÇ'6ñvÊƒ6∆74∆ˆvÙ&6∂w&˜VÊD6ˆ∆˜""¬∆ˆvÙ&6∂w&˜VÊBê–¢vÜV‚áGóRÁ6V∆V7FVDóFV’˜6óFñˆ‚ó∞–¢”Á∑f¬6V∆V7FVC÷6∆74Ê÷W5∂6∆76W2Á6V∆V7FVDóFV’˜6óFñˆÂ”∂VFóF˜"ÁWE7G&ñÊrÇ'6ñvÊ≈6V∆V7FVD6∆74Ê÷R"«6V∆V7FVBíÁWE7G&ñÊrÇ'6ñvÊƒ7W7Fˆ‘6∆74f∆r"¬&6∆72“G6V∆V7FVB"ó––¢”Á∑f¬∆&V√÷ñÁWBÁFWáBÁFı7G&ñÊrÇíÁG&ñ“ÇíÊñdV◊Gó≤.iyr'”∂VFóF˜"ÁWE7G&ñÊrÇ'6ñvÊ≈6V∆V7FVD6∆74Ê÷R"¬'FWáC¢F∆&V¬"íÁWE7G&ñÊrÇ'6ñvÊƒ7W7Fˆ‘f∆uFWáB"∆∆&V¬ó––¢"”Á∑f¬6V∆V7FVC÷f∆tÊ÷W5∂f∆w2Á6V∆V7FVDóFV’˜6óFñˆÂ”∂VFóF˜"ÁWE7G&ñÊrÇ'6ñvÊ≈6V∆V7FVDñÁFW&ÊFñˆÊƒf∆r"«6V∆V7FVBíÁWE7G&ñÊrÇ'6ñvÊ≈6V∆V7FVD6∆74Ê÷R"¬&ñÁF√¢G6V∆V7FVB"ó––¢––¢VFóF˜"Ê«íÇê–¢'Vñ∆BÇê–¢“Á6Ü˜rÇê–¢––¢&ófFRgV‚Ê˜Fñfñ6FñˆÁ2Çí∞–¢f¬óFV◊3÷∆ó7DˆbÇ$4"¬$WfW'í÷ñÁWFR¢"¬#÷ñÁWFR"¬#36V6ˆÊG2"¬##6V6ˆÊG2"¬$6˜VÁFF˜v‚"¬$ˆ‚Fñ÷R"¬%&6S¢WfW'í÷ñÁWFR"¬%&6S¢WfW'íR÷ñÁWFW2"¬%Fñ÷R∆ñ÷óB"¬%¶ˆÊR∆W'G2"ê–¢f¬÷ˆFW3÷'&îˆbÇ%Fñ÷R"¬$gV∆¬"¬%6˜VÊB"¬$ÊˆÊR"ê–¢f¬&˜É‘∆ñÊV$∆ñ˜WBáFÜó2íÊ«í≤˜&ñVÁFFñˆ„‘∆ñÊV$∆ñ˜WBÂdU%Dî4√≤6WEFFñÊrÉb√√b√í––¢f¬&FñÛ‘6ÜV6¥&˜ÇáFÜó2íÊ«í≤FWáC“%&FñÚg&ñVÊF«í#≤6WEFWáD6ˆ∆˜"ávÜóFRì≤ó46ÜV6∂VC◊&Vg2ÊvWD&ˆˆ∆V‚Ç'6ñvÊ≈&FñÙg&ñVÊF«í"«G'VRí”≤&˜ÇÊFEfñWrá&FñÚê–¢f¬6ˆÁG&ˆ«3÷◊WF&∆T÷ˆc≈7G&ñÊr≈7ñÊÊW#‚Çê–¢óFV◊2Êf˜$V6Ç≤∆&V¬”‡–¢f¬#‘∆ñÊV$∆ñ˜WBáFÜó2íÊ«í≤˜&ñVÁFFñˆ„‘∆ñÊV$∆ñ˜WB‰Ñı$ï§ÙÂD√≤w&fóGì‘w&fóGí‰4TÂDU%ıdU%Dî4¬––¢"ÊFEfñWrÖFWáEfñWráFÜó46ñvÊ≈6WGFñÊw47FófóGííÊ«í≤FWáC÷∆&V√≤6WEFWáD6ˆ∆˜"ávÜóFRì≤∆ñ˜WE&◊3‘∆ñÊV$∆ñ˜WB‰∆ñ˜WE&◊2É¬”"√bí“ê–¢f¬3’7ñÊÊW"áFÜó2íÊ«í≤FFW#‘'&îFFW"áFÜó46ñvÊ≈6WGFñÊw47FófóGí∆ÊG&ˆñBÂ"Ê∆ñ˜WBÁ6ñ◊∆U˜7ñÊÊW%ˆG&˜F˜vÂˆóFV“∆÷ˆFW2ì≤6WE6V∆V7Fñˆ‚Ü÷ˆFW2ÊñÊFWÑˆbá&Vg2ÊvWE7G&ñÊrÇ&Ê˜FñgïÚ"∂∆&V¬¬$ÊˆÊR"ííÊ6ˆW&6TD∆V7BÉíí––¢"ÊFEfñWrá2ƒ∆ñÊV$∆ñ˜WB‰∆ñ˜WE&◊2É#¬”"íì≤&˜ÇÊFEfñWrá"ì≤6ˆÁG&ˆ«5∂∆&V≈”◊0–¢––¢∆W'DFñ∆ˆr‰'Vñ∆FW"áFÜó2íÁ6WEFóF∆RÇ$Ê˜Fñfñ6FñˆÁ2"íÁ6WEfñWrÖ67&ˆ∆≈fñWráFÜó2íÊ«ó∂FEfñWrÜ&˜Çó“íÁ6WDÊVvFófT'WGFˆ‚Ç.8*ﬁ8:>8;>8+æ8:≤"∆ÁV∆¬íÁ6WE˜6óFófT'WGFˆ‚Ç%6fR"óµÚ≈Ú”‡–¢f¬S◊&Vg2ÊVFóBÇíÁWD&ˆˆ∆V‚Ç'6ñvÊ≈&FñÙg&ñVÊF«í"«&FñÚÊó46ÜV6∂VBì≤6ˆÁG&ˆ«2Êf˜$V6á≤Ü≤«bí”ÊRÁWE7G&ñÊrÇ&Ê˜FñgïÚ"∂≤«bÁ6V∆V7FVDóFV“ÁFı7G&ñÊrÇíó”∂RÊ«íÇê–¢“Á6Ü˜rÇê–¢––¢&ófFRgV‚Ü˜&‚Çí∞–¢f¬&˜É‘∆ñÊV$∆ñ˜WBáFÜó2íÊ«í≤˜&ñVÁFFñˆ„‘∆ñÊV$∆ñ˜WBÂdU%Dî4√≤6WEFFñÊrÉb√√b√í––¢f¬VÊ&∆VC‘6ÜV6¥&˜ÇáFÜó2íÊ«í≤FWáC“%fó'GV¬#≤6WEFWáD6ˆ∆˜"ávÜóFRì≤ó46ÜV6∂VC◊&Vg2ÊvWD&ˆˆ∆V‚Ç'6ñvÊƒÜ˜&‰VÊ&∆VB"«G'VRí”≤&˜ÇÊFEfñWrÜVÊ&∆VBê–¢gV‚6∆ñFW"Ü∆&V√•7G&ñÊr∆∂Wì•7G&ñÊr∆FVc§ñÁB∆÷É§ñÁBí∞–¢&˜ÇÊFEfñWrÖFWáEfñWráFÜó2íÊ«í≤FWáC÷∆&V√≤6WEFWáD6ˆ∆˜"ávÜóFRí“ê–¢f¬6VV≥’6VV¥&"áFÜó2íÊ«í≤FÜó2Ê÷É÷÷É≤&ˆw&W73◊&Vg2ÊvWDñÁBÜ∂Wí∆FVbíÊ6ˆW&6Tñ‚É∆÷Çí––¢6VV≤Á6WDˆÂ6VV¥&$6ÜÊvT∆ó7FVÊW"Üˆ&¶V7C•6VV¥&"‰ˆÂ6VV¥&$6ÜÊvT∆ó7FVÊW'∞–¢˜fW'&ñFRgV‚ˆÂ&ˆw&W746ÜÊvVBá3•6VV¥&#Ú«c§ñÁB∆g&ˆ’W6W#§&ˆˆ∆V‚ó∑&Vg2ÊVFóBÇíÁWDñÁBÜ∂Wí«bíÊ«íÇó––¢˜fW'&ñFRgV‚ˆÂ7F'EG&6∂ñÊuF˜V6Çá3•6VV¥&#Úó∑”≤˜fW'&ñFRgV‚ˆÂ7F˜G&6∂ñÊuF˜V6Çá3•6VV¥&#Úó∑––¢“ì≤&˜ÇÊFEfñWrá6VV≤ê–¢––¢6∆ñFW"Ç%fˆ«V÷R"¬'6ñvÊƒÜ˜&Âfˆ«V÷R"√É√ì∑6∆ñFW"Ç%6Ü˜'B6˜VÊBÜ◊2í"¬'6ñvÊ≈6Ü˜'DÜ˜&‰◊2"√##√ì∑6∆ñFW"Ç$∆ˆÊr6˜VÊBÜ◊2í"¬'6ñvÊƒÜ˜&‰◊2"√s√Sì∑6∆ñFW"Ç$vÜ◊2í"¬'6ñvÊƒv◊2"√É√#ê–¢∆W'DFñ∆ˆr‰'Vñ∆FW"áFÜó2íÁ6WEFóF∆RÇ%&V÷˜FRÜ˜&‚"íÁ6WEfñWrÜ&˜ÇíÁ6WE˜6óFófT'WGFˆ‚Ç.ZËŒK®b"óµÚ≈Ú”Á&Vg2ÊVFóBÇíÁWD&ˆˆ∆V‚Ç'6ñvÊƒÜ˜&‰VÊ&∆VB"∆VÊ&∆VBÊó46ÜV6∂VBíÊ«íÇó“Á6Ü˜rÇê–¢––¢&ófFRgV‚6Ü˜t∆ˆrÇí“6ñ◊∆U7vóF6ÇÇ.8:ﬁ8+8).K˘ﬁZŸÇ"¬'6ñvÊƒ∆ˆtVÊ&∆VB"«G'VRê–ß––
+    private val fleetConfigKeys = listOf("signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag","signalOrangeEnabled","signalOrangeDisplayedMinutes","signalOrangeRemovedAfterMinutes","signalRaceDelayEnabled","signalRaceDelayMinutes","signalTimeLimitEnabled","signalRaceLimitMinutes","signalFinishWindowMinutes","signalRule42Override","signalStartEntries")
+    private fun saveFleetConfig(name:String) {
+        val json=org.json.JSONObject()
+        fleetConfigKeys.forEach { key -> when (val value=prefs.all[key]) {
+            is String -> json.put(key,value)
+            is Boolean -> json.put(key,value)
+            is Int -> json.put(key,value)
+            is Set<*> -> json.put(key,org.json.JSONArray(value.toList()))
+        } }
+        prefs.edit().putString("signalFleetConfig:$name",json.toString()).apply()
+    }
+    private fun loadFleetConfig(name:String) {
+        val raw=prefs.getString("signalFleetConfig:$name",null) ?: return
+        val json=runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return
+        val editor=prefs.edit().putString("signalFleetStartName",name)
+        fleetConfigKeys.forEach { key -> if(json.has(key)) when (key) {
+            "signalStartEntries" -> { val array=json.optJSONArray(key); if(array!=null) editor.putStringSet(key,(0 until array.length()).map { array.optString(it) }.toSet()) }
+            "signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag" -> editor.putString(key,json.optString(key))
+            "signalOrangeEnabled","signalRaceDelayEnabled","signalTimeLimitEnabled","signalRule42Override" -> editor.putBoolean(key,json.optBoolean(key))
+            else -> editor.putInt(key,json.optInt(key))
+        } }
+        editor.apply()
+    }
+    private fun addStart(existing:String?=null) {
+        val flags=listOf("Class","Orange","AP","X","First Substitute")
+        val parsed=existing?.split("¬∑")?.map(String::trim).orEmpty()
+        val flag=parsed.getOrNull(0) ?: "Class"
+        val time=Regex("""T[‚àí-](\d+):(\d+)""").find(existing.orEmpty())
+        val minute=time?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 5
+        val second=time?.groupValues?.getOrNull(2)?.toIntOrNull() ?: 0
+        val direction=if(parsed.getOrNull(2)=="Èôç‰∏ã") "Èôç‰∏ã" else "Êé≤Êèö"
+        val horn=parsed.getOrNull(3) ?: "Áü≠Èü≥"
+        val content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(22,8,22,4) }
+        val flagPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,flags); setSelection(flags.indexOf(flag).coerceAtLeast(0)); content.addView(this) }
+        val minuteField=EditText(this).apply { hint="ÂàÜÂâç"; inputType=2; setText(minute.toString()); setTextColor(white); content.addView(this) }
+        val secondField=EditText(this).apply { hint="Áßí"; inputType=2; setText(second.toString()); setTextColor(white); content.addView(this) }
+        val actionPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,listOf("Êé≤Êèö","Èôç‰∏ã")); setSelection(if(direction=="Èôç‰∏ã")1 else 0); content.addView(this) }
+        val hornPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,listOf("Áü≠Èü≥","Èï∑Èü≥","Èü≥„Å™„Åó")); setSelection(listOf("Áü≠Èü≥","Èï∑Èü≥","Èü≥„Å™„Åó").indexOf(horn).coerceAtLeast(0)); content.addView(this) }
+        AlertDialog.Builder(this).setTitle(if(existing==null)"Add Start‚Ä¶" else "‰ø°Âè∑„ÇíÁ∑®ÈõÜ").setView(content).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("‰øùÂ≠ò"){_,_->
+            val selected=flags[flagPicker.selectedItemPosition]
+            val m=(minuteField.text.toString().toIntOrNull()?:5).coerceIn(0,60)
+            val s=(secondField.text.toString().toIntOrNull()?:0).coerceIn(0,59)
+            val row="$selected ¬∑ T‚àí${m}:${s.toString().padStart(2,'0')} ¬∑ ${if(actionPicker.selectedItemPosition==1)"Èôç‰∏ã" else "Êé≤Êèö"} ¬∑ ${listOf("Áü≠Èü≥","Èï∑Èü≥","Èü≥„Å™„Åó")[hornPicker.selectedItemPosition]}"
+            val items=prefs.getStringSet("signalStartEntries",emptySet())?.toMutableSet()?:mutableSetOf()
+            existing?.let(items::remove); items.add(row)
+            prefs.edit().putStringSet("signalStartEntries",items).apply(); build()
+        }.show()
+    }
+    private fun removeStart(action:String) {
+        val items=prefs.getStringSet("signalStartEntries",emptySet())?.toMutableSet()?:mutableSetOf()
+        items.remove(action); prefs.edit().putStringSet("signalStartEntries",items).apply(); saveFleetConfig(prefs.getString("signalFleetStartName","OP Au Bp")?:"OP Au Bp"); build()
+    }
+    private fun classGallery() {
+        val groups = linkedMapOf("„ÇØ„É©„Çπ„É≠„Ç¥" to SignalClassLogoAssets.availableClassNames(this))
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 12)
+        }
+        var dialog: AlertDialog? = null
+        val density = resources.displayMetrics.density
+        groups.forEach { (category, classes) ->
+            content.addView(TextView(this).apply {
+                text = category
+                textSize = 17f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(0xFFB0B0B5.toInt())
+                setPadding(4, 18, 4, 8)
+            })
+            val grid = GridView(this).apply {
+                numColumns = 3
+                horizontalSpacing = (8 * density).toInt()
+                verticalSpacing = (8 * density).toInt()
+                stretchMode = GridView.STRETCH_COLUMN_WIDTH
+                adapter = object : BaseAdapter() {
+                    override fun getCount() = classes.size
+                    override fun getItem(position: Int) = classes[position]
+                    override fun getItemId(position: Int) = position.toLong()
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
+                        val name = classes[position]
+                        return LinearLayout(this@SignalSettingsActivity).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER
+                            setPadding(4, 5, 4, 5)
+                            val logoBitmap = SignalClassLogoAssets.bitmap(this@SignalSettingsActivity, name)
+                            val markBox = FrameLayout(this@SignalSettingsActivity).apply {
+                                setBackgroundColor(Color.WHITE)
+                                if (logoBitmap != null) {
+                                    addView(ImageView(this@SignalSettingsActivity).apply {
+                                        setImageBitmap(logoBitmap)
+                                        scaleType = ImageView.ScaleType.FIT_CENTER
+                                        setPadding((5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt(), (5 * density).toInt())
+                                    }, FrameLayout.LayoutParams(-1, -1))
+                                } else {
+                                    addView(TextView(this@SignalSettingsActivity).apply {
+                                        text = classMark(name)
+                                        textSize = 23f
+                                        typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD_ITALIC)
+                                        gravity = Gravity.CENTER
+                                        isSingleLine = true
+                                        setTextColor(Color.BLACK)
+                                        if (android.os.Build.VERSION.SDK_INT >= 26) {
+                                            setAutoSizeTextTypeUniformWithConfiguration(10, 23, 1, android.util.TypedValue.COMPLEX_UNIT_SP)
+                                        }
+                                    }, FrameLayout.LayoutParams(-1, -1))
+                                }
+                            }
+                            addView(markBox, LinearLayout.LayoutParams(-1, (64 * density).toInt()))
+                            addView(TextView(this@SignalSettingsActivity).apply {
+                                text = name
+                                textSize = 12f
+                                gravity = Gravity.CENTER
+                                setTextColor(white)
+                                setPadding(0, 4, 0, 0)
+                                maxLines = 2
+                            })
+                        }
+                    }
+                }
+                setOnItemClickListener { _, _, index, _ ->
+                    val selected = classes[index]
+                    prefs.edit()
+                        .putString("signalSelectedClassName", selected)
+                        .putString("signalCustomClassFlag", "class-$selected")
+                        .apply()
+                    dialog?.dismiss()
+                    build()
+                }
+            }
+            val rows = (classes.size + 2) / 3
+            content.addView(grid, LinearLayout.LayoutParams(-1, rows * (82 * density).toInt()))
+        }
+        val scroll = ScrollView(this).apply { addView(content) }
+        dialog = AlertDialog.Builder(this)
+            .setTitle("„ÇØ„É©„ÇπÊóó„ÇíÈÅ∏Êäû")
+            .setView(scroll)
+            .setNegativeButton("Èñâ„Åò„Çã", null)
+            .create()
+        dialog?.show()
+    }
+    private fun classMark(name:String):String = when(name) {
+        "A-Cat" -> "AÃ≤"; "Optimist" -> "‚ìÑ"; "Starling" -> "‚òÖ"; "ILCA" -> "ILCA"
+        "49er FX" -> "49er FX"; "J/22" -> "J\n22"; "J/24" -> "J\n24"; "J/70" -> "J\n70"; "J/80" -> "J\n80"
+        "J/105" -> "J\n105"; "420" -> "420"; "470" -> "470"; else -> name
+    }
+    private fun internationalFlags() {
+        val flags=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute")
+        val grid=GridView(this).apply { numColumns=3; horizontalSpacing=8; verticalSpacing=10; setPadding(12,12,12,12); adapter=object:BaseAdapter(){
+            override fun getCount()=flags.size
+            override fun getItem(position:Int)=flags[position]
+            override fun getItemId(position:Int)=position.toLong()
+            override fun getView(position:Int, convertView:View?, parent:android.view.ViewGroup?):View {
+                val name=flags[position]
+                return LinearLayout(this@SignalSettingsActivity).apply {
+                    orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER
+                    addView(SignalFlagArtworkView(this@SignalSettingsActivity,name),LinearLayout.LayoutParams(-1,72))
+                    addView(TextView(this@SignalSettingsActivity).apply { text=name; textSize=12f; gravity=Gravity.CENTER; setTextColor(white); setPadding(0,4,0,0) })
+                }
+            }
+        }; setOnItemClickListener { _,_,i,_ -> prefs.edit().putString("signalSelectedInternationalFlag",flags[i]).apply(); (tag as? AlertDialog)?.dismiss(); build() } }
+        val dialog=AlertDialog.Builder(this).setTitle("International Signal Flags").setView(ScrollView(this).apply { addView(grid) }).setNegativeButton("Èñâ„Åò„Çã",null).create()
+        grid.tag=dialog; dialog.show()
+    }
+    private fun flagEditor() {
+        val classNames=listOf("29er","3.7","420","470","49er","49er FX","A-Cat","Albacore","B14","Cadet","Dart 18","Dragon","Europe","Finn","Formula 18","Hobie","ILCA","IOD","J/22","J/24","J/70","J/80","Laser","Melges 24","Moth","Nacra 15","Nacra 17","Optimist","RS Aero","Snipe","Solo","Starling","Sunfish","Tasar","Topper","Tornado","Viper","WASZP","Wayfarer","Weta","X-79","X-99","Yngling","Zoom 8")
+        val flagNames=listOf("Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu")
+        val input=EditText(this).apply { hint="Êóó„ÅÆÂêçÂâç"; setText(prefs.getString("signalCustomFlagName","Class Flag")); setTextColor(white) }
+        val types=listOf("„ÇØ„É©„ÇπÊóó","ÊñáÂ≠óÊóó","ÂõΩÈöõ‰ø°Âè∑Êóó")
+        val type=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,types) }
+        val classes=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,classNames) }
+        val flags=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,flagNames) }
+        classes.setSelection(classNames.indexOf(prefs.getString("signalSelectedClassName","29er")).coerceAtLeast(0))
+        flags.setSelection(flagNames.indexOf(prefs.getString("signalSelectedInternationalFlag","Alpha")).coerceAtLeast(0))
+        val layouts=listOf("ÂÖ®Èù¢Ëâ≤","‰∏ä‰∏ãÂàÜÂâ≤","Â∑¶Âè≥ÂàÜÂâ≤","Êñú„ÇÅÂàÜÂâ≤","ÈÄÜÊñú„ÇÅ")
+        val layout=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,layouts) }
+        layout.setSelection(prefs.getInt("signalCustomFlagLayoutIndex",0).coerceIn(0,layouts.lastIndex))
+        var logoColor = prefs.getInt("signalClassLogoTextColor", Color.BLACK)
+        var logoBackground = prefs.getInt("signalClassLogoBackgroundColor", Color.WHITE)
+        val logoColorButton = Button(this).apply { text = "„É≠„Ç¥Ëâ≤„ÇíÈÅ∏Êäû"; setTextColor(logoColor) }
+        val backgroundColorButton = Button(this).apply { text = "ËÉåÊôØËâ≤„ÇíÈÅ∏Êäû"; setTextColor(logoBackground) }
+        val preview=FrameLayout(this).apply { setBackgroundColor(logoBackground) }
+        val box=LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL; setPadding(18,0,18,0)
+            addView(input); addView(type); addView(classes); addView(flags); addView(layout);
+            addView(logoColorButton); addView(backgroundColorButton); addView(preview,LinearLayout.LayoutParams(-1,96))
+        }
+        fun updatePreview() {
+            val isInternational=type.selectedItemPosition==2
+            classes.visibility=if(type.selectedItemPosition==0)View.VISIBLE else View.GONE
+            flags.visibility=if(isInternational)View.VISIBLE else View.GONE
+            layout.visibility=if(type.selectedItemPosition==1)View.VISIBLE else View.GONE
+            preview.removeAllViews()
+            preview.setBackgroundColor(logoBackground)
+            logoColorButton.text = "„É≠„Ç¥Ëâ≤: ${String.format("#%06X", 0xFFFFFF and logoColor)}"
+            backgroundColorButton.text = "ËÉåÊôØËâ≤: ${String.format("#%06X", 0xFFFFFF and logoBackground)}"
+            logoColorButton.setTextColor(logoColor)
+            backgroundColorButton.setTextColor(if (Color.luminance(logoBackground) > 0.45f) Color.BLACK else Color.WHITE)
+            val label = when(type.selectedItemPosition){0->classes.selectedItem.toString();1->input.text.toString().ifBlank{"Êóó"};else->flagNames[flags.selectedItemPosition]}
+            val logo = if(type.selectedItemPosition==0) SignalClassLogoAssets.bitmap(this, label) else null
+            if (logo != null) {
+                preview.addView(ImageView(this).apply {
+                    setImageBitmap(logo); scaleType=ImageView.ScaleType.FIT_CENTER
+                    setColorFilter(logoColor, android.graphics.PorterDuff.Mode.SRC_IN)
+                    setPadding(8,8,8,8)
+                }, FrameLayout.LayoutParams(-1,-1))
+            } else {
+                preview.addView(TextView(this).apply {
+                    text=if(type.selectedItemPosition==0) classMark(label) else label
+                    gravity=Gravity.CENTER; textSize=22f; setTextColor(logoColor)
+                }, FrameLayout.LayoutParams(-1,-1))
+            }
+        }
+        val paletteNames = arrayOf("Èªí","ÁôΩ","Ëµ§","Ê©ô","ÈªÑ","Á∑ë","Èùí","Á¥´")
+        val paletteColors = intArrayOf(Color.BLACK, Color.WHITE, 0xFFE32636.toInt(), 0xFFF58A00.toInt(), 0xFFF5D328.toInt(), 0xFF00B83F.toInt(), 0xFF1769FF.toInt(), 0xFF7A35A8.toInt())
+        logoColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("„É≠„Ç¥Ëâ≤").setItems(paletteNames) { _, i -> logoColor=paletteColors[i]; updatePreview() }.show() }
+        backgroundColorButton.setOnClickListener { AlertDialog.Builder(this).setTitle("ËÉåÊôØËâ≤").setItems(paletteNames) { _, i -> logoBackground=paletteColors[i]; updatePreview() }.show() }
+        type.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{
+            override fun onItemSelected(parent:AdapterView<*>?,view:View?,position:Int,id:Long)=updatePreview()
+            override fun onNothingSelected(parent:AdapterView<*>?) {}
+        }
+        classes.onItemSelectedListener=type.onItemSelectedListener
+        flags.onItemSelectedListener=type.onItemSelectedListener
+        input.addTextChangedListener(object:android.text.TextWatcher{
+            override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){}
+            override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){if(type.selectedItemPosition==1) updatePreview()}
+            override fun afterTextChanged(s:android.text.Editable?){}
+        })
+        AlertDialog.Builder(this).setTitle("„ÇØ„É©„ÇπÊóó„Éª‰ø°Âè∑Êóó„ÅÆË®≠ÂÆö").setView(box).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("‰øùÂ≠ò"){_,_->
+            val editor=prefs.edit().putString("signalCustomFlagName",input.text.toString()).putInt("signalCustomFlagStyle",type.selectedItemPosition).putInt("signalCustomFlagLayoutIndex",layout.selectedItemPosition)
+                .putInt("signalClassLogoTextColor", logoColor).putInt("signalClassLogoBackgroundColor", logoBackground)
+            when(type.selectedItemPosition){
+                0->{val selected=classNames[classes.selectedItemPosition];editor.putString("signalSelectedClassName",selected).putString("signalCustomClassFlag","class-$selected")}
+                1->{val label=input.text.toString().trim().ifEmpty{"Êóó"};editor.putString("signalSelectedClassName","text:$label").putString("signalCustomFlagText",label)}
+                2->{val selected=flagNames[flags.selectedItemPosition];editor.putString("signalSelectedInternationalFlag",selected).putString("signalSelectedClassName","intl:$selected")}
+            }
+            editor.apply()
+            build()
+        }.show()
+    }
+    private fun notifications() {
+        val items=listOf("ASAP","Every minute*","1 minute","30 seconds","20 seconds","Countdown","On Time","Race: Every minute","Race: Every 5 minutes","Time Limit","Zone alerts")
+        val modes=arrayOf("Time","Full","Sound","None")
+        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(16,0,16,0) }
+        val radio=CheckBox(this).apply { text="Radio Friendly"; setTextColor(white); isChecked=prefs.getBoolean("signalRadioFriendly",true) }; box.addView(radio)
+        val controls=mutableMapOf<String,Spinner>()
+        items.forEach { label ->
+            val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
+            r.addView(TextView(this@SignalSettingsActivity).apply { text=label; setTextColor(white); layoutParams=LinearLayout.LayoutParams(0,-2,1f) })
+            val s=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,modes); setSelection(modes.indexOf(prefs.getString("notify_"+label,"None")).coerceAtLeast(0)) }
+            r.addView(s,LinearLayout.LayoutParams(120,-2)); box.addView(r); controls[label]=s
+        }
+        AlertDialog.Builder(this).setTitle("Notifications").setView(ScrollView(this).apply{addView(box)}).setNegativeButton("„Ç≠„É£„É≥„Çª„É´",null).setPositiveButton("Save"){_,_->
+            val e=prefs.edit().putBoolean("signalRadioFriendly",radio.isChecked); controls.forEach{(k,v)->e.putString("notify_"+k,v.selectedItem.toString())};e.apply()
+        }.show()
+    }
+    private fun horn() {
+        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(16,0,16,0) }
+        val enabled=CheckBox(this).apply { text="Virtual"; setTextColor(white); isChecked=prefs.getBoolean("signalHornEnabled",true) }; box.addView(enabled)
+        fun slider(label:String,key:String,def:Int,max:Int) {
+            box.addView(TextView(this).apply { text=label; setTextColor(white) })
+            val seek=SeekBar(this).apply { this.max=max; progress=prefs.getInt(key,def).coerceIn(0,max) }
+            seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{
+                override fun onProgressChanged(s:SeekBar?,v:Int,fromUser:Boolean){prefs.edit().putInt(key,v).apply()}
+                override fun onStartTrackingTouch(s:SeekBar?){}; override fun onStopTrackingTouch(s:SeekBar?){}
+            }); box.addView(seek)
+        }
+        slider("Volume","signalHornVolume",80,100);slider("Short Sound (ms)","signalShortHornMs",220,1000);slider("Long Sound (ms)","signalHornMs",700,5000);slider("Gap (ms)","signalGapMs",180,2000)
+        AlertDialog.Builder(this).setTitle("Remote Horn").setView(box).setPositiveButton("ÂÆå‰∫Ü"){_,_->prefs.edit().putBoolean("signalHornEnabled",enabled.isChecked).apply()}.show()
+    }
+    private fun showLog() = simpleSwitch("„É≠„Ç∞„Çí‰øùÂ≠ò","signalLogEnabled",true)
+}

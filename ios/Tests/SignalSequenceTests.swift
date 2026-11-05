@@ -1,5 +1,328 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíëŽ8N‹Z–‹­¦ëeŠw¬õ¥µÁ½ÉÐaQ•ÍÐ4)Ñ•ÍÑ…‰±”¥µÁ½ÉÐ]…Ñ¡9…Ù¥…Ñ¥½¸4(4)™¥¹…°±…ÍÌM¥¹…±M•ÅÕ•¹•Q•ÍÑÌèaQ•ÍÑ…Í”ì4(€€€™Õ¹ŒÑ•ÍÑMÑ…ÉÑIÕ±•M•±•ÑÍ%ÑÍ5…Ñ¡¥¹AÉ•Á…É…Ñ¥½¹M¥¹…° ¤ì4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰@ˆ¤°€‰@ˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰$ˆ¤°€‰$ˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰Tˆ¤°€‰Tˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰hˆ¤°€‰hˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰	±…¬ˆ¤°€‰‰±…¬ˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…%¡™½ÉMÑ…ÉÑIÕ±”è€‰•™…Õ±Ðˆ¤°€‰@ˆ¤4(€€€ô4(4(€€€™Õ¹ŒÑ•ÍÑ5…¹Õ…±=É…¹•I…¥Í•…¹I•‰…Í•Q¥µ•±¥¹•Ñ±…ÍÍ]…É¹¥¹œ ¤Ñ¡É½ÝÌì4(€€€€€€€±•Ð…Ñ¥½¹Ì€ô€Œ‰mì‰™±…%ˆè‰±…ÍÌ´Ðˆ°‰µ¥¹ÕÑ”ˆèÔ°‰Í•½¹ˆèÀ°‰É…¥Í•ˆéÑÉÕ”°‰•¹…‰±•ˆéÑÉÕ”°‰¡½É¸ˆè‰Í¡½ÉÐ‰õtˆŒ4(€€€€€€€±•Ð½¹™¥ÕÉ•€ôÑÉäaQU¹ÝÉ…À¡M¥¹…±M•ÅÕ•¹”¹½¹™¥ÕÉ•‘MÑ…ÉÑÙ•¹ÑÌ 4(€€€€€€€€€€€©Í½¸è…Ñ¥½¹Ì°4(€€€€€€€€€€€ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ°4(€€€€€€€€€€€ÁÉ•Á±…%è€‰@ˆ°4(€€€€€€€€€€€½É…¹•¹…‰±•èÑÉÕ”°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìè€Ô°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘5¥¹ÕÑ•Ìè€Ð°4(€€€€€€€€€€€É…••±…å¹…‰±•è™…±Í”°4(€€€€€€€€€€€É…••±…å5¥¹ÕÑ•Ìè€À4(€€€€€€€€¤¤4(€€€€€€€±•Ð…¹¡½É•€ôÑÉäaQU¹ÝÉ…À¡M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÍMÑ…ÉÑ¥¹Ñ¥ÉÍÑ±…ÍÍ]…É¹¥¹œ¡½¹™¥ÕÉ•¤¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡…¹¡½É•¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°lÀ°€ØÀ°€ÈÐÀ°€ÌÀÀ°€ÔÐÁt¤4(€€€€€€€aQÍÍ•ÉÑQÉÕ”¡…¹¡½É•¹™¥ÉÍÐü¹Ñ¥Ñ±”¹½¹Ñ…¥¹Ì ‹’ê#–F+’þ‡–>Üˆ¤€ôôÑÉÕ”¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í”¡¹½Üè€ØÔ°½É…¹•I…¥Í•‘Ðè€À°¥¹Ñ•ÉÙ…±5¥¹ÕÑ•Ìè€Ä°µ¥¹¥µÕµ1•…‘M•½¹‘Ìè€À¤°€ÄÈÀ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í”¡¹½Üè€ØÔ°½É…¹•I…¥Í•‘Ðè€ÔÀ°¥¹Ñ•ÉÙ…±5¥¹ÕÑ•Ìè€Ä°µ¥¹¥µÕµ1•…‘M•½¹‘Ìè€À¤°€ÄÈÀ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í”¡¹½Üè€ÌÀÀ°½É…¹•I…¥Í•‘Ðè€À°¥¹Ñ•ÉÙ…±5¥¹ÕÑ•Ìè€Ô°µ¥¹¥µÕµ1•…‘M•½¹‘Ìè€À¤°€ÌÀÀ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í”¡¹½Üè€ÌÀÄ°½É…¹•I…¥Í•‘Ðè€À°¥¹Ñ•ÉÙ…±5¥¹ÕÑ•Ìè€Ô°µ¥¹¥µÕµ1•…‘M•½¹‘Ìè€À¤°€ÌØÀ¤4(€€€ô4(4(€€€™Õ¹ŒÑ•ÍÑMÑ…ÉÑI•™•É•¹•=™™Í•ÑQÉ…­Í=É…¹•A¡…Í•M•ÑÑ¥¹Ì ¤ì4(€€€€€€€±•Ð‘•™…Õ±ÑÌ€ôUÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É4(€€€€€€€±•Ð½±‘¹…‰±•€ô‘•™…Õ±ÑÌ¹½‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€±•Ð½±‘¥ÍÁ±…å•€ô‘•™…Õ±ÑÌ¹½‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€‘•™•Èì4(€€€€€€€€€€€¥˜±•Ð½±‘¹…‰±•ì‘•™…Õ±ÑÌ¹Í•Ð¡½±‘¹…‰±•°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤ô4(€€€€€€€€€€€•±Í”ì‘•™…Õ±ÑÌ¹É•µ½Ù•=‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤ô4(€€€€€€€€€€€¥˜±•Ð½±‘¥ÍÁ±…å•ì‘•™…Õ±ÑÌ¹Í•Ð¡½±‘¥ÍÁ±…å•°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤ô4(€€€€€€€€€€€•±Í”ì‘•™…Õ±ÑÌ¹É•µ½Ù•=‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤ô4(€€€€€€€ô4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð¡ÑÉÕ”°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ô°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ð¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤°€ØÀÀ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ð¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤°€ÔÐÀ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð¡™…±Í”°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ð¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤°€ÌÀÀ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ð¡ÁÉ½™¥±•%è€‰Ù¥‘•¼´ÈÀˆ¤°€À¤4(€€€ô4(4(€€€™Õ¹ŒÑ•ÍÑY¥‘•½M¡•‘Õ±•Í5…Ñ¡I•™•É•¹•Q¥µ•Í±…MÑ…Ñ•Í¹‘!½É¹M¥¹…±Ì ¤ì4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð Ô°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð ÄÀ°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€±•ÐÙ¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰Ù¥‘•¼´ÈÀˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°lÀ°€ÌÀÀ°€ÌØÀ°€ÔÐÀ°€ØÀÀ°€ÄÈÀÁt¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…Àì€À¹™±…Ì¹µ…À¡p¹¥¤ô°ml‰½É…¹”‰t°l‰É••¸‰t°l‰‰±Õ”µÍÅÕ…É”‰t°l‰‰±Õ”µÍÅÕ…É”‰t°l‰É••¸‰t°l‰½É…¹”‰ut¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹É…¥Í•¤°mÑÉÕ”°ÑÉÕ”°ÑÉÕ”°™…±Í”°™…±Í”°™…±Í•t¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹¡½É¹AÕ±Í•Ì¤°mlÁt°lÁt°lÁt°lÅt°lÁt°mut¤4(4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€±•ÐÙ¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰Ù¥‘•¼´ÄÌˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°lÀ°€ÈÐÀ°€ÌÀÀ°€ÐàÀ°€ÔÐÀ°€ÜàÁt¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…Àì€À¹™±…Ì¹µ…À¡p¹¥¤ô°ml‰½É…¹”‰t°l‰±…ÍÌ´Ðˆ°€‰‘¥…½¹…°‰t°l‰¡•­•È‰t°l‰¡•­•È‰t°l‰±…ÍÌ´Ðˆ°€‰‘¥…½¹…°‰t°l‰½É…¹”‰ut¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹É…¥Í•¤°mÑÉÕ”°ÑÉÕ”°ÑÉÕ”°™…±Í”°™…±Í”°™…±Í•t¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡Ù¥‘•½¹µ…À¡p¹¡½É¹AÕ±Í•Ì¤°mlÁt°lÁt°lÁt°lÅt°lÁt°mut¤4(4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð Ô°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€UÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°lÀ°€ÌÀÀ°€ÌØÀ°€ÔÐÀ°€ØÀÀ°€àÐÁt¤4(€€€ô4(4(€€€™Õ¹ŒÑ•ÍÑ=É…¹•¥Í…‰±•M•ÑÑ¥¹ÁÁ±¥•ÍQ½±±Y¥‘•½AÉ½™¥±•Í¹‘I•ÍÑ…ÉÑMÑ…ÉÑÍ=É…¹•½Ý¸ ¤ì4(€€€€€€€±•Ð‘•™…Õ±ÑÌ€ôUÍ•É•™…Õ±ÑÌ¹ÍÑ…¹‘…É4(€€€€€€€±•ÐÁÉ•Ù¥½ÕÌ€ô‘•™…Õ±ÑÌ¹½‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð¡™…±Í”°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€‘•™•Èì4(€€€€€€€€€€€¥˜±•ÐÁÉ•Ù¥½ÕÌì‘•™…Õ±ÑÌ¹Í•Ð¡ÁÉ•Ù¥½ÕÌ°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤ô4(€€€€€€€€€€€•±Í”ì‘•™…Õ±ÑÌ¹É•µ½Ù•=‰©•Ð¡™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤ô4(€€€€€€€ô4(4(€€€€€€€™½ÈÁÉ½™¥±”¥¸l‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ°€‰Ù¥‘•¼´ÄÌˆ°€‰Ù¥‘•¼´ÈÀ‰tì4(€€€€€€€€€€€±•Ð•Ù•¹ÑÌ€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%èÁÉ½™¥±”¤4(€€€€€€€€€€€aQÍÍ•ÉÑ…±Í”¡•Ù•¹ÑÌ¹½¹Ñ…¥¹Ìì€À¹™±…Ì¹½¹Ñ…¥¹Ìì€À¹¥€ôô€‰½É…¹”ˆôô¤4(€€€€€€€€€€€aQÍÍ•ÉÑÅÕ…°¡•Ù•¹ÑÌ¹™¥ÉÍÐü¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ°€À°€‰]¥Ñ ½É…¹”‘¥Í…‰±•°Ñ¡”™¥ÉÍÐÉ…”Í¥¹…°¥Ì…Ñ¥½¸é•É¼ˆ¤4(€€€€€€€ô4(4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ô°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€±•Ð½É…¹•=™™MÑ…¹‘…É€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡½É…¹•=™™MÑ…¹‘…É¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°lÀ°€ØÀ°€ÈÐÀ°€ÌÀÁt¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡½É…¹•=™™MÑ…¹‘…É¹µ…À¡p¹™±…œ¤°l‹Ž
-¿Ž§Ž
-çš^\€Ðˆ°€‰Cš^\ˆ°€‰Cš^\ˆ°€‹Ž
-¿Ž§Ž
-çš^\€Ð‰t¤4(4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð¡ÑÉÕ”°™½É-•äè€‰Í¥¹…±=É…¹•¹…‰±•ˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ü°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ì°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…° 4(€€€€€€€€€€€M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ¤¹µ…À¡p¹Í•½¹‘Í™Ñ•ÉMÑ…ÉÐ¤°4(€€€€€€€€€€€lÀ°€ÐÈÀ°€ÐàÀ°€ØØÀ°€ÜÈÀ°€äÀÁt°4(€€€€€€€€€€€€‰¡…¹¥¹œ½É…¹”‘¥ÍÁ±…äÑ¥µ”Í¡¥™ÑÌÑ¡”É…”Í¥¹…±ÌìÉ•µ½Ù…°É•µ…¥¹ÌÉ•±…Ñ¥Ù”Ñ¼Ñ¡”±…ÍÐÍ¡¥™Ñ•Í¥¹…°ˆ4(€€€€€€€€¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ô°™½É-•äè€‰Í¥¹…±=É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ìˆ¤4(€€€€€€€‘•™…Õ±ÑÌ¹Í•Ð Ð°™½É-•äè€‰Í¥¹…±=É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ìˆ¤4(€€€€€€€±•ÐÉ•ÍÑ…ÉÐ€ôM¥¹…±M•ÅÕ•¹”¹É•…±±I•ÍÑ…ÉÑÙ•¹ÑÌ ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹É…¥Í•‘±…Ì¡•Ù•¹ÑÌèÉ•ÍÑ…ÉÐ°•±…ÁÍ•è€À¤¹µ…À¡p¹¥¤°l‰±…ÍÌ´Ð‰t¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹™±…œ ‰@ˆ¤¹…ÉÑÝ½É­9…µ”°€‰¹ÍÝ•É¥¹œA•¹¹…¹Ðˆ¤4(€€€€€€€aQÍÍ•ÉÑÅÕ…°¡M¥¹…±M•ÅÕ•¹”¹™±…œ ‰™¥ÉÍÐµÍÕˆˆ¤¹…ÉÑÝ½É­9…µ”°€‰¥ÉÍÐMÕ‰ÍÑ¥ÑÕÑ”ˆ¤4(€€€ô4(4(€€€™Õ¹ŒÑ•ÍÑM•±•Ñ•‘MÑ…ÉÑIÕ±•¡…¹•ÍQ¡•AÉ•Á…É…Ñ¥½¹±…œ ¤ì4(€€€€€€€±•Ð•áÁ•Ñ•€ôl‰@ˆè€‰@ˆ°€‰$ˆè€‰$ˆ°€‰Tˆè€‰Tˆ°€‰hˆè€‰hˆ°€‰‰±…¬ˆè€‰‰±…¬‰t4(€€€€€€€™½È€¡ÉÕ±”°™±…%¤¥¸•áÁ•Ñ•ì4(€€€€€€€€€€€±•Ð•Ù•¹ÑÌ€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡ÁÉ½™¥±•%è€‰ÍÑ…¹‘…ÉµÍÑ…ÉÐˆ°±…ÍÍ±…%è€‰±…ÍÌ´Ðˆ°ÁÉ•Á±…%èÉÕ±”¤4(µãŽ-¢G§²ÚîÆ­yÓÐ¢ÐÐ Ð¢gVæ2FW7DfÆw46†ævTEF†U66†VGVÆVD&÷VæF&–W2‚’°Ð¢gVæ2–G2†BVÆ6VC¢F÷V&ÆR’Óâµ7G&–æuÒ°Ð¢6–væÅ6WVVæ6RæfÆw2†VÆ6VC¢VÆ6VBÂ&öf–ÆT”C¢'7FæF&B×7F'B"Â6Æ74fÆt”C¢&6Æ72ÓB"Â&WfÆt”C¢%"Ð¢æÖ…Âæ–BÐ¢ç6÷'FVB‚Ð¢ÐÐ Ð¢„5D76W'DWVÂ†–G2†C¢#“’’Â²&÷&ævR%ÒÐ¢„5D76W'DWVÂ†–G2†C¢3’Â²&6Æ72ÓB"Â&÷&ævR%ÒÐ¢„5D76W'DWVÂ†–G2†C¢3c’Â²%"Â&6Æ72ÓB"Â&÷&ævR%ÒÐ¢„5D76W'DWVÂ†–G2†C¢SC’Â²&6Æ72ÓB"Â&÷&ævR%ÒÐ¢„5D76W'DWVÂ†–G2†C¢c’Â²&÷&ævR%ÒÐ¢ÐÐ Ð Ð¢gVæ2FW7E66†VGVÆVE7F'G4F—66&D†–FFVå6V6öæG4æEW6U6VÆV7FVE&öf–ÆW4ÆVEF–ÖR‚’°Ð¢ÆWB6VÆV7FVBÒFFR‡F–ÖT–çFW'fÅ6–æ6S“s¢¢c²3rÐ Ð¢„5D76W'DWVÂ€Ð¢6–væÅ6WVVæ6Rç66†VGVÆVE6WVVæ6U7F'B‡6VÆV7FVDFFS¢6VÆV7FVBÂ6Æö6´öfg6WC¢Ó"Â66†VGVÆTE&6U7F'C¢fÇ6RÂ&öf–ÆT”C¢'7FæF&B×7F'B"’çF–ÖT–çFW'fÅ6–æ6S“sÀÐ¢cÀÐ¢67W&7“¢ãÀÐ¢%6WVVæ6R×7F'B&W6W'fF–öç2×W7BW6RF†R6VÆV7FVBÖ–çWFRÂv—F‚¦W&ò†–FFVâ6V6öæG2 Ð¢Ð¢„5D76W'DWVÂ€Ð¢6–væÅ6WVVæ6Rç66†VGVÆVE6WVVæ6U7F'B‡6VÆV7FVDFFS¢6VÆV7FVBÂ6Æö6´öfg6WC¢Ó"Â66†VGVÆTE&6U7F'C¢G'VRÂ&öf–ÆT”C¢'7FæF&B×7F'B"Â÷&ævTVæ&ÆVC¢G'VRÂ÷&ævTF—7Æ–VDÖ–çWFW3¢R’çF–ÖT–çFW'fÅ6–æ6S“sÀÐ¢ÀÐ¢67W&7“¢ãÀÐ¢%'VÆR#b&6R×7F'B&W6W'fF–öâ×W7B&Vv–âFVâÖ–çWFW2&Vf÷&RF†R7F'Bv†Vâ÷&ævR—2Væ&ÆVB Ð¢Ð¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç66†VGVÆVE7F'DÆVE6V6öæG2‡&öf–ÆT”C¢'7FæF&B×7F'B"Â÷&ævTVæ&ÆVC¢fÇ6R’Â3Ð¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç66†VGVÆVE7F'DÆVE6V6öæG2‡&öf–ÆT”C¢'f–FVòÓ#"Â÷&ævTVæ&ÆVC¢G'VRÂ÷&ævTF—7Æ–VDÖ–çWFW3¢R’ÂcÐ¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç66†VGVÆVE7F'DÆVE6V6öæG2‡&öf–ÆT”C¢'f–FVòÓ2"Â÷&ævTVæ&ÆVC¢G'VRÂ÷&ævTF—7Æ–VDÖ–çWFW3¢B’ÂSCÐ¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç66†VGVÆVE7F'DÆVE6V6öæG2‡&öf–ÆT”C¢&7W7FöÒÖf—fR"Â÷&ævTVæ&ÆVC¢G'VR’Â3Ð¢ÐÐ Ð Ð¢gVæ2FW7E6fVDfÆVWE7F'G4vVæW&FUF†U'VÆS#eF–ÖVÆ–æUW6VD'•F–ÖW"‚’°Ð¢ÆWB§6öâÒ2%·²&fÆt”B#¢&6Æ72ÓB"Â&Ö–çWFR#£RÂ'6V6öæB#£Â'&—6VB#§G'VRÂ&Væ&ÆVB#§G'VRÂ&†÷&â#¢'6†÷'B'ÕÒ"0Ð¢ÆWBWfVçG2Ò6–væÅ6WVVæ6Ræ6öæf–wW&VE7F'DWfVçG2€Ð¢§6öã¢§6öâÀÐ¢&öf–ÆT”C¢'7FæF&B×7F'B"ÀÐ¢&WfÆt”C¢%"ÀÐ¢÷&ævTVæ&ÆVC¢G'VRÀÐ¢÷&ævTF—7Æ–VDÖ–çWFW3¢RÀÐ¢÷&ævU&VÖ÷fVDÖ–çWFW3¢BÀÐ¢&6TFVÆ”Væ&ÆVC¢fÇ6RÀÐ¢&6TFVÆ”Ö–çWFW3¢ Ð¢’Ð Ð¢„5D76W'DWVÂ†WfVçG2æÖ…Âç6V6öæG4gFW%7F'B’Â³Â3Â3cÂSCÂcÂƒCÒÐ¢„5D76W'DWVÂ†WfVçG2æÖ…Âæ†÷&åVÇ6W2’Âµ³ÒÂ³ÒÂ³ÒÂ³ÒÂ³ÒÂµÕÒÐ¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç&—6VDfÆw2†WfVçG3¢WfVçG2ÂVÆ6VC¢3c’æÖ…Âæ–B’ç6÷'FVB‚’Â²%"Â&6Æ72ÓB"Â&÷&ævR%ÒÐ¢ÐÐ Ð¢gVæ2FW7DfÆVWE7F'EF–ÖTÖ÷fW56–væÇ4æD÷&ævT6ä&T'6VçB‚’°Ð¢ÆWB§6öâÒ2%·²&fÆt”B#¢&6Æ72ÓC#"Â&Ö–çWFR#£BÂ'6V6öæB#£Â'&—6VB#§G'VRÂ&Væ&ÆVB#§G'VRÂ&†÷&â#¢&Æöær'ÕÒ"0Ð¢ÆWBWfVçG2Ò6–væÅ6WVVæ6Ræ6öæf–wW&VE7F'DWfVçG2€Ð¢§6öã¢§6öâÀÐ¢&öf–ÆT”C¢'7FæF&B×7F'B"ÀÐ¢&WfÆt”C¢$’"ÀÐ¢÷&ævTVæ&ÆVC¢fÇ6RÀÐ¢÷&ævTF—7Æ–VDÖ–çWFW3¢RÀÐ¢÷&ævU&VÖ÷fVDÖ–çWFW3¢BÀÐ¢&6TFVÆ”Væ&ÆVC¢fÇ6RÀÐ¢&6TFVÆ”Ö–çWFW3¢ Ð¢’Ð Ð¢„5D76W'DWVÂ†WfVçG2æÖ…Âç6V6öæG4gFW%7F'B’Â³cÂ#Â3Â3cÒÐ¢„5D76W'DWVÂ†WfVçG2æf—'7Còæ†÷&åVÇ6W2Â³ÒÐ¢„5D76W'DfÇ6R†WfVçG2æ6öçF–ç2²CæfÆw2æ6öçF–ç2‡v†W&S¢²Cæ–BÓÒ&÷&ævR"Ò’ÒÐ¢ÐÐ Ð¢gVæ2FW7DFVfVÇE66†VGVÆTFFT—5&÷VæFVEFôgVÆÄÖ–çWFR‚’°Ð¢ÆWBFFRÒ6–væÅ6WVVæ6RæFVfVÇE66†VGVÆVDFFR†æ÷s¢FFR‡F–ÖT–çFW'fÅ6–æ6S“s¢r’ÂÖ–æ–×VÔÆVE6V6öæG3¢#Ð¢„5D76W'DWVÂ†FFRçF–ÖT–çFW'fÅ6–æ6S“sÂƒÂ67W&7“¢ãÐ¢ÐÐ Ð¢gVæ2FW7E&W7F'Ev&æ–æt—4W†7FÇ”öæTÖ–çWFTgFW%6–væÄÆ÷vW&–ær‚’°Ð¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç&W7F'Ev&æ–æuF–ÖR†Æ÷vW&VDC¢#R’ÂƒRÐ¢ÐÐ Ð¢gVæ2FW7E&6T6÷VçFF÷våW6W46Æ74Æ÷vW&–æt5F†U&VÅ¦W&ò‚’°Ð¢ÆWBWfVçG2Ò6–væÅ6WVVæ6RæWfVçG2‡&öf–ÆT”C¢'7FæF&B×7F'B"Â6Æ74fÆt”C¢&6Æ72ÓB"Â&WfÆt”C¢%"Ð Ð¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç&6U7F'DWfVçD–æFW‚†–ã¢WfVçG2’ÂBÐ¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç6V6öæG5VçF–Å&6U7F'B†–ã¢WfVçG2Â6WVVæ6TVÆ6VC¢’ÂcÐ¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç6V6öæG5VçF–Å&6U7F'B†–ã¢WfVçG2Â6WVVæ6TVÆ6VC¢sr’ÂS#2Ð¢„5D76W'DWVÂ…6–væÅ6WVVæ6Rç6V6öæG5VçF–Å&6U7F'B†–ã¢WfVçG2Â6WVVæ6TVÆ6VC¢c’ÂÓÐ¢ÐÐ Ð¢gVæ2FW7Ef–FVõ6WVVæ6W5W6UF†V—$÷vä6Æ74Æ÷vW&–æt5&6U7F'B‚’°Ð¢ÆWBFVfVÇG2ÒW6W$FVfVÇG2ç7FæF&@Ð¢ÆWBöÆDF—7Æ–VBÒFVfVÇG2æö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢ÆWBöÆE&VÖ÷fVBÒFVfVÇG2æö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢FVfW"°Ð¢–bÆWBöÆDF—7Æ–VB²FVfVÇG2ç6WB†öÆDF—7Æ–VBÂf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"’ÐÐ¢VÇ6R²FVfVÇG2ç&VÖ÷fTö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"’ÐÐ¢–bÆWBöÆE&VÖ÷fVB²FVfVÇG2ç6WB†öÆE&VÖ÷fVBÂf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"’ÐÐ¢VÇ6R²FVfVÇG2ç&VÖ÷fTö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"’ÐÐ¢ÐÐ¢FVfVÇG2ç6WBƒRÂf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢FVfVÇG2ç6WBƒÂf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢ÆWBf–FVôÒ6–væÅ6WVVæ6RæWfVçG2‡&öf–ÆT”C¢'f–FVòÓ#"Ð¢FVfVÇG2ç6WBƒBÂf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢FVfVÇG2ç6WBƒBÂf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢ÆWBf–FVô"Ò6–væÅ6WVVæ6RæWfVçG2‡&öf–ÆT”C¢'f–FVòÓ2"Ð Ð¢„5D76W'DWVÂ‡f–FVôµ6–væÅ6WVVæ6Rç&6U7F'DWfVçD–æFW‚†–ã¢f–FVô’Òç6V6öæG4gFW%7F'BÂcÐ¢„5D76W'DWVÂ‡f–FVô%µ6–væÅ6WVVæ6Rç&6U7F'DWfVçD–æFW‚†–ã¢f–FVô"’Òç6V6öæG4gFW%7F'BÂSCÐ¢ÐÐ Ð¢gVæ2FW7Dg&÷¦Vå6–væÅÆå&÷VæEG&—5v—F†÷WDföÆÆ÷v–ætÆFW$÷&ævU6WGF–æw2‚’F‡&÷w2°Ð¢ÆWBFVfVÇG2ÒW6W$FVfVÇG2ç7FæF&@Ð¢ÆWBöÆDF—7Æ–VBÒFVfVÇG2æö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢ÆWBöÆE&VÖ÷fVBÒFVfVÇG2æö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢FVfW"°Ð¢–bÆWBöÆDF—7Æ–VB²FVfVÇG2ç6WB†öÆDF—7Æ–VBÂf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"’ÐÐ¢VÇ6R²FVfVÇG2ç&VÖ÷fTö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"’ÐÐ¢–bÆWBöÆE&VÖ÷fVB²FVfVÇG2ç6WB†öÆE&VÖ÷fVBÂf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"’ÐÐ¢VÇ6R²FVfVÇG2ç&VÖ÷fTö&¦V7B†f÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"’ÐÐ¢ÐÐ¢FVfVÇG2ç6WBƒRÂf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢FVfVÇG2ç6WBƒBÂf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢ÆWBg&÷¦VâÒ6–væÅ6WVVæ6RæWfVçG2‡&öf–ÆT”C¢'7FæF&B×7F'B"Ð¢ÆWB6æ6†÷BÒG'’¥4ôäVæ6öFW"‚’æVæ6öFR†g&÷¦VâÐ¢FVfVÇG2ç6WBƒ‚Âf÷$¶W“¢'6–væÄ÷&ævTF—7Æ–VDÖ–çWFW2"Ð¢FVfVÇG2ç6WBƒ’Âf÷$¶W“¢'6–væÄ÷&ævU&VÖ÷fVDgFW$Ö–çWFW2"Ð¢ÆWB6†ævVBÒ6–væÅ6WVVæ6RæWfVçG2‡&öf–ÆT”C¢'7FæF&B×7F'B"Ð¢ÆWB&W7F÷&VBÒG'’¥4ôäFV6öFW"‚’æFV6öFR…µ6–væÅ6WVVæ6RäWfVçEÒç6VÆbÂg&öÓ¢6æ6†÷BÐ Ð¢„5D76W'DWVÂ‡&W7F÷&VBÂg&÷¦VâÐ¢„5D76W'Dæ÷DWVÂ†6†ævVBæÖ…Âç6V6öæG4gFW%7F'B’Â&W7F÷&VBæÖ…Âç6V6öæG4gFW%7F'B’Ð¢„5D76W'DWVÂ‡&W7F÷&VEµ6–væÅ6WVVæ6Rç&6U7F'DWfVçD–æFW‚†–ã¢&W7F÷&VB’Òç6V6öæG4gFW%7F'BÂcÐ¢ÐÐ§ÐÐ
+import XCTest
+@testable import WatchNavigation
+
+final class SignalSequenceTests: XCTestCase {
+    func testStartRuleSelectsItsMatchingPreparationSignal() {
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "P"), "P")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "I"), "I")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "U"), "U")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Z"), "Z")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Black"), "black")
+        XCTAssertEqual(SignalSequence.preparationFlagID(forStartRule: "Default"), "P")
+    }
+
+    func testManualOrangeRaiseCanRebaseTimelineAtClassWarning() throws {
+        let actions = #"[{"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"}]"#
+        let configured = try XCTUnwrap(SignalSequence.configuredStartEvents(
+            json: actions,
+            profileID: "standard-start",
+            prepFlagID: "P",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        ))
+        let anchored = try XCTUnwrap(SignalSequence.eventsStartingAtFirstClassWarning(configured))
+        XCTAssertEqual(anchored.map(\.secondsAfterStart), [0, 60, 240, 300, 540])
+        XCTAssertTrue(anchored.first?.title.contains("äºˆå‘Šä¿¡å·") == true)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 0), 120)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 0), 120)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 300, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 0), 300)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 0), 360)
+    }
+
+    func testStartReferenceOffsetTracksOrangePhaseSettings() {
+        let defaults = UserDefaults.standard
+        let oldEnabled = defaults.object(forKey: "signalOrangeEnabled")
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        defer {
+            if let oldEnabled { defaults.set(oldEnabled, forKey: "signalOrangeEnabled") }
+            else { defaults.removeObject(forKey: "signalOrangeEnabled") }
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+        }
+        defaults.set(true, forKey: "signalOrangeEnabled")
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 600)
+        defaults.set(4, forKey: "signalOrangeDisplayedMinutes")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 540)
+        defaults.set(false, forKey: "signalOrangeEnabled")
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "standard-start"), 300)
+        XCTAssertEqual(SignalSequence.startReferenceOffset(profileID: "video-20"), 0)
+    }
+
+    func testVideoSchedulesMatchReferenceTimesFlagStatesAndHornSignals() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(10, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoA = SignalSequence.events(profileID: "video-20")
+        XCTAssertEqual(videoA.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 1200])
+        XCTAssertEqual(videoA.map { $0.flags.map(\.id) }, [["orange"], ["green"], ["blue-square"], ["blue-square"], ["green"], ["orange"]])
+        XCTAssertEqual(videoA.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(videoA.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+
+        UserDefaults.standard.set(4, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoB = SignalSequence.events(profileID: "video-13")
+        XCTAssertEqual(videoB.map(\.secondsAfterStart), [0, 240, 300, 480, 540, 780])
+        XCTAssertEqual(videoB.map { $0.flags.map(\.id) }, [["orange"], ["class-4", "diagonal"], ["checker"], ["checker"], ["class-4", "diagonal"], ["orange"]])
+        XCTAssertEqual(videoB.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(videoB.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        XCTAssertEqual(SignalSequence.events(profileID: "standard-start").map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+    }
+
+    func testOrangeDisableSettingAppliesToAllVideoProfilesAndRestartStartsOrangeDown() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: "signalOrangeEnabled")
+        defaults.set(false, forKey: "signalOrangeEnabled")
+        defer {
+            if let previous { defaults.set(previous, forKey: "signalOrangeEnabled") }
+            else { defaults.removeObject(forKey: "signalOrangeEnabled") }
+        }
+
+        for profile in ["standard-start", "video-13", "video-20"] {
+            let events = SignalSequence.events(profileID: profile)
+            XCTAssertFalse(events.contains { $0.flags.contains { $0.id == "orange" } })
+            XCTAssertEqual(events.first?.secondsAfterStart, 0, "With orange disabled, the first race signal is action zero")
+        }
+
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let orangeOffStandard = SignalSequence.events(profileID: "standard-start")
+        XCTAssertEqual(orangeOffStandard.map(\.secondsAfterStart), [0, 60, 240, 300])
+        XCTAssertEqual(orangeOffStandard.map(\.flag), ["ã‚¯ãƒ©ã‚¹æ—— 4", "Pæ——", "Pæ——", "ã‚¯ãƒ©ã‚¹æ—— 4"])
+
+        defaults.set(true, forKey: "signalOrangeEnabled")
+        defaults.set(7, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(3, forKey: "signalOrangeRemovedAfterMinutes")
+        XCTAssertEqual(
+            SignalSequence.events(profileID: "standard-start").map(\.secondsAfterStart),
+            [0, 420, 480, 660, 720, 900],
+            "Changing orange display time shifts the race signals; removal remains relative to the last shifted signal"
+        )
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let restart = SignalSequence.recallRestartEvents()
+        XCTAssertEqual(SignalSequence.raisedFlags(events: restart, elapsed: 0).map(\.id), ["class-4"])
+        XCTAssertEqual(SignalSequence.flag("AP").artworkName, "Answering Pennant")
+        XCTAssertEqual(SignalSequence.flag("first-sub").artworkName, "First Substitute")
+    }
+
+    func testSelectedStartRuleChangesThePreparationFlag() {
+        let expected = ["P": "P", "I": "I", "U": "U", "Z": "Z", "black": "black"]
+        for (rule, flagID) in expected {
+            let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: rule)
+            XCTAssertEqual(events[2].flags.first?.id, flagID)
+            XCTAssertEqual(events[3].flags.first?.id, flagID)
+            XCTAssertEqual(events[2].colorHex, events[3].colorHex)
+        }
+    }
+
+    func testTimerRefreshAlignsToCorrectedWholeSecond() {
+        let now = Date(timeIntervalSince1970: 123.456)
+        let next = SignalSequence.nextAlignedTickDate(after: now, clockOffset: 0.25)
+        XCTAssertEqual(next.timeIntervalSince1970, 123.75, accuracy: 0.001)
+
+        let atBoundary = Date(timeIntervalSince1970: 123.75)
+        let following = SignalSequence.nextAlignedTickDate(after: atBoundary, clockOffset: 0.25)
+        XCTAssertEqual(following.timeIntervalSince1970, 124.75, accuracy: 0.001)
+    }
+
+    func testSequenceZeroAlignsToRealMinuteAfterMinimumLeadTime() {
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 10, minimumLeadSeconds: 15), 60)
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 60, minimumLeadSeconds: 0), 60)
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 50, minimumLeadSeconds: 15), 120)
+        XCTAssertEqual(SignalSequence.countdownSeconds(50.1), 51)
+        XCTAssertEqual(SignalSequence.countdownSeconds(51.0), 51)
+        XCTAssertEqual(SignalSequence.countdownSeconds(0.0), 0)
+    }
+
+    func testStandardStartScheduleUsesRaceStartOffsetsAndRequestedHornSignals() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
+
+        XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(events.map(\.raised), [true, true, true, false, false, false])
+        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+        XCTAssertEqual(events.map(\.title), [
+            "æ©™æ——ã‚’æŽ²æšï¼ˆäºˆå‘Šä¿¡å·ã®5åˆ†å‰ï¼‰",
+            "ã‚¯ãƒ©ã‚¹æ—— 4ã‚’æŽ²æšï¼ˆäºˆå‘Šä¿¡å·ãƒ»ã‚¹ã‚¿ãƒ¼ãƒˆ5åˆ†å‰ï¼‰",
+            "Pæ——ã‚’æŽ²æšï¼ˆæº–å‚™ä¿¡å·ãƒ»ã‚¹ã‚¿ãƒ¼ãƒˆ4åˆ†å‰ï¼‰",
+            "Pæ——ã‚’é™ä¸‹ï¼ˆã‚¹ã‚¿ãƒ¼ãƒˆ1åˆ†å‰ï¼‰",
+            "ã‚¯ãƒ©ã‚¹æ—— 4ã‚’é™ä¸‹ï¼ˆã‚¹ã‚¿ãƒ¼ãƒˆï¼‰",
+            "æ©™æ——ã‚’é™ä¸‹ï¼ˆæœ€å¾Œã®ä¿¡å·ã‹ã‚‰è¨­å®šæ™‚é–“å¾Œï¼‰"
+        ])
+    }
+
+    func testStandardSequenceIsTheDefaultAndHighlightsOrangeFlagFirst() {
+        UserDefaults.standard.set(5, forKey: "signalOrangeDisplayedMinutes")
+        UserDefaults.standard.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        XCTAssertEqual(SignalSequence.events().map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(SignalSequence.initialEventIndex(), 0)
+    }
+
+    func testRecallRestartAndOrangeFlagRemovalTimes() {
+        let restart = SignalSequence.recallRestartEvents(classFlagID: "class-4", prepFlagID: "P")
+        XCTAssertEqual(restart.map(\.secondsAfterStart), [0, 60, 240, 300])
+        XCTAssertEqual(restart.map(\.hornPulses), [[0], [0], [1], [0]])
+        XCTAssertEqual(SignalSequence.flags(elapsed: 839, profileID: "standard-start").map(\.id), ["orange"])
+        XCTAssertEqual(SignalSequence.flags(elapsed: 840, profileID: "standard-start"), [])
+    }
+
+    func testRecallAndPostponementUseRequestedShortHornCounts() {
+        XCTAssertEqual(SignalSequence.individualRecallRaise.flags.map(\.id), ["X"])
+        XCTAssertEqual(SignalSequence.individualRecallRaise.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.generalRecallRaise.flags.map(\.id), ["first-sub"])
+        XCTAssertEqual(SignalSequence.generalRecallRaise.hornPulses, [0, 0])
+        XCTAssertEqual(SignalSequence.generalRecallLower.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.postponementRaise.flags.map(\.id), ["AP"])
+        XCTAssertEqual(SignalSequence.postponementRaise.hornPulses, [0, 0])
+        XCTAssertEqual(SignalSequence.postponementLower.hornPulses, [0])
+    }
+
+    func testAbandonAllUsesThreeShortSoundsAndLowerUsesOne() {
+        XCTAssertEqual(SignalSequence.abandonRaise.hornPulses, [0, 0, 0])
+        XCTAssertEqual(SignalSequence.abandonLower.hornPulses, [0])
+        XCTAssertEqual(SignalSequence.nextMinuteBoundary(at: 125, minimumLeadSeconds: 0), 180)
+    }
+
+    func testFlagsChangeAtTheScheduledBoundaries() {
+        func ids(at elapsed: Double) -> [String] {
+            SignalSequence.flags(elapsed: elapsed, profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
+                .map(\.id)
+                .sorted()
+        }
+
+        XCTAssertEqual(ids(at: 299), ["orange"])
+        XCTAssertEqual(ids(at: 300), ["class-4", "orange"])
+        XCTAssertEqual(ids(at: 360), ["P", "class-4", "orange"])
+        XCTAssertEqual(ids(at: 540), ["class-4", "orange"])
+        XCTAssertEqual(ids(at: 600), ["orange"])
+    }
+
+
+    func testScheduledStartsDiscardHiddenSecondsAndUseSelectedProfilesLeadTime() {
+        let selected = Date(timeIntervalSince1970: 10 * 60 + 37)
+
+        XCTAssertEqual(
+            SignalSequence.scheduledSequenceStart(selectedDate: selected, clockOffset: -2, scheduleAtRaceStart: false, profileID: "standard-start").timeIntervalSince1970,
+            600,
+            accuracy: 0.001,
+            "Sequence-start reservations must use the selected minute, with zero hidden seconds"
+        )
+        XCTAssertEqual(
+            SignalSequence.scheduledSequenceStart(selectedDate: selected, clockOffset: -2, scheduleAtRaceStart: true, profileID: "standard-start", orangeEnabled: true, orangeDisplayedMinutes: 5).timeIntervalSince1970,
+            0,
+            accuracy: 0.001,
+            "Rule 26 race-start reservation must begin ten minutes before the start when orange is enabled"
+        )
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "standard-start", orangeEnabled: false), 300)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "video-20", orangeEnabled: true, orangeDisplayedMinutes: 5), 600)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "video-13", orangeEnabled: true, orangeDisplayedMinutes: 4), 540)
+        XCTAssertEqual(SignalSequence.scheduledStartLeadSeconds(profileID: "custom-five", orangeEnabled: true), 300)
+    }
+
+
+    func testSavedFleetStartsGenerateTheRule26TimelineUsedByTimer() {
+        let json = #"[{"flagID":"class-4","minute":5,"second":0,"raised":true,"enabled":true,"horn":"short"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "P",
+            orangeEnabled: true,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\.secondsAfterStart), [0, 300, 360, 540, 600, 840])
+        XCTAssertEqual(events.map(\.hornPulses), [[0], [0], [0], [1], [0], []])
+        XCTAssertEqual(SignalSequence.raisedFlags(events: events, elapsed: 360).map(\.id).sorted(), ["P", "class-4", "orange"])
+    }
+
+    func testFleetStartTimeMovesSignalsAndOrangeCanBeAbsent() {
+        let json = #"[{"flagID":"class-420","minute":4,"second":0,"raised":true,"enabled":true,"horn":"long"}]"#
+        let events = SignalSequence.configuredStartEvents(
+            json: json,
+            profileID: "standard-start",
+            prepFlagID: "I",
+            orangeEnabled: false,
+            orangeDisplayedMinutes: 5,
+            orangeRemovedMinutes: 4,
+            raceDelayEnabled: false,
+            raceDelayMinutes: 0
+        )!
+
+        XCTAssertEqual(events.map(\.secondsAfterStart), [60, 120, 300, 360])
+        XCTAssertEqual(events.first?.hornPulses, [1])
+        XCTAssertFalse(events.contains { $0.flags.contains(where: { $0.id == "orange" }) })
+    }
+
+    func testDefaultScheduleDateIsRoundedToAFullMinute() {
+        let date = SignalSequence.defaultScheduledDate(now: Date(timeIntervalSince1970: 17), minimumLeadSeconds: 120)
+        XCTAssertEqual(date.timeIntervalSince1970, 180, accuracy: 0.001)
+    }
+
+    func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
+        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
+    }
+
+    func testRaceCountdownUsesClassLoweringAsTheRealZero() {
+        let events = SignalSequence.events(profileID: "standard-start", classFlagID: "class-4", prepFlagID: "P")
+
+        XCTAssertEqual(SignalSequence.raceStartEventIndex(in: events), 4)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 0), 600)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 77), 523)
+        XCTAssertEqual(SignalSequence.secondsUntilRaceStart(in: events, sequenceElapsed: 601), -1)
+    }
+
+    func testVideoSequencesUseTheirOwnClassLoweringAsRaceStart() {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(10, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoA = SignalSequence.events(profileID: "video-20")
+        defaults.set(4, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let videoB = SignalSequence.events(profileID: "video-13")
+
+        XCTAssertEqual(videoA[SignalSequence.raceStartEventIndex(in: videoA)!].secondsAfterStart, 600)
+        XCTAssertEqual(videoB[SignalSequence.raceStartEventIndex(in: videoB)!].secondsAfterStart, 540)
+    }
+
+    func testFrozenSignalPlanRoundTripsWithoutFollowingLaterOrangeSettings() throws {
+        let defaults = UserDefaults.standard
+        let oldDisplayed = defaults.object(forKey: "signalOrangeDisplayedMinutes")
+        let oldRemoved = defaults.object(forKey: "signalOrangeRemovedAfterMinutes")
+        defer {
+            if let oldDisplayed { defaults.set(oldDisplayed, forKey: "signalOrangeDisplayedMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeDisplayedMinutes") }
+            if let oldRemoved { defaults.set(oldRemoved, forKey: "signalOrangeRemovedAfterMinutes") }
+            else { defaults.removeObject(forKey: "signalOrangeRemovedAfterMinutes") }
+        }
+        defaults.set(5, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(4, forKey: "signalOrangeRemovedAfterMinutes")
+        let frozen = SignalSequence.events(profileID: "standard-start")
+        let snapshot = try JSONEncoder().encode(frozen)
+        defaults.set(8, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(9, forKey: "signalOrangeRemovedAfterMinutes")
+        let changed = SignalSequence.events(profileID: "standard-start")
+        let restored = try JSONDecoder().decode([SignalSequence.Event].self, from: snapshot)
+
+        XCTAssertEqual(restored, frozen)
+        XCTAssertNotEqual(changed.map(\.secondsAfterStart), restored.map(\.secondsAfterStart))
+        XCTAssertEqual(restored[SignalSequence.raceStartEventIndex(in: restored)!].secondsAfterStart, 600)
+    }
+}

@@ -1,36 +1,304 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíçn4N‹Z–‹­¦ëeŠw¬íÁ…­…”½´¹½±‘•¹™…±½¹Ì¹Í…¥±¥¹ÁÌ4(4)¥µÁ½ÉĞ½Éœ¹©Õ¹¥Ğ¹ÍÍ•ÉĞ¹…ÍÍ•ÉÑÅÕ…±Ì4)¥µÁ½ÉĞ½Éœ¹©Õ¹¥Ğ¹ÍÍ•ÉĞ¹…ÍÍ•ÉÑ9½ÑÅÕ…±Ì4)¥µÁ½ÉĞ½Éœ¹©Õ¹¥Ğ¹Q•ÍĞ4(4)±…ÍÌM¥¹…±M•ÅÕ•¹•Q•ÍĞì4(€€€Q•ÍĞ4(€€€™Õ¸ÍÑ…ÉÑIÕ±•M•±•ÑÍ%ÑÍ5…Ñ¡¥¹AÉ•Á…É…Ñ¥½¹M¥¹…° ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰@ˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰@ˆ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰$ˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰$ˆ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰Tˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰Tˆ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰hˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰hˆ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰‰±…¬ˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰	±…¬ˆ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰@ˆ°M¥¹…±M•ÅÕ•¹”¹ÁÉ•Á…É…Ñ¥½¹±…½ÉMÑ…ÉÑIÕ±” ‰•™…Õ±Ğˆ¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸µ…¹Õ…±=É…¹•I…¥Í•¹¡½ÉÍ±…ÍÍ]…É¹¥¹¹‘-••ÁÍI…•Q¥µ•±¥¹” ¤ì4(€€€€€€€Ù…°‰…Í”€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ¡‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°ÁÉ½™¥±•%¹‘•à€ô€À¤4(€€€€€€€Ù…°½¹™¥ÕÉ•€ôM¥¹…±M•ÅÕ•¹”¹½¹™¥ÕÉ•‘MÑ…¹‘…É‘Ù•¹ÑÌ 4(€€€€€€€€€€€‰…Í”°Í•Ñ=˜ ‰±…ÍÌƒ
-ÜSŠ"HÔèÀÀƒ
-Üƒš:Ëš>hƒ
-Üƒ~·¦~Ìˆ¤°€ØÀÀ°€Ğ°™…±Í”°€À4(€€€€€€€€¤„„4(€€€€€€€Ù…°…¹¡½É•€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÍMÑ…ÉÑ¥¹Ñ¥ÉÍÑ±…ÍÍ]…É¹¥¹œ¡½¹™¥ÕÉ•¤„„4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ØÀ°€ÈĞÀ°€ÌÀÀ°€ÔĞÀ¤°…¹¡½É•¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‹
-¿§
-çš^_
-Kš:Ëš>k¾ò#’ê#–F+’ş‡–>ß¾ò$ˆ°…¹¡½É•¹™¥ÉÍĞ ¤¹Ñ¥Ñ±”¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‹š¦dˆ°…¹¡½É•¹±…ÍĞ ¤¹™±…œ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÌÀÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í” ÌÀÁ|ÀÀÁ0°€Á0°€Ô°€À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÌØÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í” ÌÀÅ|ÀÀÁ0°€Á0°€Ô°€À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÄÈÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í” ØÕ|ÀÀÁ0°€Á0°€Ä°€À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÄÈÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹ÍÑ…ÉÑ™Ñ•É=É…¹•I…¥Í” ØÕ|ÀÀÁ0°€ÔÁ|ÀÀÁ0°€Ä°€À¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸É…•MÑ…ÉÑ=™™Í•ÑQÉ…­Í=É…¹•A¡…Í•¹‘¥Í…‰±•‘=É…¹” ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÀÀ°M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°ÑÉÕ”°€Ô¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÔĞÀ°M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°ÑÉÕ”°€Ğ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÌÀÀ°M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°™…±Í”°€Ô¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì À°M¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰Ù¥‘•¼´ÈÀˆ°ÑÉÕ”°€Ô¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸Ù¥‘•½¹‘Y¥‘•½	5…Ñ¡Q¡•I•™•É•¹•M¥¹…±Q¥µ•Ì ¤ì4(€€€€€€€Ù…°Ù¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÈÀ°€Ä°½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€ÄÀ°½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€ÄÈÀÀ¤°Ù¥‘•½¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹š¦dˆ°€‹ŞDˆ°€‹¦vHˆ°€‹¦vHˆ°€‹ŞDˆ°€‹š¦dˆ¤°Ù¥‘•½¹µ…Àì¥Ğ¹™±…œô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡ÑÉÕ”°ÑÉÕ”°ÑÉÕ”°™…±Í”°™…±Í”°™…±Í”¤°Ù¥‘•½¹µ…Àì¥Ğ¹É…¥Í•ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ Ä¤°±¥ÍÑ=˜ À¤°•µÁÑå1¥ÍĞ ¤¤°4(€€€€€€€€€€€Ù¥‘•½¹µ…Àì¥Ğ¹¡½É¹AÕ±Í•Ìô¤4(4(€€€€€€€Ù…°Ù¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄÌ°€È°½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ğ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÈĞÀ°€ÌÀÀ°€ĞàÀ°€ÔĞÀ°€ÜàÀ¤°Ù¥‘•½¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡ÑÉÕ”°ÑÉÕ”°ÑÉÕ”°™…±Í”°™…±Í”°™…±Í”¤°Ù¥‘•½¹µ…Àì¥Ğ¹É…¥Í•ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ Ä¤°±¥ÍÑ=˜ À¤°•µÁÑå1¥ÍĞ ¤¤°4(€€€€€€€€€€€Ù¥‘•½¹µ…Àì¥Ğ¹¡½É¹AÕ±Í•Ìô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹Òhˆ°€‹šZs
-ˆ¤°Ù¥‘•½	lÅt¹™±…5…É­Ì¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹Òhˆ°€‹šZs
-ˆ¤°Ù¥‘•½	lÑt¹™±…5…É­Ì¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡Í•Ñ=˜ ‹š¦dˆ°€‹Òhˆ°€‹šZs
-ˆ°€‹¢Ö“f÷
-Ÿ
-¼ˆ¤°4(€€€€€€€€€€€M¥¹…±M•ÅÕ•¹”¹™±…ÍÑÙ•¹ÑÌ¡Ù¥‘•½°€ÌÀÀ¸À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¹Ñ½M•Ğ ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ğ°M¥¹…±M•ÅÕ•¹”¹¥¹¥Ñ¥…±Ù•¹Ñ%¹‘•à Ä¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ğ°M¥¹…±M•ÅÕ•¹”¹¥¹¥Ñ¥…±Ù•¹Ñ%¹‘•à È¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸½É…¹•¥Í…‰±•M•ÑÑ¥¹ÁÁ±¥•ÍQ½Ù•ÉåAÉ½™¥±•¹‘I•…±±-••ÁÍ=É…¹•½İ¸ ¤ì4(€€€€€€€™½È€¡ÁÉ½™¥±”¥¸M¥¹…±M•ÅÕ•¹”¹ÁÉ½™¥±•Ì¹¥¹‘¥•Ì¤ì4(€€€€€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡™…±Í”°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÈÀ°ÁÉ½™¥±”°½É…¹•¹…‰±•€ô™…±Í”¤¹…¹äì¥Ğ¹™±…œ€ôô€‹š¦dˆô¤4(€€€€€€€ô4(€€€€€€€Ù…°½É…¹•=™˜€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ 4(€€€€€€€€€€€‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°4(€€€€€€€€€€€ÁÉ½™¥±•%¹‘•à€ô€À°4(€€€€€€€€€€€½É…¹•¹…‰±•€ô™…±Í”°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ4(€€€€€€€€¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ØÀ°€ÈĞÀ°€ÌÀÀ¤°½É…¹•=™˜¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹Òhˆ°€‰@ˆ°€‰@ˆ°€‹Òhˆ¤°½É…¹•=™˜¹µ…Àì¥Ğ¹™±…œô¤4(4(€€€€€€€Ù…°±½¹•É=É…¹”€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ 4(€€€€€€€€€€€‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°4(€€€€€€€€€€€ÁÉ½™¥±•%¹‘•à€ô€À°4(€€€€€€€€€€€½É…¹•¹…‰±•€ôÑÉÕ”°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ü°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ì4(€€€€€€€€¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ĞÈÀ°€ĞàÀ°€ØØÀ°€ÜÈÀ°€äÀÀ¤°±½¹•É=É…¹”¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(4(€€€€€€€Ù…°É•ÍÑ…ÉĞ€ôM¥¹…±M•ÅÕ•¹”¹É•ÍÑ…ÉÑÙ•¹ÑÌ ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹Òhˆ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍÑÙ•¹ÑÌ¡É•ÍÑ…ÉĞ°€À¸À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹²³’â’î¢† ˆ¤°M¥¹…±M•ÅÕ•¹”¹•¹•É…±I•…±±I…¥Í”¹™±…5…É­Ì¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‰@ˆ¤°M¥¹…±M•ÅÕ•¹”¹Á½ÍÑÁ½¹•µ•¹ÑI…¥Í”¹™±…5…É­Ì¹µ…Àì¥Ğ¹¥ô¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸Í•±•Ñ•‘±…ÍÍ±……¹	•1½½Q•áÑ=É%¹Ñ•É¹…Ñ¥½¹…±±…œ ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰±…ÍÌµ1…Í•Èˆ°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°±…ÍÍ9…µ”€ô€‰1…Í•Èˆ¥lÅt¹™±…œ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰Ñ•áĞé±…ÍÌ€Äˆ°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°±…ÍÍ9…µ”€ô€‰Ñ•áĞé±…ÍÌ€Äˆ¥lÅt¹™±…œ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰¥¹Ñ°é±Á¡„ˆ°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°±…ÍÍ9…µ”€ô€‰¥¹Ñ°é±Á¡„ˆ¥lÅt¹™±…œ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰¥¹Ñ•É¹…Ñ¥½¹…±±…œˆ°M¥¹…±±…5…É¬ ‰¥¹Ñ°é±Á¡„ˆ°€Áá¹Ñ½%¹Ğ ¤¤¹ÍÑå±”¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰Ñ•áÑ±…œˆ°M¥¹…±±…5…É¬ ‰Ñ•áĞé±…ÍÌ€Äˆ°€Áá¹Ñ½%¹Ğ ¤¤¹ÍÑå±”¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸Í¥¹…±M•ÅÕ•¹•±¥¹Íi•É½Q½I•…±±½­5¥¹ÕÑ•™Ñ•É5¥¹¥µÕµ1•… ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹Í¡•‘Õ±•‘MÑ…ÉÑĞ ÄÁ|ÀÀÁ0°€ÄÔ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹Í¡•‘Õ±•‘MÑ…ÉÑĞ ÄÁ|ÀÀÁ0°€À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹Í¡•‘Õ±•‘MÑ…ÉÑĞ ØÁ|ÀÀÁ0°€À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÄÈÁ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹Í¡•‘Õ±•‘MÑ…ÉÑĞ ÔÁ|ÀÀÁ0°€ÄÔ¤¤4(€€€ô4(€€€Q•ÍĞ4(€€€™Õ¸É•™É•Í¡]…¥ÑÍ½ÉQ¡•9•áÑ½ÉÉ•Ñ•‘]¡½±•M•½¹ ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ĞÀÁ0°M¥¹…±Q¥µ¥¹œ¹µ¥±±¥ÍU¹Ñ¥±9•áÑM•½¹ ÄÉ|ÌĞÕ|ØÀÁ0¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Å0°M¥¹…±Q¥µ¥¹œ¹µ¥±±¥ÍU¹Ñ¥±9•áÑM•½¹ ÄÉ|ÌĞÕ|ääå0¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÄÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹µ¥±±¥ÍU¹Ñ¥±9•áÑM•½¹ ÄÉ|ÌĞÙ|ÀÀÁ0¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸½Õ¹Ñ‘½İ¹UÍ•Í•¥±¥¹M½%Ñ5…Ñ¡•Í±½­M•½¹‘Ì ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÔÄ°M¥¹…±Q¥µ¥¹œ¹½Õ¹Ñ‘½İ¹M•½¹‘Ì ÔÀ¸Ä¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÔÄ°M¥¹…±Q¥µ¥¹œ¹½Õ¹Ñ‘½İ¹M•½¹‘Ì ÔÄ¸À¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì À°M¥¹…±Q¥µ¥¹œ¹½Õ¹Ñ‘½İ¹M•½¹‘Ì À¸À¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸Í•±•Ñ•‘MÑ…ÉÑIÕ±•½¹ÑÉ½±ÍQ¡•I…¥Í•‘¹‘1½İ•É•‘AÉ•Á…É…Ñ¥½¹±…œ ¤ì4(€€€€€€€Ù…°•áÁ•Ñ•€ôµ…Á=˜ ‰@ˆÑ¼€‰@ˆ°€‰$ˆÑ¼€‰$ˆ°€‰TˆÑ¼€‰Tˆ°€‰hˆÑ¼€‰hˆ°€‰‰±…¬ˆÑ¼€‰‰±…¬ˆ¤4(€€€€€€€™½È€ ¡ÉÕ±”°™±…œ¤¥¸•áÁ•Ñ•¤ì4(€€€€€€€€€€€Ù…°•Ù•¹ÑÌ€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°ÁÉ•Á±…œ€ôÉÕ±”¤4(€€€€€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡™±…œ°•Ù•¹ÑÍlÉt¹™±…œ¤4(€€€€€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡™±…œ°•Ù•¹ÑÍlÍt¹™±…œ¤4(€€€€€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡•Ù•¹ÑÍlÉt¹½±½È°•Ù•¹ÑÍlÍt¹½±½È¤4(€€€€€€€ô4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸ÍÑ…¹‘…É‘MÑ…ÉÑUÍ•ÍI…•M¥¹…±Q¥µ•Í¹‘=É…¹•M¡½ÉÑ!½É¸ ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€àĞÀ¤°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À¤¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡ÑÉÕ”°ÑÉÕ”°ÑÉÕ”°™…±Í”°™…±Í”°™…±Í”¤°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÈÀ°€À¤¹µ…Àì¥Ğ¹É…¥Í•ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜¡±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ À¤°±¥ÍÑ=˜ Ä¶ãKh‘éì¶»§q«^t À¤°M¥¹…±M•ÅÕ•¹”¹¥¹‘¥Ù¥‘Õ…±I•…±±I…¥Í”¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€À¤°M¥¹…±M•ÅÕ•¹”¹•¹•É…±I•…±±I…¥Í”¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À¤°M¥¹…±M•ÅÕ•¹”¹•¹•É…±I•…±±1½İ•È¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€À¤°M¥¹…±M•ÅÕ•¹”¹Á½ÍÑÁ½¹•µ•¹ÑI…¥Í”¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À¤°M¥¹…±M•ÅÕ•¹”¹Á½ÍÑÁ½¹•µ•¹Ñ1½İ•È¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€À°€À¤°M¥¹…±M•ÅÕ•¹”¹…‰…¹‘½¹I…¥Í”¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À¤°M¥¹…±M•ÅÕ•¹”¹…‰…¹‘½¹1½İ•È¹¡½É¹AÕ±Í•Ì¤4(€€€ô4(4(4(€€€Q•ÍĞ4(€€€™Õ¸Í…Ù•‘±••ÑMÑ…ÉÑI½İÍÉ¥Ù•IÕ¹Ñ¥µ•±…Í¹‘!½É¹Ì ¤ì4(€€€€€€€Ù…°‰…Í”€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ 4(€€€€€€€€€€€‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°4(€€€€€€€€€€€ÁÉ½™¥±•%¹‘•à€ô€À°4(€€€€€€€€€€€ÁÉ•Á±…œ€ô€‰@ˆ°4(€€€€€€€€€€€½É…¹•¹…‰±•€ôÑÉÕ”°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€±…ÍÍ9…µ”€ô€‹
-¿§
-çš^\ˆ°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô4(€€€€€€€€¤4(€€€€€€€Ù…°½¹™¥ÕÉ•€ôM¥¹…±M•ÅÕ•¹”¹½¹™¥ÕÉ•‘MÑ…¹‘…É‘Ù•¹ÑÌ 4(€€€€€€€€€€€‰…Í”€ô‰…Í”°4(€€€€€€€€€€€•¹ÑÉ¥•Ì€ôÍ•Ñ=˜ ‰±…ÍÌƒ
-ÜSŠ"HÔèÀÀƒ
-Üƒš:Ëš>hƒ
-Üƒ~·¦~Ìˆ¤°4(€€€€€€€€€€€É•™•É•¹•=™™Í•Ğ€ôM¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°ÑÉÕ”°€Ô¤°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€É…••±…å¹…‰±•€ô™…±Í”°4(€€€€€€€€€€€É…••±…å5¥¹ÕÑ•Ì€ô€À4(€€€€€€€€¤„„4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€àĞÀ¤°½¹™¥ÕÉ•¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‰@ˆ°€‹š¦dˆ°€‹Òhˆ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍÑÙ•¹ÑÌ¡½¹™¥ÕÉ•°€ÌØÀ¸À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¹Í½ÉÑ• ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ Ä¤°½¹™¥ÕÉ•¹™¥ÉÍĞì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ€ôô€ÔĞÀô¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡•µÁÑå1¥ÍĞñ%¹Ğø ¤°½¹™¥ÕÉ•¹™¥ÉÍĞì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ€ôô€àĞÀô¹¡½É¹AÕ±Í•Ì¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸Í…Ù•‘MÑ…ÉÑQ¥µ•¹‘I…••±…å¡…¹•Q¡••¹•É…Ñ•‘Q¥µ•±¥¹” ¤ì4(€€€€€€€Ù…°‰…Í”€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ¤4(€€€€€€€Ù…°½¹™¥ÕÉ•€ôM¥¹…±M•ÅÕ•¹”¹½¹™¥ÕÉ•‘MÑ…¹‘…É‘Ù•¹ÑÌ 4(€€€€€€€€€€€‰…Í”€ô‰…Í”°4(€€€€€€€€€€€•¹ÑÉ¥•Ì€ôÍ•Ñ=˜ ‰±…ÍÌƒ
-ÜSŠ"HĞèÀÀƒ
-Üƒš:Ëš>hƒ
-Üƒ¦Vß¦~Ìˆ¤°4(€€€€€€€€€€€É•™•É•¹•=™™Í•Ğ€ôM¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°ÑÉÕ”°€Ô¤°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€É…••±…å¹…‰±•€ô™…±Í”°4(€€€€€€€€€€€É…••±…å5¥¹ÕÑ•Ì€ô€À4(€€€€€€€€¤„„4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌØÀ°€ĞÈÀ°€ØÀÀ°€ØØÀ°€äÀÀ¤°½¹™¥ÕÉ•¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ Ä¤°½¹™¥ÕÉ•¹™¥ÉÍĞì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ€ôô€ÌØÀô¹¡½É¹AÕ±Í•Ì¤4(€€€ô4(4(4(€€€Q•ÍĞ4(€€€™Õ¸Í…Ù•‘AÉ•Á¹‘%¹‘¥Ù¥‘Õ…±M¥¹…±I½İÍ½¹ÑÉ½±Q¡•¥É=İ¹Q¥µ•Í¹‘!½É¹Ì ¤ì4(€€€€€€€Ù…°‰…Í”€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ 4(€€€€€€€€€€€‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°4(€€€€€€€€€€€ÁÉ½™¥±•%¹‘•à€ô€À°4(€€€€€€€€€€€ÁÉ•Á±…œ€ô€‰@ˆ°4(€€€€€€€€€€€½É…¹•¹…‰±•€ôÑÉÕ”°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€±…ÍÍ9…µ”€ô€‹
-¿§
-çš^\ˆ°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô4(€€€€€€€€¤4(€€€€€€€Ù…°½¹™¥ÕÉ•€ôM¥¹…±M•ÅÕ•¹”¹½¹™¥ÕÉ•‘MÑ…¹‘…É‘Ù•¹ÑÌ 4(€€€€€€€€€€€‰…Í”€ô‰…Í”°4(€€€€€€€€€€€•¹ÑÉ¥•Ì€ôÍ•Ñ=˜ 4(€€€€€€€€€€€€€€€€‰±…ÍÌƒ
-ÜSŠ"HÔèÀÀƒ
-Üƒš:Ëš>hƒ
-Üƒ~·¦~Ìˆ°4(€€€€€€€€€€€€€€€€‰$ƒ
-ÜSŠ"HĞèÀÀƒ
-Üƒš:Ëš>hƒ
-Üƒ~·¦~Ìˆ°4(€€€€€€€€€€€€€€€€‰$ƒ
-ÜSŠ"HÄèÀÀƒ
-Üƒ¦f7’â,ƒ
-Üƒ¦Vß¦~Ìˆ°4(€€€€€€€€€€€€€€€€‰`ƒ
-ÜSŠ"HÀèÌÀƒ
-Üƒš:Ëš>hƒ
-Üƒ~·¦~Ìˆ4(€€€€€€€€€€€€¤°4(€€€€€€€€€€€É•™•É•¹•=™™Í•Ğ€ôM¥¹…±M•ÅÕ•¹”¹ÍÑ…ÉÑI•™•É•¹•=™™Í•Ğ ‰ÍÑ…¹‘…ÉµÍÑ…ÉĞˆ°ÑÉÕ”°€Ô¤°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€É…••±…å¹…‰±•€ô™…±Í”°4(€€€€€€€€€€€É…••±…å5¥¹ÕÑ•Ì€ô€À4(€€€€€€€€¤„„4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ÔÜÀ°€ØÀÀ°€àĞÀ¤°½¹™¥ÕÉ•¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ Ä¤°½¹™¥ÕÉ•¹™¥ÉÍĞì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ€ôô€ÔĞÀô¹¡½É¹AÕ±Í•Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ‰`ˆ°½¹™¥ÕÉ•¹™¥ÉÍĞì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ€ôô€ÔÜÀô¹™±…œ¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸…Ñ¥Ù•I½İ‘Ù…¹•ÍÑ±…ÁÍ•‘Ù•¹Ñ	½Õ¹‘…Éä ¤ì4(€€€€€€€Ù…°½™™Í•ÑÌ€ô±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€ÄÈÀÀ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ´Ä°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ´À¸Ä°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì À°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à À¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì À°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à Èää¸äää°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ä°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ÌÀÀ¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì È°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ÌØÀ¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ì°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ÔĞÀ¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ğ°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ØÀÀ¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ô°M¥¹…±Q¥µ¥¹œ¹…Ñ¥Ù•Ù•¹Ñ%¹‘•à ÄÈÀÀ¸À°½™™Í•ÑÌ¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸É½ÍÍ•‘Ù•¹ÑÍÉ•I•Á½ÉÑ•‘=¹•¹‘%¹=É‘•È ¤ì4(€€€€€€€Ù…°½™™Í•ÑÌ€ô±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€ÄÈÀÀ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À¤°M¥¹…±Q¥µ¥¹œ¹•Ù•¹Ñ%¹‘¥•ÍÉ½ÍÍ• ´Ä¸À°€À¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ Ä°€È¤°M¥¹…±Q¥µ¥¹œ¹•Ù•¹Ñ%¹‘¥•ÍÉ½ÍÍ• Èää¸À°€ÌØÄ¸À°½™™Í•ÑÌ¤¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡•µÁÑå1¥ÍĞñ%¹Ğø ¤°M¥¹…±Q¥µ¥¹œ¹•Ù•¹Ñ%¹‘¥•ÍÉ½ÍÍ• ÌØÄ¸À°€ÌÔä¸À°½™™Í•ÑÌ¤¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸É•™•É•¹•Y¥‘•½Q¥µ¥¹½•Í9½ÑM…±•]¥Ñ¡ÕÉ…Ñ¥½¸ ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ À°€ÌÀÀ°€ÌØÀ°€ÔĞÀ°€ØÀÀ°€àĞÀ¤°M¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄÀ°€Ä¤¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸µ…ÍÑM¡½İÍÕÉÉ•¹ÑI…¥Í•‘±…Ì ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹š¦dˆ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍĞ À¸À°€ÈÀ°€À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹š¦dˆ°€‹Òhˆ°€‰@ˆ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍĞ ÌØÀ¸À°€ÄĞ°€À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡±¥ÍÑ=˜ ‹š¦dˆ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍĞ ØÀÀ¸À°€ÄĞ°€À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡•µÁÑå1¥ÍĞñMÑÉ¥¹œø ¤°M¥¹…±M•ÅÕ•¹”¹™±…ÍĞ ÄÈÀÀ¸À°€ÄĞ°€À¤¹™¥±Ñ•Èì¥Ğ¹É…¥Í•ô¹µ…Àì¥Ğ¹¥ô¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸É•ÍÑ…ÉÑ]…É¹¥¹½±±½İÍ±…1½İ•É¥¹	åá…Ñ±å=¹•5¥¹ÕÑ” ¤ì4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÄàÕ|ÀÀÁ0°M¥¹…±Q¥µ¥¹œ¹É•ÍÑ…ÉÑ]…É¹¥¹Ğ ÄÈÕ|ÀÀÁ0¤¤4(€€€ô4(4(4(€€€Q•ÍĞ4(€€€™Õ¸É…•MÑ…ÉÑ½Õ¹Ñ‘½İ¹Q…É•ÑÍQ¡•±…ÍÍ1½İ•É¥¹ÑI•…±i•É¼ ¤ì4(€€€€€€€Ù…°ÍÑ…¹‘…É€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ 4(€€€€€€€€€€€‘ÕÉ…Ñ¥½¹5¥¹ÕÑ•Ì€ô€ÄĞ°4(€€€€€€€€€€€ÁÉ½™¥±•%¹‘•à€ô€À°4(€€€€€€€€€€€ÁÉ•Á±…œ€ô€‰@ˆ°4(€€€€€€€€€€€½É…¹•¹…‰±•€ôÑÉÕ”°4(€€€€€€€€€€€½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°4(€€€€€€€€€€€±…ÍÍ9…µ”€ô€‹
-¿§
-çš^\ˆ°4(€€€€€€€€€€€½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô4(€€€€€€€€¤4(€€€€€€€Ù…°¥¹‘•à€ôM¥¹…±M•ÅÕ•¹”¹É…•MÑ…ÉÑÙ•¹Ñ%¹‘•à¡ÍÑ…¹‘…É¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì Ğ°¥¹‘•à¤4(€€€€€€€Ù…°É…•MÑ…ÉÑM•½¹‘Ì€ôÍÑ…¹‘…É‘m¥¹‘•à„…t¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÀÀ°É…•MÑ…ÉÑM•½¹‘Ì¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÔÈÌ°É…•MÑ…ÉÑM•½¹‘Ì€´€ÜÜ¤4(4(€€€€€€€Ù…°Ù¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹ÁÉ½™¥±•Ì¹™¥ÉÍĞì¥Ğ¹¥€ôô€‰Ù¥‘•¼´ÈÀˆô¹•Ù•¹ÑÌ4(€€€€€€€Ù…°Ù¥‘•½€ôM¥¹…±M•ÅÕ•¹”¹ÁÉ½™¥±•Ì¹™¥ÉÍĞì¥Ğ¹¥€ôô€‰Ù¥‘•¼´ÄÌˆô¹•Ù•¹ÑÌ4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÀÀ°Ù¥‘•½mM¥¹…±M•ÅÕ•¹”¹É…•MÑ…ÉÑÙ•¹Ñ%¹‘•à¡Ù¥‘•½¤„…t¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ÔĞÀ°Ù¥‘•½	mM¥¹…±M•ÅÕ•¹”¹É…•MÑ…ÉÑÙ•¹Ñ%¹‘•à¡Ù¥‘•½¤„…t¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ¤4(€€€ô4(4(€€€Q•ÍĞ4(€€€™Õ¸™É½é•¹M¥¹…±A±…¹I½Õ¹‘QÉ¥ÁÍ]¥Ñ¡½ÕÑ½±±½İ¥¹1…Ñ•É=É…¹•M•ÑÑ¥¹Ì ¤ì4(€€€€€€€Ù…°™É½é•¸€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°½É…¹•¹…‰±•€ôÑÉÕ”°½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€Ğ°½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€Ô¤4(€€€€€€€Ù…°Í…Ù•€ôM¥¹…±M•ÅÕ•¹”¹•¹½‘•Ù•¹ÑÌ¡™É½é•¸¤4(€€€€€€€Ù…°±…Ñ•É½¹™¥ÕÉ…Ñ¥½¸€ôM¥¹…±M•ÅÕ•¹”¹•Ù•¹ÑÌ ÄĞ°€À°½É…¹•¹…‰±•€ôÑÉÕ”°½É…¹•I•µ½Ù•‘™Ñ•É5¥¹ÕÑ•Ì€ô€ä°½É…¹•¥ÍÁ±…å•‘5¥¹ÕÑ•Ì€ô€à¤4(€€€€€€€Ù…°É•ÍÑ½É•€ôM¥¹…±M•ÅÕ•¹”¹‘•½‘•Ù•¹ÑÌ¡Í…Ù•¤4(4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì¡™É½é•¸°É•ÍÑ½É•¤4(€€€€€€€…ÍÍ•ÉÑ9½ÑÅÕ…±Ì¡±…Ñ•É½¹™¥ÕÉ…Ñ¥½¸¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô°É•ÍÑ½É•„„¹µ…Àì¥Ğ¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞô¤4(€€€€€€€…ÍÍ•ÉÑÅÕ…±Ì ØÀÀ°É•ÍÑ½É•‘mM¥¹…±M•ÅÕ•¹”¹É…•MÑ…ÉÑÙ•¹Ñ%¹‘•à¡É•ÍÑ½É•¤„…t¹Í•½¹‘Í™Ñ•ÉMÑ…ÉĞ¤4(€€€ô4)ô4(
+package com.goldenfalcons.sailinggps
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Test
+
+class SignalSequenceTest {
+    @Test
+    fun startRuleSelectsItsMatchingPreparationSignal() {
+        assertEquals("P", SignalSequence.preparationFlagForStartRule("P"))
+        assertEquals("I", SignalSequence.preparationFlagForStartRule("I"))
+        assertEquals("U", SignalSequence.preparationFlagForStartRule("U"))
+        assertEquals("Z", SignalSequence.preparationFlagForStartRule("Z"))
+        assertEquals("black", SignalSequence.preparationFlagForStartRule("Black"))
+        assertEquals("P", SignalSequence.preparationFlagForStartRule("Default"))
+    }
+
+    @Test
+    fun manualOrangeRaiseAnchorsClassWarningAndKeepsRaceTimeline() {
+        val base = SignalSequence.events(durationMinutes = 14, profileIndex = 0)
+        val configured = SignalSequence.configuredStandardEvents(
+            base, setOf("Class Â· Tâˆ’5:00 Â· æ²æš Â· çŸ­éŸ³"), 600, 4, false, 0
+        )!!
+        val anchored = SignalSequence.eventsStartingAtFirstClassWarning(configured)!!
+        assertEquals(listOf(0, 60, 240, 300, 540), anchored.map { it.secondsAfterStart })
+        assertEquals("ã‚¯ãƒ©ã‚¹æ——ã‚’æ²æšï¼ˆäºˆå‘Šä¿¡å·ï¼‰", anchored.first().title)
+        assertEquals("æ©™", anchored.last().flag)
+        assertEquals(300_000L, SignalTiming.startAfterOrangeRaise(300_000L, 0L, 5, 0))
+        assertEquals(360_000L, SignalTiming.startAfterOrangeRaise(301_000L, 0L, 5, 0))
+        assertEquals(120_000L, SignalTiming.startAfterOrangeRaise(65_000L, 0L, 1, 0))
+        assertEquals(120_000L, SignalTiming.startAfterOrangeRaise(65_000L, 50_000L, 1, 0))
+    }
+
+    @Test
+    fun raceStartOffsetTracksOrangePhaseAndDisabledOrange() {
+        assertEquals(600, SignalSequence.startReferenceOffset("standard-start", true, 5))
+        assertEquals(540, SignalSequence.startReferenceOffset("standard-start", true, 4))
+        assertEquals(300, SignalSequence.startReferenceOffset("standard-start", false, 5))
+        assertEquals(0, SignalSequence.startReferenceOffset("video-20", true, 5))
+    }
+
+    @Test
+    fun videoAAndVideoBMatchTheReferenceSignalTimes() {
+        val videoA = SignalSequence.events(20, 1, orangeRemovedAfterMinutes = 10, orangeDisplayedMinutes = 5)
+        assertEquals(listOf(0, 300, 360, 540, 600, 1200), videoA.map { it.secondsAfterStart })
+        assertEquals(listOf("æ©™", "ç·‘", "é’", "é’", "ç·‘", "æ©™"), videoA.map { it.flag })
+        assertEquals(listOf(true, true, true, false, false, false), videoA.map { it.raised })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
+            videoA.map { it.hornPulses })
+
+        val videoB = SignalSequence.events(13, 2, orangeRemovedAfterMinutes = 4, orangeDisplayedMinutes = 4)
+        assertEquals(listOf(0, 240, 300, 480, 540, 780), videoB.map { it.secondsAfterStart })
+        assertEquals(listOf(true, true, true, false, false, false), videoB.map { it.raised })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
+            videoB.map { it.hornPulses })
+        assertEquals(listOf("ç´š", "æ–œã‚"), videoB[1].flagMarks.map { it.id })
+        assertEquals(listOf("ç´š", "æ–œã‚"), videoB[4].flagMarks.map { it.id })
+        assertEquals(setOf("æ©™", "ç´š", "æ–œã‚", "èµ¤ç™½ãƒã‚§ãƒƒã‚¯"),
+            SignalSequence.flagsAtEvents(videoB, 300.0).filter { it.raised }.map { it.id }.toSet())
+        assertEquals(4, SignalSequence.initialEventIndex(1))
+        assertEquals(4, SignalSequence.initialEventIndex(2))
+    }
+
+    @Test
+    fun orangeDisableSettingAppliesToEveryProfileAndRecallKeepsOrangeDown() {
+        for (profile in SignalSequence.profiles.indices) {
+            assertEquals(false, SignalSequence.events(20, profile, orangeEnabled = false).any { it.flag == "æ©™" })
+        }
+        val orangeOff = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = false,
+            orangeDisplayedMinutes = 5,
+            orangeRemovedAfterMinutes = 4
+        )
+        assertEquals(listOf(0, 60, 240, 300), orangeOff.map { it.secondsAfterStart })
+        assertEquals(listOf("ç´š", "P", "P", "ç´š"), orangeOff.map { it.flag })
+
+        val longerOrange = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            orangeEnabled = true,
+            orangeDisplayedMinutes = 7,
+            orangeRemovedAfterMinutes = 3
+        )
+        assertEquals(listOf(0, 420, 480, 660, 720, 900), longerOrange.map { it.secondsAfterStart })
+
+        val restart = SignalSequence.restartEvents()
+        assertEquals(listOf("ç´š"), SignalSequence.flagsAtEvents(restart, 0.0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("ç¬¬ä¸€ä»£è¡¨"), SignalSequence.generalRecallRaise.flagMarks.map { it.id })
+        assertEquals(listOf("AP"), SignalSequence.postponementRaise.flagMarks.map { it.id })
+    }
+
+    @Test
+    fun selectedClassFlagCanBeLogoTextOrInternationalFlag() {
+        assertEquals("class-Laser", SignalSequence.events(14, 0, className = "Laser")[1].flag)
+        assertEquals("text:Class 1", SignalSequence.events(14, 0, className = "text:Class 1")[1].flag)
+        assertEquals("intl:Alpha", SignalSequence.events(14, 0, className = "intl:Alpha")[1].flag)
+        assertEquals("internationalFlag", SignalFlagMark("intl:Alpha", 0xFFFFFFFF.toInt()).style)
+        assertEquals("textFlag", SignalFlagMark("text:Class 1", 0xFFFFFFFF.toInt()).style)
+    }
+
+    @Test
+    fun signalSequenceAlignsZeroToRealClockMinuteAfterMinimumLead() {
+        assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 15))
+        assertEquals(60_000L, SignalTiming.scheduledStartAt(10_000L, 0))
+        assertEquals(60_000L, SignalTiming.scheduledStartAt(60_000L, 0))
+        assertEquals(120_000L, SignalTiming.scheduledStartAt(50_000L, 15))
+    }
+    @Test
+    fun refreshWaitsForTheNextCorrectedWholeSecond() {
+        assertEquals(400L, SignalTiming.millisUntilNextSecond(12_345_600L))
+        assertEquals(1L, SignalTiming.millisUntilNextSecond(12_345_999L))
+        assertEquals(1000L, SignalTiming.millisUntilNextSecond(12_346_000L))
+    }
+
+    @Test
+    fun countdownUsesCeilingSoItMatchesClockSeconds() {
+        assertEquals(51, SignalTiming.countdownSeconds(50.1))
+        assertEquals(51, SignalTiming.countdownSeconds(51.0))
+        assertEquals(0, SignalTiming.countdownSeconds(0.0))
+    }
+
+    @Test
+    fun selectedStartRuleControlsTheRaisedAndLoweredPreparationFlag() {
+        val expected = mapOf("P" to "P", "I" to "I", "U" to "U", "Z" to "Z", "black" to "black")
+        for ((rule, flag) in expected) {
+            val events = SignalSequence.events(14, 0, prepFlag = rule)
+            assertEquals(flag, events[2].flag)
+            assertEquals(flag, events[3].flag)
+            assertEquals(events[2].color, events[3].color)
+        }
+    }
+
+    @Test
+    fun standardStartUsesRaceSignalTimesAndOrangeShortHorn() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(14, 0).map { it.secondsAfterStart })
+        assertEquals(listOf(true, true, true, false, false, false), SignalSequence.events(20, 0).map { it.raised })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(0), listOf(1), listOf(0), emptyList()),
+            SignalSequence.events(20, 0).map { it.hornPulses })
+    }
+
+    @Test
+    fun standardTimelineAndRecallRestartUseExpectedOffsets() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.profiles[0].events.map { it.secondsAfterStart })
+        assertEquals("I", SignalSequence.events(14, 0, "I")[2].flag)
+        assertEquals(0xFFF5D328.toInt(), SignalSequence.events(14, 0, "I")[2].color)
+        assertEquals(listOf(0, 60, 240, 300), SignalSequence.restartEvents().map { it.secondsAfterStart })
+        assertEquals(listOf(listOf(0), listOf(0), listOf(1), listOf(0)), SignalSequence.restartEvents().map { it.hornPulses })
+        assertEquals(listOf(0), SignalSequence.individualRecallRaise.hornPulses)
+        assertEquals(listOf(0, 0), SignalSequence.generalRecallRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.generalRecallLower.hornPulses)
+        assertEquals(listOf(0, 0), SignalSequence.postponementRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.postponementLower.hornPulses)
+        assertEquals(listOf(0, 0, 0), SignalSequence.abandonRaise.hornPulses)
+        assertEquals(listOf(0), SignalSequence.abandonLower.hornPulses)
+    }
+
+
+    @Test
+    fun savedFleetStartRowsDriveRuntimeFlagsAndHorns() {
+        val base = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "ã‚¯ãƒ©ã‚¹æ——",
+            orangeDisplayedMinutes = 5
+        )
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf("Class Â· Tâˆ’5:00 Â· æ²æš Â· çŸ­éŸ³"),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), configured.map { it.secondsAfterStart })
+        assertEquals(listOf("P", "æ©™", "ç´š"), SignalSequence.flagsAtEvents(configured, 360.0).filter { it.raised }.map { it.id }.sorted())
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 540 }.hornPulses)
+        assertEquals(emptyList<Int>(), configured.first { it.secondsAfterStart == 840 }.hornPulses)
+    }
+
+    @Test
+    fun savedStartTimeAndRaceDelayChangeTheGeneratedTimeline() {
+        val base = SignalSequence.events()
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf("Class Â· Tâˆ’4:00 Â· æ²æš Â· é•·éŸ³"),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 360, 420, 600, 660, 900), configured.map { it.secondsAfterStart })
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 360 }.hornPulses)
+    }
+
+
+    @Test
+    fun savedPrepAndIndividualSignalRowsControlTheirOwnTimesAndHorns() {
+        val base = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "ã‚¯ãƒ©ã‚¹æ——",
+            orangeDisplayedMinutes = 5
+        )
+        val configured = SignalSequence.configuredStandardEvents(
+            base = base,
+            entries = setOf(
+                "Class Â· Tâˆ’5:00 Â· æ²æš Â· çŸ­éŸ³",
+                "I Â· Tâˆ’4:00 Â· æ²æš Â· çŸ­éŸ³",
+                "I Â· Tâˆ’1:00 Â· é™ä¸‹ Â· é•·éŸ³",
+                "X Â· Tâˆ’0:30 Â· æ²æš Â· çŸ­éŸ³"
+            ),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = false,
+            raceDelayMinutes = 0
+        )!!
+        assertEquals(listOf(0, 300, 360, 540, 570, 600, 840), configured.map { it.secondsAfterStart })
+        assertEquals(listOf(1), configured.first { it.secondsAfterStart == 540 }.hornPulses)
+        assertEquals("X", configured.first { it.secondsAfterStart == 570 }.flag)
+    }
+
+    @Test
+    fun activeRowAdvancesAtElapsedEventBoundary() {
+        val offsets = listOf(0, 300, 360, 540, 600, 1200)
+        assertEquals(-1, SignalTiming.activeEventIndex(-0.1, offsets))
+        assertEquals(0, SignalTiming.activeEventIndex(0.0, offsets))
+        assertEquals(0, SignalTiming.activeEventIndex(299.999, offsets))
+        assertEquals(1, SignalTiming.activeEventIndex(300.0, offsets))
+        assertEquals(2, SignalTiming.activeEventIndex(360.0, offsets))
+        assertEquals(3, SignalTiming.activeEventIndex(540.0, offsets))
+        assertEquals(4, SignalTiming.activeEventIndex(600.0, offsets))
+        assertEquals(5, SignalTiming.activeEventIndex(1200.0, offsets))
+    }
+
+    @Test
+    fun crossedEventsAreReportedOnceAndInOrder() {
+        val offsets = listOf(0, 300, 360, 540, 600, 1200)
+        assertEquals(listOf(0), SignalTiming.eventIndicesCrossed(-1.0, 0.0, offsets))
+        assertEquals(listOf(1, 2), SignalTiming.eventIndicesCrossed(299.0, 361.0, offsets))
+        assertEquals(emptyList<Int>(), SignalTiming.eventIndicesCrossed(361.0, 359.0, offsets))
+    }
+
+    @Test
+    fun referenceVideoTimingDoesNotScaleWithDuration() {
+        assertEquals(listOf(0, 300, 360, 540, 600, 840), SignalSequence.events(10, 1).map { it.secondsAfterStart })
+    }
+
+    @Test
+    fun mastShowsCurrentRaisedFlags() {
+        assertEquals(listOf("æ©™"), SignalSequence.flagsAt(0.0, 20, 0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("æ©™", "ç´š", "P"), SignalSequence.flagsAt(360.0, 14, 0).filter { it.raised }.map { it.id })
+        assertEquals(listOf("æ©™"), SignalSequence.flagsAt(600.0, 14, 0).filter { it.raised }.map { it.id })
+        assertEquals(emptyList<String>(), SignalSequence.flagsAt(1200.0, 14, 0).filter { it.raised }.map { it.id })
+    }
+
+    @Test
+    fun restartWarningFollowsFlagLoweringByExactlyOneMinute() {
+        assertEquals(185_000L, SignalTiming.restartWarningAt(125_000L))
+    }
+
+
+    @Test
+    fun raceStartCountdownTargetsTheClassLoweringAtRealZero() {
+        val standard = SignalSequence.events(
+            durationMinutes = 14,
+            profileIndex = 0,
+            prepFlag = "P",
+            orangeEnabled = true,
+            orangeRemovedAfterMinutes = 4,
+            className = "ã‚¯ãƒ©ã‚¹æ——",
+            orangeDisplayedMinutes = 5
+        )
+        val index = SignalSequence.raceStartEventIndex(standard)
+        assertEquals(4, index)
+        val raceStartSeconds = standard[index!!].secondsAfterStart
+        assertEquals(600, raceStartSeconds)
+        assertEquals(523, raceStartSeconds - 77)
+
+        val videoA = SignalSequence.profiles.first { it.id == "video-20" }.events
+        val videoB = SignalSequence.profiles.first { it.id == "video-13" }.events
+        assertEquals(600, videoA[SignalSequence.raceStartEventIndex(videoA)!!].secondsAfterStart)
+        assertEquals(540, videoB[SignalSequence.raceStartEventIndex(videoB)!!].secondsAfterStart)
+    }
+
+    @Test
+    fun frozenSignalPlanRoundTripsWithoutFollowingLaterOrangeSettings() {
+        val frozen = SignalSequence.events(14, 0, orangeEnabled = true, orangeRemovedAfterMinutes = 4, orangeDisplayedMinutes = 5)
+        val saved = SignalSequence.encodeEvents(frozen)
+        val laterConfiguration = SignalSequence.events(14, 0, orangeEnabled = true, orangeRemovedAfterMinutes = 9, orangeDisplayedMinutes = 8)
+        val restored = SignalSequence.decodeEvents(saved)
+
+        assertEquals(frozen, restored)
+        assertNotEquals(laterConfiguration.map { it.secondsAfterStart }, restored!!.map { it.secondsAfterStart })
+        assertEquals(600, restored[SignalSequence.raceStartEventIndex(restored)!!].secondsAfterStart)
+    }
+}
