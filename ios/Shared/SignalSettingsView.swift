@@ -359,9 +359,13 @@ private struct SignalFleetPresetEditor: View {
                     activeOrangeRemoval = preset.orangeRemovedMinutes
                     activeRaceDelayEnabled = preset.raceDelayEnabled
                     activeRaceDelayMinutes = preset.raceDelayMinutes
+                    // A fleet preset has one selected class flag. Apply it to
+                    // every class-flag action, including presets previously
+                    // saved with a different class, so subsequent changes do
+                    // not leave stale logo IDs in the live timeline.
                     var runtimeStarts = preset.starts
-                    if runtimeStarts.count == 1 && runtimeStarts[0].flagID == "class-4" {
-                        runtimeStarts[0].flagID = preset.classFlagID
+                    for index in runtimeStarts.indices where runtimeStarts[index].flagID.hasPrefix("class-") {
+                        runtimeStarts[index].flagID = preset.classFlagID
                     }
                     if let encoded = try? JSONEncoder().encode(runtimeStarts) {
                         activeStartActionsJSON = String(data: encoded, encoding: .utf8) ?? "[]"
@@ -460,6 +464,7 @@ private struct SignalClassFlagSettingsView: View {
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
     @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
     @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @Environment(\.dismiss) private var dismiss
@@ -529,6 +534,19 @@ private struct SignalCustomFlagEditor: View {
                         activeLogoBackground = flag.flagColor
                     case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
                     default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
+                    }
+                    // The live sequence uses its saved action rows in
+                    // preference to the standalone class flag setting. Keep
+                    // those rows in sync when this editor activates a logo.
+                    if activeClassFlag.hasPrefix("class-"),
+                       let data = activeStartActionsJSON.data(using: .utf8),
+                       var actions = try? JSONDecoder().decode([SignalStartAction].self, from: data) {
+                        for index in actions.indices where actions[index].flagID.hasPrefix("class-") {
+                            actions[index].flagID = activeClassFlag
+                        }
+                        if let updated = try? JSONEncoder().encode(actions) {
+                            activeStartActionsJSON = String(data: updated, encoding: .utf8) ?? "[]"
+                        }
                     }
                     dismiss()
                 }.tint(.orange)
