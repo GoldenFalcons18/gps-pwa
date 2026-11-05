@@ -1,1 +1,1 @@
-1.8.33 versionCode 59 signal behavior correction
+1.8.33 versionCode 59 signed release retry after UTF-8 correction
