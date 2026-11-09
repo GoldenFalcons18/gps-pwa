@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 32106)
+Total output lines: 1935
+
 package com.goldenfalcons.sailinggps
 
 import android.Manifest
@@ -6,8 +9,8 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.hardware.*
 import android.location.Location
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -25,6 +28,7 @@ import androidx.core.content.FileProvider
 import com.goldenfalcons.sailinggps.databinding.ActivityMainBinding
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -71,6 +75,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
     private var running = false
+    private var pendingStartAfterLocationPermission = false
+    private var backgroundPermissionPromptShownThisSession = false
     private var gpsGapSeconds = 0L
 
     private var navigatorMode = false
@@ -145,6 +151,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     companion object {
         private const val REQ_LOCATION = 10
         private const val REQ_NOTIFICATIONS = 11
+        private const val REQ_BACKGROUND_LOCATION = 12
         // One decimal display: values >= 0.05 kt round to 0.1 kt.
         private const val GPS_COURSE_THRESHOLD_KT = 0.05
     }
@@ -178,6 +185,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        migrateSignalHornDefaults()
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(b.root) { view, insets ->
@@ -276,6 +284,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onResume() {
         super.onResume()
         foregroundActive = true
+        if (::b.isInitialized && hasBackgroundLocationPermission() && pendingStartAfterLocationPermission) {
+            pendingStartAfterLocationPermission = false
+            startGpsLoggingWithPermission()
+        }
         if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         startPreview()
         uiHandler.removeCallbacks(clockTick)
@@ -324,8 +336,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
         val standardProfileIndex=SignalSequence.profiles.indexOfFirst { it.id=="standard-start" }.coerceAtLeast(0)
-        displayPrefs.edit().putInt("signalFlagProfileIndex",standardProfileIndex).putInt("signalDurationIndexV2",0)
-            .putInt("signalProfileSchemaVersion",3).apply()
+        if (displayPrefs.getInt("signalProfileSchemaVersion", 0) < 3) {
+            displayPrefs.edit().putInt("signalFlagProfileIndex", standardProfileIndex)
+                .putInt("signalDurationIndexV2", 0)
+                .putInt("signalProfileSchemaVersion", 3)
+                .apply()
+        }
         // Start rule and preparation signal are one setting, edited in Signal Settings.
         val selectedStartRule=displayPrefs.getString("signalStartRule", displayPrefs.getString("signalPrepFlag", "P")) ?: "P"
         val selectedPrepFlag=SignalSequence.preparationFlagForStartRule(selectedStartRule)
@@ -380,9 +396,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.signalHornEnabled.isChecked=displayPrefs.getBoolean("signalHornEnabled",true)
         b.signalHornEnabled.setOnCheckedChangeListener { _,checked -> displayPrefs.edit().putBoolean("signalHornEnabled",checked).apply() }
-        bindSignalSeek(b.signalHornLength,b.tvHornLength,"signalHornMs",700,100,49,"長音")
-        bindSignalSeek(b.signalShortHorn,b.tvSignalShortHorn,"signalShortHornMs",220,50,18,"短音")
-        bindSignalSeek(b.signalGap,b.tvSignalGap,"signalGapMs",180,50,38,"間隔")
+        bindSignalSeek(b.signalHornLength,b.tvHornLength,"signalHornMs",5100,100,99,"長音")
+        bindSignalSeek(b.signalShortHorn,b.tvSignalShortHorn,"signalShortHornMs",3100,50,198,"短音")
+        bindSignalSeek(b.signalGap,b.tvSignalGap,"signalGapMs",1100,50,58,"間隔")
         bindSignalSeek(b.signalVolume,b.tvSignalVolume,"signalHornVolume",80,1,100,"音量")
         b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
@@ -687,6 +703,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(!displayPrefs.getBoolean("signalRestartMode",false) && displayPrefs.getLong("signalElapsedStartAt",0L)>now) { resetSignalSequence();return }
         val events=currentSignalEvents()
         val totalMs=(events.lastOrNull()?.secondsAfterStart ?: 0)*1000L
+        var rebuildRows = false
         if(displayPrefs.getBoolean("signalRestartMode",false)) {
             val restartAt=displayPrefs.getLong("signalRestartAt",0L)
             val paused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
@@ -722,10 +739,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         .putString("signalRunEventsJSON",SignalSequence.encodeEvents(timeline)).remove("signalPausedElapsedMs").remove("signalPausedAtMs").putInt("signalLastFiredIndex",-1)
                     if(orangeTimeline==null) edit.remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs")
                     edit.apply()
+                    rebuildRows = true
                 }
             }
         }
         signalActiveIndex=-1
+        if(rebuildRows) buildSignalRows()
         updateSignalUi()
     }
 
@@ -733,25 +752,59 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (pulses.isEmpty() || !displayPrefs.getBoolean("signalHornEnabled",true)) return
         val volume=displayPrefs.getInt("signalHornVolume",80).coerceIn(0,100)
         if(volume==0) return
-        val tone = ToneGenerator(AudioManager.STREAM_MUSIC, volume)
-        val longMs = displayPrefs.getInt("signalHornMs", 700).coerceIn(100, 5000)
-        val shortMs = displayPrefs.getInt("signalShortHornMs",220).coerceIn(100,1000)
-        val gapMs = displayPrefs.getInt("signalGapMs",180).coerceIn(100,2000)
-        val sequence = mutableListOf<Pair<Int, Int>>()
-        pulses.forEachIndexed { index, pulse ->
-            sequence += ToneGenerator.TONE_PROP_BEEP to (if (pulse == 0) shortMs else longMs)
-            if (index < pulses.lastIndex) sequence += ToneGenerator.TONE_PROP_BEEP to gapMs
-        }
-        fun playAt(index: Int) {
-            if (index >= sequence.size) {
-                tone.release()
-                return
+        val longMs = displayPrefs.getInt("signalHornMs", 5100).coerceIn(100, 10000)
+        val shortMs = displayPrefs.getInt("signalShortHornMs",3100).coerceIn(100,10000)
+        val gapMs = displayPrefs.getInt("signalGapMs",1100).coerceIn(100,3000)
+        val rate = 22_050
+        val gapSamples = rate * gapMs / 1000
+        val pulseSamples = pulses.map { rate * (if (it == 0) shortMs else longMs) / 1000 }
+        val pcm = ShortArray(pulseSamples.sum() + gapSamples * maxOf(0, pulses.size - 1))
+        var cursor = 0
+        pulses.forEachIndexed { pulseIndex, pulse ->
+            val count = pulseSamples[pulseIndex]
+            val duration = count.toDouble() / rate
+            val gain = volume / 100.0
+            for (i in 0 until count) {
+                val t = i.toDouble() / rate
+                val attack = (t / 0.08).coerceIn(0.0, 1.0)
+                val release = ((duration - t) / 0.18).coerceIn(0.0, 1.0)
+                val envelope = minOf(attack, release)
+                // Two detuned horn tones with harmonics create the brassy air-horn timbre.
+                val lower = 370.0 - 9.0 * (t / duration)
+                val upper = 440.0 - 11.0 * (t / duration)
+                val horn = 0.50 * sin(2 * Math.PI * lower * t) +
+                    0.42 * sin(2 * Math.PI * upper * t) +
+                    0.22 * sin(2 * Math.PI * lower * 2 * t) +
+                    0.18 * sin(2 * Math.PI * upper * 2 * t) +
+                    0.10 * sin(2 * Math.PI * lower * 3 * t) +
+                    0.08 * sin(2 * Math.PI * upper * 3 * t)
+                pcm[cursor++] = (horn * envelope * gain * 0.62 * Short.MAX_VALUE)
+                    .toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
             }
-            val (toneType, duration) = sequence[index]
-            tone.startTone(toneType, duration)
-            uiHandler.postDelayed({ tone.stopTone(); playAt(index + 1) }, duration.toLong())
+            if (pulseIndex < pulses.lastIndex) cursor += gapSamples
         }
-        playAt(0)
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(android.media.AudioAttributes.Builder()
+                .setUsage(android.media.AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+            .setAudioFormat(AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+            .setBufferSizeInBytes(AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT).coerceAtLeast(pcm.size * 2))
+            .setTransferMode(AudioTrack.MODE_STATIC).build()
+        track.write(pcm, 0, pcm.size)
+        track.setVolume(1f)
+        track.play()
+        uiHandler.postDelayed({ runCatching { track.stop(); track.release() } }, (pcm.size * 1000L / rate) + 250L)
+    }
+
+    private fun migrateSignalHornDefaults() {
+        val prefs = displayPrefs
+        if (prefs.getBoolean("signalHornTimingPresetMigrated", false)) return
+        val edit = prefs.edit()
+        if (prefs.getInt("signalShortHornMs", 220) == 220) edit.putInt("signalShortHornMs", 3100)
+        if (prefs.getInt("signalHornMs", 700) == 700) edit.putInt("signalHornMs", 5100)
+        if (prefs.getInt("signalGapMs", 180) == 180) edit.putInt("signalGapMs", 1100)
+        edit.putBoolean("signalHornTimingPresetMigrated", true).apply()
     }
 
     private fun updateSignalUi() {
@@ -847,128 +900,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             displayPrefs.getBoolean("signalAbandonFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false) }
             displayPrefs.getBoolean("signalIndividualRecallFlagUp",false) -> raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
         }
-        displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" }).apply()
-        if(displayPrefs.getBoolean("signalOrangeManualOverride",false)) {
-            raised.removeAll { it.id=="橙" }
-            if(displayPrefs.getBoolean("signalOrangeManualUp",false)) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
-        }
-        signalRowEventIndices.forEachIndexed { rowIndex,eventIndex ->
-            val rowEvent=events.getOrNull(eventIndex) ?: return@forEachIndexed
-            val row=signalRows.getOrNull(rowIndex) ?: return@forEachIndexed
-            val orangeRaiseAlreadyDone=rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
-            row.visibility=if(orangeRaiseAlreadyDone) View.GONE else View.VISIBLE
-            signalRowTimeViews.getOrNull(rowIndex)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+rowEvent.secondsAfterStart*1000L)) else signalEventTimeLabel(rowEvent,restartMode)
-        }
-        b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
-        b.btnSignalOrange.visibility=View.VISIBLE
-        b.signalMast.show(raised,true)
-        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"クラス旗待ち（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
-        val xUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
-        val generalUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
-        val apUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
-        val nUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        val canRaiseX=raceSignalControlsEnabled && prepFlag in listOf("P","I") && !generalUp && !apUp && !nUp
-        val canRaiseGeneral=raceSignalControlsEnabled && !apUp && !nUp
-        val canRaiseAp=!generalUp && !nUp
-        val canRaiseN=raceSignalControlsEnabled
-        b.btnSignalStart.isEnabled=!waitingForRestart && !generalUp && !apUp && !nUp
-        b.btnSignalStart.visibility=if(b.btnSignalStart.isEnabled) View.VISIBLE else View.GONE
-        b.btnSignalInterrupt.isEnabled=started || waitingForRestart
-        b.btnSignalInterrupt.visibility=if(b.btnSignalInterrupt.isEnabled) View.VISIBLE else View.GONE
-        b.btnSignalStop.visibility=if(started || waitingForRestart) View.VISIBLE else View.GONE
-        b.btnSignalIndividualRecall.text=if(xUp) "X旗 降下" else "個別リコール X旗（$prepFlag）"
-        b.btnSignalIndividualRecall.isEnabled=xUp || canRaiseX
-        b.btnSignalIndividualRecall.visibility=if(b.btnSignalIndividualRecall.isEnabled) View.VISIBLE else View.GONE
-        b.btnSignalGeneralRecall.text=if(generalUp) "第一代表旗 降下" else "ゼネラルリコール"
-        b.btnSignalGeneralRecall.isEnabled=generalUp || canRaiseGeneral
-        b.btnSignalGeneralRecall.visibility=if(b.btnSignalGeneralRecall.isEnabled) View.VISIBLE else View.GONE
-        b.btnSignalPostponement.text=if(apUp) "AP 降下" else "AP 掲揚"
-        b.btnSignalPostponement.isEnabled=apUp || canRaiseAp
-        b.btnSignalPostponement.visibility=if(b.btnSignalPostponement.isEnabled) View.VISIBLE else View.GONE
-        b.btnSignalNFlag.text=if(nUp) "N旗 降下" else "N旗（中止）"
-        b.btnSignalNFlag.isEnabled=nUp || canRaiseN
-        b.btnSignalNFlag.visibility=if(b.btnSignalNFlag.isEnabled) View.VISIBLE else View.GONE
-
-        val lastFired=displayPrefs.getInt("signalLastFiredIndex",-1)
-        if(running && active>lastFired) {
-            for(index in (lastFired+1)..active) {
-                if(index !in events.indices) continue
-                val eventAt=startAt+events[index].secondsAfterStart*1000L
-                if(now-eventAt in 0L..1500L) playSignalHorn(events[index].hornPulses)
-            }
-            displayPrefs.edit().putInt("signalLastFiredIndex",active).apply()
-        }
-        if(highlighted!=signalActiveIndex) {
-            signalRows.forEachIndexed { rowIndex,row ->
-                val eventIndex=signalRowEventIndices.getOrNull(rowIndex)
-                val isHighlighted=eventIndex==highlighted
-                row.setBackgroundColor(if(isHighlighted) 0xff75c879.toInt() else 0xffeeeeee.toInt())
-                row.animate().cancel()
-                row.alpha=if(isHighlighted && running) 0.78f else 1f
-                if(isHighlighted && running) row.animate().alpha(1f).setDuration(180).start()
-            }
-            signalActiveIndex=highlighted
-        }
-    }
-
-    private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
-    private fun setDisplayMode(requestedMode:Int) {
-        val mode=requestedMode.coerceIn(0,4)
-        val immersive=mode>=2
-        val wasImmersive=currentDisplayMode>=2
-        val content=b.focusPanel.parent as LinearLayout
-        if(immersive && !wasImmersive) {
-            focusHiddenVisibility.clear()
-            for(index in 1 until content.childCount) {
-                val view=content.getChildAt(index)
-                if(view!=b.focusPanel && view!=b.timerPanel) focusHiddenVisibility[view]=view.visibility
-            }
-        }
-        if(!immersive && wasImmersive) {
-            focusHiddenVisibility.forEach{(view,visibility)->view.visibility=visibility}
-            focusHiddenVisibility.clear()
-        }
-        currentDisplayMode=mode
-        val navigator=mode==1
-        navigatorMode = navigator
-        if (navigator && mapPanel == null) {
-            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
-            mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
-            mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
-            mapPanel?.setWaypoints(waypoints, activeWaypoint)
-            mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
-            updateMap()
-            mapPanel?.resume()
-        }
-        b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
-        b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
-        if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
-        b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
-        b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
-        b.signalPanel.visibility=if(mode==4) android.view.View.VISIBLE else android.view.View.GONE
-        if(mode==2) b.focusPanel.layoutParams=b.focusPanel.layoutParams.apply {height=maxOf((480*resources.displayMetrics.density).toInt(),resources.displayMetrics.heightPixels-(150*resources.displayMetrics.density).toInt())}
-        b.btnSpeedMode.isEnabled = mode!=0
-        b.btnNavigatorMode.isEnabled = mode!=1
-        b.btnFocusMode.isEnabled=mode!=2
-        b.btnTimerMode.isEnabled=mode!=3
-        b.btnSignalMode.isEnabled=mode!=4
-        b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
-        b.btnFocusMenu.visibility=if(immersive) android.view.View.VISIBLE else android.view.View.GONE
-        displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
-        updateNavigationUi()
-        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
-        if(mode==4) updateSignalUi()
-    }
-
-    private fun captureStartLineEndpoint(kind:String) {
-        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
-        val lat=latestLat; val lon=latestLon
-        if(lat==null || lon==null || age !in 0.0..15.0) {
-            Toast.makeText(this,"現在地GPSを取得してから登録してください",Toast.LENGTH_LONG).show()
-            return
-        }
-        val prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
+        displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" })…2106 tokens truncated…l prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
         displayPrefs.edit().putBoolean("${prefix}.set",true).putString("${prefix}.lat",lat.toString()).putString("${prefix}.lon",lon.toString()).apply()
         val label=if(kind=="outer") "アウターマーク" else "シグナルボート"
         saveStartLineWaypoint(kind, lat, lon)
@@ -1084,7 +1016,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_LOCATION) startPreview()
+        if (requestCode == REQ_LOCATION) {
+            val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                startPreview()
+                if (pendingStartAfterLocationPermission) ensureBackgroundLocationForRecording()
+                else if (!hasBackgroundLocationPermission()) showBackgroundLocationPrompt(false)
+            } else if (pendingStartAfterLocationPermission) {
+                pendingStartAfterLocationPermission = false
+                Toast.makeText(this, "位置情報が許可されていません。設定から許可してください", Toast.LENGTH_LONG).show()
+            }
+        } else if (requestCode == REQ_BACKGROUND_LOCATION) {
+            if (hasBackgroundLocationPermission()) {
+                if (pendingStartAfterLocationPermission) {
+                    pendingStartAfterLocationPermission = false
+                    startGpsLoggingWithPermission()
+                }
+            } else if (pendingStartAfterLocationPermission) {
+                pendingStartAfterLocationPermission = false
+                Toast.makeText(this, "常に許可が必要です。アプリ情報の位置情報設定から変更してください", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun headingReference(): HeadingReference.Reading? {
@@ -1163,6 +1115,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
                 REQ_LOCATION
             )
+        } else if (!hasBackgroundLocationPermission() && !backgroundPermissionPromptShownThisSession) {
+            showBackgroundLocationPrompt(false)
         }
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIFICATIONS)
@@ -1171,10 +1125,51 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun startGpsLogging() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            pendingStartAfterLocationPermission = true
             requestNeededPermissions()
-            Toast.makeText(this, "位置情報を許可してください", Toast.LENGTH_LONG).show()
             return
         }
+        ensureBackgroundLocationForRecording()
+    }
+
+    private fun hasBackgroundLocationPermission(): Boolean =
+        Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun ensureBackgroundLocationForRecording() {
+        if (hasBackgroundLocationPermission()) {
+            pendingStartAfterLocationPermission = false
+            startGpsLoggingWithPermission()
+        } else {
+            pendingStartAfterLocationPermission = true
+            showBackgroundLocationPrompt(true)
+        }
+    }
+
+    private fun showBackgroundLocationPrompt(forRecording: Boolean) {
+        if (isFinishing || isDestroyed) return
+        backgroundPermissionPromptShownThisSession = true
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("位置情報を常に許可")
+            .setMessage("画面を消した後も航跡を記録し続けるには、位置情報を「常に許可」にしてください。Androidの仕様により、この説明の後に許可画面が開きます。")
+            .setNegativeButton(if (forRecording) "記録しない" else "あとで") { _, _ ->
+                if (forRecording) pendingStartAfterLocationPermission = false
+            }
+            .setPositiveButton("許可方法を開く") { _, _ ->
+                if (Build.VERSION.SDK_INT == 29) {
+                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), REQ_BACKGROUND_LOCATION)
+                } else if (Build.VERSION.SDK_INT >= 30) {
+                    runCatching {
+                        startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.fromParts("package", packageName, null)
+                        })
+                    }.onFailure { Toast.makeText(this, "アプリ情報を開けませんでした", Toast.LENGTH_LONG).show() }
+                }
+            }
+            .show()
+    }
+
+    private fun startGpsLoggingWithPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         val intent = Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_START)
         ContextCompat.startForegroundService(this, intent)
         running = true
@@ -1819,3 +1814,4 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLog.text = logBuffer.joinToString("\n")
     }
 }
+
