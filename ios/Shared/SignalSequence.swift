@@ -4,11 +4,16 @@ import Foundation
 /// with the orange starting-line flag, five minutes before the warning signal.
 /// Video profiles remain available as alternate reference sequences.
 struct SignalSequence {
-    private static let nonOrangeMastPoles = [0, 2, 3, 4]
-
+    // Fixed by signal identity so changing another flag never moves a raised flag.
     static func mastPoleIndex(flagID: String, otherFlagOrdinal: Int) -> Int {
-        if flagID == "orange" { return 1 }
-        return nonOrangeMastPoles[min(max(0, otherFlagOrdinal), nonOrangeMastPoles.count - 1)]
+        switch flagID {
+        case "orange", "橙": return 2
+        case "X": return 0
+        case "first-sub", "第一代表": return 1
+        default:
+            if flagID.hasPrefix("class-") || flagID == "級" { return 3 }
+            return 4
+        }
     }
 
     static func canOperateRaceSignals(hasStarted: Bool, firstActionPending: Bool, restartPending: Bool) -> Bool {

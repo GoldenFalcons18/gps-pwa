@@ -52,11 +52,14 @@ data class SignalFlagState(
 )
 
 object SignalMastLayout {
-    private val nonOrangePoles = intArrayOf(0, 2, 3, 4)
-
-    fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int =
-        if (flagId == "橙" || flagId == "orange") 1
-        else nonOrangePoles[otherFlagOrdinal.coerceIn(0, nonOrangePoles.lastIndex)]
+    // Fixed by signal identity so changing another flag never moves a raised flag.
+    fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int = when {
+        flagId == "橙" || flagId == "orange" -> 2
+        flagId == "X" -> 0
+        flagId == "第一代表" || flagId == "first-sub" -> 1
+        flagId == "級" || flagId.startsWith("class-") -> 3
+        else -> 4
+    }
 
     fun canOperateRaceSignals(hasStarted: Boolean, firstActionPending: Boolean, restartPending: Boolean): Boolean =
         hasStarted && !firstActionPending && !restartPending

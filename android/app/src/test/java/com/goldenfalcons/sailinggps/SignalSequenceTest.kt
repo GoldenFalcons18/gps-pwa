@@ -7,13 +7,16 @@ import org.junit.Test
 
 class SignalSequenceTest {
     @Test
-    fun orangeFlagAlwaysUsesOrangePoleAndOtherFlagsUseDifferentPoles() {
-        assertEquals(1, SignalMastLayout.poleIndex("橙", 0))
-        assertEquals(1, SignalMastLayout.poleIndex("orange", 2))
-        assertEquals(0, SignalMastLayout.poleIndex("class-420", 0))
-        assertEquals(2, SignalMastLayout.poleIndex("P", 1))
-        assertEquals(3, SignalMastLayout.poleIndex("X", 2))
-        assertEquals(4, SignalMastLayout.poleIndex("第一代表", 3))
+    fun flagsStayOnIdentityBasedMastsWhenOtherFlagsChange() {
+        assertEquals(2, SignalMastLayout.poleIndex("橙", 0))
+        assertEquals(2, SignalMastLayout.poleIndex("orange", 3))
+        assertEquals(0, SignalMastLayout.poleIndex("X", 0))
+        assertEquals(0, SignalMastLayout.poleIndex("X", 4))
+        assertEquals(1, SignalMastLayout.poleIndex("第一代表", 0))
+        assertEquals(1, SignalMastLayout.poleIndex("first-sub", 4))
+        assertEquals(3, SignalMastLayout.poleIndex("class-420", 0))
+        assertEquals(4, SignalMastLayout.poleIndex("P", 0))
+        assertEquals(4, SignalMastLayout.poleIndex("AP", 3))
     }
 
     @Test
