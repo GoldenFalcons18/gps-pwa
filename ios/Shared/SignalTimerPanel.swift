@@ -13,9 +13,10 @@ struct SignalTimerPanel: View {
     @AppStorage("signalRunEventsJSON") private var runEventsJSON = ""
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
     @AppStorage("signalMinimumTimeToFirstAction") private var minimumTimeToFirstAction = 15
-    @AppStorage("signalHornSeconds") private var hornSeconds = 0.7
-    @AppStorage("signalShortHornSeconds") private var shortHornSeconds = 0.22
-    @AppStorage("signalHornGapSeconds") private var hornGapSeconds = 0.18
+    @AppStorage("signalHornSeconds") private var hornSeconds = 5.1
+    @AppStorage("signalShortHornSeconds") private var shortHornSeconds = 3.1
+    @AppStorage("signalHornGapSeconds") private var hornGapSeconds = 1.1
+    @AppStorage("signalHornTimingPresetMigrated") private var hornTimingPresetMigrated = false
     @AppStorage("signalHornVolume") private var hornVolume = 0.8
     @AppStorage("signalHornEnabled") private var hornEnabled = true
     @AppStorage("signalFlagProfile") private var flagProfile = "standard-start"
@@ -480,9 +481,9 @@ struct SignalTimerPanel: View {
                         DisclosureGroup("ホーン設定") {
                             Toggle("仮想ホーンを有効にする", isOn: $hornEnabled)
                             signalSlider("音量", value: $hornVolume, range: 0...1, step: 0.05, format: "%.0f%%", scale: 100)
-                            signalSlider("短音", value: $shortHornSeconds, range: 0.1...1.0, step: 0.05, format: "%.2f秒", scale: 1)
-                            signalSlider("長音", value: $hornSeconds, range: 0.1...5.0, step: 0.1, format: "%.1f秒", scale: 1)
-                            signalSlider("連発間隔", value: $hornGapSeconds, range: 0.1...2.0, step: 0.05, format: "%.2f秒", scale: 1)
+                            signalSlider("短音", value: $shortHornSeconds, range: 0.1...10.0, step: 0.1, format: "%.1f秒", scale: 1)
+                            signalSlider("長音", value: $hornSeconds, range: 0.1...10.0, step: 0.1, format: "%.1f秒", scale: 1)
+                            signalSlider("連発間隔", value: $hornGapSeconds, range: 0.1...3.0, step: 0.1, format: "%.1f秒", scale: 1)
                         }
                         .font(.caption)
                     }
@@ -526,6 +527,12 @@ struct SignalTimerPanel: View {
             }
             #endif
             .onAppear {
+                if !hornTimingPresetMigrated {
+                    if abs(hornSeconds - 0.7) < 0.001 { hornSeconds = 5.1 }
+                    if abs(shortHornSeconds - 0.22) < 0.001 { shortHornSeconds = 3.1 }
+                    if abs(hornGapSeconds - 0.18) < 0.001 { hornGapSeconds = 1.1 }
+                    hornTimingPresetMigrated = true
+                }
                 if sequenceTimingVersion < 2 {
                     flagProfile = "standard-start"
                     sequenceTimingVersion = 2
@@ -588,7 +595,7 @@ struct SignalTimerPanel: View {
             Text(title).frame(width: 72, alignment: .leading)
             Slider(value: value, in: range, step: step)
             Text(String(format: format, value.wrappedValue * scale))
-                .font(.system(.caption2, design: .monospaced)).frame(width: 48, alignment: .trailing)
+                .font(.system(.caption2, design: .monospaced)).frame(width: 54, alignment: .trailing)
         }
     }
 
@@ -605,8 +612,19 @@ struct SignalTimerPanel: View {
         for (burst, pulseDuration) in pulseDurations.enumerated() {
             let count = max(1, Int(rate * pulseDuration))
             for index in 0..<count {
-                let fade = min(1, Double(index) / 160) * min(1, Double(count - index) / 1200)
-                var sample = Int16(sin(2 * Double.pi * 660 * Double(index) / rate) * 0.42 * hornVolume * fade * Double(Int16.max)).littleEndian
+                let t = Double(index) / rate
+                let duration = Double(count) / rate
+                let envelope = min(min(1, t / 0.08), min(1, (duration - t) / 0.18))
+                // Two detuned horn tones with harmonics create the brassy air-horn timbre.
+                let lower = 370.0 - 9.0 * (t / duration)
+                let upper = 440.0 - 11.0 * (t / duration)
+                let horn = 0.50 * sin(2 * Double.pi * lower * t)
+                    + 0.42 * sin(2 * Double.pi * upper * t)
+                    + 0.22 * sin(2 * Double.pi * lower * 2 * t)
+                    + 0.18 * sin(2 * Double.pi * upper * 2 * t)
+                    + 0.10 * sin(2 * Double.pi * lower * 3 * t)
+                    + 0.08 * sin(2 * Double.pi * upper * 3 * t)
+                var sample = Int16(horn * envelope * hornVolume * 0.62 * Double(Int16.max)).littleEndian
                 withUnsafeBytes(of: &sample) { samples.append(contentsOf: $0) }
             }
             if burst < pulseDurations.count - 1 { samples.append(Data(repeating: 0, count: gapSamples * 2)) }
@@ -663,7 +681,7 @@ private struct MastPole: View {
                 if assignedPole(for: flagIndex) == poleIndex {
                     SignalFlagView(flag: flags[flagIndex])
                         .frame(width: 25, height: 18)
-                        .offset(x: 2, y: CGFloat(flagIndex / 5) * 20 + 8)
+                        .offset(x: 2, y: 8)
                         .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
                 }
             }
@@ -754,3 +772,4 @@ private func signalDisplayColor(_ hex: String) -> Color {
                      green: Double((value >> 8) & 0xFF) / 255,
                      blue: Double(value & 0xFF) / 255, opacity: 1)
 }
+
