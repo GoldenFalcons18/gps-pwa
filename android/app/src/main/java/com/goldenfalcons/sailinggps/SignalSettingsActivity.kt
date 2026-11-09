@@ -475,8 +475,9 @@ class SignalSettingsActivity : AppCompatActivity() {
                 override fun onStartTrackingTouch(s:SeekBar?){}; override fun onStopTrackingTouch(s:SeekBar?){}
             }); box.addView(seek)
         }
-        slider("Volume","signalHornVolume",80,100);slider("Short Sound (ms)","signalShortHornMs",220,1000);slider("Long Sound (ms)","signalHornMs",700,5000);slider("Gap (ms)","signalGapMs",180,2000)
+        slider("Volume","signalHornVolume",80,100);slider("Short Sound (ms)","signalShortHornMs",3100,10000);slider("Long Sound (ms)","signalHornMs",5100,10000);slider("Gap (ms)","signalGapMs",1100,3000)
         AlertDialog.Builder(this).setTitle("Remote Horn").setView(box).setPositiveButton("完了"){_,_->prefs.edit().putBoolean("signalHornEnabled",enabled.isChecked).apply()}.show()
     }
     private fun showLog() = simpleSwitch("ログを保存","signalLogEnabled",true)
 }
+
