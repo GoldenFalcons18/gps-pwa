@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS)
 import AudioToolbox
+import AVFoundation
 
 private struct SignalStartAction: Identifiable, Codable, Hashable {
     var id = UUID()
@@ -705,9 +706,9 @@ private struct SignalNotificationsView: View {
 private struct SignalHornSettingsView: View {
     @AppStorage("signalHornEnabled") private var enabled = true
     @AppStorage("signalHornVolume") private var volume = 0.8
-    @AppStorage("signalShortHornSeconds") private var shortSound = 0.22
-    @AppStorage("signalHornSeconds") private var longSound = 0.7
-    @AppStorage("signalHornGapSeconds") private var gap = 0.18
+    @AppStorage("signalShortHornSeconds") private var shortSound = 3.1
+    @AppStorage("signalHornSeconds") private var longSound = 5.1
+    @AppStorage("signalHornGapSeconds") private var gap = 1.1
 
     var body: some View {
         Form {
@@ -726,13 +727,13 @@ private struct SignalHornSettingsView: View {
                 slider("Volume", value: $volume, range: 0...1, step: 0.05, suffix: "%", multiplier: 100)
             }
             Section("Remote Settings") {
-                slider("Short Sound", value: $shortSound, range: 0.1...1, step: 0.05, suffix: "s")
-                slider("Long Sound", value: $longSound, range: 0.1...5, step: 0.1, suffix: "s")
-                slider("Gap", value: $gap, range: 0.1...2, step: 0.05, suffix: "s")
+                slider("Short Sound", value: $shortSound, range: 0.1...10, step: 0.1, suffix: "s")
+                slider("Long Sound", value: $longSound, range: 0.1...10, step: 0.1, suffix: "s")
+                slider("Gap", value: $gap, range: 0.1...3, step: 0.1, suffix: "s")
             }
             Section("Preview") {
-                Button("短音を試す") { SignalSettingsSound.preview(seconds: shortSound) }
-                Button("長音を試す") { SignalSettingsSound.preview(seconds: longSound) }
+                Button("短音を試す") { SignalSettingsSound.preview(seconds: shortSound, volume: volume) }
+                Button("長音を試す") { SignalSettingsSound.preview(seconds: longSound, volume: volume) }
             }
         }
         .navigationTitle("Remote Horn")
@@ -753,11 +754,35 @@ private struct SignalHornSettingsView: View {
 }
 
 private enum SignalSettingsSound {
-    static func preview(seconds: Double) {
-        AudioServicesPlaySystemSound(1104)
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(0.1, seconds)) {
-            AudioServicesPlaySystemSound(1104)
+    private static var player: AVAudioPlayer?
+
+    static func preview(seconds: Double, volume: Double) {
+        let rate = 22_050.0
+        let duration = max(0.1, seconds)
+        let count = max(1, Int(rate * duration))
+        var samples = Data(capacity: count * 2)
+        for index in 0..<count {
+            let t = Double(index) / rate
+            let envelope = min(min(1, t / 0.08), min(1, (duration - t) / 0.18))
+            let frequency = 218.0 - 7.0 * (t / duration)
+            let fundamental = sin(2 * Double.pi * frequency * t)
+            let harmonics = 0.48 * sin(2 * Double.pi * frequency * 2 * t)
+                + 0.24 * sin(2 * Double.pi * frequency * 3 * t)
+                + 0.12 * sin(2 * Double.pi * frequency * 4 * t)
+                + 0.12 * sin(2 * Double.pi * (frequency + 3.5) * t)
+            var sample = Int16((fundamental * 0.68 + harmonics) * envelope * volume * 0.52 * Double(Int16.max)).littleEndian
+            withUnsafeBytes(of: &sample) { samples.append(contentsOf: $0) }
         }
+        var wav = Data("RIFF".utf8)
+        func append32(_ value: UInt32) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
+        func append16(_ value: UInt16) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
+        append32(UInt32(36 + samples.count)); wav.append(Data("WAVEfmt ".utf8)); append32(16); append16(1); append16(1)
+        append32(UInt32(rate)); append32(UInt32(rate) * 2); append16(2); append16(16)
+        wav.append(Data("data".utf8)); append32(UInt32(samples.count)); wav.append(samples)
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        player = try? AVAudioPlayer(data: wav)
+        player?.play()
     }
 }
 
@@ -774,3 +799,4 @@ private extension Color {
 }
 
 #endif
+
