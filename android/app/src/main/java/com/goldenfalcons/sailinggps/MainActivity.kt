@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 32106)
-Total output lines: 1935
-
 package com.goldenfalcons.sailinggps
 
 import android.Manifest
@@ -900,7 +897,128 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             displayPrefs.getBoolean("signalAbandonFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false) }
             displayPrefs.getBoolean("signalIndividualRecallFlagUp",false) -> raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
         }
-        displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" })…2106 tokens truncated…l prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
+        displayPrefs.edit().putBoolean("signalOrangeDisplayedUp",raised.any { it.id=="橙" }).apply()
+        if(displayPrefs.getBoolean("signalOrangeManualOverride",false)) {
+            raised.removeAll { it.id=="橙" }
+            if(displayPrefs.getBoolean("signalOrangeManualUp",false)) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
+        }
+        signalRowEventIndices.forEachIndexed { rowIndex,eventIndex ->
+            val rowEvent=events.getOrNull(eventIndex) ?: return@forEachIndexed
+            val row=signalRows.getOrNull(rowIndex) ?: return@forEachIndexed
+            val orangeRaiseAlreadyDone=rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
+            row.visibility=if(orangeRaiseAlreadyDone) View.GONE else View.VISIBLE
+            signalRowTimeViews.getOrNull(rowIndex)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+rowEvent.secondsAfterStart*1000L)) else signalEventTimeLabel(rowEvent,restartMode)
+        }
+        b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
+        b.btnSignalOrange.visibility=View.VISIBLE
+        b.signalMast.show(raised,true)
+        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"クラス旗待ち（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
+        val xUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
+        val generalUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        val apUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
+        val nUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        val canRaiseX=raceSignalControlsEnabled && prepFlag in listOf("P","I") && !generalUp && !apUp && !nUp
+        val canRaiseGeneral=raceSignalControlsEnabled && !apUp && !nUp
+        val canRaiseAp=!generalUp && !nUp
+        val canRaiseN=raceSignalControlsEnabled
+        b.btnSignalStart.isEnabled=!waitingForRestart && !generalUp && !apUp && !nUp
+        b.btnSignalStart.visibility=if(b.btnSignalStart.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalInterrupt.isEnabled=started || waitingForRestart
+        b.btnSignalInterrupt.visibility=if(b.btnSignalInterrupt.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalStop.visibility=if(started || waitingForRestart) View.VISIBLE else View.GONE
+        b.btnSignalIndividualRecall.text=if(xUp) "X旗 降下" else "個別リコール X旗（$prepFlag）"
+        b.btnSignalIndividualRecall.isEnabled=xUp || canRaiseX
+        b.btnSignalIndividualRecall.visibility=if(b.btnSignalIndividualRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalGeneralRecall.text=if(generalUp) "第一代表旗 降下" else "ゼネラルリコール"
+        b.btnSignalGeneralRecall.isEnabled=generalUp || canRaiseGeneral
+        b.btnSignalGeneralRecall.visibility=if(b.btnSignalGeneralRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalPostponement.text=if(apUp) "AP 降下" else "AP 掲揚"
+        b.btnSignalPostponement.isEnabled=apUp || canRaiseAp
+        b.btnSignalPostponement.visibility=if(b.btnSignalPostponement.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalNFlag.text=if(nUp) "N旗 降下" else "N旗（中止）"
+        b.btnSignalNFlag.isEnabled=nUp || canRaiseN
+        b.btnSignalNFlag.visibility=if(b.btnSignalNFlag.isEnabled) View.VISIBLE else View.GONE
+
+        val lastFired=displayPrefs.getInt("signalLastFiredIndex",-1)
+        if(running && active>lastFired) {
+            for(index in (lastFired+1)..active) {
+                if(index !in events.indices) continue
+                val eventAt=startAt+events[index].secondsAfterStart*1000L
+                if(now-eventAt in 0L..1500L) playSignalHorn(events[index].hornPulses)
+            }
+            displayPrefs.edit().putInt("signalLastFiredIndex",active).apply()
+        }
+        if(highlighted!=signalActiveIndex) {
+            signalRows.forEachIndexed { rowIndex,row ->
+                val eventIndex=signalRowEventIndices.getOrNull(rowIndex)
+                val isHighlighted=eventIndex==highlighted
+                row.setBackgroundColor(if(isHighlighted) 0xff75c879.toInt() else 0xffeeeeee.toInt())
+                row.animate().cancel()
+                row.alpha=if(isHighlighted && running) 0.78f else 1f
+                if(isHighlighted && running) row.animate().alpha(1f).setDuration(180).start()
+            }
+            signalActiveIndex=highlighted
+        }
+    }
+
+    private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
+    private fun setDisplayMode(requestedMode:Int) {
+        val mode=requestedMode.coerceIn(0,4)
+        val immersive=mode>=2
+        val wasImmersive=currentDisplayMode>=2
+        val content=b.focusPanel.parent as LinearLayout
+        if(immersive && !wasImmersive) {
+            focusHiddenVisibility.clear()
+            for(index in 1 until content.childCount) {
+                val view=content.getChildAt(index)
+                if(view!=b.focusPanel && view!=b.timerPanel) focusHiddenVisibility[view]=view.visibility
+            }
+        }
+        if(!immersive && wasImmersive) {
+            focusHiddenVisibility.forEach{(view,visibility)->view.visibility=visibility}
+            focusHiddenVisibility.clear()
+        }
+        currentDisplayMode=mode
+        val navigator=mode==1
+        navigatorMode = navigator
+        if (navigator && mapPanel == null) {
+            mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
+            mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
+            mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
+            mapPanel?.setWaypoints(waypoints, activeWaypoint)
+            mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
+            updateMap()
+            mapPanel?.resume()
+        }
+        b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
+        b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
+        b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
+        b.signalPanel.visibility=if(mode==4) android.view.View.VISIBLE else android.view.View.GONE
+        if(mode==2) b.focusPanel.layoutParams=b.focusPanel.layoutParams.apply {height=maxOf((480*resources.displayMetrics.density).toInt(),resources.displayMetrics.heightPixels-(150*resources.displayMetrics.density).toInt())}
+        b.btnSpeedMode.isEnabled = mode!=0
+        b.btnNavigatorMode.isEnabled = mode!=1
+        b.btnFocusMode.isEnabled=mode!=2
+        b.btnTimerMode.isEnabled=mode!=3
+        b.btnSignalMode.isEnabled=mode!=4
+        b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnFocusMenu.visibility=if(immersive) android.view.View.VISIBLE else android.view.View.GONE
+        displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
+        updateNavigationUi()
+        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
+        if(mode==4) updateSignalUi()
+    }
+
+    private fun captureStartLineEndpoint(kind:String) {
+        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
+        val lat=latestLat; val lon=latestLon
+        if(lat==null || lon==null || age !in 0.0..15.0) {
+            Toast.makeText(this,"現在地GPSを取得してから登録してください",Toast.LENGTH_LONG).show()
+            return
+        }
+        val prefix=if(kind=="outer") "startLine.outer" else "startLine.signal"
         displayPrefs.edit().putBoolean("${prefix}.set",true).putString("${prefix}.lat",lat.toString()).putString("${prefix}.lon",lon.toString()).apply()
         val label=if(kind=="outer") "アウターマーク" else "シグナルボート"
         saveStartLineWaypoint(kind, lat, lon)
@@ -1814,4 +1932,3 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLog.text = logBuffer.joinToString("\n")
     }
 }
-
