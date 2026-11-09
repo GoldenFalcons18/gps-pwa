@@ -2,14 +2,13 @@ import XCTest
 @testable import WatchNavigation
 
 final class SignalSequenceTests: XCTestCase {
-    func testFlagsStayOnIdentityBasedMastsWhenOtherFlagsChange() {
+    func testOrangeFlagAlwaysUsesOrangeMastAndOtherFlagsStayOffIt() {
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 0), 2)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 3), 2)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 0), 0)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 4), 0)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 4), 2)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 2), 0)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "第一代表", otherFlagOrdinal: 3), 1)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "first-sub", otherFlagOrdinal: 0), 1)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "第一代表", otherFlagOrdinal: 4), 1)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "class-420", otherFlagOrdinal: 0), 3)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "class-420", otherFlagOrdinal: 4), 3)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "P", otherFlagOrdinal: 0), 4)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "AP", otherFlagOrdinal: 3), 4)
     }
@@ -44,11 +43,11 @@ final class SignalSequenceTests: XCTestCase {
         let anchored = try XCTUnwrap(SignalSequence.eventsStartingAtFirstClassWarning(configured))
         XCTAssertEqual(anchored.map(\.secondsAfterStart), [0, 60, 240, 300, 540])
         XCTAssertTrue(anchored.first?.title.contains("予告信号") == true)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 65)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 120)
         XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 50, orangeRaisedAt: 0, intervalMinutes: 1, minimumLeadSeconds: 15), 60)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 15), 110)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 65, orangeRaisedAt: 50, intervalMinutes: 1, minimumLeadSeconds: 15), 120)
         XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 300, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 300)
-        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 301)
+        XCTAssertEqual(SignalSequence.startAfterOrangeRaise(now: 301, orangeRaisedAt: 0, intervalMinutes: 5, minimumLeadSeconds: 15), 360)
     }
 
     func testStartReferenceOffsetTracksOrangePhaseSettings() {
@@ -388,3 +387,4 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(restored[SignalSequence.raceStartEventIndex(in: restored)!].secondsAfterStart, 600)
     }
 }
+
