@@ -4,14 +4,13 @@ import Foundation
 /// with the orange starting-line flag, five minutes before the warning signal.
 /// Video profiles remain available as alternate reference sequences.
 struct SignalSequence {
-    // Fixed by signal identity so changing another flag never moves a raised flag.
     static func mastPoleIndex(flagID: String, otherFlagOrdinal: Int) -> Int {
         switch flagID {
-        case "orange", "橙": return 2
+        case "orange": return 2
         case "X": return 0
         case "first-sub", "第一代表": return 1
         default:
-            if flagID.hasPrefix("class-") || flagID == "級" { return 3 }
+            if flagID.hasPrefix("class-") { return 3 }
             return 4
         }
     }
@@ -40,10 +39,10 @@ struct SignalSequence {
     }
 
     static func startAfterOrangeRaise(now: Double, orangeRaisedAt: Double, intervalMinutes: Int, minimumLeadSeconds: Int) -> Double {
-        // The manual orange raise is the timing anchor. Start immediately when
-        // its interval has elapsed, otherwise wait only for the exact deadline.
-        // This path must not inherit the generic minimum lead or minute rounding.
-        max(now, orangeRaisedAt + Double(max(0, intervalMinutes) * 60))
+        // The manual orange raise is the timing anchor. Preserve the full
+        // interval, then begin the class-warning sequence at a real :00 so
+        // every minute-based signal stays aligned to the wall clock.
+        nextMinuteBoundary(at: max(now, orangeRaisedAt + Double(max(0, intervalMinutes) * 60)), minimumLeadSeconds: 0)
     }
 
     struct Flag: Identifiable, Equatable, Codable {
@@ -532,3 +531,4 @@ struct SignalSequence {
         return f.string(from: date.addingTimeInterval(offset))
     }
 }
+
