@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.Surface
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
@@ -61,7 +62,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
             if(currentDisplayMode>=2) updateNavigationUi()
             if(currentDisplayMode==4) updateSignalUi()
-            uiHandler.postDelayed(this, 1000)
+            uiHandler.postDelayed(this, SignalTiming.millisUntilNextSecond(signalNow()))
         }
     }
     private var latestLat: Double? = null
@@ -76,6 +77,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var currentDisplayMode=0
     private val focusHiddenVisibility=mutableMapOf<android.view.View,Int>()
     private val signalRows=mutableListOf<LinearLayout>()
+    private val signalRowTimeViews=mutableListOf<TextView>()
+    private val signalRowEventIndices=mutableListOf<Int>()
     private var signalActiveIndex=-1
     private var signalClockOffsetMs:Long
         get()=displayPrefs.getLong("signalClockOffsetMs",0L)
@@ -320,75 +323,45 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
-        if(displayPrefs.getInt("signalProfileSchemaVersion",0)<1) {
-            val oldProfile=displayPrefs.getInt("signalFlagProfileIndex",0)
-            val newProfile=if(oldProfile<=0) 0 else (oldProfile+1).coerceAtMost(SignalSequence.profiles.lastIndex)
-            val newDuration=if(displayPrefs.contains("signalDurationIndexV2")) (displayPrefs.getInt("signalDurationIndexV2",4)+1).coerceIn(0,5) else 0
-            displayPrefs.edit().putInt("signalFlagProfileIndex",newProfile).putInt("signalDurationIndexV2",newDuration).putInt("signalProfileSchemaVersion",1).apply()
-        }
-        if(displayPrefs.getInt("signalProfileSchemaVersion",0)<2) {
-            val oldIndex=displayPrefs.getInt("signalFlagProfileIndex",0)
-            val migratedIndex=if(oldIndex>=2) oldIndex+1 else oldIndex
-            displayPrefs.edit().putInt("signalFlagProfileIndex",migratedIndex.coerceIn(0,SignalSequence.profiles.lastIndex))
-                .putInt("signalProfileSchemaVersion",2).apply()
-        }
-        b.signalDuration.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("14分・帆走スタート","1分シーケンス","3分シーケンス","5分シーケンス","10分シーケンス","20分シーケンス","13分・動画B"))
-        b.signalDuration.setSelection(displayPrefs.getInt("signalDurationIndexV2",0).coerceIn(0,6))
-        b.signalFlagProfile.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,SignalSequence.profiles.map{it.name})
-        b.signalFlagProfile.setSelection(displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex))
-        b.signalFlagProfile.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) {
-                displayPrefs.edit().putInt("signalFlagProfileIndex",position).apply()
-                val sequenceDurationIndex=when(position) { 0 -> 0; 1 -> 5; 2 -> 6; else -> -1 }
-                if(sequenceDurationIndex>=0) {
-                    displayPrefs.edit().putInt("signalDurationIndexV2",sequenceDurationIndex).apply()
-                    b.signalDuration.setSelection(sequenceDurationIndex)
-                }
-                buildSignalRows();updateSignalUi()
-            }
-        }
-        b.signalDuration.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) { displayPrefs.edit().putInt("signalDurationIndexV2",position).apply();buildSignalRows();updateSignalUi() }
-        }
-        b.signalPrepFlag.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,listOf("準備信号：P旗","準備信号：I旗"))
-        b.signalPrepFlag.setSelection(if(displayPrefs.getString("signalPrepFlag","P")=="I") 1 else 0)
-        b.signalPrepFlag.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent:android.widget.AdapterView<*>?) {}
-            override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long) {
-                displayPrefs.edit().putString("signalPrepFlag",if(position==1) "I" else "P").apply()
-                buildSignalRows();updateSignalUi()
-            }
-        }
+        val standardProfileIndex=SignalSequence.profiles.indexOfFirst { it.id=="standard-start" }.coerceAtLeast(0)
+        displayPrefs.edit().putInt("signalFlagProfileIndex",standardProfileIndex).putInt("signalDurationIndexV2",0)
+            .putInt("signalProfileSchemaVersion",3).apply()
+        // Start rule and preparation signal are one setting, edited in Signal Settings.
+        val selectedStartRule=displayPrefs.getString("signalStartRule", displayPrefs.getString("signalPrepFlag", "P")) ?: "P"
+        val selectedPrepFlag=SignalSequence.preparationFlagForStartRule(selectedStartRule)
+        displayPrefs.edit().putString("signalStartRule", if(selectedStartRule=="black") "Black" else selectedStartRule)
+            .putString("signalPrepFlag",selectedPrepFlag).apply()
         buildSignalRows()
         b.btnSignalSettings.setOnClickListener { startActivity(Intent(this, SignalSettingsActivity::class.java)) }
         b.btnSignalOrange.setOnClickListener {
             val current = if (displayPrefs.getBoolean("signalOrangeManualOverride", false))
                 displayPrefs.getBoolean("signalOrangeManualUp", false)
             else displayPrefs.getBoolean("signalOrangeDisplayedUp", false)
-            displayPrefs.edit().putBoolean("signalOrangeManualOverride", true)
-                .putBoolean("signalOrangeManualUp", !current).apply()
+            val edit=displayPrefs.edit().putBoolean("signalOrangeManualOverride", true).putBoolean("signalOrangeManualUp", !current)
+            if(current) edit.remove("signalOrangeRaisedAtMs") else edit.putLong("signalOrangeRaisedAtMs",signalNow())
+            edit.apply()
             if(!current) playSignalHorn(listOf(0))
             updateSignalUi()
         }
         b.btnSignalIndividualRecall.setOnClickListener { toggleIndividualRecall() }
         b.btnSignalNFlag.setOnClickListener { toggleAbandonFlag() }
         b.btnSignalInterrupt.setOnClickListener { showSignalInterruptDialog() }
+        b.btnSignalStop.setOnClickListener { resetSignalSequence() }
         b.btnSignalGeneralRecall.setOnClickListener { toggleGeneralRecall() }
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
         b.btnSignalReset.setOnClickListener { showSignalScheduleDialog() }
         b.btnSignalZero.setOnClickListener {
+            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalSkipFinalEvent",false).apply()
+            val frozen=freezeConfiguredSignalEvents()
             val alignedStart=SignalTiming.scheduledStartAt(signalNow(),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
             displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
                 .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
-                .putBoolean("signalSkipFinalEvent",false).remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
-                .putLong("signalElapsedStartAt",alignedStart).remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",-1)
-                .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
+                .putBoolean("signalSkipFinalEvent",false).remove("signalRestartAt").remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs")
+                .putString("signalRunEventsJSON",SignalSequence.encodeEvents(frozen)).putLong("signalElapsedStartAt",alignedStart).remove("signalPausedElapsedMs").remove("signalPausedAtMs").putInt("signalLastFiredIndex",-1)
+                .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
             signalActiveIndex=-1;buildSignalRows();updateSignalUi()
         }
-        b.btnNictSync.setOnClickListener { syncNictClock() }
         fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
             seek.max=maxProgress
             val stored=displayPrefs.getInt(key,defaultValue)
@@ -434,12 +407,29 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun signalNow():Long=System.currentTimeMillis()+signalClockOffsetMs
-    private fun currentSignalDurationMinutes():Int =
-        listOf(14,1,3,5,10,20,13).getOrElse(displayPrefs.getInt("signalDurationIndexV2",0)){14}
+    private fun currentSignalDurationMinutes():Int = 14
+
+    private fun orangeRaiseTimeMs(now:Long=signalNow()):Long? {
+        if(displayPrefs.getBoolean("signalOrangeManualOverride",false)) {
+            return if(displayPrefs.getBoolean("signalOrangeManualUp",false)) displayPrefs.getLong("signalOrangeRaisedAtMs",0L).takeIf { it>0L } else null
+        }
+        val restart=displayPrefs.getBoolean("signalRestartMode",false)
+        val start=if(restart) displayPrefs.getLong("signalRestartAt",0L) else displayPrefs.getLong("signalElapsedStartAt",0L)
+        val paused=if(restart) displayPrefs.getLong("signalRestartPausedElapsedMs",-1L) else displayPrefs.getLong("signalPausedElapsedMs",-1L)
+        if(!restart && start>now) return null
+        val base=when {
+            start>0L -> start
+            paused>=0L -> (if(restart) displayPrefs.getLong("signalRestartPausedAtMs",now) else displayPrefs.getLong("signalPausedAtMs",now))-paused
+            else -> return null
+        }
+        val elapsed=if(start>0L) (now-start).coerceAtLeast(0L) else paused
+        val event=currentSignalEvents().firstOrNull { it.flag=="橙" && it.raised && it.secondsAfterStart*1000L<=elapsed } ?: return null
+        return base+event.secondsAfterStart*1000L
+    }
 
     private fun buildSignalRows() {
-        b.signalSequenceContainer.removeAllViews();signalRows.clear();signalActiveIndex=-1
-        currentSignalEvents().forEach { event ->
+        b.signalSequenceContainer.removeAllViews();signalRows.clear();signalRowTimeViews.clear();signalRowEventIndices.clear();signalActiveIndex=-1
+        currentSignalEvents().forEachIndexed { eventIndex,event ->
             val row=LinearLayout(this).apply {
                 orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
                 layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
@@ -458,36 +448,72 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             row.addView(flagArtworkRow)
             row.addView(TextView(this).apply {text=event.title;textSize=13f;setTextColor(Color.BLACK);gravity=android.view.Gravity.CENTER_VERTICAL;layoutParams=LinearLayout.LayoutParams(0,-1,1f)})
-            row.addView(TextView(this).apply {text=signalEventTimeLabel(event,displayPrefs.getBoolean("signalRestartMode",false));textSize=12f;setTextColor(Color.DKGRAY);typeface=android.graphics.Typeface.MONOSPACE})
+            val eventTime=TextView(this).apply {text=signalEventTimeLabel(event,displayPrefs.getBoolean("signalRestartMode",false));textSize=12f;setTextColor(Color.DKGRAY);typeface=android.graphics.Typeface.MONOSPACE}
+            row.addView(eventTime);signalRowTimeViews+=eventTime;signalRowEventIndices+=eventIndex
             row.addView(TextView(this).apply { text=event.hornPulses.joinToString(""){if(it==0)"●" else "—"};textSize=12f;setTextColor(Color.DKGRAY);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(42,-1) })
             b.signalSequenceContainer.addView(row);signalRows+=row
         }
     }
 
     private fun currentSignalEvents():List<SignalEvent> {
-        val prep=displayPrefs.getString("signalPrepFlag","P") ?: "P"
+        val hasRun=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L
+        if(!displayPrefs.getBoolean("signalRestartMode",false) && hasRun) {
+            SignalSequence.decodeEvents(displayPrefs.getString("signalRunEventsJSON",null))?.takeIf { it.isNotEmpty() }?.let { return it }
+        }
+        return configuredSignalEvents()
+    }
+
+    private fun configuredSignalEvents():List<SignalEvent> {
+        val prep=SignalSequence.preparationFlagForStartRule(
+            displayPrefs.getString("signalStartRule", displayPrefs.getString("signalPrepFlag","P")) ?: "P"
+        )
         val orange=displayPrefs.getBoolean("signalOrangeEnabled",true)
-        val profile=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        val profile=SignalSequence.profiles.indexOfFirst { it.id=="standard-start" }.coerceAtLeast(0)
         val profileId=SignalSequence.profiles[profile].id
-        val orangeRemoved=displayPrefs.getInt("signalOrangeRemovedAfterMinutes",if(profileId=="video-20") 10 else 4)
-        val orangeDisplayed=displayPrefs.getInt("signalOrangeDisplayedMinutes",if(profileId=="video-13") 4 else 5)
+        val orangeRemoved=displayPrefs.getInt("signalOrangeRemovedAfterMinutes",4)
+        val orangeDisplayed=displayPrefs.getInt("signalOrangeDisplayedMinutes",5)
         val className=displayPrefs.getString("signalSelectedClassName","クラス旗") ?: "クラス旗"
-        val all=if(displayPrefs.getBoolean("signalRestartMode",false)) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        val base=if(restartMode) SignalSequence.restartEvents(prep,orange,orangeRemoved,className) else {
             SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className,orangeDisplayed)
         }
+        val all=if(!restartMode && profileId=="standard-start") {
+            val rows=displayPrefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+            SignalSequence.configuredStandardEvents(
+                base=base,
+                entries=rows,
+                referenceOffset=SignalSequence.startReferenceOffset(profileId,orange,orangeDisplayed),
+                orangeRemovedAfterMinutes=orangeRemoved,
+                raceDelayEnabled=displayPrefs.getBoolean("signalRaceDelayEnabled",false),
+                raceDelayMinutes=displayPrefs.getInt("signalRaceDelayMinutes",0)
+            ) ?: base
+        } else base
         return if(displayPrefs.getBoolean("signalSkipFinalEvent",false) && all.size>1) all.dropLast(1) else all
     }
 
+    private fun freezeConfiguredSignalEvents():List<SignalEvent> = configuredSignalEvents().also { events ->
+        displayPrefs.edit().putString("signalRunEventsJSON",SignalSequence.encodeEvents(events)).apply()
+    }
+
     private fun signalEventTimeLabel(event:SignalEvent,restart:Boolean):String {
-        val profile=SignalSequence.profiles.getOrElse(displayPrefs.getInt("signalFlagProfileIndex",0)){SignalSequence.profiles[0]}
-        if(!restart && profile.id!="standard-start") return "%02d:%02d".format(event.secondsAfterStart/60,event.secondsAfterStart%60)
-        val orangeOn=displayPrefs.getBoolean("signalOrangeEnabled",true)
-        val orangeBeforeWarning=displayPrefs.getInt("signalOrangeDisplayedMinutes",if(profile.id=="video-13") 4 else 5)
-        val startOffset=if(restart) 300 else SignalSequence.startReferenceOffset(profile.id,orangeOn,orangeBeforeWarning)
-        val offset=event.secondsAfterStart-startOffset
-        if(offset==0) return "T+00:00"
-        val value=abs(offset)
-        return (if(offset<0) "T−" else "T+")+"%02d:%02d".format(value/60,value%60)
+        val now=signalNow()
+        val restartAt=displayPrefs.getLong("signalRestartAt",0L)
+        val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
+        val sequenceStart=when {
+            restart && restartAt>0L -> restartAt
+            restart && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
+            displayPrefs.getLong("signalElapsedStartAt",0L)>0L -> displayPrefs.getLong("signalElapsedStartAt",0L)
+            displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L -> displayPrefs.getLong("signalPausedAtMs",now)-displayPrefs.getLong("signalPausedElapsedMs",0L)
+            else -> 0L
+        }
+        if(sequenceStart==0L) {
+            val events=currentSignalEvents()
+            val zero=events.getOrNull(SignalSequence.raceStartEventIndex(events) ?: -1)?.secondsAfterStart ?: 0
+            val offset=event.secondsAfterStart-zero
+            if(offset==0) return "T+00:00"
+            return (if(offset<0) "T−" else "T+")+"%02d:%02d".format(abs(offset)/60,abs(offset)%60)
+        }
+        return java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(sequenceStart+event.secondsAfterStart*1000L))
     }
 
     private fun pauseSignalForManualEvent() {
@@ -495,18 +521,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(displayPrefs.getBoolean("signalRestartMode",false)) {
             val restartAt=displayPrefs.getLong("signalRestartAt",0L)
             if(restartAt>0L && now>=restartAt) {
-                displayPrefs.edit().putLong("signalRestartPausedElapsedMs",now-restartAt).remove("signalRestartAt").apply()
+                displayPrefs.edit().putLong("signalRestartPausedElapsedMs",now-restartAt).putLong("signalRestartPausedAtMs",now).remove("signalRestartAt").apply()
             } else if(restartAt>now) {
-                displayPrefs.edit().putLong("signalRestartPausedElapsedMs",0L).remove("signalRestartAt").apply()
+                displayPrefs.edit().putLong("signalRestartPausedElapsedMs",0L).putLong("signalRestartPausedAtMs",restartAt).remove("signalRestartAt").apply()
             }
         } else {
             val startAt=displayPrefs.getLong("signalElapsedStartAt",0L)
-            if(startAt>0L) displayPrefs.edit().putLong("signalPausedElapsedMs",(now-startAt).coerceAtLeast(0L)).remove("signalElapsedStartAt").apply()
+            if(startAt>0L) displayPrefs.edit().putLong("signalPausedElapsedMs",(now-startAt).coerceAtLeast(0L)).putLong("signalPausedAtMs",maxOf(now,startAt)).remove("signalElapsedStartAt").apply()
         }
     }
 
     private fun toggleAbandonFlag() {
         val wasUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp) {
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
@@ -514,7 +541,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.abandonRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalAbandonFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L)
+                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).remove("signalRestartPausedAtMs")
                 .putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.abandonLower.hornPulses)
         }
@@ -539,7 +566,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val now=java.util.Calendar.getInstance()
             android.app.TimePickerDialog(this,{ _,hour,minute ->
                 val target=java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY,hour);set(java.util.Calendar.MINUTE,minute);set(java.util.Calendar.SECOND,0);set(java.util.Calendar.MILLISECOND,0) }
-                val firstSignalLead=when(displayPrefs.getInt("signalFlagProfileIndex",0)){2->240;3,4,5,6->0;else->300}
+                val firstSignalLead=300
                 val signalOffset=if(mode==1) firstSignalLead*1000L else 0L
                 target.add(java.util.Calendar.MILLISECOND,signalClockOffsetMs.toInt())
                 if(target.timeInMillis-signalOffset<=signalNow()) {
@@ -551,17 +578,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun scheduleSignalStart(startAt:Long) {
-        displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
+        displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalSkipFinalEvent",false).apply()
+        val frozen=freezeConfiguredSignalEvents()
+        displayPrefs.edit().putString("signalRunEventsJSON",SignalSequence.encodeEvents(frozen)).putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
             .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
-            .putBoolean("signalSkipFinalEvent",false).putLong("signalElapsedStartAt",startAt).remove("signalPausedElapsedMs")
-            .remove("signalRestartAt").remove("signalRestartPausedElapsedMs").putInt("signalLastFiredIndex",-1)
-            .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
+            .putLong("signalElapsedStartAt",startAt).remove("signalPausedElapsedMs").remove("signalPausedAtMs")
+            .remove("signalRestartAt").remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs").putInt("signalLastFiredIndex",-1)
+            .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
     }
 
     private fun toggleIndividualRecall() {
         if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalPostponementFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         val wasUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp) {
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",true).apply()
             playSignalHorn(SignalSequence.individualRecallRaise.hornPulses)
@@ -571,6 +601,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun toggleGeneralRecall() {
         val wasUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        if(!wasUp && !canOperateRaceSignals()) return
         if(!wasUp && displayPrefs.getBoolean("signalAbandonFlagUp",false)) return
         if(!wasUp) {
             pauseSignalForManualEvent()
@@ -579,7 +610,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             playSignalHorn(SignalSequence.generalRecallRaise.hornPulses)
         } else {
             displayPrefs.edit().putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
+                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).remove("signalRestartPausedAtMs").putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.generalRecallLower.hornPulses)
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
@@ -589,22 +620,62 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val wasUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
         if(!wasUp && (displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) || displayPrefs.getBoolean("signalAbandonFlagUp",false))) return
         if(!wasUp) {
+            val orangeAt=orangeRaiseTimeMs()
             pauseSignalForManualEvent()
             displayPrefs.edit().putBoolean("signalIndividualRecallFlagUp",false).putBoolean("signalGeneralRecallFlagUp",false)
                 .putBoolean("signalRestartMode",false).putLong("signalRestartAt",0L).putBoolean("signalPostponementFlagUp",true).putBoolean("signalAbandonFlagUp",false).apply()
+            if(orangeAt!=null) displayPrefs.edit().putBoolean("signalOrangeManualOverride",true).putBoolean("signalOrangeManualUp",true).putLong("signalOrangeRaisedAtMs",orangeAt).apply()
             playSignalHorn(SignalSequence.postponementRaise.hornPulses)
         } else {
+            val loweredAt=signalNow()
+            var orangeAt=orangeRaiseTimeMs(loweredAt)
+            val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
+            val raiseOrangeNow=orangeEnabled && orangeAt==null
+            if(raiseOrangeNow) {
+                orangeAt=loweredAt
+                displayPrefs.edit().putBoolean("signalOrangeManualOverride",true).putBoolean("signalOrangeManualUp",true).putLong("signalOrangeRaisedAtMs",loweredAt).apply()
+            }
+            val restartAt=SignalTiming.postponementRestartWarningAt(
+                loweredAt,orangeAt,displayPrefs.getInt("signalOrangeDisplayedMinutes",5),orangeEnabled
+            )
             displayPrefs.edit().putBoolean("signalPostponementFlagUp",false).putBoolean("signalRestartMode",true)
-                .putLong("signalRestartAt",SignalTiming.restartWarningAt(signalNow())).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1).apply()
+                .putLong("signalRestartAt",restartAt).putLong("signalRestartPausedElapsedMs",-1L).remove("signalRestartPausedAtMs").putInt("signalLastFiredIndex",-1).apply()
             playSignalHorn(SignalSequence.postponementLower.hornPulses)
+            if(raiseOrangeNow) playSignalHorn(listOf(0))
         }
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
     }
 
+    private fun canOperateRaceSignals():Boolean {
+        val now=signalNow()
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        val mainStart=displayPrefs.getLong("signalElapsedStartAt",0L)
+        val restartStart=displayPrefs.getLong("signalRestartAt",0L)
+        val mainPaused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
+        val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
+        val hasStarted=mainStart>0L || mainPaused>=0L || restartStart>0L || restartPaused>=0L
+        val eventList=currentSignalEvents()
+        val raceStartOffset=(eventList.getOrNull(SignalSequence.raceStartEventIndex(eventList) ?: -1)?.secondsAfterStart ?: 0)*1000L
+        val sequenceBase=when {
+            restartMode && restartStart>0L -> restartStart
+            restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
+            mainStart>0L -> mainStart
+            mainPaused>=0L -> displayPrefs.getLong("signalPausedAtMs",now)-mainPaused
+            else -> 0L
+        }
+        val raceStartPending=sequenceBase>0L && sequenceBase+raceStartOffset>now
+        return SignalMastLayout.canOperateRaceSignals(
+            hasStarted=hasStarted,
+            firstActionPending=mainStart>now || raceStartPending,
+            restartPending=restartStart>now
+        )
+    }
+
     private fun resetSignalSequence() {
-        displayPrefs.edit().remove("signalElapsedStartAt").remove("signalPausedElapsedMs").remove("signalLastFiredIndex")
-            .remove("signalOrangeManualOverride").remove("signalOrangeManualUp")
-            .remove("signalRestartAt").remove("signalRestartPausedElapsedMs")
+        displayPrefs.edit().remove("signalElapsedStartAt").remove("signalPausedElapsedMs").remove("signalPausedAtMs").remove("signalLastFiredIndex")
+            .remove("signalRunEventsJSON")
+            .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs")
+            .remove("signalRestartAt").remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs")
             .putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
             .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false).putBoolean("signalSkipFinalEvent",false).apply()
         signalActiveIndex=-1;buildSignalRows();updateSignalUi()
@@ -621,9 +692,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val paused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
             when {
                 restartAt>now -> return
-                restartAt>0L && now-restartAt<totalMs -> displayPrefs.edit().putLong("signalRestartPausedElapsedMs",now-restartAt).remove("signalRestartAt").apply()
-                paused>=0L && paused<totalMs -> displayPrefs.edit().putLong("signalRestartAt",now-paused).remove("signalRestartPausedElapsedMs").apply()
-                else -> displayPrefs.edit().putLong("signalRestartAt",now).putLong("signalRestartPausedElapsedMs",-1L).putInt("signalLastFiredIndex",-1)
+                restartAt>0L && now-restartAt<totalMs -> displayPrefs.edit().putLong("signalRestartPausedElapsedMs",now-restartAt).putLong("signalRestartPausedAtMs",now).remove("signalRestartAt").apply()
+                paused>=0L && paused<totalMs -> displayPrefs.edit().putLong("signalRestartAt",now-paused).remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs").apply()
+                else -> displayPrefs.edit().putLong("signalRestartAt",now).putLong("signalRestartPausedElapsedMs",-1L).remove("signalRestartPausedAtMs").putInt("signalLastFiredIndex",-1)
                     .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
             }
         } else {
@@ -631,17 +702,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val paused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
             val elapsed=if(startAt>0L) (now-startAt).coerceAtLeast(0L) else paused
             when {
-                startAt>0L && elapsed<totalMs -> displayPrefs.edit().putLong("signalPausedElapsedMs",elapsed).remove("signalElapsedStartAt").apply()
+                startAt>0L && elapsed<totalMs -> displayPrefs.edit().putLong("signalPausedElapsedMs",elapsed).putLong("signalPausedAtMs",maxOf(now,startAt)).remove("signalElapsedStartAt").apply()
                 paused>=0L && paused<totalMs -> displayPrefs.edit().putLong(
                     "signalElapsedStartAt",
                     if(paused==0L) SignalTiming.scheduledStartAt(now,displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
                     else now-paused
-                ).remove("signalPausedElapsedMs").apply()
+                ).remove("signalPausedElapsedMs").remove("signalPausedAtMs").apply()
                 else -> {
-                    val hadCompleted = paused>=totalMs || (startAt>0L && elapsed>=totalMs)
-                    displayPrefs.edit().putLong("signalElapsedStartAt",SignalTiming.scheduledStartAt(now,displayPrefs.getInt("signalMinimumTimeToFirstAction",15)))
-                        .remove("signalPausedElapsedMs").putInt("signalLastFiredIndex",-1).apply()
-                    if(hadCompleted) displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
+                    val frozen=freezeConfiguredSignalEvents()
+                    val raisedOrangeAt=displayPrefs.getLong("signalOrangeRaisedAtMs",0L)
+                    val orangeTimeline=if(displayPrefs.getBoolean("signalOrangeManualOverride",false) && displayPrefs.getBoolean("signalOrangeManualUp",false) && raisedOrangeAt>0L)
+                        SignalSequence.eventsStartingAtFirstClassWarning(frozen)?.let { events ->
+                            val start=SignalTiming.startAfterOrangeRaise(now,raisedOrangeAt,displayPrefs.getInt("signalOrangeDisplayedMinutes",5),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
+                            start to events
+                        } else null
+                    val timeline=orangeTimeline?.second ?: frozen
+                    val start=orangeTimeline?.first ?: SignalTiming.scheduledStartAt(now,displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
+                    val edit=displayPrefs.edit().putLong("signalElapsedStartAt",start)
+                        .putString("signalRunEventsJSON",SignalSequence.encodeEvents(timeline)).remove("signalPausedElapsedMs").remove("signalPausedAtMs").putInt("signalLastFiredIndex",-1)
+                    if(orangeTimeline==null) edit.remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs")
+                    edit.apply()
                 }
             }
         }
@@ -674,26 +754,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         playAt(0)
     }
 
-    private fun syncNictClock() {
-        b.btnNictSync.isEnabled=false;b.tvNictStatus.text="ntp.nict.jp に接続中…"
-        NictClock.query { result -> runOnUiThread {
-            b.btnNictSync.isEnabled=true
-            result.onSuccess { offset -> signalClockOffsetMs=offset;b.tvNictStatus.text="ntp.nict.jp 同期済み（差 ${if(offset>=0) "+" else ""}${offset} ms）";updateSignalUi() }
-                .onFailure { b.tvNictStatus.text="NTP同期失敗・端末時刻を使用中";Toast.makeText(this,"NTP同期に失敗しました",Toast.LENGTH_LONG).show() }
-        } }
-    }
     private fun updateSignalUi() {
         if(!::b.isInitialized) return
         val now=signalNow()
+        val offset=signalClockOffsetMs
+        b.tvNictStatus.text=if(offset==0L) "端末時刻を使用中" else "ntp.nict.jp 同期済み（差 ${if(offset>=0) "+" else ""}${offset} ms）"
         val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
         val restartAt=displayPrefs.getLong("signalRestartAt",0L)
         val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
         val waitingForRestart=restartMode && restartAt>now
-        val profileIndex=displayPrefs.getInt("signalFlagProfileIndex",0).coerceIn(0,SignalSequence.profiles.lastIndex)
+        val profileIndex=SignalSequence.profiles.indexOfFirst { it.id=="standard-start" }.coerceAtLeast(0)
         val duration=currentSignalDurationMinutes()
         val prepFlag=displayPrefs.getString("signalPrepFlag","P") ?: "P"
         val events=currentSignalEvents()
         val totalSeconds=events.lastOrNull()?.secondsAfterStart ?: 0
+        val raceStartIndex=SignalSequence.raceStartEventIndex(events)
+        val raceStartOffsetMs=events.getOrNull(raceStartIndex ?: -1)?.secondsAfterStart?.times(1000L) ?: 0L
         val normalStartAt=displayPrefs.getLong("signalElapsedStartAt",0L)
         val normalPaused=displayPrefs.getLong("signalPausedElapsedMs",-1L)
         val waitingForFirstSignal=!restartMode && normalStartAt>now
@@ -707,40 +783,59 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         val elapsedSeconds=elapsedMs/1000.0
         val started=restartMode || normalStartAt>0L || normalPaused>=0L
-        val running=if(waitingForRestart) false else if(restartMode) restartAt>0L && elapsedSeconds<totalSeconds else normalStartAt>0L && elapsedSeconds<totalSeconds
+        val raceStartAt=when {
+            restartMode && restartAt>0L -> restartAt+raceStartOffsetMs
+            restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)+raceStartOffsetMs-restartPaused
+            normalStartAt>0L -> normalStartAt+raceStartOffsetMs
+            normalPaused>=0L -> displayPrefs.getLong("signalPausedAtMs",now)+raceStartOffsetMs-normalPaused
+            else -> 0L
+        }
+        val raceStartPending=started && raceStartAt>now
+        val running=if(waitingForRestart) false else if(restartMode) restartAt>0L && restartAt<=now && elapsedSeconds<totalSeconds else normalStartAt>0L && normalStartAt<=now && elapsedSeconds<totalSeconds
         val completed=started && !waitingForRestart && elapsedSeconds>=totalSeconds
         val active=when {
             waitingForRestart -> 0
             waitingForFirstSignal || !started -> -1
             else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
         }
-        val highlighted=if(waitingForFirstSignal || !started) SignalSequence.initialEventIndex(profileIndex) else active
+        val raceSignalControlsEnabled=SignalMastLayout.canOperateRaceSignals(
+            hasStarted=started,
+            firstActionPending=waitingForFirstSignal || raceStartPending,
+            restartPending=waitingForRestart
+        )
+        val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
         val event=events[active.coerceAtLeast(0)]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.flag=="橙") {
-            displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").apply()
+            displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
         }
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
-        val displayedStart=when {
-            waitingForRestart -> restartAt
+        val raceStartEvent=events.getOrNull(raceStartIndex ?: -1)
+        val raceStartName=raceStartEvent?.flagMarks?.firstOrNull()?.id?.removePrefix("class-")?.let { "クラス旗 $it スタート時刻" } ?: "スタート時刻"
+        b.tvSignalStartAt.text=if(raceStartAt>0L) raceStartName+"  "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else raceStartName+"  TBD"
+        val rowBase=when {
             restartMode && restartAt>0L -> restartAt
-            restartMode && restartPaused>=0L -> now-restartPaused
+            restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
             normalStartAt>0L -> normalStartAt
-            normalPaused>=0L -> now-normalPaused
+            normalPaused>=0L -> displayPrefs.getLong("signalPausedAtMs",now)-normalPaused
             else -> 0L
         }
         b.tvSignalClock.text=clock
-        b.tvSignalStartAt.text="Start at  " + if(started) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(displayedStart)) else "TBD"
-        b.tvSignalTitle.text=if(waitingForFirstSignal) "分00秒待ち · ${event.title}" else event.title
+        b.tvSignalTitle.text=if(raceStartPending) "スタートまで" else if(waitingForFirstSignal) "クラス旗掲揚待ち · ${event.title}" else event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
-        val shownSeconds=when {
-            waitingForRestart -> (restartAt-now).coerceAtLeast(0L)/1000.0
-            waitingForFirstSignal -> (normalStartAt-now).coerceAtLeast(0L)/1000.0
-            else -> elapsedSeconds
+        val raceDeltaMs=if(raceStartAt>0L) raceStartAt-now else 0L
+        val raceWholeSeconds=when {
+            raceDeltaMs>0L -> SignalTiming.countdownSeconds(raceDeltaMs/1000.0)
+            raceDeltaMs<0L -> (-raceDeltaMs/1000L).toInt().coerceAtLeast(0)
+            else -> 0
         }
-        val shownWholeSeconds=if(waitingForRestart||waitingForFirstSignal) SignalTiming.countdownSeconds(shownSeconds) else shownSeconds.toInt().coerceAtLeast(0)
-        b.tvSignalCountdown.text=if(!started) "--:--" else "%02d:%02d".format(shownWholeSeconds/60,shownWholeSeconds%60)
-        b.tvSignalNextLabel.text=when {waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"次の分00秒まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止 · 経過時間";else->"経過時間"}
+        val raceSign=when {
+            raceDeltaMs>=1000L -> "−"
+            raceDeltaMs<=-1000L -> "+"
+            else -> ""
+        }
+        b.tvSignalCountdown.text=if(raceStartAt>0L) raceSign+"%02d:%02d".format(raceWholeSeconds/60,raceWholeSeconds%60) else "--:--"
+        b.tvSignalNextLabel.text=when {raceStartPending->"スタートまで";waitingForRestart->"次の予告信号まで";waitingForFirstSignal->"クラス旗掲揚まで";!started->"開始待ち";completed->"シーケンス終了";!running->"一時停止";else->"レース経過"}
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
         val raised=when {
             waitingForRestart || waitingForFirstSignal || !started -> mutableListOf()
@@ -757,19 +852,42 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             raised.removeAll { it.id=="橙" }
             if(displayPrefs.getBoolean("signalOrangeManualUp",false)) raised+=SignalFlagState("橙",0xFFF58A00.toInt(),true,false)
         }
+        signalRowEventIndices.forEachIndexed { rowIndex,eventIndex ->
+            val rowEvent=events.getOrNull(eventIndex) ?: return@forEachIndexed
+            val row=signalRows.getOrNull(rowIndex) ?: return@forEachIndexed
+            val orangeRaiseAlreadyDone=rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
+            row.visibility=if(orangeRaiseAlreadyDone) View.GONE else View.VISIBLE
+            signalRowTimeViews.getOrNull(rowIndex)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+rowEvent.secondsAfterStart*1000L)) else signalEventTimeLabel(rowEvent,restartMode)
+        }
         b.btnSignalOrange.text=if(raised.any { it.id=="橙" }) "オレンジ旗 降下" else "オレンジ旗 掲揚"
+        b.btnSignalOrange.visibility=View.VISIBLE
         b.signalMast.show(raised,true)
-        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"分00秒合わせ中（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
-        b.btnSignalStart.isEnabled=!waitingForRestart && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalInterrupt.isEnabled=started
-        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalNFlag.text=if(displayPrefs.getBoolean("signalAbandonFlagUp",false)) "N旗 降下" else "N旗（中止）"
-        b.btnSignalIndividualRecall.text=if(displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)) "X旗 降下" else "個別リコール X旗（$prepFlag）"
-        b.btnSignalIndividualRecall.isEnabled=prepFlag in listOf("P","I") && !displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalGeneralRecall.text=if(displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)) "第一代表旗 降下" else "ゼネラルリコール"
-        b.btnSignalPostponement.text=if(displayPrefs.getBoolean("signalPostponementFlagUp",false)) "AP 降下" else "AP 掲揚"
-        b.btnSignalGeneralRecall.isEnabled=!displayPrefs.getBoolean("signalPostponementFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
-        b.btnSignalPostponement.isEnabled=!displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) && !displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        b.btnSignalStart.text=when {waitingForRestart->"再予告待ち";waitingForFirstSignal->"クラス旗待ち（取消）";running->"一時停止";started && !completed->"再開";completed->"再スタート";else->"開始"}
+        val xUp=displayPrefs.getBoolean("signalIndividualRecallFlagUp",false)
+        val generalUp=displayPrefs.getBoolean("signalGeneralRecallFlagUp",false)
+        val apUp=displayPrefs.getBoolean("signalPostponementFlagUp",false)
+        val nUp=displayPrefs.getBoolean("signalAbandonFlagUp",false)
+        val canRaiseX=raceSignalControlsEnabled && prepFlag in listOf("P","I") && !generalUp && !apUp && !nUp
+        val canRaiseGeneral=raceSignalControlsEnabled && !apUp && !nUp
+        val canRaiseAp=!generalUp && !nUp
+        val canRaiseN=raceSignalControlsEnabled
+        b.btnSignalStart.isEnabled=!waitingForRestart && !generalUp && !apUp && !nUp
+        b.btnSignalStart.visibility=if(b.btnSignalStart.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalInterrupt.isEnabled=started || waitingForRestart
+        b.btnSignalInterrupt.visibility=if(b.btnSignalInterrupt.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalStop.visibility=if(started || waitingForRestart) View.VISIBLE else View.GONE
+        b.btnSignalIndividualRecall.text=if(xUp) "X旗 降下" else "個別リコール X旗（$prepFlag）"
+        b.btnSignalIndividualRecall.isEnabled=xUp || canRaiseX
+        b.btnSignalIndividualRecall.visibility=if(b.btnSignalIndividualRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalGeneralRecall.text=if(generalUp) "第一代表旗 降下" else "ゼネラルリコール"
+        b.btnSignalGeneralRecall.isEnabled=generalUp || canRaiseGeneral
+        b.btnSignalGeneralRecall.visibility=if(b.btnSignalGeneralRecall.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalPostponement.text=if(apUp) "AP 降下" else "AP 掲揚"
+        b.btnSignalPostponement.isEnabled=apUp || canRaiseAp
+        b.btnSignalPostponement.visibility=if(b.btnSignalPostponement.isEnabled) View.VISIBLE else View.GONE
+        b.btnSignalNFlag.text=if(nUp) "N旗 降下" else "N旗（中止）"
+        b.btnSignalNFlag.isEnabled=nUp || canRaiseN
+        b.btnSignalNFlag.visibility=if(b.btnSignalNFlag.isEnabled) View.VISIBLE else View.GONE
 
         val lastFired=displayPrefs.getInt("signalLastFiredIndex",-1)
         if(running && active>lastFired) {
@@ -781,15 +899,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             displayPrefs.edit().putInt("signalLastFiredIndex",active).apply()
         }
         if(highlighted!=signalActiveIndex) {
-            signalRows.forEachIndexed { index,row ->
-                row.setBackgroundColor(if(index==highlighted) 0xff75c879.toInt() else 0xffeeeeee.toInt())
+            signalRows.forEachIndexed { rowIndex,row ->
+                val eventIndex=signalRowEventIndices.getOrNull(rowIndex)
+                val isHighlighted=eventIndex==highlighted
+                row.setBackgroundColor(if(isHighlighted) 0xff75c879.toInt() else 0xffeeeeee.toInt())
                 row.animate().cancel()
-                row.alpha=if(index==highlighted && running) 0.78f else 1f
-                if(index==highlighted && running) row.animate().alpha(1f).setDuration(180).start()
+                row.alpha=if(isHighlighted && running) 0.78f else 1f
+                if(isHighlighted && running) row.animate().alpha(1f).setDuration(180).start()
             }
             signalActiveIndex=highlighted
         }
-        if(completed && !restartMode) displayPrefs.edit().remove("signalElapsedStartAt").putLong("signalPausedElapsedMs",totalSeconds*1000L).apply()
     }
 
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)

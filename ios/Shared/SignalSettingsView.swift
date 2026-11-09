@@ -44,11 +44,8 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
               !saved.isEmpty else { return [.starter] }
         return saved.map { preset in
             var migrated = preset
-            // Earlier builds stored 4 as the default but did not apply this setting.
-            // Keep the 4-minute video-B preset; restore the five-minute default elsewhere.
-            if migrated.orangeDisplayedMinutes == 4 && migrated.sequence != "video-13" {
-                migrated.orangeDisplayedMinutes = 5
-            }
+            migrated.sequence = "standard-start"
+            migrated.prepFlagID = SignalSequence.preparationFlagID(forStartRule: migrated.startRule)
             return migrated
         }
     }
@@ -70,7 +67,6 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
     var internationalFlag = "Alpha"
 }
 
-private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
 private struct SignalColorChoice: Identifiable {
     let name: String
     let color: Color
@@ -120,10 +116,13 @@ struct SignalSettingsView: View {
     @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
     @AppStorage("signalRadioFriendly") private var radioFriendly = true
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
+    @AppStorage("signalClockAlignmentMode") private var clockAlignmentMode = "manual"
     @AppStorage("signalExternalDisplayEnabled") private var externalDisplay = true
     @AppStorage("signalRemoteFlagsEnabled") private var remoteFlags = false
     @AppStorage("signalBuoyZoneLinked") private var buoyZoneLinked = false
     @AppStorage("signalLogEnabled") private var logEnabled = true
+    @State private var timeSyncMessage = ""
+    @State private var isSyncingTime = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -145,7 +144,34 @@ struct SignalSettingsView: View {
                         Text("端末の標準音声").tag("端末の標準音声")
                     }
                     NavigationLink("Notifications") { SignalNotificationsView() }
-                    LabeledContent("Time Sync", value: String(format: "%.0f秒", clockOffset))
+                    Picker("時間合わせ", selection: $clockAlignmentMode) {
+                        Text("端末時刻で0秒合わせ").tag("manual")
+                        Text("ntp.nict.jpと同期").tag("nict")
+                    }
+                    .onChange(of: clockAlignmentMode) { _, mode in
+                        if mode == "manual" {
+                            clockOffset = 0
+                            timeSyncMessage = "端末の実時刻を基準にします"
+                        } else {
+                            Task { await syncTime() }
+                        }
+                    }
+                    if clockAlignmentMode == "nict" {
+                        Button {
+                            Task { await syncTime() }
+                        } label: {
+                            HStack {
+                                Text(timeSyncMessage.isEmpty
+                                     ? (clockOffset == 0 ? "未同期" : "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）")
+                                     : timeSyncMessage)
+                                Spacer()
+                                if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
+                            }
+                        }.disabled(isSyncingTime)
+                    } else {
+                        Text("各信号は端末の実時刻のn分00秒を基準に動作します。開始時は設定した最短時間を確保して、次の分00秒に合わせます。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
                     Toggle("BuoyZoneと連携", isOn: $buoyZoneLinked)
@@ -168,6 +194,20 @@ struct SignalSettingsView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    @MainActor
+    private func syncTime() async {
+        isSyncingTime = true
+        defer { isSyncingTime = false }
+        do {
+            let serverTime = try await NICTClock.query()
+            clockOffset = serverTime.timeIntervalSinceNow
+            timeSyncMessage = "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）"
+        } catch {
+            clockOffset = 0
+            timeSyncMessage = "同期失敗・端末時刻を使用中"
+        }
     }
 }
 
@@ -202,7 +242,7 @@ private struct SignalFleetSequencesView: View {
                             .foregroundStyle(.orange)
                         VStack(alignment: .leading) {
                             Text(preset.name)
-                            Text("\(preset.starts.count) starts · \(sequenceName(preset.sequence))")
+                            Text("\(preset.starts.count) signal actions")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -230,9 +270,6 @@ private struct SignalFleetSequencesView: View {
     }
 
     private func save() { savedJSON = SignalFleetPreset.encode(presets) }
-    private func sequenceName(_ id: String) -> String {
-        SignalSequence.profiles.first(where: { $0.id == id })?.name ?? "5分シーケンス"
-    }
 }
 
 private struct SignalFleetPresetEditor: View {
@@ -243,15 +280,12 @@ private struct SignalFleetPresetEditor: View {
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
     @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
     @AppStorage("signalOrangeRemovedAfterMinutes") private var activeOrangeRemoval = 4
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
+    @AppStorage("signalRaceDelayEnabled") private var activeRaceDelayEnabled = false
+    @AppStorage("signalRaceDelayMinutes") private var activeRaceDelayMinutes = 0
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
 
-    private let sequences: [SignalSequenceChoice] = [
-        SignalSequenceChoice(id: "standard-start", name: "Rule 26・5分（橙旗は別設定）"),
-        SignalSequenceChoice(id: "video-20", name: "動画A · 20分"),
-        SignalSequenceChoice(id: "video-13", name: "動画B · 13分"),
-        SignalSequenceChoice(id: "custom-five", name: "カスタム · 5分")
-    ]
     private let rules = ["P", "I", "U", "Z", "Black", "Default"]
 
     var body: some View {
@@ -260,10 +294,8 @@ private struct SignalFleetPresetEditor: View {
                 TextField("Name", text: $preset.name)
             }
             Section("Defaults") {
-                Picker("Start Sequence", selection: $preset.sequence) {
-                    ForEach(sequences) { Text($0.name).tag($0.id) }
-                }
-                Picker("Start Rule", selection: $preset.startRule) {
+                LabeledContent("Start Sequence", value: "Rule 26 · 5 min")
+                Picker("スタートルール／準備信号", selection: $preset.startRule) {
                     ForEach(rules, id: \.self) { Text($0).tag($0) }
                 }
                 NavigationLink {
@@ -275,11 +307,7 @@ private struct SignalFleetPresetEditor: View {
                         Text(SignalSequence.flag(preset.classFlagID).name).foregroundStyle(.secondary)
                     }
                 }
-                Picker("準備信号", selection: $preset.prepFlagID) {
-                    ForEach(["P", "I", "U", "Z", "black"], id: \.self) { Text($0 == "black" ? "黒旗" : "\($0)旗").tag($0) }
-                }
-                Stepper("次のレースまで：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
-                Toggle("Custom Race Delay", isOn: $preset.raceDelayEnabled)
+                Stepper("Time between races：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
             }
             Section("Time Limits") {
                 Toggle("Enable", isOn: $preset.timeLimitEnabled)
@@ -295,7 +323,7 @@ private struct SignalFleetPresetEditor: View {
                     .disabled(!preset.orangeEnabled)
                 Stepper("スタート後、橙旗を降下するまで：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("待機中は橙旗を降下します。有効時は同期したシーケンス開始時に自動掲揚します。予告信号とスタートの時刻は橙旗の掲揚時間に応じて表示します。橙旗は設定時間後に降下し、掲揚・降下は手動でも操作できます。動画Aの既定はスタート後10分、ほかは4分です。")
+                Text("シーケンス前は橙旗を降下します。手動で掲揚した場合はその時刻を記録し、指定間隔が経過した時点でクラス旗の手順に進みます。降下も手動で操作できます。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
@@ -307,9 +335,11 @@ private struct SignalFleetPresetEditor: View {
                         SignalFlagSwatch(flagID: start.flagID)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(start.title)
-                            TextField("時刻（分）", value: $start.minute, format: .number)
-                                .keyboardType(.numberPad)
-                                .font(.caption)
+                            HStack(spacing: 4) {
+                                TextField("分", value: $start.minute, format: .number).keyboardType(.numberPad).frame(width: 36)
+                                Text(":")
+                                TextField("秒", value: $start.second, format: .number).keyboardType(.numberPad).frame(width: 36)
+                            }.font(.caption).monospacedDigit()
                         }
                         Spacer()
                         Toggle("有効", isOn: $start.enabled).labelsHidden()
@@ -328,31 +358,32 @@ private struct SignalFleetPresetEditor: View {
                 }
             }
         }
-        .onChange(of: preset.sequence) { _, sequence in
-            switch sequence {
-            case "video-13":
-                preset.orangeDisplayedMinutes = 4
-                preset.orangeRemovedMinutes = 4
-            case "video-20":
-                preset.orangeDisplayedMinutes = 5
-                preset.orangeRemovedMinutes = 10
-            default:
-                preset.orangeDisplayedMinutes = 5
-                preset.orangeRemovedMinutes = 4
-            }
+        .onChange(of: preset.startRule) { _, value in
+            preset.prepFlagID = SignalSequence.preparationFlagID(forStartRule: value)
         }
         .navigationTitle("Fleet Start")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    activeSequence = preset.sequence
+                    activeSequence = "standard-start"
                     activeClassFlag = preset.classFlagID
-                    activePrepFlag = ["P", "I", "U", "Z"].contains(preset.startRule)
-                        ? preset.startRule
-                        : (preset.startRule == "Black" ? "black" : preset.prepFlagID)
+                    activePrepFlag = SignalSequence.preparationFlagID(forStartRule: preset.startRule)
                     activeOrangeEnabled = preset.orangeEnabled
                     activeOrangeDisplayed = preset.orangeDisplayedMinutes
                     activeOrangeRemoval = preset.orangeRemovedMinutes
+                    activeRaceDelayEnabled = preset.raceDelayMinutes > 0
+                    activeRaceDelayMinutes = preset.raceDelayMinutes
+                    // A fleet preset has one selected class flag. Apply it to
+                    // every class-flag action, including presets previously
+                    // saved with a different class, so subsequent changes do
+                    // not leave stale logo IDs in the live timeline.
+                    var runtimeStarts = preset.starts
+                    for index in runtimeStarts.indices where runtimeStarts[index].flagID.hasPrefix("class-") {
+                        runtimeStarts[index].flagID = preset.classFlagID
+                    }
+                    if let encoded = try? JSONEncoder().encode(runtimeStarts) {
+                        activeStartActionsJSON = String(data: encoded, encoding: .utf8) ?? "[]"
+                    }
                     dismiss()
                 }.tint(.orange)
             }
@@ -371,16 +402,15 @@ private struct SignalFleetPresetEditor: View {
         }
         .preferredColorScheme(.dark)
     }
+
 }
 
 struct SignalClassPicker: View {
     @Binding var selection: String
-    private let categories = ["Multihull", "Keelboat", "Board", "Centerboard"]
-    private let classFlags: [SignalFlagChoice] =
-        ["A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Multihull") } +
-        ["10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Keelboat") } +
-        ["Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Board") } +
-        ["29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J14","Jollyboat","Laser","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Centerboard") }
+    private let categories = ["クラスロゴ"]
+    private let classFlags: [SignalFlagChoice] = SignalClassLogoAssets.availableClassNames.map {
+        SignalFlagChoice(id: "class-\($0)", name: $0, category: "クラスロゴ")
+    }
 
     var body: some View {
         List {
@@ -448,6 +478,7 @@ private struct SignalClassFlagSettingsView: View {
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
     @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
     @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @Environment(\.dismiss) private var dismiss
@@ -517,6 +548,19 @@ private struct SignalCustomFlagEditor: View {
                         activeLogoBackground = flag.flagColor
                     case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
                     default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
+                    }
+                    // The live sequence uses its saved action rows in
+                    // preference to the standalone class flag setting. Keep
+                    // those rows in sync when this editor activates a logo.
+                    if activeClassFlag.hasPrefix("class-"),
+                       let data = activeStartActionsJSON.data(using: .utf8),
+                       var actions = try? JSONDecoder().decode([SignalStartAction].self, from: data) {
+                        for index in actions.indices where actions[index].flagID.hasPrefix("class-") {
+                            actions[index].flagID = activeClassFlag
+                        }
+                        if let updated = try? JSONEncoder().encode(actions) {
+                            activeStartActionsJSON = String(data: updated, encoding: .utf8) ?? "[]"
+                        }
                     }
                     dismiss()
                 }.tint(.orange)

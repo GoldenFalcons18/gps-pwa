@@ -66,7 +66,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = (w * 0.012f).coerceAtLeast(2f)
         poleXs.forEachIndexed { index, x ->
-            paint.color = if (index == 1) 0xffff8800.toInt() else 0xff555555.toInt()
+            paint.color = if (index == 2) 0xffff8800.toInt() else 0xff555555.toInt()
             canvas.drawLine(x, h * 0.26f, x, h * 0.95f, paint)
         }
         paint.style = Paint.Style.FILL
@@ -75,7 +75,8 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
 
         flags.forEachIndexed { index, state ->
             if (!state.raised && previous.getOrNull(index)?.raised != true) return@forEachIndexed
-            val poleIndex = when (index) { 0 -> 1; 1 -> 3; 2 -> 2; 3 -> 4; else -> 0 }
+            val otherFlagOrdinal = flags.take(index).count { it.id != "橙" && it.id != "orange" }
+            val poleIndex = SignalMastLayout.poleIndex(state.id, otherFlagOrdinal)
             val mastX = poleXs[poleIndex]
             val flagWidth = w * 0.18f
             val flagHeight = h * 0.24f

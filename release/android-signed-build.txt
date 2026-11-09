@@ -1,1 +1,1 @@
-1.8.24 versionCode 52 complete International Code signal flags
+1.8.42 versionCode 68 pending validation
