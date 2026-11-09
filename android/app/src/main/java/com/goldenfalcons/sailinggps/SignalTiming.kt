@@ -10,12 +10,12 @@ object SignalTiming {
     }
 
     fun startAfterOrangeRaise(nowMillis: Long, orangeRaisedAtMillis: Long, intervalMinutes: Int, minimumLeadSeconds: Int): Long {
-        // A manual orange raise is the timing anchor. Once its configured
-        // interval has elapsed, the class-warning sequence starts immediately;
-        // before that, wait only until the exact interval deadline. Do not
-        // round this path to a minute boundary or add the generic start delay.
+        // A manual orange raise is the timing anchor. The first class signal
+        // must not occur before its configured interval; then start on the
+        // next real-clock :00 boundary, keeping the event sequence on whole
+        // minutes. Do not add the generic minimum lead a second time.
         val earliestByOrange = orangeRaisedAtMillis + intervalMinutes.coerceAtLeast(0) * 60_000L
-        return maxOf(nowMillis, earliestByOrange)
+        return scheduledStartAt(maxOf(nowMillis, earliestByOrange), 0)
     }
 
     fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
@@ -43,3 +43,4 @@ object SignalTiming {
         return if (to <= from) emptyList() else ((from + 1)..to).toList()
     }
 }
+
