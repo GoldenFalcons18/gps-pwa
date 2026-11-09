@@ -52,12 +52,11 @@ data class SignalFlagState(
 )
 
 object SignalMastLayout {
-    // Fixed by signal identity so changing another flag never moves a raised flag.
     fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int = when {
         flagId == "橙" || flagId == "orange" -> 2
         flagId == "X" -> 0
         flagId == "第一代表" || flagId == "first-sub" -> 1
-        flagId == "級" || flagId.startsWith("class-") -> 3
+        flagId.startsWith("class-") || flagId == "級" -> 3
         else -> 4
     }
 
@@ -465,3 +464,4 @@ object SignalSequence {
         }
     }
 }
+
