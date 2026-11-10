@@ -1,1 +1,1 @@
-1.8.46 versionCode 72 retry after source correction
+1.8.47 versionCode 73 pending CI verification
