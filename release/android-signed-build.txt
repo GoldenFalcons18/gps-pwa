@@ -1,1 +1,1 @@
-1.8.47 versionCode 73 pending CI verification
+1.8.47 versionCode 73 signed release retry after unit test pass
