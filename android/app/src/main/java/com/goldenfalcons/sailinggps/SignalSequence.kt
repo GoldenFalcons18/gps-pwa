@@ -421,7 +421,10 @@ object SignalSequence {
 
             // Every raised class start has its own automatic start-time lowering.
             // A separately configured lowering must not suppress this event.
-            timeline += classFlagDown.copy(secondsAfterStart = raceStart)
+            timeline += classFlagDown.copy(
+                secondsAfterStart = raceStart,
+                title = "${classTitle}を降下（スタート）"
+            )
             finalRaceStart = maxOf(finalRaceStart, raceStart)
 
             actions.filter {
