@@ -53,7 +53,7 @@ data class SignalFlagState(
 
 object SignalMastLayout {
     fun poleIndex(flagId: String, otherFlagOrdinal: Int): Int = when {
-        flagId == "橙" || flagId == "orange" -> 2
+        flagId == "橙" || flagId == "orange" -> 1
         flagId == "X" -> 0
         flagId == "第一代表" || flagId == "first-sub" -> 1
         flagId.startsWith("class-") || flagId == "級" -> 3
