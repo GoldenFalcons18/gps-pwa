@@ -13,6 +13,30 @@ private struct SignalStartAction: Identifiable, Codable, Hashable {
     var enabled = true
     var horn = "short"
 
+    private enum CodingKeys: String, CodingKey { case id, flagID, minute, second, raised, enabled, horn }
+
+    init(id: UUID = UUID(), flagID: String = "class-4", minute: Int = 5, second: Int = 0,
+         raised: Bool = true, enabled: Bool = true, horn: String = "short") {
+        self.id = id
+        self.flagID = flagID
+        self.minute = minute
+        self.second = second
+        self.raised = raised
+        self.enabled = enabled
+        self.horn = horn
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        flagID = try values.decodeIfPresent(String.self, forKey: .flagID) ?? "class-4"
+        minute = try values.decodeIfPresent(Int.self, forKey: .minute) ?? 5
+        second = try values.decodeIfPresent(Int.self, forKey: .second) ?? 0
+        raised = try values.decodeIfPresent(Bool.self, forKey: .raised) ?? true
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        horn = try values.decodeIfPresent(String.self, forKey: .horn) ?? "short"
+    }
+
     var title: String {
         "\(SignalSequence.flag(flagID).name)を\(raised ? "掲揚" : "降下")"
     }
@@ -38,6 +62,35 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
         SignalStartAction(flagID: "class-4", minute: 5, raised: true, horn: "short")
     ]
 
+    private enum CodingKeys: String, CodingKey {
+        case id, name, sequence, startRule, classFlagID, prepFlagID, raceDelayEnabled, raceDelayMinutes
+        case timeLimitEnabled, raceLimitMinutes, finishWindowMinutes, rule42Override
+        case orangeEnabled, orangeDisplayedMinutes, orangeRemovedMinutes, starts
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try values.decodeIfPresent(String.self, forKey: .name) ?? "OP Au Bp"
+        sequence = try values.decodeIfPresent(String.self, forKey: .sequence) ?? "standard-start"
+        startRule = try values.decodeIfPresent(String.self, forKey: .startRule) ?? "P"
+        classFlagID = try values.decodeIfPresent(String.self, forKey: .classFlagID) ?? "class-4"
+        prepFlagID = try values.decodeIfPresent(String.self, forKey: .prepFlagID) ?? "P"
+        raceDelayEnabled = try values.decodeIfPresent(Bool.self, forKey: .raceDelayEnabled) ?? false
+        raceDelayMinutes = try values.decodeIfPresent(Int.self, forKey: .raceDelayMinutes) ?? 0
+        timeLimitEnabled = try values.decodeIfPresent(Bool.self, forKey: .timeLimitEnabled) ?? false
+        raceLimitMinutes = try values.decodeIfPresent(Int.self, forKey: .raceLimitMinutes) ?? 50
+        finishWindowMinutes = try values.decodeIfPresent(Int.self, forKey: .finishWindowMinutes) ?? 20
+        rule42Override = try values.decodeIfPresent(Bool.self, forKey: .rule42Override) ?? false
+        orangeEnabled = try values.decodeIfPresent(Bool.self, forKey: .orangeEnabled) ?? true
+        orangeDisplayedMinutes = try values.decodeIfPresent(Int.self, forKey: .orangeDisplayedMinutes) ?? 5
+        orangeRemovedMinutes = try values.decodeIfPresent(Int.self, forKey: .orangeRemovedMinutes) ?? 4
+        starts = try values.decodeIfPresent([SignalStartAction].self, forKey: .starts)
+            ?? [SignalStartAction(flagID: classFlagID, minute: 5, raised: true, horn: "short")]
+    }
+
     static let starter = SignalFleetPreset()
     static func load(from value: String) -> [SignalFleetPreset] {
         guard let data = value.data(using: .utf8),
@@ -53,6 +106,22 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
     static func encode(_ value: [SignalFleetPreset]) -> String {
         guard let data = try? JSONEncoder().encode(value) else { return "[]" }
         return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    func activate() {
+        let defaults = UserDefaults.standard
+        defaults.set(name, forKey: "signalFleetStartName")
+        defaults.set("standard-start", forKey: "signalFlagProfile")
+        defaults.set(classFlagID, forKey: "signalCustomClassFlag")
+        defaults.set(SignalSequence.preparationFlagID(forStartRule: startRule), forKey: "signalCustomPrepFlag")
+        defaults.set(orangeEnabled, forKey: "signalOrangeEnabled")
+        defaults.set(orangeDisplayedMinutes, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(orangeRemovedMinutes, forKey: "signalOrangeRemovedAfterMinutes")
+        defaults.set(raceDelayMinutes > 0, forKey: "signalRaceDelayEnabled")
+        defaults.set(raceDelayMinutes, forKey: "signalRaceDelayMinutes")
+        if let data = try? JSONEncoder().encode(starts), let value = String(data: data, encoding: .utf8) {
+            defaults.set(value, forKey: "signalActiveStartActionsJSON")
+        }
     }
 }
 
@@ -206,8 +275,9 @@ struct SignalSettingsView: View {
             clockOffset = serverTime.timeIntervalSinceNow
             timeSyncMessage = "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）"
         } catch {
-            clockOffset = 0
-            timeSyncMessage = "同期失敗・端末時刻を使用中"
+                    timeSyncMessage = clockOffset == 0
+                        ? "同期に失敗しました。端末時刻を使用中"
+                        : "再同期失敗。前回の補正値を保持（\(String(format: "%+.3f", clockOffset)) 秒）"
         }
     }
 }
@@ -229,25 +299,45 @@ private struct SignalLogSettingsView: View {
 
 private struct SignalFleetSequencesView: View {
     @AppStorage("signalFleetPresetsJSON") private var savedJSON = ""
+    @AppStorage("signalFleetStartName") private var activeFleetName = "OP Au Bp"
     @State private var presets: [SignalFleetPreset] = [.starter]
     @State private var loaded = false
 
     var body: some View {
         List {
             ForEach($presets) { $preset in
-                NavigationLink {
-                    SignalFleetPresetEditor(preset: $preset)
-                } label: {
-                    HStack {
-                        Image(systemName: "circle")
-                            .foregroundStyle(.orange)
-                        VStack(alignment: .leading) {
-                            Text(preset.name)
-                            Text("\(preset.starts.count) signal actions")
-                                .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Button {
+                        preset.activate()
+                        activeFleetName = preset.name
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: activeFleetName == preset.name ? "checkmark.circle.fill" : "circle")
+                                .font(.title2).foregroundStyle(activeFleetName == preset.name ? .green : .secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(preset.name).font(.body.weight(activeFleetName == preset.name ? .semibold : .regular))
+                                Text(activeFleetName == preset.name ? "選択中 · 信号 \(preset.starts.count)件" : "タップしてこのフリートを選択")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
                         }
+                        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(preset.name)をフリートとして選択")
+                    .accessibilityAddTraits(activeFleetName == preset.name ? .isSelected : [])
+                    NavigationLink {
+                        SignalFleetPresetEditor(preset: $preset)
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.title3)
+                            .frame(width: 52, height: 58)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("\(preset.name)の設定を編集")
                 }
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 12))
             }
             .onDelete { presets.remove(atOffsets: $0); save() }
             Button {
@@ -286,6 +376,7 @@ private struct SignalFleetPresetEditor: View {
     @AppStorage("signalRaceDelayMinutes") private var activeRaceDelayMinutes = 0
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
+    @State private var editingStartFlagID: UUID?
 
     private let rules = ["P", "I", "U", "Z", "Black", "Default"]
 
@@ -300,7 +391,16 @@ private struct SignalFleetPresetEditor: View {
                     ForEach(rules, id: \.self) { Text($0).tag($0) }
                 }
                 NavigationLink {
-                    SignalClassPicker(selection: $preset.classFlagID)
+                    SignalClassPicker(selection: Binding(
+                        get: { preset.classFlagID },
+                        set: { value in
+                            let previous = preset.classFlagID
+                            preset.classFlagID = value
+                            if let index = preset.starts.firstIndex(where: { $0.raised && $0.flagID == previous }) {
+                                preset.starts[index].flagID = value
+                            }
+                        }
+                    ))
                 } label: {
                     HStack {
                         Text("Classes")
@@ -333,7 +433,15 @@ private struct SignalFleetPresetEditor: View {
                         Button(role: .destructive) {
                             preset.starts.removeAll { $0.id == start.id }
                         } label: { Image(systemName: "minus.circle.fill") }
-                        SignalFlagSwatch(flagID: start.flagID)
+                        .frame(width: 40, height: 48)
+                        .contentShape(Rectangle())
+                        Button { editingStartFlagID = start.id } label: {
+                            SignalFlagSwatch(flagID: start.flagID)
+                                .frame(width: 58, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(start.title)のクラス旗を選択")
                         VStack(alignment: .leading, spacing: 2) {
                             Text(start.title)
                             HStack(spacing: 4) {
@@ -355,7 +463,8 @@ private struct SignalFleetPresetEditor: View {
                     }
                 }
                 Button { showingAddFlag = true } label: {
-                    Label("Add Start…", systemImage: "plus.circle.fill")
+                    Label("スタートを追加", systemImage: "plus.circle.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                 }
             }
         }
@@ -366,25 +475,7 @@ private struct SignalFleetPresetEditor: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    activeSequence = "standard-start"
-                    activeClassFlag = preset.classFlagID
-                    activePrepFlag = SignalSequence.preparationFlagID(forStartRule: preset.startRule)
-                    activeOrangeEnabled = preset.orangeEnabled
-                    activeOrangeDisplayed = preset.orangeDisplayedMinutes
-                    activeOrangeRemoval = preset.orangeRemovedMinutes
-                    activeRaceDelayEnabled = preset.raceDelayMinutes > 0
-                    activeRaceDelayMinutes = preset.raceDelayMinutes
-                    // A fleet preset has one selected class flag. Apply it to
-                    // every class-flag action, including presets previously
-                    // saved with a different class, so subsequent changes do
-                    // not leave stale logo IDs in the live timeline.
-                    var runtimeStarts = preset.starts
-                    for index in runtimeStarts.indices where runtimeStarts[index].flagID.hasPrefix("class-") {
-                        runtimeStarts[index].flagID = preset.classFlagID
-                    }
-                    if let encoded = try? JSONEncoder().encode(runtimeStarts) {
-                        activeStartActionsJSON = String(data: encoded, encoding: .utf8) ?? "[]"
-                    }
+                    preset.activate()
                     dismiss()
                 }.tint(.orange)
             }
@@ -399,6 +490,23 @@ private struct SignalFleetPresetEditor: View {
                 ))
                 .navigationTitle("Classes")
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完了") { showingAddFlag = false } } }
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { editingStartFlagID != nil },
+            set: { if !$0 { editingStartFlagID = nil } }
+        )) {
+            NavigationStack {
+                SignalClassPicker(selection: Binding(
+                    get: { preset.starts.first(where: { $0.id == editingStartFlagID })?.flagID ?? preset.classFlagID },
+                    set: { value in
+                        guard let index = preset.starts.firstIndex(where: { $0.id == editingStartFlagID }) else { return }
+                        preset.starts[index].flagID = value
+                        editingStartFlagID = nil
+                    }
+                ))
+                .navigationTitle("このスタートのクラス旗")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完了") { editingStartFlagID = nil } } }
             }
         }
         .preferredColorScheme(.dark)

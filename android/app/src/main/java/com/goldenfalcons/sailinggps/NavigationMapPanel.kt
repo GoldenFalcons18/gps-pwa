@@ -369,6 +369,10 @@ class NavigationMapPanel(
         if (now - lastFollowLogAt >= 500) {
             lastFollowLogAt = now
             log("Map follow heading=$lastHeading shown=$shownHeading")
+            if (BuildConfig.DEBUG) android.util.Log.d(
+                "SailingGpsLogger",
+                "Map follow heading=$lastHeading shown=$shownHeading"
+            )
         }
         // Center the camera ahead so the real boat stays 72% down the viewport.
         val center = DisplayNavigation.followCenter(point.latitude, point.longitude, shownHeading ?: lastHeading ?: 0.0, map.height.toDouble(), dpi / 2.54, metersPerCm)
@@ -465,3 +469,4 @@ class NavigationMapPanel(
         map.onDetach()
     }
 }
+

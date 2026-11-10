@@ -40,7 +40,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             "L" -> "Lima"
             else -> state.id.removePrefix("intl:")
         }
-        val bitmap = artworkCache.getOrPut(name) {
+        val bitmap = SignalClassLogoAssets.internationalBitmap(context, name) ?: artworkCache.getOrPut(name) {
             val width = 300
             val height = 200
             val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -66,7 +66,7 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = (w * 0.012f).coerceAtLeast(2f)
         poleXs.forEachIndexed { index, x ->
-            paint.color = if (index == 2) 0xffff8800.toInt() else 0xff555555.toInt()
+            paint.color = if (index == 1) 0xffff8800.toInt() else 0xff555555.toInt()
             canvas.drawLine(x, h * 0.26f, x, h * 0.95f, paint)
         }
         paint.style = Paint.Style.FILL
@@ -82,13 +82,20 @@ class SignalMastView @JvmOverloads constructor(context: Context, attrs: Attribut
             val flagHeight = h * 0.24f
             val topY = h * 0.28f
             val downY = h * 0.72f
+            val poleStack = flags.take(index).mapIndexed { priorIndex, priorState ->
+                priorIndex to priorState
+            }.count { (priorIndex, priorState) ->
+                (priorState.raised || previous.getOrNull(priorIndex)?.raised == true) &&
+                    SignalMastLayout.poleIndex(priorState.id, 0) == poleIndex
+            }
             val oldRaised = previous.getOrNull(index)?.raised ?: false
+            val stackOffset = poleStack * flagHeight * 0.72f
             val y = if (oldRaised == state.raised) {
-                if (state.raised) topY else downY
+                if (state.raised) topY + stackOffset else downY + stackOffset
             } else if (state.raised) {
-                downY + (topY - downY) * progress
+                downY + stackOffset + (topY - downY) * progress
             } else {
-                topY + (downY - topY) * progress
+                topY + stackOffset + (downY - topY) * progress
             }
             val flagRect = RectF(mastX, y, (mastX + flagWidth).coerceAtMost(w), (y + flagHeight).coerceAtMost(h))
             val classFlag = state.id.startsWith("class-") || state.id == "級"
