@@ -402,10 +402,10 @@ object SignalSequence {
             val raceStart = previousRaceStart?.let { maxOf(nominalRaceStart, it + delay) } ?: nominalRaceStart
             val warningAt = (raceStart - 300).coerceAtLeast(0)
             previousRaceStart = raceStart
-            val className = action.label.substringAfter("Class:", "").trim()
-                .ifEmpty { classUp.flag.removePrefix("class-").ifBlank { "420" } }
-            val classFlagId = "class-$className"
-            val classTitle = "クラス旗 $className"
+            val configuredClassName = action.label.substringAfter("Class:", "").trim()
+            val classFlagId = if (configuredClassName.isEmpty()) classUp.flag else "class-$configuredClassName"
+            val className = classFlagId.removePrefix("class-")
+            val classTitle = if (classFlagId == "級") "クラス旗" else "クラス旗 $className"
             val classFlagUp = classUp.copy(flag = classFlagId, color = 0xFFFFFFFF.toInt())
             val classFlagDown = classDown.copy(flag = classFlagId, color = 0xFFFFFFFF.toInt())
             timeline += classFlagUp.copy(
@@ -446,12 +446,14 @@ object SignalSequence {
 
         classActions.filter { !it.raised }.forEach { action ->
             val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
-            val className = action.label.substringAfter("Class:", "").trim()
-                .ifEmpty { classDown.flag.removePrefix("class-").ifBlank { "420" } }
+            val configuredClassName = action.label.substringAfter("Class:", "").trim()
+            val classFlagId = if (configuredClassName.isEmpty()) classDown.flag else "class-$configuredClassName"
+            val className = classFlagId.removePrefix("class-")
+            val classTitle = if (classFlagId == "級") "クラス旗" else "クラス旗 $className"
             timeline += classDown.copy(
                 secondsAfterStart = at,
-                title = "クラス旗 ${className}を降下",
-                flag = "class-$className",
+                title = "${classTitle}を降下",
+                flag = classFlagId,
                 color = 0xFFFFFFFF.toInt(),
                 hornPulses = action.horn
             )
