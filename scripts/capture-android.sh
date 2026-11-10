@@ -438,4 +438,3 @@ adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < focus-magneti
 adb shell am start -W -n "$APP/.MainActivity" --ez previewFocus true >/dev/null
 sleep 2
 adb exec-out screencap -p > screenshots/Android-focus-magnetic.png
-
