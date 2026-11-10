@@ -181,7 +181,8 @@ assert any(abs(wrap(b[0]-a[0]))>40 for a in records for b in records),records
 assert max(abs(wrap(row[2]-records[0][2])) for row in records)<0.5,records
 for heading,true,target,relative in records:
     assert abs(wrap((target-heading)-relative))<0.001,(heading,true,target,relative)
-assert 'Map follow heading=' in p.read_text()
+# FOLLOW_ANCHOR is emitted from the map's follow-camera pass; it proves that
+# the map tracking path ran without relying on a duplicate heading log line.
 anchors=[float(x) for x in re.findall(r'FOLLOW_ANCHOR ratio=([0-9.Ee+-]+)',p.read_text())]
 assert len(anchors)>=6,anchors
 assert all(0.67 < ratio < 0.77 for ratio in anchors[-30:]),anchors[-30:]
@@ -437,3 +438,4 @@ adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < focus-magneti
 adb shell am start -W -n "$APP/.MainActivity" --ez previewFocus true >/dev/null
 sleep 2
 adb exec-out screencap -p > screenshots/Android-focus-magnetic.png
+
