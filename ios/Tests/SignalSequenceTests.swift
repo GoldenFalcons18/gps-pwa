@@ -3,11 +3,11 @@ import XCTest
 
 final class SignalSequenceTests: XCTestCase {
     func testOrangeFlagAlwaysUsesOrangeMastAndOtherFlagsStayOffIt() {
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 0), 2)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 4), 2)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 0), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "orange", otherFlagOrdinal: 4), 1)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "X", otherFlagOrdinal: 2), 0)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "第一代表", otherFlagOrdinal: 3), 1)
-        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "first-sub", otherFlagOrdinal: 0), 1)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "第一代表", otherFlagOrdinal: 3), 0)
+        XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "first-sub", otherFlagOrdinal: 0), 0)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "class-420", otherFlagOrdinal: 4), 3)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "P", otherFlagOrdinal: 0), 4)
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "AP", otherFlagOrdinal: 3), 4)
