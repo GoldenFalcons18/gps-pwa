@@ -8,11 +8,11 @@ import org.junit.Test
 class SignalSequenceTest {
     @Test
     fun orangeFlagAlwaysUsesOrangePoleAndOtherFlagsUseDifferentPoles() {
-        assertEquals(2, SignalMastLayout.poleIndex("橙", 0))
-        assertEquals(2, SignalMastLayout.poleIndex("orange", 4))
+        assertEquals(1, SignalMastLayout.poleIndex("橙", 0))
+        assertEquals(1, SignalMastLayout.poleIndex("orange", 4))
         assertEquals(0, SignalMastLayout.poleIndex("X", 2))
-        assertEquals(1, SignalMastLayout.poleIndex("第一代表", 3))
-        assertEquals(1, SignalMastLayout.poleIndex("first-sub", 0))
+        assertEquals(0, SignalMastLayout.poleIndex("第一代表", 3))
+        assertEquals(0, SignalMastLayout.poleIndex("first-sub", 0))
         assertEquals(3, SignalMastLayout.poleIndex("class-420", 4))
         assertEquals(4, SignalMastLayout.poleIndex("P", 0))
         assertEquals(4, SignalMastLayout.poleIndex("AP", 3))
