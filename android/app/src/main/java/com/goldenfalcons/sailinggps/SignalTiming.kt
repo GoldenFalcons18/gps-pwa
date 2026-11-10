@@ -9,6 +9,26 @@ object SignalTiming {
         return if (remainder == 0L) earliest else earliest + minute - remainder
     }
 
+    fun startAfterOrangeRaise(nowMillis: Long, orangeRaisedAtMillis: Long, intervalMinutes: Int, minimumLeadSeconds: Int): Long {
+        // A manual orange raise is the timing anchor. The first class signal
+        // must not occur before its configured interval; then start on the
+        // next real-clock :00 boundary, keeping the event sequence on whole
+        // minutes. Do not add the generic minimum lead a second time.
+        val earliestByOrange = orangeRaisedAtMillis + intervalMinutes.coerceAtLeast(0) * 60_000L
+        return scheduledStartAt(maxOf(nowMillis, earliestByOrange), 0)
+    }
+
+    fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
+
+    fun postponementRestartWarningAt(loweredAtMs: Long, orangeRaisedAtMs: Long?, orangeDisplayedMinutes: Int, orangeEnabled: Boolean): Long {
+        if (!orangeEnabled) return restartWarningAt(loweredAtMs)
+        val orangeDeadline = (orangeRaisedAtMs ?: loweredAtMs) + orangeDisplayedMinutes.coerceAtLeast(0) * 60_000L
+        return maxOf(restartWarningAt(loweredAtMs), orangeDeadline)
+    }
+
+    /** Delay the next refresh until the next whole corrected-clock second. */
+    fun millisUntilNextSecond(nowMillis: Long): Long = 1000L - Math.floorMod(nowMillis, 1000L)
+
     fun countdownSeconds(remainingSeconds: Double): Int = kotlin.math.ceil(remainingSeconds).toInt().coerceAtLeast(0)
 
     fun activeEventIndex(elapsedSeconds: Double, eventOffsets: List<Int>): Int {
@@ -23,3 +43,4 @@ object SignalTiming {
         return if (to <= from) emptyList() else ((from + 1)..to).toList()
     }
 }
+

@@ -36,24 +36,23 @@
                 <TextView android:id="@+id/tvSignalStartAt" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TBD" android:gravity="end" android:textColor="#111111" android:textSize="14sp" android:fontFamily="monospace" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="66dp" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/tvSignalTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:visibility="gone" android:textColor="#111111" android:textSize="12sp" />
+                <TextView android:id="@+id/tvSignalTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:maxLines="2" android:textColor="#111111" android:textSize="12sp" />
                 <TextView android:id="@+id/tvSignalCountdown" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="--:--" android:gravity="center" android:textColor="#111111" android:textSize="42sp" android:fontFamily="monospace" />
                 <TextView android:id="@+id/tvSignalNextLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:visibility="gone" />
                 <ImageView android:layout_width="42dp" android:layout_height="42dp" android:src="@android:drawable/ic_lock_idle_alarm" android:tint="#999999" android:contentDescription="経過タイマー" />
             </LinearLayout>
             <LinearLayout android:id="@+id/signalSequenceContainer" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical" android:gravity="center_vertical" />
-            <Spinner android:id="@+id/signalPrepFlag" android:layout_width="match_parent" android:layout_height="40dp" />
             <Button android:id="@+id/btnSignalOrange" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="オレンジ旗を掲揚" android:textSize="12sp" />
             <LinearLayout android:id="@+id/signalManualControls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
                 <Button android:id="@+id/btnSignalIndividualRecall" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="個別リコール X旗" android:textSize="10sp" />
                 <Button android:id="@+id/btnSignalGeneralRecall" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="ゼネラルリコール" android:textSize="10sp" />
-                <Button android:id="@+id/btnSignalPostponement" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="AP掲揚" android:textSize="10sp" />
+                <Button android:id="@+id/btnSignalPostponement" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="AP掲揚" android:textSize="9sp" />
+                <Button android:id="@+id/btnSignalNFlag" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="N旗" android:textSize="9sp" />
             </LinearLayout>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="● 短音　━ 長音" android:gravity="center" android:textColor="#666666" android:textSize="10sp" />
             <TextView android:id="@+id/tvNictStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="端末時刻を使用中" android:gravity="center" android:textColor="#666666" android:textSize="11sp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
                 <CheckBox android:id="@+id/signalHornEnabled" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="仮想ホーン" android:checked="true" android:textSize="11sp" />
-                <Button android:id="@+id/btnNictSync" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NTP" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
                 <TextView android:id="@+id/tvHornLength" android:layout_width="72dp" android:layout_height="wrap_content" android:text="長音 0.70秒" android:textColor="#333333" android:textSize="10sp" />
@@ -69,13 +68,12 @@
                 <TextView android:id="@+id/tvSignalVolume" android:layout_width="72dp" android:layout_height="wrap_content" android:text="音量 80%" android:textColor="#333333" android:textSize="10sp" />
                 <SeekBar android:id="@+id/signalVolume" android:layout_width="0dp" android:layout_height="30dp" android:layout_weight="1" android:max="100" android:progress="80" />
             </LinearLayout>
-            <Spinner android:id="@+id/signalFlagProfile" android:layout_width="match_parent" android:layout_height="42dp" />
-            <Spinner android:id="@+id/signalDuration" android:layout_width="match_parent" android:layout_height="42dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
-                <Button android:id="@+id/btnSignalInterrupt" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Interrupt…" android:enabled="false" />
+                <Button android:id="@+id/btnSignalInterrupt" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="中断…" android:enabled="false" />
+                <Button android:id="@+id/btnSignalStop" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="停止" android:visibility="gone" />
                 <Button android:id="@+id/btnSignalStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Start" />
                 <Button android:id="@+id/btnSignalZero" android:layout_width="48dp" android:layout_height="wrap_content" android:text="◴" />
-                <Button android:id="@+id/btnSignalReset" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" android:text="リセット" />
+                <Button android:id="@+id/btnSignalReset" android:layout_width="48dp" android:layout_height="wrap_content" android:text="◷" android:contentDescription="開始時刻を予約" />
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
@@ -169,3 +167,4 @@
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
+
