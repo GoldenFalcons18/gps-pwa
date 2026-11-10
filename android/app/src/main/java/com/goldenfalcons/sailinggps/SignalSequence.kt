@@ -350,10 +350,10 @@ object SignalSequence {
         )
 
         val actions = entries.mapIndexedNotNull { order, row ->
-            val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapNotNull null
+            val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapIndexedNotNull null
             val label = row.substringBefore("·").trim()
-            val minute = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
-            val second = match.groupValues[2].toIntOrNull()?.coerceIn(0, 59) ?: return@mapNotNull null
+            val minute = match.groupValues[1].toIntOrNull() ?: return@mapIndexedNotNull null
+            val second = match.groupValues[2].toIntOrNull()?.coerceIn(0, 59) ?: return@mapIndexedNotNull null
             val raised = row.contains("掲揚")
             val horn = when {
                 row.contains("長音") -> listOf(1)
@@ -450,7 +450,7 @@ object SignalSequence {
                 .ifEmpty { classDown.flag.removePrefix("class-").ifBlank { "420" } }
             timeline += classDown.copy(
                 secondsAfterStart = at,
-                title = "クラス旗 $classNameを降下",
+                title = "クラス旗 ${className}を降下",
                 flag = "class-$className",
                 color = 0xFFFFFFFF.toInt(),
                 hornPulses = action.horn
