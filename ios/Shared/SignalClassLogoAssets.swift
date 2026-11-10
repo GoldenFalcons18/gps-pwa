@@ -46,6 +46,24 @@ enum SignalClassLogoAssets {
     }()
 
     private static let imageCache = NSCache<NSString, CGImageBox>()
+    private static let internationalImages: [String: Data] = {
+        guard let url = resourceURL(for: "signal-international-flags"),
+              let data = try? Data(contentsOf: url),
+              let catalog = try? JSONSerialization.jsonObject(with: data) as? [String: String] else { return [:] }
+        return catalog.reduce(into: [:]) { result, item in
+            if let bytes = Data(base64Encoded: item.value),
+               CGImageSourceCreateWithData(bytes as CFData, nil) != nil {
+                result[normalizedKey(item.key)] = bytes
+            }
+        }
+    }()
+
+    static func internationalImage(for name: String) -> CGImage? {
+        let normalized = normalizedKey(name)
+        guard let data = internationalImages[normalized],
+              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
 
     static func image(for className: String) -> CGImage? {
         let key = assetKey(for: className)

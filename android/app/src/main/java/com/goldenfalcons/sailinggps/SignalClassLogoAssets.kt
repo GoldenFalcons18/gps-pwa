@@ -10,6 +10,8 @@ import org.json.JSONObject
 object SignalClassLogoAssets {
     private var encodedImages: JSONObject? = null
     private val bitmapCache = mutableMapOf<String, Bitmap>()
+    private var encodedInternationalFlags: JSONObject? = null
+    private val internationalBitmapCache = mutableMapOf<String, Bitmap>()
 
     fun availableClassNames(context: Context): List<String> {
         val keys = imageMap(context).keys()
@@ -37,6 +39,37 @@ object SignalClassLogoAssets {
         val image = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
         bitmapCache[key] = image
         return image
+    }
+
+    @Synchronized
+    fun internationalBitmap(context: Context, flagName: String): Bitmap? {
+        val key = normalizeKey(flagName.removePrefix("intl:"))
+        internationalBitmapCache[key]?.let { return it }
+        val map = encodedInternationalFlags ?: run {
+            val loaded = runCatching {
+                context.assets.open("signal-international-flags.json").bufferedReader().use { JSONObject(it.readText()) }
+            }.getOrElse {
+                runCatching {
+                    context.assets.open("Shared/signal-international-flags.json").bufferedReader().use { JSONObject(it.readText()) }
+                }.getOrNull()
+            } ?: return null
+            encodedInternationalFlags = loaded
+            loaded
+        }
+        val encoded = map.optString(flagName.removePrefix("intl:")).takeIf { it.isNotBlank() }
+            ?: run {
+                val keys = map.keys()
+                var value: String? = null
+                while (keys.hasNext()) {
+                    val candidate = keys.next()
+                    if (normalizeKey(candidate) == key) { value = map.optString(candidate); break }
+                }
+                value
+            } ?: return null
+        val bytes = runCatching { Base64.decode(encoded, Base64.DEFAULT) }.getOrNull() ?: return null
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        internationalBitmapCache[key] = bitmap
+        return bitmap
     }
 
     private fun imageMap(context: Context): JSONObject {

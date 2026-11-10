@@ -329,15 +329,27 @@ object SignalSequence {
         orangeRemovedAfterMinutes: Int,
         raceDelayEnabled: Boolean,
         raceDelayMinutes: Int
+    ): List<SignalEvent>? = configuredStandardEvents(
+        base, entries.sorted(), referenceOffset, orangeRemovedAfterMinutes, raceDelayEnabled, raceDelayMinutes
+    )
+
+    fun configuredStandardEvents(
+        base: List<SignalEvent>,
+        entries: List<String>,
+        referenceOffset: Int,
+        orangeRemovedAfterMinutes: Int,
+        raceDelayEnabled: Boolean,
+        raceDelayMinutes: Int
     ): List<SignalEvent>? {
         data class StartAction(
             val label: String,
             val secondsBeforeRace: Int,
             val raised: Boolean,
-            val horn: List<Int>
+            val horn: List<Int>,
+            val order: Int
         )
 
-        val actions = entries.mapNotNull { row ->
+        val actions = entries.mapIndexedNotNull { order, row ->
             val match = Regex("""T[−-](\d+):(\d+)""").find(row) ?: return@mapNotNull null
             val label = row.substringBefore("·").trim()
             val minute = match.groupValues[1].toIntOrNull() ?: return@mapNotNull null
@@ -348,11 +360,13 @@ object SignalSequence {
                 row.contains("音なし") -> emptyList()
                 else -> listOf(0)
             }
-            StartAction(label, minute * 60 + second, raised, horn)
+            StartAction(label, minute * 60 + second, raised, horn, order)
         }
-        val classActions = actions.filter { it.label.contains("Class", ignoreCase = true) || it.label.contains("クラス") }
+        val classActions = actions.filter {
+            it.label.equals("Class", ignoreCase = true) || it.label.startsWith("Class:", ignoreCase = true) || it.label.contains("クラス")
+        }
         val classRaises = classActions.filter { it.raised }
-            .sortedWith(compareByDescending<StartAction> { it.secondsBeforeRace }.thenBy { it.label })
+            .sortedWith(compareByDescending<StartAction> { it.secondsBeforeRace }.thenBy { it.order })
         if (classRaises.isEmpty()) return null
 
         val classUp = base.firstOrNull { (it.flag == "級" || it.flag.startsWith("class-")) && it.raised } ?: return null
@@ -388,8 +402,13 @@ object SignalSequence {
             val raceStart = previousRaceStart?.let { maxOf(nominalRaceStart, it + delay) } ?: nominalRaceStart
             val warningAt = (raceStart - 300).coerceAtLeast(0)
             previousRaceStart = raceStart
-            val classTitle = classUp.title.substringBefore("を掲揚")
-            timeline += classUp.copy(
+            val className = action.label.substringAfter("Class:", "").trim()
+                .ifEmpty { classUp.flag.removePrefix("class-").ifBlank { "420" } }
+            val classFlagId = "class-$className"
+            val classTitle = "クラス旗 $className"
+            val classFlagUp = classUp.copy(flag = classFlagId, color = 0xFFFFFFFF.toInt())
+            val classFlagDown = classDown.copy(flag = classFlagId, color = 0xFFFFFFFF.toInt())
+            timeline += classFlagUp.copy(
                 secondsAfterStart = warningAt,
                 title = "${classTitle}を掲揚（予告信号）",
                 hornPulses = action.horn
@@ -402,11 +421,12 @@ object SignalSequence {
 
             // Every raised class start has its own automatic start-time lowering.
             // A separately configured lowering must not suppress this event.
-            timeline += classDown.copy(secondsAfterStart = raceStart)
+            timeline += classFlagDown.copy(secondsAfterStart = raceStart)
             finalRaceStart = maxOf(finalRaceStart, raceStart)
 
             actions.filter {
-                it.label !in setOf("Class", "Orange", "クラス旗", "橙旗") &&
+                !it.label.equals("Class", true) && !it.label.startsWith("Class:", true) &&
+                    it.label !in setOf("Orange", "クラス旗", "橙旗") &&
                     it.label.uppercase() !in setOf("P", "I", "U", "Z", "BLACK")
             }.forEach { custom ->
                 val (flag, color) = flagFor(custom.label)
@@ -426,7 +446,15 @@ object SignalSequence {
 
         classActions.filter { !it.raised }.forEach { action ->
             val at = (referenceOffset - action.secondsBeforeRace).coerceAtLeast(0)
-            timeline += classDown.copy(secondsAfterStart = at, hornPulses = action.horn)
+            val className = action.label.substringAfter("Class:", "").trim()
+                .ifEmpty { classDown.flag.removePrefix("class-").ifBlank { "420" } }
+            timeline += classDown.copy(
+                secondsAfterStart = at,
+                title = "クラス旗 $classNameを降下",
+                flag = "class-$className",
+                color = 0xFFFFFFFF.toInt(),
+                hornPulses = action.horn
+            )
         }
         orangeActions.forEach { action ->
             val (flag, color) = flagFor(action.label)

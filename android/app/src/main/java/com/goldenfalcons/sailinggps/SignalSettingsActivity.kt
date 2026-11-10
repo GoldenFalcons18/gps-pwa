@@ -47,15 +47,15 @@ class SignalSettingsActivity : AppCompatActivity() {
         section("Fleet Start Sequences")
         val names = prefs.getStringSet("signalFleetPresetNames", setOf("OP Au Bp")) ?: setOf("OP Au Bp")
         val activeFleet = prefs.getString("signalFleetStartName", "OP Au Bp") ?: "OP Au Bp"
-        names.sorted().forEach { name -> row(name, if (name == activeFleet) "使用中・編集" else "選択・編集") { fleet(name) } }
+        names.sorted().forEach { name -> fleetPresetRow(name, name == activeFleet) }
         row("＋ Fleet Start", "Add") { addFleet() }
 
         section("$activeFleet · Starts")
-        val storedStarts=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+        val storedStarts=readStartEntries()
         val obsoletePrepRows=setOf("P","I","U","Z","BLACK")
-        val starts=storedStarts.filterNot { it.substringBefore("·").trim().uppercase() in obsoletePrepRows }.toSet()
-        if(starts!=storedStarts) prefs.edit().putStringSet("signalStartEntries",starts).apply()
-        starts.forEach { row(it,"−") { val copy=starts.toMutableSet(); copy.remove(it); prefs.edit().putStringSet("signalStartEntries",copy).apply(); build() } }
+        val starts=storedStarts.filterNot { it.substringBefore("·").trim().uppercase() in obsoletePrepRows }
+        if(starts!=storedStarts) saveStartEntries(starts)
+        starts.forEach { entry -> row(entry,"−") { saveStartEntries(readStartEntries().filterNot { it == entry }); saveFleetConfig(activeFleet); build() } }
         row("＋ Add Start…","›") { addStart() }
         section("Class Flags")
         row("クラス旗を編集","編集") { flagEditor() }
@@ -71,6 +71,44 @@ class SignalSettingsActivity : AppCompatActivity() {
         r.addView(TextView(this).apply { text=value+"  ›"; textSize=14f; setTextColor(0xFFAAAAAA.toInt()) })
         r.setOnClickListener { click() }; list.addView(r)
         list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) },LinearLayout.LayoutParams(-1,1))
+    }
+    private fun fleetPresetRow(name: String, active: Boolean) {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = 66
+            setPadding(4, 4, 4, 4)
+        }
+        container.addView(Button(this).apply {
+            text = if (active) "✓  $name\n選択中" else "$name\nタップして選択"
+            textSize = 15f
+            isAllCaps = false
+            setTextColor(if (active) 0xFF65D885.toInt() else white)
+            minimumHeight = 58
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            setOnClickListener { selectFleet(name) }
+        })
+        container.addView(Button(this).apply {
+            text = "編集"
+            isAllCaps = false
+            minimumWidth = (76 * resources.displayMetrics.density).toInt()
+            minimumHeight = 56
+            setOnClickListener { fleet(name) }
+        })
+        list.addView(container)
+        list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) }, LinearLayout.LayoutParams(-1, 1))
+    }
+
+    private fun selectFleet(name: String) {
+        val current = prefs.getString("signalFleetStartName", "OP Au Bp") ?: "OP Au Bp"
+        if (name == current) return
+        saveFleetConfig(current)
+        val targetWasSaved = prefs.getString("signalFleetConfig:$name", null) != null
+        loadFleetConfig(name)
+        prefs.edit().putString("signalFleetStartName", name).apply()
+        if (!targetWasSaved) saveFleetConfig(name)
+        Toast.makeText(this, "$name を選択しました", Toast.LENGTH_SHORT).show()
+        build()
     }
     private fun switch(title:String,key:String,default:Boolean) {
         val r=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL; minimumHeight=50; setPadding(6,4,4,4) }
@@ -101,8 +139,7 @@ class SignalSettingsActivity : AppCompatActivity() {
                             prefs.edit().putLong("signalClockOffsetMs", offset).apply()
                             Toast.makeText(this, "NICTと同期しました（差 ${if (offset >= 0) "+" else ""}${offset} ms）", Toast.LENGTH_LONG).show()
                         }.onFailure {
-                            prefs.edit().putString("signalClockAlignmentMode", "manual").putLong("signalClockOffsetMs", 0L).apply()
-                            Toast.makeText(this, "同期に失敗しました。端末時刻を使用します", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this, "同期に失敗しました。前回の設定を保持します", Toast.LENGTH_LONG).show()
                         }
                         build()
                     } }
@@ -130,7 +167,9 @@ class SignalSettingsActivity : AppCompatActivity() {
             val names=prefs.getStringSet("signalFleetPresetNames",setOf("OP Au Bp"))?.toMutableSet()?:mutableSetOf()
             val current=prefs.getString("signalFleetStartName","OP Au Bp") ?: "OP Au Bp"
             saveFleetConfig(current)
-            names.add(name); prefs.edit().putStringSet("signalFleetPresetNames",names).putString("signalFleetStartName",name).apply()
+            names.add(name)
+            prefs.edit().putStringSet("signalFleetPresetNames",names).putString("signalFleetConfig:$name","{}").apply()
+            loadFleetConfig(name)
             saveFleetConfig(name)
             build()
         }.show()
@@ -171,9 +210,9 @@ class SignalSettingsActivity : AppCompatActivity() {
         val raceLimit=field("Race limit (minutes)",prefs.getInt("signalRaceLimitMinutes",50).toString())
         val finishWindow=field("Finish window (minutes)",prefs.getInt("signalFinishWindowMinutes",20).toString())
         val rule42=CheckBox(this).apply { text="Rule 42 override"; setTextColor(white); isChecked=prefs.getBoolean("signalRule42Override",false); content.addView(this) }
-        val startRows=prefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+        val startRows=readStartEntries()
         label("Starts")
-        startRows.sorted().forEach { action ->
+        startRows.forEach { action ->
             val actionRow=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL; orientation=LinearLayout.HORIZONTAL }
             actionRow.addView(TextView(this).apply { text="• $action"; setTextColor(white); setPadding(0,4,0,4); layoutParams=LinearLayout.LayoutParams(0,-2,1f); setOnClickListener { addStart(action) } })
             actionRow.addView(Button(this).apply { text="−"; setOnClickListener { removeStart(action) } })
@@ -210,7 +249,24 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
 
-    private val fleetConfigKeys = listOf("signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag","signalOrangeEnabled","signalOrangeDisplayedMinutes","signalOrangeRemovedAfterMinutes","signalRaceDelayEnabled","signalRaceDelayMinutes","signalTimeLimitEnabled","signalRaceLimitMinutes","signalFinishWindowMinutes","signalRule42Override","signalStartEntries")
+    private val fleetConfigKeys = listOf("signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag","signalOrangeEnabled","signalOrangeDisplayedMinutes","signalOrangeRemovedAfterMinutes","signalRaceDelayEnabled","signalRaceDelayMinutes","signalTimeLimitEnabled","signalRaceLimitMinutes","signalFinishWindowMinutes","signalRule42Override","signalStartEntries","signalStartEntriesOrderJSON")
+    private fun readStartEntries(): List<String> {
+        val legacy = prefs.getStringSet("signalStartEntries", setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+        val ordered = prefs.getString("signalStartEntriesOrderJSON", null)?.let { raw ->
+            runCatching {
+                val array = org.json.JSONArray(raw)
+                (0 until array.length()).map { array.optString(it) }.filter { it in legacy }
+            }.getOrNull()
+        }.orEmpty()
+        return (ordered + (legacy - ordered.toSet()).sorted()).distinct()
+    }
+    private fun saveStartEntries(entries: List<String>) {
+        val ordered = entries.distinct()
+        prefs.edit()
+            .putStringSet("signalStartEntries", ordered.toSet())
+            .putString("signalStartEntriesOrderJSON", org.json.JSONArray(ordered).toString())
+            .apply()
+    }
     private fun saveFleetConfig(name:String) {
         val json=org.json.JSONObject()
         fleetConfigKeys.forEach { key -> when (val value=prefs.all[key]) {
@@ -222,11 +278,16 @@ class SignalSettingsActivity : AppCompatActivity() {
         prefs.edit().putString("signalFleetConfig:$name",json.toString()).apply()
     }
     private fun loadFleetConfig(name:String) {
-        val raw=prefs.getString("signalFleetConfig:$name",null) ?: return
-        val json=runCatching { org.json.JSONObject(raw) }.getOrNull() ?: return
+        val raw=prefs.getString("signalFleetConfig:$name",null)
+        val json=raw?.let { runCatching { org.json.JSONObject(it) }.getOrNull() } ?: org.json.JSONObject()
         val editor=prefs.edit().putString("signalFleetStartName",name)
+        // Clear the previous fleet's values first. Older or partially saved
+        // presets may not contain keys added in newer versions; leaving those
+        // keys untouched silently carries the previous fleet into this one.
+        fleetConfigKeys.forEach { key -> editor.remove(key) }
         fleetConfigKeys.forEach { key -> if(json.has(key)) when (key) {
             "signalStartEntries" -> { val array=json.optJSONArray(key); if(array!=null) editor.putStringSet(key,(0 until array.length()).map { array.optString(it) }.toSet()) }
+            "signalStartEntriesOrderJSON" -> editor.putString(key,json.optString(key))
             "signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag" -> editor.putString(key,json.optString(key))
             "signalOrangeEnabled","signalRaceDelayEnabled","signalTimeLimitEnabled","signalRule42Override" -> editor.putBoolean(key,json.optBoolean(key))
             else -> editor.putInt(key,json.optInt(key))
@@ -234,9 +295,13 @@ class SignalSettingsActivity : AppCompatActivity() {
         editor.apply()
     }
     private fun addStart(existing:String?=null) {
+        val classNames = SignalClassLogoAssets.availableClassNames(this)
         val flags=listOf("Class","Orange","AP","X","First Substitute")
         val parsed=existing?.split("·")?.map(String::trim).orEmpty()
         val flag=parsed.getOrNull(0) ?: "Class"
+        val savedClassName=flag.substringAfter("Class:", "").ifBlank {
+            prefs.getString("signalSelectedClassName", "420") ?: "420"
+        }
         val time=Regex("""T[−-](\d+):(\d+)""").find(existing.orEmpty())
         val minute=time?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 5
         val second=time?.groupValues?.getOrNull(2)?.toIntOrNull() ?: 0
@@ -244,23 +309,36 @@ class SignalSettingsActivity : AppCompatActivity() {
         val horn=parsed.getOrNull(3) ?: "短音"
         val content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(22,8,22,4) }
         val flagPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,flags); setSelection(flags.indexOf(flag).coerceAtLeast(0)); content.addView(this) }
+        val classPicker=Spinner(this).apply {
+            adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,classNames)
+            setSelection(classNames.indexOf(savedClassName).coerceAtLeast(0))
+            visibility=if (flag.equals("Class",true) || flag.startsWith("Class:",true) || flag.contains("クラス")) View.VISIBLE else View.GONE
+        }
+        content.addView(classPicker)
+        flagPicker.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                classPicker.visibility = if (flags[position].equals("Class", true) || flags[position].contains("クラス")) View.VISIBLE else View.GONE
+            }
+        }
         val minuteField=EditText(this).apply { hint="分前"; inputType=2; setText(minute.toString()); setTextColor(white); content.addView(this) }
         val secondField=EditText(this).apply { hint="秒"; inputType=2; setText(second.toString()); setTextColor(white); content.addView(this) }
         val actionPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,listOf("掲揚","降下")); setSelection(if(direction=="降下")1 else 0); content.addView(this) }
         val hornPicker=Spinner(this).apply { adapter=ArrayAdapter(this@SignalSettingsActivity,android.R.layout.simple_spinner_dropdown_item,listOf("短音","長音","音なし")); setSelection(listOf("短音","長音","音なし").indexOf(horn).coerceAtLeast(0)); content.addView(this) }
         AlertDialog.Builder(this).setTitle(if(existing==null)"Add Start…" else "信号を編集").setView(content).setNegativeButton("キャンセル",null).setPositiveButton("保存"){_,_->
-            val selected=flags[flagPicker.selectedItemPosition]
+            val selectedBase=flags[flagPicker.selectedItemPosition]
+            val selected=if(selectedBase.equals("Class",true)) "Class:${classNames.getOrElse(classPicker.selectedItemPosition){savedClassName}}" else selectedBase
             val m=(minuteField.text.toString().toIntOrNull()?:5).coerceIn(0,60)
             val s=(secondField.text.toString().toIntOrNull()?:0).coerceIn(0,59)
             val row="$selected · T−${m}:${s.toString().padStart(2,'0')} · ${if(actionPicker.selectedItemPosition==1)"降下" else "掲揚"} · ${listOf("短音","長音","音なし")[hornPicker.selectedItemPosition]}"
-            val items=prefs.getStringSet("signalStartEntries",emptySet())?.toMutableSet()?:mutableSetOf()
+            val items=readStartEntries().toMutableList()
             existing?.let(items::remove); items.add(row)
-            prefs.edit().putStringSet("signalStartEntries",items).apply(); build()
+            saveStartEntries(items); build()
         }.show()
     }
     private fun removeStart(action:String) {
-        val items=prefs.getStringSet("signalStartEntries",emptySet())?.toMutableSet()?:mutableSetOf()
-        items.remove(action); prefs.edit().putStringSet("signalStartEntries",items).apply(); saveFleetConfig(prefs.getString("signalFleetStartName","OP Au Bp")?:"OP Au Bp"); build()
+        val items=readStartEntries().filterNot { it == action }
+        saveStartEntries(items); saveFleetConfig(prefs.getString("signalFleetStartName","OP Au Bp")?:"OP Au Bp"); build()
     }
     private fun classGallery() {
         val groups = linkedMapOf("クラスロゴ" to SignalClassLogoAssets.availableClassNames(this))

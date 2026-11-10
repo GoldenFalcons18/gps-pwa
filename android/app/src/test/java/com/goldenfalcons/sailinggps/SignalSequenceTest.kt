@@ -229,6 +229,27 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun sequentialFleetStartsKeepTheirSelectedClassFlagsAndOrder() {
+        val configured = SignalSequence.configuredStandardEvents(
+            base = SignalSequence.events(),
+            entries = listOf(
+                "Class:420 · T−5:00 · 掲揚 · 短音",
+                "Class:470 · T−5:00 · 掲揚 · 短音"
+            ),
+            referenceOffset = SignalSequence.startReferenceOffset("standard-start", true, 5),
+            orangeRemovedAfterMinutes = 4,
+            raceDelayEnabled = true,
+            raceDelayMinutes = 1
+        )!!
+
+        assertEquals("class-420", configured.first { it.raised && it.title.contains("420") }.flag)
+        assertEquals(300, configured.first { it.raised && it.title.contains("420") }.secondsAfterStart)
+        assertEquals("class-470", configured.first { it.raised && it.title.contains("470") }.flag)
+        assertEquals(360, configured.first { it.raised && it.title.contains("470") }.secondsAfterStart)
+        assertEquals("class-420", configured.first { !it.raised && it.title.contains("420") }.flag)
+    }
+
+    @Test
     fun fleetIntervalAppliesWithoutSwitchAndKeepsAutomaticClassLowerings() {
         val configured = SignalSequence.configuredStandardEvents(
             base = SignalSequence.events(),

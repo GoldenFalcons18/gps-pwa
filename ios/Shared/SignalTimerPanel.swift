@@ -679,9 +679,10 @@ private struct MastPole: View {
                 .frame(width: 2, height: height * 0.94)
             ForEach(flags.indices, id: \.self) { flagIndex in
                 if assignedPole(for: flagIndex) == poleIndex {
+                    let stack = flags.indices.filter { $0 < flagIndex && assignedPole(for: $0) == poleIndex }.count
                     SignalFlagView(flag: flags[flagIndex])
                         .frame(width: 25, height: 18)
-                        .offset(x: 2, y: 8)
+                        .offset(x: 2, y: 8 + CGFloat(stack) * 13)
                         .animation(.easeInOut(duration: 0.45), value: flags.map(\.id))
                 }
             }

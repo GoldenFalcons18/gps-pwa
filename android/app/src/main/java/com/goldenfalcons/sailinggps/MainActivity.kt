@@ -491,7 +491,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             SignalSequence.events(currentSignalDurationMinutes(),profile,prep,orange,orangeRemoved,className,orangeDisplayed)
         }
         val all=if(!restartMode && profileId=="standard-start") {
-            val rows=displayPrefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+            val legacy=displayPrefs.getStringSet("signalStartEntries",setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
+            val ordered=displayPrefs.getString("signalStartEntriesOrderJSON",null)?.let { raw -> runCatching {
+                val array=org.json.JSONArray(raw)
+                (0 until array.length()).map { array.optString(it) }.filter { it in legacy }
+            }.getOrNull() }.orEmpty()
+            val rows=(ordered+(legacy-ordered.toSet()).sorted()).distinct()
             SignalSequence.configuredStandardEvents(
                 base=base,
                 entries=rows,
@@ -1932,3 +1937,4 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLog.text = logBuffer.joinToString("\n")
     }
 }
+
