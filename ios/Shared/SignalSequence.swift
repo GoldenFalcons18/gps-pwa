@@ -6,9 +6,9 @@ import Foundation
 struct SignalSequence {
     static func mastPoleIndex(flagID: String, otherFlagOrdinal: Int) -> Int {
         switch flagID {
-        case "orange": return 2
+        case "orange": return 1
         case "X": return 0
-        case "first-sub", "第一代表": return 1
+        case "first-sub", "第一代表": return 0
         default:
             if flagID.hasPrefix("class-") { return 3 }
             return 4
