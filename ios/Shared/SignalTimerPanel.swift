@@ -675,7 +675,7 @@ private struct MastPole: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             Rectangle()
-                .fill(poleIndex == 2 ? Color.orange : Color.gray.opacity(0.85))
+                .fill(poleIndex == 1 ? Color.orange : Color.gray.opacity(0.85))
                 .frame(width: 2, height: height * 0.94)
             ForEach(flags.indices, id: \.self) { flagIndex in
                 if assignedPole(for: flagIndex) == poleIndex {
