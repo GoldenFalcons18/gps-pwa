@@ -1,6 +1,27 @@
 #if os(iOS) || os(watchOS)
 import SwiftUI
 
+private struct OptimistClassEmblem: View {
+    let color: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            ZStack {
+                Rectangle()
+                    .fill(color)
+                    .frame(width: side * 0.075, height: side * 0.78)
+                    .offset(y: side * 0.06)
+                Circle()
+                    .stroke(color, lineWidth: side * 0.075)
+                    .frame(width: side * 0.66, height: side * 0.66)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .accessibilityLabel("Optimist class emblem")
+    }
+}
+
 struct SignalClassLogoMark: View {
     let name: String
     var color: Color = .black
@@ -28,30 +49,34 @@ struct SignalClassLogoMark: View {
 
     @ViewBuilder
     private var fallbackMark: some View {
-        ZStack {
-            Text(mark)
-                .font(.system(size: 34, weight: .black, design: .rounded))
-                .italic()
-                .minimumScaleFactor(0.28)
-                .lineLimit(1)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(color)
-                .padding(.horizontal, 3)
-            if name == "A-Cat" {
-                VStack(spacing: 3) {
-                    Spacer()
-                    Rectangle().fill(color).frame(width: 35, height: 3)
-                    Rectangle().fill(color).frame(width: 28, height: 3)
-                }.padding(.bottom, 5)
-            } else if name == "Optimist" {
-                Circle().stroke(color, lineWidth: 3).padding(9)
+        if name == "Optimist" {
+            OptimistClassEmblem(color: color).padding(5)
+        } else {
+            ZStack {
+                Text(mark)
+                    .font(.system(size: 34, weight: .black, design: .rounded))
+                    .italic()
+                    .minimumScaleFactor(0.28)
+                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 3)
+                if name == "A-Cat" {
+                    VStack(spacing: 3) {
+                        Spacer()
+                        Rectangle().fill(color).frame(width: 35, height: 3)
+                        Rectangle().fill(color).frame(width: 28, height: 3)
+                    }.padding(.bottom, 5)
+                }
             }
         }
     }
 
     var body: some View {
         Group {
-            if let image = SignalClassLogoAssets.image(for: name) {
+            if name.replacingOccurrences(of: "class-", with: "").caseInsensitiveCompare("Optimist") == .orderedSame {
+                OptimistClassEmblem(color: color).padding(5)
+            } else if let image = SignalClassLogoAssets.image(for: name) {
                 Image(decorative: image, scale: 1)
                     .renderingMode(.template)
                     .resizable()

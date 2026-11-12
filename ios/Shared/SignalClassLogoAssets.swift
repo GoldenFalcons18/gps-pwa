@@ -14,6 +14,7 @@ enum SignalClassLogoAssets {
             names.formUnion(catalog.keys)
         }
         names.insert("420")
+        names.insert("Optimist")
         return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }()
 

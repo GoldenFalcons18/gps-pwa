@@ -38,7 +38,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
         row("時刻サーバー同期", "ntp.nict.jp と同期") { clockAlignment() }
-        row("秒を00に合わせる", "NICT時刻を基準") { alignClockZero() }
+        row("秒を00に合わせる", "現在のアプリ時刻") { alignClockZero() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
         switch("BuoyZone", "signalBuoyZoneLinked", false)
@@ -124,20 +124,14 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun alignClockZero() {
-        NictClock.query { result -> runOnUiThread {
-            result.onSuccess { offset ->
-                val deviceNow = System.currentTimeMillis()
-                val serverNow = deviceNow + offset
-                val zeroedServerMinute = Math.floorDiv(serverNow, 60_000L) * 60_000L
-                val alignedOffset = zeroedServerMinute - deviceNow
-                prefs.edit().putString("signalClockAlignmentMode", "nict")
-                    .putLong("signalClockOffsetMs", alignedOffset).apply()
-                Toast.makeText(this, "NICT時刻の秒を00に合わせました（シーケンスは開始していません）", Toast.LENGTH_LONG).show()
-            }.onFailure {
-                Toast.makeText(this, "NICT時刻を取得できず、00秒合わせに失敗しました", Toast.LENGTH_LONG).show()
-            }
-            build()
-        } }
+        val deviceNow = System.currentTimeMillis()
+        val currentOffset = prefs.getLong("signalClockOffsetMs", 0L)
+        val currentAppTime = deviceNow + currentOffset
+        val zeroedAppMinute = Math.floorDiv(currentAppTime, 60_000L) * 60_000L
+        val alignedOffset = zeroedAppMinute - deviceNow
+        prefs.edit().putLong("signalClockOffsetMs", alignedOffset).apply()
+        Toast.makeText(this, "現在のアプリ時刻の秒を00に合わせました（NICT同期・シーケンス開始なし）", Toast.LENGTH_LONG).show()
+        build()
     }
     private fun clockAlignment() {
         prefs.edit().putString("signalClockAlignmentMode", "nict").apply()
@@ -201,12 +195,13 @@ class SignalSettingsActivity : AppCompatActivity() {
         ruleSpinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,rules)
         val selectedRule=prefs.getString("signalStartRule","P") ?: "P"
         ruleSpinner.setSelection(rules.indexOf(selectedRule).coerceAtLeast(0)); content.addView(ruleSpinner)
-        label("Class flag")
-        val classes=SignalClassLogoAssets.availableClassNames(this)
-        val classSpinner=Spinner(this)
-        classSpinner.adapter=ArrayAdapter(this,android.R.layout.simple_spinner_dropdown_item,classes)
-        val currentClass=prefs.getString("signalSelectedClassName", "420") ?: "420"
-        classSpinner.setSelection(classes.indexOf(currentClass).coerceAtLeast(0)); content.addView(classSpinner)
+        label("Class flag (uses Class Flags settings)")
+        content.addView(TextView(this).apply {
+            text = (prefs.getString("signalCustomClassFlag", "class-420") ?: "class-420")
+                .removePrefix("class-").removePrefix("intl:").removePrefix("text:")
+            setTextColor(0xFFBBBBBB.toInt())
+            textSize = 16f
+        })
         val orangeEnabled=CheckBox(this).apply { text="Orange flag enabled"; setTextColor(white); isChecked=prefs.getBoolean("signalOrangeEnabled",true); content.addView(this) }
         val orangeMinutes=field("Orange flag: raise to warning interval (minutes)",prefs.getInt("signalOrangeDisplayedMinutes",5).toString())
         val orangeRemove=field("Lower orange flag after start (minutes)",prefs.getInt("signalOrangeRemovedAfterMinutes",4).toString())
@@ -228,13 +223,10 @@ class SignalSettingsActivity : AppCompatActivity() {
         AlertDialog.Builder(this).setTitle("Fleet Start").setView(scroller).setNegativeButton("Cancel"){_,_->loadFleetConfig(previous); prefs.edit().putString("signalFleetStartName",previous).apply()}.setPositiveButton("Save"){_,_->
             val updated=nameField.text.toString().trim().ifEmpty{name}
             val rule=rules[ruleSpinner.selectedItemPosition]
-            val selectedClass=classes.getOrElse(classSpinner.selectedItemPosition){"420"}
             val editor=prefs.edit()
                 .putString("signalFleetStartName",updated)
                 .putString("signalStartRule",rule)
                 .putString("signalPrepFlag",SignalSequence.preparationFlagForStartRule(rule))
-                .putString("signalSelectedClassName",selectedClass)
-                .putString("signalCustomClassFlag","class-$selectedClass")
                 .putBoolean("signalOrangeEnabled",orangeEnabled.isChecked)
                 .putInt("signalOrangeDisplayedMinutes",orangeMinutes.text.toString().toIntOrNull()?.coerceIn(0,30)?:5)
                 .putInt("signalOrangeRemovedAfterMinutes",orangeRemove.text.toString().toIntOrNull()?.coerceIn(0,30)?:4)
@@ -254,7 +246,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
 
-    private val fleetConfigKeys = listOf("signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag","signalOrangeEnabled","signalOrangeDisplayedMinutes","signalOrangeRemovedAfterMinutes","signalRaceDelayEnabled","signalRaceDelayMinutes","signalTimeLimitEnabled","signalRaceLimitMinutes","signalFinishWindowMinutes","signalRule42Override","signalStartEntries","signalStartEntriesOrderJSON")
+    private val fleetConfigKeys = listOf("signalStartRule","signalPrepFlag","signalOrangeEnabled","signalOrangeDisplayedMinutes","signalOrangeRemovedAfterMinutes","signalRaceDelayEnabled","signalRaceDelayMinutes","signalTimeLimitEnabled","signalRaceLimitMinutes","signalFinishWindowMinutes","signalRule42Override","signalStartEntries","signalStartEntriesOrderJSON")
     private fun readStartEntries(): List<String> {
         val legacy = prefs.getStringSet("signalStartEntries", setOf("Class · T−5:00 · 掲揚 · 短音")) ?: emptySet()
         val ordered = prefs.getString("signalStartEntriesOrderJSON", null)?.let { raw ->
@@ -293,7 +285,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         fleetConfigKeys.forEach { key -> if(json.has(key)) when (key) {
             "signalStartEntries" -> { val array=json.optJSONArray(key); if(array!=null) editor.putStringSet(key,(0 until array.length()).map { array.optString(it) }.toSet()) }
             "signalStartEntriesOrderJSON" -> editor.putString(key,json.optString(key))
-            "signalStartRule","signalPrepFlag","signalSelectedClassName","signalCustomClassFlag" -> editor.putString(key,json.optString(key))
+            "signalStartRule","signalPrepFlag" -> editor.putString(key,json.optString(key))
             "signalOrangeEnabled","signalRaceDelayEnabled","signalTimeLimitEnabled","signalRule42Override" -> editor.putBoolean(key,json.optBoolean(key))
             else -> editor.putInt(key,json.optInt(key))
         } }

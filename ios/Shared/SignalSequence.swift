@@ -33,7 +33,7 @@ struct SignalSequence {
 
     static func eventsStartingAtFirstClassWarning(_ events: [Event]) -> [Event]? {
         guard let warningIndex = events.firstIndex(where: { event in
-            event.raised && event.title.contains("予告信号") && event.flags.contains(where: { $0.id.hasPrefix("class-") })
+            event.raised && event.title.contains("予告信号")
         }) else { return nil }
         let warningOffset = events[warningIndex].secondsAfterStart
         return events.dropFirst(warningIndex).enumerated().map { index, event in
@@ -398,6 +398,7 @@ struct SignalSequence {
     static func configuredStartEvents(
         json: String,
         profileID: String,
+        classFlagID: String = "class-4",
         prepFlagID: String,
         orangeEnabled: Bool,
         orangeDisplayedMinutes: Int,
@@ -411,7 +412,7 @@ struct SignalSequence {
         // Fleet entries are chronological by their configured T-minus time.
         // Disabled rows and manual lowering rows must not consume a race-delay slot.
         let starts = stored.enumerated()
-            .filter { $0.element.enabled && $0.element.raised && $0.element.flagID.hasPrefix("class-") }
+            .filter { $0.element.enabled && $0.element.raised && ($0.element.flagID.hasPrefix("class-") || $0.element.flagID == classFlagID) }
             .sorted {
                 let lhs = $0.element.minute * 60 + $0.element.second
                 let rhs = $1.element.minute * 60 + $1.element.second
@@ -455,7 +456,7 @@ struct SignalSequence {
         }
         // Explicit class-flag lowering rows are independent actions. They do
         // not create another race and therefore must not shift later starts.
-        for action in stored where action.enabled && !action.raised && action.flagID.hasPrefix("class-") {
+        for action in stored where action.enabled && !action.raised && (action.flagID.hasPrefix("class-") || action.flagID == classFlagID) {
             let timeToStart = max(0, action.minute * 60 + action.second)
             let at = max(0, startReference - timeToStart)
             let pulses = action.horn == "long" ? [1] : (action.horn == "none" ? [] : [0])

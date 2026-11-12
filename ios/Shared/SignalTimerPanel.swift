@@ -54,6 +54,7 @@ struct SignalTimerPanel: View {
         let all = SignalSequence.configuredStartEvents(
             json: activeStartActionsJSON,
             profileID: flagProfile,
+            classFlagID: classFlagID,
             prepFlagID: prepFlagID,
             orangeEnabled: orangeEnabled,
             orangeDisplayedMinutes: orangeDisplayedMinutes,
