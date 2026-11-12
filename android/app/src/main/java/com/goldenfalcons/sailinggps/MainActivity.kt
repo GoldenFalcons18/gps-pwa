@@ -366,17 +366,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
         b.btnSignalReset.setOnClickListener { showSignalScheduleDialog() }
-        b.btnSignalZero.setOnClickListener {
-            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalSkipFinalEvent",false).apply()
-            val frozen=freezeConfiguredSignalEvents()
-            val alignedStart=signalNow()
-            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
-                .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
-                .putBoolean("signalSkipFinalEvent",false).remove("signalRestartAt").remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs").remove("signalPostponementLowerAtMs").remove("signalPostponementWarningAtMs")
-                .putString("signalRunEventsJSON",SignalSequence.encodeEvents(frozen)).putLong("signalElapsedStartAt",alignedStart).remove("signalPausedElapsedMs").remove("signalPausedAtMs").putInt("signalLastFiredIndex",-1)
-                .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
-            signalActiveIndex=-1;buildSignalRows();updateSignalUi()
-        }
+        b.btnSignalZero.visibility = View.GONE
         fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
             seek.max=maxProgress
             val stored=displayPrefs.getInt(key,defaultValue)
