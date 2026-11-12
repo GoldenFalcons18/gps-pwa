@@ -1647,15 +1647,66 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showDisplayModePicker() {
-        val names=listOf("スピードメーター","ナビゲーション","セーリング","タイマー","シグナル")
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("モード選択")
-            .setSingleChoiceItems(names.toTypedArray(),currentDisplayMode) { dialog, which ->
-                setDisplayMode(which)
-                dialog.dismiss()
+        val names = listOf("スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル")
+        val descriptions = listOf(
+            "SOG速度を大きく表示",
+            "地図・目標方位・距離",
+            "SOG・COG・目標方位を大きく表示",
+            "スタートまでの時間を計測",
+            "旗の順序と合図音を表示"
+        )
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 14, 16, 14)
+            setBackgroundColor(Color.rgb(15, 15, 15))
+        }
+        column.addView(TextView(this).apply {
+            text = "モード選択"
+            textSize = 22f
+            setTextColor(Color.WHITE)
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setPadding(6, 4, 6, 14)
+        })
+        names.forEachIndexed { index, name ->
+            val selected = index == currentDisplayMode
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(14, 11, 14, 11)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(Color.rgb(22, 22, 22))
+                    setStroke((2 * resources.displayMetrics.density).toInt(), if (selected) Color.GREEN else Color.rgb(255, 170, 0))
+                    cornerRadius = 12 * resources.displayMetrics.density
+                }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { dialog.dismiss(); setDisplayMode(index) }
             }
-            .setNegativeButton("キャンセル",null)
-            .show()
+            card.addView(TextView(this).apply {
+                text = if (selected) "✓  $name" else name
+                textSize = 18f
+                setTextColor(Color.WHITE)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            })
+            card.addView(TextView(this).apply {
+                text = descriptions[index]
+                textSize = 14f
+                setTextColor(Color.LTGRAY)
+                setPadding(0, 5, 0, 0)
+            })
+            val lp = LinearLayout.LayoutParams(-1, -2).apply {
+                bottomMargin = (8 * resources.displayMetrics.density).toInt()
+            }
+            column.addView(card, lp)
+        }
+        column.addView(Button(this).apply {
+            text = "キャンセル"
+            isAllCaps = false
+            setOnClickListener { dialog.dismiss() }
+        })
+        dialog.setContentView(android.widget.ScrollView(this).apply { addView(column) })
+        dialog.show()
+        dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
     private fun showNavigationMenu() {
