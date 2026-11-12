@@ -74,7 +74,9 @@ struct SignalClassLogoMark: View {
 
     var body: some View {
         Group {
-            if let image = SignalClassLogoAssets.image(for: name) {
+            if name.replacingOccurrences(of: "class-", with: "").caseInsensitiveCompare("Optimist") == .orderedSame {
+                OptimistClassEmblem(color: color).padding(5)
+            } else if let image = SignalClassLogoAssets.image(for: name) {
                 Image(decorative: image, scale: 1)
                     .renderingMode(.template)
                     .resizable()
