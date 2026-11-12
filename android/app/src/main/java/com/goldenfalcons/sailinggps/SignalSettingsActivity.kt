@@ -197,7 +197,8 @@ class SignalSettingsActivity : AppCompatActivity() {
         ruleSpinner.setSelection(rules.indexOf(selectedRule).coerceAtLeast(0)); content.addView(ruleSpinner)
         label("Class flag (uses Class Flags settings)")
         content.addView(TextView(this).apply {
-            text = SignalSequence.flag(prefs.getString("signalCustomClassFlag", "class-420") ?: "class-420").name
+            text = (prefs.getString("signalCustomClassFlag", "class-420") ?: "class-420")
+                .removePrefix("class-").removePrefix("intl:").removePrefix("text:")
             setTextColor(0xFFBBBBBB.toInt())
             textSize = 16f
         })
