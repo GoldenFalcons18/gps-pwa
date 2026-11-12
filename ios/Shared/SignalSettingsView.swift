@@ -233,10 +233,10 @@ struct SignalSettingsView: View {
                         HStack {
                             Text("秒を00に合わせる")
                             Spacer()
-                            if isAligningClockZero { ProgressView() } else { Text("NICT時刻を基準").foregroundStyle(.blue) }
+                            if isAligningClockZero { ProgressView() } else { Text("アプリ時刻を基準").foregroundStyle(.blue) }
                         }
                     }.disabled(isSyncingTime || isAligningClockZero)
-                    Text("NICT時刻を基準に、押した時点の秒を00に補正します。シーケンスは開始しません。")
+                    Text("現在のアプリ時刻の秒を00に補正します。NICTへの問い合わせやシーケンス開始は行いません。")
                         .font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
@@ -266,15 +266,11 @@ struct SignalSettingsView: View {
     private func alignClockZero() async {
         isAligningClockZero = true
         defer { isAligningClockZero = false }
-        do {
-            let serverTime = try await NICTClock.query()
-            let deviceNow = Date()
-            let zeroedServerMinute = floor(serverTime.timeIntervalSince1970 / 60.0) * 60.0
-            clockOffset = zeroedServerMinute - deviceNow.timeIntervalSince1970
-            timeSyncMessage = "NICT時刻の秒を00に合わせました"
-        } catch {
-            timeSyncMessage = "NICT時刻を取得できず、00秒合わせに失敗しました"
-        }
+        let deviceNow = Date()
+        let currentAppTime = deviceNow.addingTimeInterval(clockOffset)
+        let zeroedAppMinute = floor(currentAppTime.timeIntervalSince1970 / 60.0) * 60.0
+        clockOffset = zeroedAppMinute - deviceNow.timeIntervalSince1970
+        timeSyncMessage = "現在のアプリ時刻の秒を00に合わせました"
     }
 
     @MainActor
