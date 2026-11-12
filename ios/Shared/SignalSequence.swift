@@ -71,6 +71,12 @@ struct SignalSequence {
         var colorHex: UInt32 { flags.first?.colors.first ?? 0xFFFFFF }
     }
 
+    /// Manual orange state is released only by an actual lowering event.
+    /// Raised/state rows in a restart timeline must not clear the physical flag.
+    static func shouldReleaseManualOrangeOverride(for event: Event) -> Bool {
+        !event.raised && event.flags.contains { $0.id == "orange" }
+    }
+
     struct Profile: Identifiable {
         let id: String
         let name: String

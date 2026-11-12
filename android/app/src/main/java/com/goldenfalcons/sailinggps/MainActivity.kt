@@ -868,7 +868,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         )
         val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
         val event=events[active.coerceAtLeast(0)]
-        if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.flag=="橙") {
+        if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.let(SignalSequence::shouldReleaseManualOrangeOverride)==true) {
             displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
         }
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))

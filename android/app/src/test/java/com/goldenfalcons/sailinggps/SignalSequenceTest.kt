@@ -131,6 +131,20 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun apRestartKeepsRaisedOrangeUntilItsActualLowerEvent() {
+        val restart = SignalSequence.restartEvents(orangeRemovedAfterMinutes = 4)
+        val orangeState = restart.first { it.flagMarks.any { mark -> mark.id == "橙" } && it.raised }
+        val orangeLower = restart.first { it.flagMarks.any { mark -> mark.id == "橙" } && !it.raised }
+        val classWarning = restart.first { it.title.contains("再予告信号") }
+
+        assertTrue(!SignalSequence.shouldReleaseManualOrangeOverride(orangeState))
+        assertTrue(SignalSequence.shouldReleaseManualOrangeOverride(orangeLower))
+        assertEquals(0, classWarning.secondsAfterStart)
+        assertEquals(540, orangeLower.secondsAfterStart)
+        assertEquals(60, restart.first { it.title.contains("準備信号") }.secondsAfterStart)
+    }
+
+    @Test
     fun apRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
         assertEquals(1_200_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 900_000L, 5, true))
         assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 700_000L, 5, true))

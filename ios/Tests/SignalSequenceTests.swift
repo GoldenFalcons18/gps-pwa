@@ -208,6 +208,19 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.flags(elapsed: 840, profileID: "standard-start"), [])
     }
 
+    func testAPRestartKeepsRaisedOrangeUntilItsActualLowerEvent() {
+        let restart = SignalSequence.recallRestartEvents(orangeEnabled: true, orangeRemovedMinutes: 4)
+        let orangeState = try! XCTUnwrap(restart.first { $0.flags.contains(where: { $0.id == "orange" }) && $0.raised })
+        let orangeLower = try! XCTUnwrap(restart.first { $0.flags.contains(where: { $0.id == "orange" }) && !$0.raised })
+        let classWarning = try! XCTUnwrap(restart.first { $0.title.contains("再予告信号") })
+
+        XCTAssertFalse(SignalSequence.shouldReleaseManualOrangeOverride(for: orangeState))
+        XCTAssertTrue(SignalSequence.shouldReleaseManualOrangeOverride(for: orangeLower))
+        XCTAssertEqual(classWarning.secondsAfterStart, 0)
+        XCTAssertEqual(orangeLower.secondsAfterStart, 540)
+        XCTAssertEqual(restart.first(where: { $0.title.contains("準備信号") })?.secondsAfterStart, 60)
+    }
+
     func testAPRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 900, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_200)
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 700, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_060)
