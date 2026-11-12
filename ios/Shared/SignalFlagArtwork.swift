@@ -11,7 +11,7 @@ private struct OptimistClassEmblem: View {
                 Rectangle()
                     .fill(color)
                     .frame(width: side * 0.075, height: side * 0.78)
-                    .offset(y: side * 0.13)
+                    .offset(y: side * 0.06)
                 Circle()
                     .stroke(color, lineWidth: side * 0.075)
                     .frame(width: side * 0.66, height: side * 0.66)
