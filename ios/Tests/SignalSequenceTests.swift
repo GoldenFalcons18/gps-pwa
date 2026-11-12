@@ -20,6 +20,14 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertNil(SignalSequence.raisedFlagTime(events: timeline, flagID: "orange", elapsed: Double(orangeLower.secondsAfterStart), baseTime: 1_000))
     }
 
+    func testPostponementDisplayKeepsAnAlreadyRaisedOrangeFlag() {
+        let flags = SignalSequence.flagsWhilePostponementRaised([
+            SignalSequence.flag("orange"),
+            SignalSequence.flag("class-4")
+        ])
+        XCTAssertEqual(flags.map(\.id), ["orange", "AP"])
+    }
+
     func testRecallAndAbandonControlsWaitForSequenceStart() {
         XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: false, firstActionPending: false, restartPending: false))
         XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: true, restartPending: false))

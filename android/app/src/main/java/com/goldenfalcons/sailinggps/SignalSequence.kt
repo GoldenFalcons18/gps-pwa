@@ -62,6 +62,10 @@ object SignalMastLayout {
 
     fun canOperateRaceSignals(hasStarted: Boolean, firstActionPending: Boolean, restartPending: Boolean): Boolean =
         hasStarted && !firstActionPending && !restartPending
+
+    fun flagsWhilePostponementRaised(existing: List<SignalFlagState>): List<SignalFlagState> =
+        existing.filter { it.id == "橙" || it.id == "orange" } +
+            SignalFlagState("AP", 0xFFD71920.toInt(), true, false)
 }
 
 object SignalSequence {

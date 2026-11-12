@@ -19,6 +19,10 @@ struct SignalSequence {
         hasStarted && !firstActionPending && !restartPending
     }
 
+    static func flagsWhilePostponementRaised(_ existing: [Flag]) -> [Flag] {
+        existing.filter { $0.id == "orange" } + [flag("AP")]
+    }
+
     static func preparationFlagID(forStartRule rule: String) -> String {
         switch rule {
         case "P", "I", "U", "Z": return rule

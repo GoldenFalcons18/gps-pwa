@@ -345,7 +345,7 @@ struct SignalTimerPanel: View {
         if generalRecallFlagUp {
             visible = [SignalSequence.flag("first-sub")]
         } else if postponementFlagUp {
-            visible = [SignalSequence.flag("AP")]
+            visible = SignalSequence.flagsWhilePostponementRaised(visible)
         } else if abandonFlagUp {
             visible = [SignalSequence.flag("N")]
         } else if individualRecallFlagUp {

@@ -366,17 +366,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnSignalPostponement.setOnClickListener { togglePostponement() }
         b.btnSignalStart.setOnClickListener { toggleSignalSequence() }
         b.btnSignalReset.setOnClickListener { showSignalScheduleDialog() }
-        b.btnSignalZero.setOnClickListener {
-            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalSkipFinalEvent",false).apply()
-            val frozen=freezeConfiguredSignalEvents()
-            val alignedStart=SignalTiming.scheduledStartAt(signalNow(),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
-            displayPrefs.edit().putBoolean("signalRestartMode",false).putBoolean("signalIndividualRecallFlagUp",false)
-                .putBoolean("signalGeneralRecallFlagUp",false).putBoolean("signalPostponementFlagUp",false).putBoolean("signalAbandonFlagUp",false)
-                .putBoolean("signalSkipFinalEvent",false).remove("signalRestartAt").remove("signalRestartPausedElapsedMs").remove("signalRestartPausedAtMs").remove("signalPostponementLowerAtMs").remove("signalPostponementWarningAtMs")
-                .putString("signalRunEventsJSON",SignalSequence.encodeEvents(frozen)).putLong("signalElapsedStartAt",alignedStart).remove("signalPausedElapsedMs").remove("signalPausedAtMs").putInt("signalLastFiredIndex",-1)
-                .remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
-            signalActiveIndex=-1;buildSignalRows();updateSignalUi()
-        }
+        b.btnSignalZero.visibility = View.GONE
         fun bindSignalSeek(seek:android.widget.SeekBar,label:android.widget.TextView,key:String,defaultValue:Int,step:Int,maxProgress:Int,suffix:String) {
             seek.max=maxProgress
             val stored=displayPrefs.getInt(key,defaultValue)
@@ -831,7 +821,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val now=signalNow()
         processPostponementSchedule(now)
         val offset=signalClockOffsetMs
-        b.tvNictStatus.text=if(offset==0L) "端末時刻を使用中" else "ntp.nict.jp 同期済み（差 ${if(offset>=0) "+" else ""}${offset} ms）"
+        b.tvNictStatus.text=if(offset==0L) "NICT未同期" else "ntp.nict.jp 同期済み（差 ${if(offset>=0) "+" else ""}${offset} ms）"
         val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
         val restartAt=displayPrefs.getLong("signalRestartAt",0L)
         val restartPaused=displayPrefs.getLong("signalRestartPausedElapsedMs",-1L)
@@ -927,7 +917,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         when {
             displayPrefs.getBoolean("signalGeneralRecallFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("第一代表",0xFF1769FF.toInt(),true,false) }
-            displayPrefs.getBoolean("signalPostponementFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("AP",0xFFD71920.toInt(),true,false) }
+            displayPrefs.getBoolean("signalPostponementFlagUp",false) -> {
+                val withAp=SignalMastLayout.flagsWhilePostponementRaised(raised)
+                raised.clear(); raised.addAll(withAp)
+            }
             displayPrefs.getBoolean("signalAbandonFlagUp",false) -> { raised.clear(); raised+=SignalFlagState("N",0xFF1769FF.toInt(),true,false) }
             displayPrefs.getBoolean("signalIndividualRecallFlagUp",false) -> raised+=SignalFlagState("X",0xFFFFFFFF.toInt(),true,false)
         }

@@ -186,13 +186,14 @@ struct SignalSettingsView: View {
     @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
     @AppStorage("signalRadioFriendly") private var radioFriendly = true
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
-    @AppStorage("signalClockAlignmentMode") private var clockAlignmentMode = "manual"
+    @AppStorage("signalClockAlignmentMode") private var clockAlignmentMode = "nict"
     @AppStorage("signalExternalDisplayEnabled") private var externalDisplay = true
     @AppStorage("signalRemoteFlagsEnabled") private var remoteFlags = false
     @AppStorage("signalBuoyZoneLinked") private var buoyZoneLinked = false
     @AppStorage("signalLogEnabled") private var logEnabled = true
     @State private var timeSyncMessage = ""
     @State private var isSyncingTime = false
+    @State private var isAligningClockZero = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -214,34 +215,29 @@ struct SignalSettingsView: View {
                         Text("端末の標準音声").tag("端末の標準音声")
                     }
                     NavigationLink("Notifications") { SignalNotificationsView() }
-                    Picker("時間合わせ", selection: $clockAlignmentMode) {
-                        Text("端末時刻で0秒合わせ").tag("manual")
-                        Text("ntp.nict.jpと同期").tag("nict")
-                    }
-                    .onChange(of: clockAlignmentMode) { _, mode in
-                        if mode == "manual" {
-                            clockOffset = 0
-                            timeSyncMessage = "端末の実時刻を基準にします"
-                        } else {
-                            Task { await syncTime() }
+                    LabeledContent("時刻サーバー", value: "ntp.nict.jp")
+                    Button {
+                        Task { await syncTime() }
+                    } label: {
+                        HStack {
+                            Text(timeSyncMessage.isEmpty
+                                 ? (clockOffset == 0 ? "未同期" : String(format: "同期済み（補正 %+.3f 秒）", clockOffset))
+                                 : timeSyncMessage)
+                            Spacer()
+                            if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
                         }
-                    }
-                    if clockAlignmentMode == "nict" {
-                        Button {
-                            Task { await syncTime() }
-                        } label: {
-                            HStack {
-                                Text(timeSyncMessage.isEmpty
-                                     ? (clockOffset == 0 ? "未同期" : "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）")
-                                     : timeSyncMessage)
-                                Spacer()
-                                if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
-                            }
-                        }.disabled(isSyncingTime)
-                    } else {
-                        Text("各信号は端末の実時刻のn分00秒を基準に動作します。開始時は設定した最短時間を確保して、次の分00秒に合わせます。")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
+                    }.disabled(isSyncingTime || isAligningClockZero)
+                    Button {
+                        Task { await alignClockZero() }
+                    } label: {
+                        HStack {
+                            Text("秒を00に合わせる")
+                            Spacer()
+                            if isAligningClockZero { ProgressView() } else { Text("NICT時刻を基準").foregroundStyle(.blue) }
+                        }
+                    }.disabled(isSyncingTime || isAligningClockZero)
+                    Text("NICT時刻を基準に、押した時点の秒を00に補正します。シーケンスは開始しません。")
+                        .font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
                     Toggle("BuoyZoneと連携", isOn: $buoyZoneLinked)
@@ -267,6 +263,21 @@ struct SignalSettingsView: View {
     }
 
     @MainActor
+    private func alignClockZero() async {
+        isAligningClockZero = true
+        defer { isAligningClockZero = false }
+        do {
+            let serverTime = try await NICTClock.query()
+            let deviceNow = Date()
+            let zeroedServerMinute = floor(serverTime.timeIntervalSince1970 / 60.0) * 60.0
+            clockOffset = zeroedServerMinute - deviceNow.timeIntervalSince1970
+            timeSyncMessage = "NICT時刻の秒を00に合わせました"
+        } catch {
+            timeSyncMessage = "NICT時刻を取得できず、00秒合わせに失敗しました"
+        }
+    }
+
+    @MainActor
     private func syncTime() async {
         isSyncingTime = true
         defer { isSyncingTime = false }
@@ -276,7 +287,7 @@ struct SignalSettingsView: View {
             timeSyncMessage = "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）"
         } catch {
                     timeSyncMessage = clockOffset == 0
-                        ? "同期に失敗しました。端末時刻を使用中"
+                        ? "同期失敗（補正値なし）"
                         : "再同期失敗。前回の補正値を保持（\(String(format: "%+.3f", clockOffset)) 秒）"
         }
     }

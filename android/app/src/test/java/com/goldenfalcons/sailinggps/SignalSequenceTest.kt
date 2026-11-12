@@ -27,6 +27,14 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun postponementDisplayKeepsAnAlreadyRaisedOrangeFlag() {
+        val flags = SignalMastLayout.flagsWhilePostponementRaised(listOf(
+            SignalFlagState("橙", 0xFFF58A00.toInt(), true, false),
+            SignalFlagState("class-420", 0xFFFFFFFF.toInt(), true, false)
+        ))
+        assertEquals(listOf("橙", "AP"), flags.map { it.id })
+    }
+
     fun raceSignalControlsStayDisabledUntilFirstActionBegins() {
         assertEquals(false, SignalMastLayout.canOperateRaceSignals(false, false, false))
         assertEquals(false, SignalMastLayout.canOperateRaceSignals(true, true, false))
