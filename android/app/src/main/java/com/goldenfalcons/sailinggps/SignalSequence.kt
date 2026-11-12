@@ -219,6 +219,9 @@ object SignalSequence {
     val postponementRaise = e(-4, 0, "回答旗（AP）を掲揚", "AP", 0xFFD71920.toInt(), true, 0, 0)
     val postponementLower = e(-5, 0, "回答旗（AP）を降下", "AP", 0xFFD71920.toInt(), false, 0)
 
+    fun shouldReleaseManualOrangeOverride(event: SignalEvent): Boolean =
+        !event.raised && event.flagMarks.any { it.id == "橙" || it.id == "orange" }
+
     fun restartEvents(prepFlag: String = "P", orangeEnabled: Boolean = true, orangeRemovedAfterMinutes: Int = 4, className: String = "クラス旗"): List<SignalEvent> {
         val rows = mutableListOf(
             e(0, 0, "${classFlagLabel(className)}を掲揚（再予告信号）", resolvedClassFlagId(className), 0xFF7A35A8.toInt(), true, 0),
