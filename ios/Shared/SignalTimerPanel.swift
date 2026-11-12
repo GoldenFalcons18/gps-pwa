@@ -274,12 +274,6 @@ struct SignalTimerPanel: View {
             }
         }
     }
-    private func alignAtZero(at date: Date) {
-        reset()
-        freezeConfiguredEvents()
-        startAt = date.timeIntervalSince1970 + clockOffset
-        hasStarted = true
-    }
     private func reset() {
         startAt = 0
         pausedSeconds = 0
@@ -469,8 +463,6 @@ struct SignalTimerPanel: View {
                     if canStartSequence {
                         Button(waitingForFirstSignal ? "クラス旗待ち（取消）" : (retrySequenceComplete ? "開始" : (isRunning ? "一時停止" : (hasStarted && spent < Double(events.last?.secondsAfterStart ?? 1200) ? "再開" : "開始")))) { startOrPause(at: now) }
                             .foregroundStyle(.blue).fontWeight(.semibold)
-                        Button("0秒合わせ") { alignAtZero(at: now) }
-                            .foregroundStyle(.blue)
                     }
                     #if os(iOS)
                     Button { scheduledDate = SignalSequence.defaultScheduledDate(); scheduleValidationMessage = ""; showSchedule = true } label: { Image(systemName: "clock").foregroundStyle(.blue) }
