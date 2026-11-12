@@ -461,10 +461,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun currentSignalEvents():List<SignalEvent> {
         val hasRun=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L
-        if(!displayPrefs.getBoolean("signalRestartMode",false) && hasRun) {
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        if(!restartMode && hasRun) {
             SignalSequence.decodeEvents(displayPrefs.getString("signalRunEventsJSON",null))?.takeIf { it.isNotEmpty() }?.let { return it }
         }
-        return configuredSignalEvents()
+        val events=configuredSignalEvents()
+        val orangeRaisedAt=displayPrefs.getLong("signalOrangeRaisedAtMs",0L)
+        val restartAt=displayPrefs.getLong("signalRestartAt",0L)
+        if(restartMode && displayPrefs.getBoolean("signalOrangeManualOverride",false) && displayPrefs.getBoolean("signalOrangeManualUp",false) && orangeRaisedAt>0L && restartAt>0L) return SignalSequence.recordingManualOrangeRaise(events,orangeRaisedAt,restartAt)
+        return events
     }
 
     private fun configuredSignalEvents():List<SignalEvent> {
@@ -740,7 +745,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val orangeTimeline=if(displayPrefs.getBoolean("signalOrangeManualOverride",false) && displayPrefs.getBoolean("signalOrangeManualUp",false) && raisedOrangeAt>0L)
                         SignalSequence.eventsStartingAtFirstClassWarning(frozen)?.let { events ->
                             val start=SignalTiming.startAfterOrangeRaise(now,raisedOrangeAt,displayPrefs.getInt("signalOrangeDisplayedMinutes",5),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
-                            start to events
+                            start to SignalSequence.recordingManualOrangeRaise(events,raisedOrangeAt,start)
                         } else null
                     val timeline=orangeTimeline?.second ?: frozen
                     val start=orangeTimeline?.first ?: SignalTiming.scheduledStartAt(now,displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
@@ -857,9 +862,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val running=if(waitingForRestart) false else if(restartMode) restartAt>0L && restartAt<=now && elapsedSeconds<totalSeconds else normalStartAt>0L && normalStartAt<=now && elapsedSeconds<totalSeconds
         val completed=started && !waitingForRestart && elapsedSeconds>=totalSeconds
         val active=when {
-            waitingForRestart -> 0
+            waitingForRestart -> events.indexOfFirst { it.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }.coerceAtLeast(0)
             waitingForFirstSignal || !started -> -1
-            else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
+            else -> {
+                val operational=events.withIndex().filter { it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
+                val operationalIndex=SignalTiming.activeEventIndex(elapsedSeconds,operational.map { it.value.secondsAfterStart }).coerceIn(0,operational.lastIndex)
+                operational[operationalIndex].index
+            }
         }
         val raceSignalControlsEnabled=SignalMastLayout.canOperateRaceSignals(
             hasStarted=started,
@@ -867,7 +876,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             restartPending=waitingForRestart
         )
         val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
-        val event=events[active.coerceAtLeast(0)]
+        val currentEventIndex=active.coerceAtLeast(0).let { index -> if(events.getOrNull(index)?.id==SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID) events.indexOfFirst { it.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }.coerceAtLeast(0) else index }
+        val event=events[currentEventIndex]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.let(SignalSequence::shouldReleaseManualOrangeOverride)==true) {
             displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
         }
@@ -932,7 +942,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         signalRowEventIndices.forEachIndexed { rowIndex,eventIndex ->
             val rowEvent=events.getOrNull(eventIndex) ?: return@forEachIndexed
             val row=signalRows.getOrNull(rowIndex) ?: return@forEachIndexed
-            val orangeRaiseAlreadyDone=rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
+            val orangeRaiseAlreadyDone=rowEvent.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID && rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
             row.visibility=if(orangeRaiseAlreadyDone) View.GONE else View.VISIBLE
             signalRowTimeViews.getOrNull(rowIndex)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+rowEvent.secondsAfterStart*1000L)) else signalEventTimeLabel(rowEvent,restartMode)
         }
