@@ -75,9 +75,17 @@ object SignalSequence {
         else -> "P"
     }
 
+    const val MANUAL_ORANGE_RAISE_RECORD_ID = -100
+
+    fun recordingManualOrangeRaise(events: List<SignalEvent>, raisedAtMillis: Long, sequenceStartAtMillis: Long): List<SignalEvent> {
+        val offsetSeconds = kotlin.math.floor((raisedAtMillis - sequenceStartAtMillis) / 1000.0).toInt()
+        val record = SignalEvent(MANUAL_ORANGE_RAISE_RECORD_ID, offsetSeconds, "橙旗を掲揚（手動・実時刻）", 0xFFF58A00.toInt(), true, "橙", emptyList())
+        return (events + record).sortedWith(compareBy<SignalEvent> { it.secondsAfterStart }.thenBy { it.id })
+    }
+
     fun eventsStartingAtFirstClassWarning(events: List<SignalEvent>): List<SignalEvent>? {
         val warningIndex = events.indexOfFirst { event ->
-            event.raised && event.title.contains("予告信号") && event.flagMarks.any { it.style == "classLogo" }
+            event.raised && event.flagMarks.any { it.style == "classLogo" }
         }
         if (warningIndex < 0) return null
         val warningOffset = events[warningIndex].secondsAfterStart

@@ -18,12 +18,12 @@ object SignalTiming {
         return scheduledStartAt(maxOf(nowMillis, earliestByOrange), 0)
     }
 
-    fun restartWarningAt(loweredAtMs: Long): Long = loweredAtMs + 60_000L
+    fun restartWarningAt(loweredAtMs: Long): Long = scheduledStartAt(loweredAtMs + 60_000L, 0)
 
     fun postponementRestartWarningAt(loweredAtMs: Long, orangeRaisedAtMs: Long?, orangeDisplayedMinutes: Int, orangeEnabled: Boolean): Long {
         if (!orangeEnabled) return restartWarningAt(loweredAtMs)
         val orangeDeadline = (orangeRaisedAtMs ?: loweredAtMs) + orangeDisplayedMinutes.coerceAtLeast(0) * 60_000L
-        return maxOf(restartWarningAt(loweredAtMs), orangeDeadline)
+        return scheduledStartAt(maxOf(restartWarningAt(loweredAtMs), orangeDeadline), 0)
     }
 
     /** Keep AP raised until exactly one minute before the next warning. */

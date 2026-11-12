@@ -223,11 +223,23 @@ final class SignalSequenceTests: XCTestCase {
 
     func testAPRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 900, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_200)
-        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 700, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_060)
-        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_300)
-        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: false), 1_060)
-        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_300), 1_240)
-        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_060), 1_000)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 700, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_080)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_320)
+        XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: false), 1_080)
+        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_320), 1_260)
+        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_080), 1_020)
+        let apLower = SignalSequence.postponementLowerTime(warningAt: SignalSequence.postponementRestartWarningTime(loweredAt: 1_034, orangeRaisedAt: 934, orangeDisplayedMinutes: 5, orangeEnabled: true))
+        XCTAssertEqual(apLower.truncatingRemainder(dividingBy: 60), 0, "AP降下は実時刻の分0秒")
+    }
+
+    func testManualOrangeRaiseIsRecordedWithItsActualSequenceOffset() {
+        let events = SignalSequence.eventsStartingAtFirstClassWarning(SignalSequence.events(durationMinutes: 14, profileID: "standard-start"))!
+        let timeline = SignalSequence.recordingManualOrangeRaise(in: events, raisedAt: 754, sequenceStartAt: 960)
+        let record = try! XCTUnwrap(timeline.first { $0.id == SignalSequence.manualOrangeRaiseRecordEventID })
+        XCTAssertEqual(record.secondsAfterStart, -206)
+        XCTAssertEqual(960 + Double(record.secondsAfterStart), 754)
+        XCTAssertTrue(record.raised)
+        XCTAssertEqual(record.flags.first?.id, "orange")
     }
 
     func testRecallAndPostponementUseRequestedShortHornCounts() {
@@ -360,7 +372,7 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
-        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
+        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 240)
     }
 
     func testRaceCountdownUsesClassLoweringAsTheRealZero() {
