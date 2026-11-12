@@ -227,12 +227,28 @@ struct NavigationMapView: UIViewRepresentable {
             if staticChanged {
                 signature = key
                 courseHeading = nil
-                map.removeAnnotations(map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" })
-                map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
-                for wp in p.showWaypoints ? p.waypoints : [] {
-                    let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
-                    map.addAnnotation(pin)
+                let visibleWaypoints = p.showWaypoints ? p.waypoints.filter { !p.library.hiddenGroups.contains($0.group ?? "") } : []
+                let existingPins = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind == "waypoint" }
+                let visibleIDs = Set(visibleWaypoints.map(\.id))
+                map.removeAnnotations(existingPins.filter { $0.id.map { !visibleIDs.contains($0) } ?? true })
+                for wp in visibleWaypoints {
+                    if let pin = existingPins.first(where: { $0.id == wp.id }) {
+                        let appearanceChanged = pin.title != wp.name || pin.colorName != wp.colorName || pin.markSymbol != wp.markSymbol || pin.markText != wp.markText
+                        pin.title = wp.name
+                        pin.coordinate = wp.coordinate
+                        pin.colorName = wp.colorName
+                        pin.markSymbol = wp.markSymbol
+                        pin.markText = wp.markText
+                        if appearanceChanged, let view = map.view(for: pin) {
+                            view.image = CompactWaypointMarker.image(name: wp.name, color: UIColor(waypointColor(wp.colorName)), markText: wp.markText, markSymbol: wp.markSymbol)
+                            view.accessibilityLabel = wp.name
+                        }
+                    } else {
+                        let pin = Pin(); pin.id = wp.id; pin.title = wp.name; pin.coordinate = wp.coordinate; pin.colorName = wp.colorName; pin.markSymbol = wp.markSymbol; pin.markText = wp.markText
+                        map.addAnnotation(pin)
+                    }
                 }
+                map.removeOverlays(map.overlays.filter { (($0 as? MKPolyline)?.title ?? ($0 as? MKPolygon)?.title ?? "").hasPrefix("feature:") })
                 for f in p.library.features where f.visible && !p.library.hiddenGroups.contains(f.group) {
                     let points = f.boundary(p.waypoints.map(\.archiveEntry)).map{CLLocationCoordinate2D(latitude:$0.latitude,longitude:$0.longitude)}
                     guard points.count >= 2 else { continue }
