@@ -112,14 +112,22 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
         let defaults = UserDefaults.standard
         defaults.set(name, forKey: "signalFleetStartName")
         defaults.set("standard-start", forKey: "signalFlagProfile")
-        defaults.set(classFlagID, forKey: "signalCustomClassFlag")
+        // Fleet presets use the shared class-flag configuration. Keep each
+        // explicitly different class row intact, while the preset's default
+        // class row follows the globally configured logo/text/international flag.
+        let configuredClassFlag = defaults.string(forKey: "signalCustomClassFlag") ?? classFlagID
+        let activeStarts = starts.map { action -> SignalStartAction in
+            var resolved = action
+            if action.flagID == classFlagID { resolved.flagID = configuredClassFlag }
+            return resolved
+        }
         defaults.set(SignalSequence.preparationFlagID(forStartRule: startRule), forKey: "signalCustomPrepFlag")
         defaults.set(orangeEnabled, forKey: "signalOrangeEnabled")
         defaults.set(orangeDisplayedMinutes, forKey: "signalOrangeDisplayedMinutes")
         defaults.set(orangeRemovedMinutes, forKey: "signalOrangeRemovedAfterMinutes")
         defaults.set(raceDelayMinutes > 0, forKey: "signalRaceDelayEnabled")
         defaults.set(raceDelayMinutes, forKey: "signalRaceDelayMinutes")
-        if let data = try? JSONEncoder().encode(starts), let value = String(data: data, encoding: .utf8) {
+        if let data = try? JSONEncoder().encode(activeStarts), let value = String(data: data, encoding: .utf8) {
             defaults.set(value, forKey: "signalActiveStartActionsJSON")
         }
     }
@@ -398,21 +406,12 @@ private struct SignalFleetPresetEditor: View {
                     ForEach(rules, id: \.self) { Text($0).tag($0) }
                 }
                 NavigationLink {
-                    SignalClassPicker(selection: Binding(
-                        get: { preset.classFlagID },
-                        set: { value in
-                            let previous = preset.classFlagID
-                            preset.classFlagID = value
-                            if let index = preset.starts.firstIndex(where: { $0.raised && $0.flagID == previous }) {
-                                preset.starts[index].flagID = value
-                            }
-                        }
-                    ))
+                    SignalClassFlagSettingsView()
                 } label: {
                     HStack {
-                        Text("Classes")
+                        Text("クラス旗（共通設定）")
                         Spacer()
-                        Text(SignalSequence.flag(preset.classFlagID).name).foregroundStyle(.secondary)
+                        Text(SignalSequence.flag(activeClassFlag).name).foregroundStyle(.secondary)
                     }
                 }
                 Stepper("Time between races：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
@@ -443,7 +442,7 @@ private struct SignalFleetPresetEditor: View {
                         .frame(width: 40, height: 48)
                         .contentShape(Rectangle())
                         Button { editingStartFlagID = start.id } label: {
-                            SignalFlagSwatch(flagID: start.flagID)
+                            SignalFlagSwatch(flagID: start.flagID == preset.classFlagID ? activeClassFlag : start.flagID)
                                 .frame(width: 58, height: 44)
                                 .contentShape(Rectangle())
                         }
