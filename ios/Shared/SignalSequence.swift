@@ -204,7 +204,7 @@ struct SignalSequence {
     }
 
     /// Restart warning is exactly one minute after AP, N, or first-substitute is lowered.
-    static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
+    static func restartWarningTime(loweredAt: Double) -> Double { ceil((loweredAt + 60) / 60) * 60 }
 
     static func postponementRestartWarningTime(loweredAt: Double, orangeRaisedAt: Double?, orangeDisplayedMinutes: Int, orangeEnabled: Bool) -> Double {
         let earliest = orangeEnabled
