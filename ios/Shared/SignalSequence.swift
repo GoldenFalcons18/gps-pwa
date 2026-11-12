@@ -31,6 +31,8 @@ struct SignalSequence {
         }
     }
 
+    static let manualOrangeRaiseRecordEventID = -100
+
     static func eventsStartingAtFirstClassWarning(_ events: [Event]) -> [Event]? {
         guard let warningIndex = events.firstIndex(where: { event in
             event.raised && event.title.contains("予告信号")
@@ -39,6 +41,16 @@ struct SignalSequence {
         return events.dropFirst(warningIndex).enumerated().map { index, event in
             Event(id: index, secondsAfterStart: event.secondsAfterStart - warningOffset,
                   title: event.title, flags: event.flags, raised: event.raised, hornPulses: event.hornPulses)
+        }
+    }
+
+    static func recordingManualOrangeRaise(in events: [Event], raisedAt: Double, sequenceStartAt: Double) -> [Event] {
+        let offset = Int(floor(raisedAt - sequenceStartAt))
+        let record = Event(id: manualOrangeRaiseRecordEventID, secondsAfterStart: offset,
+                           title: "橙旗を掲揚（手動・実時刻）", flags: [flag("orange")], raised: true, hornPulses: [])
+        return (events + [record]).sorted {
+            if $0.secondsAfterStart != $1.secondsAfterStart { return $0.secondsAfterStart < $1.secondsAfterStart }
+            return $0.id < $1.id
         }
     }
 
@@ -195,8 +207,10 @@ struct SignalSequence {
     static func restartWarningTime(loweredAt: Double) -> Double { loweredAt + 60 }
 
     static func postponementRestartWarningTime(loweredAt: Double, orangeRaisedAt: Double?, orangeDisplayedMinutes: Int, orangeEnabled: Bool) -> Double {
-        guard orangeEnabled else { return restartWarningTime(loweredAt: loweredAt) }
-        return max(loweredAt + 60, (orangeRaisedAt ?? loweredAt) + Double(max(0, orangeDisplayedMinutes) * 60))
+        let earliest = orangeEnabled
+            ? max(loweredAt + 60, (orangeRaisedAt ?? loweredAt) + Double(max(0, orangeDisplayedMinutes) * 60))
+            : loweredAt + 60
+        return ceil(earliest / 60) * 60
     }
 
     /// AP remains raised until one minute before the restart warning.
