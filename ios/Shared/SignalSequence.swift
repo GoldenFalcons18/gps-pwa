@@ -35,7 +35,7 @@ struct SignalSequence {
 
     static func eventsStartingAtFirstClassWarning(_ events: [Event]) -> [Event]? {
         guard let warningIndex = events.firstIndex(where: { event in
-            event.raised && event.title.contains("予告信号")
+            event.raised && event.flags.contains(where: { $0.style == "classLogo" })
         }) else { return nil }
         let warningOffset = events[warningIndex].secondsAfterStart
         return events.dropFirst(warningIndex).enumerated().map { index, event in
