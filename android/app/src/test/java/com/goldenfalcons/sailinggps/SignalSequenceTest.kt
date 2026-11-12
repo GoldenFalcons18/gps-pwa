@@ -120,6 +120,8 @@ class SignalSequenceTest {
         assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 700_000L, 5, true))
         assertEquals(1_300_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, true))
         assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, false))
+        assertEquals(1_240_000L, SignalTiming.postponementApLowerAt(1_000_000L, null, 5, true))
+        assertEquals(1_000_000L, SignalTiming.postponementApLowerAt(1_000_000L, 700_000L, 5, true))
     }
 
     @Test

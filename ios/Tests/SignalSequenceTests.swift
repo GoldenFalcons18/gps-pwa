@@ -198,6 +198,8 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: 700, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_060)
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: true), 1_300)
         XCTAssertEqual(SignalSequence.postponementRestartWarningTime(loweredAt: 1_000, orangeRaisedAt: nil, orangeDisplayedMinutes: 5, orangeEnabled: false), 1_060)
+        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_300), 1_240)
+        XCTAssertEqual(SignalSequence.postponementLowerTime(warningAt: 1_060), 1_000)
     }
 
     func testRecallAndPostponementUseRequestedShortHornCounts() {

@@ -189,6 +189,9 @@ struct SignalSequence {
         return max(loweredAt + 60, (orangeRaisedAt ?? loweredAt) + Double(max(0, orangeDisplayedMinutes) * 60))
     }
 
+    /// AP remains raised until one minute before the restart warning.
+    static func postponementLowerTime(warningAt: Double) -> Double { warningAt - 60 }
+
     static func countdownSeconds(_ remaining: Double) -> Int {
         max(0, Int(ceil(remaining)))
     }

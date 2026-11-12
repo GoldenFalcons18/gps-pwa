@@ -38,6 +38,8 @@ struct SignalTimerPanel: View {
     @AppStorage("signalOrangeManualUp") private var orangeManualUp = false
     @AppStorage("signalOrangeRaisedAt") private var orangeRaisedAt = 0.0
     @AppStorage("signalRestartWarningAt") private var restartWarningAt = 0.0
+    @AppStorage("signalPostponementLowerAt") private var postponementLowerAt = 0.0
+    @AppStorage("signalPostponementWarningAt") private var postponementWarningAt = 0.0
     @State private var hornPlayer: AVAudioPlayer?
     @State private var showSettings = false
     @State private var showInterruptOptions = false
@@ -156,26 +158,34 @@ struct SignalTimerPanel: View {
     private func togglePostponement(at date: Date) {
         if !postponementFlagUp && (generalRecallFlagUp || abandonFlagUp) { return }
         if postponementFlagUp {
-            postponementFlagUp = false
-            let loweredAt = date.timeIntervalSince1970 + clockOffset
+            // A second tap cancels a scheduled restart while leaving AP raised.
+            if postponementLowerAt > 0 {
+                postponementLowerAt = 0
+                postponementWarningAt = 0
+                restartWarningAt = 0
+                return
+            }
+
+            let now = date.timeIntervalSince1970 + clockOffset
             var orangeAt = orangeRaiseTime(at: date)
             let raiseOrangeNow = orangeEnabled && orangeAt == nil
-            if orangeEnabled {
-                if orangeAt == nil {
-                    orangeAt = loweredAt
-                }
+            if raiseOrangeNow {
+                orangeAt = now
                 orangeManualOverride = true
                 orangeManualUp = true
-                orangeRaisedAt = orangeAt ?? loweredAt
+                orangeRaisedAt = now
+                playHorn(pulses: [0])
             }
-            restartWarningAt = SignalSequence.postponementRestartWarningTime(
-                loweredAt: loweredAt,
+            let warningAt = SignalSequence.postponementRestartWarningTime(
+                loweredAt: now,
                 orangeRaisedAt: orangeAt,
                 orangeDisplayedMinutes: orangeDisplayedMinutes,
                 orangeEnabled: orangeEnabled
             )
-            playHorn(pulses: SignalSequence.postponementLower.hornPulses)
-            if raiseOrangeNow { playHorn(pulses: [0]) }
+            postponementWarningAt = warningAt
+            postponementLowerAt = SignalSequence.postponementLowerTime(warningAt: warningAt)
+            restartWarningAt = warningAt
+            if postponementLowerAt <= now { processPostponementSchedule(at: now) }
         } else {
             let orangeAt = orangeRaiseTime(at: date)
             pauseForManualSignal(at: date)
@@ -187,9 +197,18 @@ struct SignalTimerPanel: View {
             individualRecallFlagUp = false
             generalRecallFlagUp = false
             restartWarningAt = 0
+            postponementLowerAt = 0
+            postponementWarningAt = 0
             postponementFlagUp = true
             playHorn(pulses: SignalSequence.postponementRaise.hornPulses)
         }
+    }
+
+    private func processPostponementSchedule(at correctedNow: Double) {
+        guard postponementFlagUp, postponementLowerAt > 0, correctedNow >= postponementLowerAt else { return }
+        postponementFlagUp = false
+        postponementLowerAt = 0
+        playHorn(pulses: SignalSequence.postponementLower.hornPulses)
     }
     private func elapsed(at date: Date) -> Double {
         if startAt > 0 { return max(0, date.timeIntervalSince1970 + clockOffset - startAt) }
@@ -269,6 +288,8 @@ struct SignalTimerPanel: View {
         postponementFlagUp = false
         abandonFlagUp = false
         restartWarningAt = 0
+        postponementLowerAt = 0
+        postponementWarningAt = 0
         orangeManualOverride = false
         orangeManualUp = false
         skipFinalEvent = false
@@ -467,7 +488,7 @@ struct SignalTimerPanel: View {
                         Button(generalRecallFlagUp ? "第一代表旗 降下" : "ゼネラルリコール") { toggleGeneralRecall(at: now) }
                     }
                     if postponementFlagUp || (!generalRecallFlagUp && !abandonFlagUp) {
-                        Button(postponementFlagUp ? "AP 降下" : "AP 掲揚") { togglePostponement(at: now) }
+                        Button(postponementFlagUp ? (postponementLowerAt > 0 ? "AP降下予約中（取消）" : "AP降下手順を開始") : "AP 掲揚") { togglePostponement(at: now) }
                     }
                     if abandonFlagUp || raceSignalControlsEnabled {
                         Button(abandonFlagUp ? "N旗 降下" : "すべて中止 N旗") { toggleAbandon(at: now) }
@@ -526,7 +547,11 @@ struct SignalTimerPanel: View {
                 Button("キャンセル", role: .cancel) {}
             }
             #endif
+            .onChange(of: now) { _, current in
+                processPostponementSchedule(at: current.timeIntervalSince1970 + clockOffset)
+            }
             .onAppear {
+                processPostponementSchedule(at: Date().timeIntervalSince1970 + clockOffset)
                 if !hornTimingPresetMigrated {
                     if abs(hornSeconds - 0.7) < 0.001 { hornSeconds = 5.1 }
                     if abs(shortHornSeconds - 0.22) < 0.001 { shortHornSeconds = 3.1 }
@@ -545,7 +570,7 @@ struct SignalTimerPanel: View {
             }
             .onChange(of: useRetrySequence) { oldValue, newValue in
                 guard !oldValue, newValue else { return }
-                playHorn(pulses: sequenceEvents.first?.hornPulses ?? [0])
+                playHorn(pulses: sequenceEvents.first(where: { !$0.hornPulses.isEmpty })?.hornPulses ?? [])
             }
             .onChange(of: active) { oldValue, newValue in
                 guard newValue > oldValue else { return }

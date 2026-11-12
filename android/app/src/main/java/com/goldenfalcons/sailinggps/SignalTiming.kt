@@ -26,6 +26,10 @@ object SignalTiming {
         return maxOf(restartWarningAt(loweredAtMs), orangeDeadline)
     }
 
+    /** Keep AP raised until exactly one minute before the next warning. */
+    fun postponementApLowerAt(loweredAtMs: Long, orangeRaisedAtMs: Long?, orangeDisplayedMinutes: Int, orangeEnabled: Boolean): Long =
+        postponementRestartWarningAt(loweredAtMs, orangeRaisedAtMs, orangeDisplayedMinutes, orangeEnabled) - 60_000L
+
     /** Delay the next refresh until the next whole corrected-clock second. */
     fun millisUntilNextSecond(nowMillis: Long): Long = 1000L - Math.floorMod(nowMillis, 1000L)
 

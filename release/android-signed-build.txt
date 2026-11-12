@@ -1,1 +1,1 @@
-1.8.47 versionCode 73 signed release retry after unit test pass
+1.8.60 versionCode 85 signed release
