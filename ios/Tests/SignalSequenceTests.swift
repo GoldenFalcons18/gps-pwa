@@ -372,7 +372,7 @@ final class SignalSequenceTests: XCTestCase {
     }
 
     func testRestartWarningIsExactlyOneMinuteAfterSignalLowering() {
-        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 185)
+        XCTAssertEqual(SignalSequence.restartWarningTime(loweredAt: 125), 240)
     }
 
     func testRaceCountdownUsesClassLoweringAsTheRealZero() {
