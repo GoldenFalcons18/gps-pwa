@@ -38,7 +38,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
         row("時刻サーバー同期", "ntp.nict.jp と同期") { clockAlignment() }
-        row("秒を00に合わせる", "NICT時刻を基準") { alignClockZero() }
+        row("秒を00に合わせる", "現在のアプリ時刻") { alignClockZero() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
         switch("BuoyZone", "signalBuoyZoneLinked", false)
@@ -124,20 +124,14 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun alignClockZero() {
-        NictClock.query { result -> runOnUiThread {
-            result.onSuccess { offset ->
-                val deviceNow = System.currentTimeMillis()
-                val serverNow = deviceNow + offset
-                val zeroedServerMinute = Math.floorDiv(serverNow, 60_000L) * 60_000L
-                val alignedOffset = zeroedServerMinute - deviceNow
-                prefs.edit().putString("signalClockAlignmentMode", "nict")
-                    .putLong("signalClockOffsetMs", alignedOffset).apply()
-                Toast.makeText(this, "NICT時刻の秒を00に合わせました（シーケンスは開始していません）", Toast.LENGTH_LONG).show()
-            }.onFailure {
-                Toast.makeText(this, "NICT時刻を取得できず、00秒合わせに失敗しました", Toast.LENGTH_LONG).show()
-            }
-            build()
-        } }
+        val deviceNow = System.currentTimeMillis()
+        val currentOffset = prefs.getLong("signalClockOffsetMs", 0L)
+        val currentAppTime = deviceNow + currentOffset
+        val zeroedAppMinute = Math.floorDiv(currentAppTime, 60_000L) * 60_000L
+        val alignedOffset = zeroedAppMinute - deviceNow
+        prefs.edit().putLong("signalClockOffsetMs", alignedOffset).apply()
+        Toast.makeText(this, "現在のアプリ時刻の秒を00に合わせました（NICT同期・シーケンス開始なし）", Toast.LENGTH_LONG).show()
+        build()
     }
     private fun clockAlignment() {
         prefs.edit().putString("signalClockAlignmentMode", "nict").apply()
