@@ -37,7 +37,7 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("次の分00秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
-        row("時間合わせ", if (prefs.getString("signalClockAlignmentMode", "manual") == "nict") "NICT同期" else "端末時刻で0秒合わせ") { clockAlignment() }
+        row("時間合わせ", "ntp.nict.jp サーバーと同期") { clockAlignment() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
         switch("BuoyZone", "signalBuoyZoneLinked", false)
@@ -123,28 +123,16 @@ class SignalSettingsActivity : AppCompatActivity() {
         }.show()
     }
     private fun clockAlignment() {
-        val modes = arrayOf("端末時刻で0秒合わせ", "ntp.nict.jpと同期")
-        val current = if (prefs.getString("signalClockAlignmentMode", "manual") == "nict") 1 else 0
-        AlertDialog.Builder(this).setTitle("時間合わせ")
-            .setSingleChoiceItems(modes, current) { dialog, which ->
-                if (which == 0) {
-                    prefs.edit().putString("signalClockAlignmentMode", "manual").putLong("signalClockOffsetMs", 0L).apply()
-                    Toast.makeText(this, "端末の実時刻を基準に0秒へ合わせます", Toast.LENGTH_LONG).show()
-                    dialog.dismiss(); build()
-                } else {
-                    prefs.edit().putString("signalClockAlignmentMode", "nict").apply()
-                    dialog.dismiss()
-                    NictClock.query { result -> runOnUiThread {
-                        result.onSuccess { offset ->
-                            prefs.edit().putLong("signalClockOffsetMs", offset).apply()
-                            Toast.makeText(this, "NICTと同期しました（差 ${if (offset >= 0) "+" else ""}${offset} ms）", Toast.LENGTH_LONG).show()
-                        }.onFailure {
-                            Toast.makeText(this, "同期に失敗しました。前回の設定を保持します", Toast.LENGTH_LONG).show()
-                        }
-                        build()
-                    } }
-                }
-            }.setNegativeButton("キャンセル", null).show()
+        prefs.edit().putString("signalClockAlignmentMode", "nict").apply()
+        NictClock.query { result -> runOnUiThread {
+            result.onSuccess { offset ->
+                prefs.edit().putLong("signalClockOffsetMs", offset).apply()
+                Toast.makeText(this, "NICTと同期しました（差 ${if (offset >= 0) "+" else ""}${offset} ms）", Toast.LENGTH_LONG).show()
+            }.onFailure {
+                Toast.makeText(this, "同期に失敗しました。前回の補正値を保持します", Toast.LENGTH_LONG).show()
+            }
+            build()
+        } }
     }
     private fun choose(title:String,items:List<String>,key:String) {
         AlertDialog.Builder(this).setTitle(title).setItems(items.toTypedArray()) { _,i ->
