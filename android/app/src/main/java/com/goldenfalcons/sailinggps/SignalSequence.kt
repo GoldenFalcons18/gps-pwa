@@ -85,7 +85,7 @@ object SignalSequence {
 
     fun eventsStartingAtFirstClassWarning(events: List<SignalEvent>): List<SignalEvent>? {
         val warningIndex = events.indexOfFirst { event ->
-            event.raised && event.title.contains("予告信号") && event.flagMarks.any { it.style == "classLogo" }
+            event.raised && event.flagMarks.any { it.style == "classLogo" }
         }
         if (warningIndex < 0) return null
         val warningOffset = events[warningIndex].secondsAfterStart
