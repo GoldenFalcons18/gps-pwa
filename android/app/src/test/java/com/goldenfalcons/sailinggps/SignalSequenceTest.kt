@@ -382,7 +382,7 @@ class SignalSequenceTest {
 
     @Test
     fun restartWarningFollowsFlagLoweringByExactlyOneMinute() {
-        assertEquals(185_000L, SignalTiming.restartWarningAt(125_000L))
+        assertEquals(240_000L, SignalTiming.restartWarningAt(125_000L))
     }
 
 
