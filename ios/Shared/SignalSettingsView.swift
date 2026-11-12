@@ -193,6 +193,7 @@ struct SignalSettingsView: View {
     @AppStorage("signalLogEnabled") private var logEnabled = true
     @State private var timeSyncMessage = ""
     @State private var isSyncingTime = false
+    @State private var isAligningClockZero = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -225,8 +226,17 @@ struct SignalSettingsView: View {
                             Spacer()
                             if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
                         }
-                    }.disabled(isSyncingTime)
-                    Text("時刻はサーバー補正値を使います。「0秒合わせ」は押した瞬間にシーケンスを開始します。")
+                    }.disabled(isSyncingTime || isAligningClockZero)
+                    Button {
+                        Task { await alignClockZero() }
+                    } label: {
+                        HStack {
+                            Text("秒を00に合わせる")
+                            Spacer()
+                            if isAligningClockZero { ProgressView() } else { Text("NICT時刻を基準").foregroundStyle(.blue) }
+                        }
+                    }.disabled(isSyncingTime || isAligningClockZero)
+                    Text("NICT時刻を基準に、押した時点の秒を00に補正します。シーケンスは開始しません。")
                         .font(.caption).foregroundStyle(.secondary)
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
@@ -250,6 +260,21 @@ struct SignalSettingsView: View {
             }
         }
         .preferredColorScheme(.dark)
+    }
+
+    @MainActor
+    private func alignClockZero() async {
+        isAligningClockZero = true
+        defer { isAligningClockZero = false }
+        do {
+            let serverTime = try await NICTClock.query()
+            let deviceNow = Date()
+            let zeroedServerMinute = floor(serverTime.timeIntervalSince1970 / 60.0) * 60.0
+            clockOffset = zeroedServerMinute - deviceNow.timeIntervalSince1970
+            timeSyncMessage = "NICT時刻の秒を00に合わせました"
+        } catch {
+            timeSyncMessage = "NICT時刻を取得できず、00秒合わせに失敗しました"
+        }
     }
 
     @MainActor
