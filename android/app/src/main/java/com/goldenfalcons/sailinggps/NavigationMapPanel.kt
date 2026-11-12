@@ -30,6 +30,8 @@ class NavigationMapPanel(
     private val trail: Polyline
     private val points = mutableListOf<GeoPoint>()
     private val waypointMarkers = mutableListOf<Marker>()
+    private val waypointMarkersById = mutableMapOf<String, Marker>()
+    private val waypointMarkerStyles = mutableMapOf<String, String>()
     private var waypointData = emptyList<Waypoint>()
     private val targetLine = Polyline()
     private var target: GeoPoint? = null
@@ -268,29 +270,43 @@ class NavigationMapPanel(
         }
         map.overlays.addAll(0,featureOverlays);map.invalidate()
     }
-    fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?) {
-        val snapshot = waypoints.toList() to active?.id
+    fun setWaypoints(waypoints: List<Waypoint>, active: Waypoint?, hiddenGroups: Set<String> = emptySet()) {
+        val visibleWaypoints = waypoints.filter { (it.group ?: "") !in hiddenGroups }
+        val snapshot = visibleWaypoints.toList() to active?.id
         if (snapshot == waypointSnapshot) return
         waypointSnapshot = snapshot
-        waypointData = waypoints.toList()
+        waypointData = visibleWaypoints
         target = active?.let { GeoPoint(it.lat, it.lon) }
         updateTargetLine()
-        map.overlays.removeAll(waypointMarkers.toSet())
+
+        val desiredIds = visibleWaypoints.map { it.id.toString() }.toSet()
+        (waypointMarkersById.keys - desiredIds).forEach { id ->
+            waypointMarkersById.remove(id)?.let { map.overlays.remove(it) }
+            waypointMarkerStyles.remove(id)
+        }
         waypointMarkers.clear()
-        waypoints.forEach { wp ->
-            waypointMarkers.add(Marker(map).apply {
-                icon = waypointIcon(wp.name, wp.id == active?.id, wp.mark, wp.color)
-                position = GeoPoint(wp.lat, wp.lon)
-                title = (if (wp.id == active?.id) "★ " else "") + wp.name
-                snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
+        visibleWaypoints.forEach { wp ->
+            val id = wp.id.toString()
+            val isActive = wp.id == active?.id
+            val style = "${wp.name}|${wp.mark}|${wp.color}|$isActive"
+            val marker = waypointMarkersById[id] ?: Marker(map).apply {
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                isEnabled = showWaypoints
                 setOnMarkerClickListener { _, _ -> true }
                 setInfoWindow(null)
-                alpha = if (wp.id == active?.id) 1f else 0.6f
-            })
+                map.overlays.add(this)
+                waypointMarkersById[id] = this
+            }
+            marker.position = GeoPoint(wp.lat, wp.lon)
+            marker.title = (if (isActive) "★ " else "") + wp.name
+            marker.snippet = "${NavigationUtils.formatDm(wp.lat, true)} / ${NavigationUtils.formatDm(wp.lon, false)}"
+            marker.isEnabled = showWaypoints
+            marker.alpha = if (isActive) 1f else 0.6f
+            if (waypointMarkerStyles[id] != style) {
+                marker.icon = waypointIcon(wp.name, isActive, wp.mark, wp.color)
+                waypointMarkerStyles[id] = style
+            }
+            waypointMarkers.add(marker)
         }
-        map.overlays.addAll(waypointMarkers)
         map.invalidate()
         if (!didInitialWaypointFit && waypointMarkers.isNotEmpty()) {
             didInitialWaypointFit = true
