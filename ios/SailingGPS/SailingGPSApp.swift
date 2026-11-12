@@ -915,7 +915,6 @@ struct ContentView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(gps.recording ? "GPS記録中" : "GPS記録停止中")
-            }
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
