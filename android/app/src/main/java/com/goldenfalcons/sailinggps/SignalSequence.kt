@@ -496,5 +496,13 @@ object SignalSequence {
             (latest?.second ?: first).copy(raised = latest?.second?.raised ?: false)
         }
     }
+
+    fun raisedFlagTimeMs(events: List<SignalEvent>, flagId: String, elapsedMs: Long, baseTimeMs: Long): Long? {
+        val latest = events.filter {
+            it.secondsAfterStart * 1000L <= elapsedMs && it.flagMarks.any { mark -> mark.id == flagId }
+        }.maxByOrNull { it.secondsAfterStart }
+        if (latest?.raised != true) return null
+        return baseTimeMs + latest.secondsAfterStart * 1000L
+    }
 }
 

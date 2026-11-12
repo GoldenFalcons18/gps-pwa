@@ -436,8 +436,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             else -> return null
         }
         val elapsed=if(start>0L) (now-start).coerceAtLeast(0L) else paused
-        val event=currentSignalEvents().firstOrNull { it.flag=="橙" && it.raised && it.secondsAfterStart*1000L<=elapsed } ?: return null
-        return base+event.secondsAfterStart*1000L
+        return SignalSequence.raisedFlagTimeMs(currentSignalEvents(),"橙",elapsed,base)
     }
 
     private fun buildSignalRows() {

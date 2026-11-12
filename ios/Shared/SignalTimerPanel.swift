@@ -101,9 +101,7 @@ struct SignalTimerPanel: View {
         if !restart && startAt > correctedNow { return nil }
         let elapsed = restart ? max(0, correctedNow - restartWarningAt) : elapsed(at: date)
         let timeline = restart ? recallRestartEvents : events
-        guard let raise = timeline.first(where: { $0.raised && $0.flags.contains(where: { $0.id == "orange" }) }),
-              Double(raise.secondsAfterStart) <= elapsed else { return nil }
-        return base + Double(raise.secondsAfterStart)
+        return SignalSequence.raisedFlagTime(events: timeline, flagID: "orange", elapsed: elapsed, baseTime: base)
     }
     private func pauseForManualSignal(at date: Date) {
         if startAt > 0 {

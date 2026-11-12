@@ -523,6 +523,14 @@ struct SignalSequence {
         return raised.values.sorted { $0.id < $1.id }
     }
 
+    static func raisedFlagTime(events: [Event], flagID: String, elapsed: Double, baseTime: Double) -> Double? {
+        let latest = events.filter {
+            Double($0.secondsAfterStart) <= elapsed && $0.flags.contains(where: { $0.id == flagID })
+        }.max { $0.secondsAfterStart < $1.secondsAfterStart }
+        guard let latest, latest.raised else { return nil }
+        return baseTime + Double(latest.secondsAfterStart)
+    }
+
     static func flags(elapsed: Double, durationMinutes: Int = 20, profileID: String = "standard-start", classFlagID: String = "class-4", prepFlagID: String = "P") -> [Flag] {
         raisedFlags(events: events(durationMinutes: durationMinutes, profileID: profileID, classFlagID: classFlagID, prepFlagID: prepFlagID), elapsed: elapsed)
     }

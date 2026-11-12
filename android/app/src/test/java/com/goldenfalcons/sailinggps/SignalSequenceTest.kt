@@ -19,6 +19,14 @@ class SignalSequenceTest {
     }
 
     @Test
+    fun orangeAnchorRequiresOrangeFlagToStillBeRaised() {
+        val timeline = SignalSequence.events(20, 0)
+        val orangeLower = timeline.first { it.flagMarks.any { mark -> mark.id == "橙" } && !it.raised }!!
+        assertEquals(1_000L, SignalSequence.raisedFlagTimeMs(timeline, "橙", (orangeLower.secondsAfterStart - 1) * 1000L, 1_000L))
+        assertEquals(null, SignalSequence.raisedFlagTimeMs(timeline, "橙", orangeLower.secondsAfterStart * 1000L, 1_000L))
+    }
+
+    @Test
     fun raceSignalControlsStayDisabledUntilFirstActionBegins() {
         assertEquals(false, SignalMastLayout.canOperateRaceSignals(false, false, false))
         assertEquals(false, SignalMastLayout.canOperateRaceSignals(true, true, false))

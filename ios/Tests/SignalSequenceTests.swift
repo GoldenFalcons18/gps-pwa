@@ -13,6 +13,13 @@ final class SignalSequenceTests: XCTestCase {
         XCTAssertEqual(SignalSequence.mastPoleIndex(flagID: "AP", otherFlagOrdinal: 3), 4)
     }
 
+    func testOrangeAnchorRequiresOrangeFlagToStillBeRaised() {
+        let timeline = SignalSequence.events(durationMinutes: 20, profileID: "standard-start")
+        let orangeLower = timeline.first { $0.flags.contains(where: { $0.id == "orange" }) && !$0.raised }!
+        XCTAssertEqual(SignalSequence.raisedFlagTime(events: timeline, flagID: "orange", elapsed: Double(orangeLower.secondsAfterStart - 1), baseTime: 1_000), 1_000)
+        XCTAssertNil(SignalSequence.raisedFlagTime(events: timeline, flagID: "orange", elapsed: Double(orangeLower.secondsAfterStart), baseTime: 1_000))
+    }
+
     func testRecallAndAbandonControlsWaitForSequenceStart() {
         XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: false, firstActionPending: false, restartPending: false))
         XCTAssertFalse(SignalSequence.canOperateRaceSignals(hasStarted: true, firstActionPending: true, restartPending: false))
