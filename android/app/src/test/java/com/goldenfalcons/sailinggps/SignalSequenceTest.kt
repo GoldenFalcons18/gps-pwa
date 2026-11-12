@@ -147,11 +147,23 @@ class SignalSequenceTest {
     @Test
     fun apRestartWaitsForOrangeFlagIntervalAndNeverStartsBeforeOneMinute() {
         assertEquals(1_200_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 900_000L, 5, true))
-        assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 700_000L, 5, true))
-        assertEquals(1_300_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, true))
-        assertEquals(1_060_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, false))
-        assertEquals(1_240_000L, SignalTiming.postponementApLowerAt(1_000_000L, null, 5, true))
-        assertEquals(1_000_000L, SignalTiming.postponementApLowerAt(1_000_000L, 700_000L, 5, true))
+        assertEquals(1_080_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, 700_000L, 5, true))
+        assertEquals(1_320_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, true))
+        assertEquals(1_080_000L, SignalTiming.postponementRestartWarningAt(1_000_000L, null, 5, false))
+        assertEquals(1_260_000L, SignalTiming.postponementApLowerAt(1_000_000L, null, 5, true))
+        assertEquals(1_020_000L, SignalTiming.postponementApLowerAt(1_000_000L, 700_000L, 5, true))
+        assertEquals(0L, Math.floorMod(SignalTiming.postponementApLowerAt(1_000_000L, 900_000L, 5, true), 60_000L))
+    }
+
+    @Test
+    fun manualOrangeRaiseIsRecordedWithItsActualSequenceOffset() {
+        val events = SignalSequence.eventsStartingAtFirstClassWarning(SignalSequence.events(14, 0))!!
+        val timeline = SignalSequence.recordingManualOrangeRaise(events, 754_000L, 960_000L)
+        val record = timeline.first { it.id == SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
+        assertEquals(-206, record.secondsAfterStart)
+        assertEquals(754_000L, 960_000L + record.secondsAfterStart * 1000L)
+        assertEquals("橙", record.flag)
+        assertEquals(true, record.raised)
     }
 
     @Test
