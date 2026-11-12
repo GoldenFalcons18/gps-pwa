@@ -220,7 +220,7 @@ struct SignalSettingsView: View {
                     } label: {
                         HStack {
                             Text(timeSyncMessage.isEmpty
-                                 ? (clockOffset == 0 ? "未同期" : "同期済み（補正 \\(String(format: "%+.3f", clockOffset)) 秒）")
+                                 ? (clockOffset == 0 ? "未同期" : String(format: "同期済み（補正 %+.3f 秒）", clockOffset))
                                  : timeSyncMessage)
                             Spacer()
                             if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
