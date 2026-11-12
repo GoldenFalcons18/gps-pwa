@@ -157,7 +157,7 @@ class SignalSequenceTest {
 
     @Test
     fun manualOrangeRaiseIsRecordedWithItsActualSequenceOffset() {
-        val events = SignalSequence.eventsStartingAtFirstClassWarning(SignalSequence.events(14, 0))!!
+        val events = SignalSequence.eventsStartingAtFirstClassWarning(SignalSequence.events(14, 0, className = "420"))!!
         val timeline = SignalSequence.recordingManualOrangeRaise(events, 754_000L, 960_000L)
         val record = timeline.first { it.id == SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
         assertEquals(-206, record.secondsAfterStart)
