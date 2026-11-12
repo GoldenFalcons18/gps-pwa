@@ -54,6 +54,38 @@ jobs:
           PY
       - name: Run iPhone logic tests
         run: swift test --package-path ios
+      - name: Prepare standalone class logo assets
+        run: |
+          python3 - <<'PY'
+          import base64, json, pathlib, re
+          shared = pathlib.Path("ios/Shared")
+          output = shared / "ClassLogos"
+          output.mkdir(parents=True, exist_ok=True)
+          count = 0
+          for source in sorted(shared.glob("signal-class-logos*.json")):
+              raw = source.read_text(encoding="utf-8-sig")
+              start = raw.find("{")
+              if start < 0:
+                  raise SystemExit(f"No JSON object in {source}")
+              catalog = json.loads(raw[start:])
+              for name, encoded in catalog.items():
+                  key = "".join(c for c in name.lower() if c.isalnum())
+                  if not key:
+                      continue
+                  try:
+                      compact = "".join(encoded.split())
+                      image = base64.b64decode(compact + "=" * (-len(compact) % 4), validate=True)
+                  except Exception:
+                      continue
+                  if image.startswith(bytes([137, 80, 78, 71, 13, 10, 26, 10])):
+                      (output / f"class-logo-{key}.png").write_bytes(image)
+                      count += 1
+          required = ["420", "470", "29er"]
+          missing = [name for name in required if not (output / f"class-logo-{name}.png").is_file()]
+          if missing:
+              raise SystemExit("Missing required class logo assets: " + ", ".join(missing))
+          print(f"Prepared {count} standalone class logo PNGs")
+          PY
       - name: Generate Xcode project
         run: |
           brew install xcodegen
@@ -66,7 +98,35 @@ jobs:
           set -euo pipefail
           mkdir -p testflight-logs
           xcodebuild -project ios/SailingGPS.xcodeproj -scheme SailingGPS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" SAILING_CODE_SIGN_STYLE=Manual SAILING_CODE_SIGN_IDENTITY="$DISTRIBUTION_IDENTITY" SAILING_PROFILE_UUID="$PROFILE_UUID" SAILING_WATCH_PROFILE_UUID="$WATCH_PROFILE_UUID" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" archive 2>&1 | tee testflight-logs/archive.log
-          python3 -c 'import os,pathlib,plistlib; p=next((pathlib.Path(os.environ["RUNNER_TEMP"])/"SailingGPS.xcarchive/Products/Applications").glob("*.app/Info.plist")); apps=[p]+list(p.parent.glob("Watch/*.app/Info.plist")); assert len(apps)==2, "Watch app missing"; values=[plistlib.loads(a.read_bytes()) for a in apps]; assert all(v.get("ITSAppUsesNonExemptEncryption") is False for v in values); assert all(v["CFBundleVersion"]==os.environ["BUILD_NUMBER"] for v in values); assert len({v["CFBundleShortVersionString"] for v in values})==1; print("Encryption export declaration verified: false (iPhone and Watch)"); print("Watch bundle verified:",values[1]["CFBundleShortVersionString"],values[1]["CFBundleVersion"])'
+          python3 - <<'PY'
+          import os, pathlib, plistlib
+          app_root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "SailingGPS.xcarchive/Products/Applications"
+          phone = next(app_root.glob("*.app/Info.plist"))
+          watch = list(phone.parent.glob("Watch/*.app/Info.plist"))
+          assert len(watch) == 1, f"Expected one Watch app; found {len(watch)}"
+          apps = [phone, watch[0]]
+          values = [plistlib.loads(path.read_bytes()) for path in apps]
+          for label, value in zip(("iPhone", "Watch"), values):
+              print(f"{label}: version={value.get('CFBundleShortVersionString')} build={value.get('CFBundleVersion')} encryption={value.get('ITSAppUsesNonExemptEncryption')}")
+          assert all(value.get("ITSAppUsesNonExemptEncryption") is False for value in values), "Encryption declaration missing or not false"
+          assert all(value.get("CFBundleVersion") == os.environ["BUILD_NUMBER"] for value in values), "iPhone and Watch build numbers must match BUILD_NUMBER"
+          assert len({value.get("CFBundleShortVersionString") for value in values}) == 1, "iPhone and Watch marketing versions must match"
+          print("Encryption export declaration and Watch bundle verified.")
+          PY
+          swift - "$RUNNER_TEMP/SailingGPS.xcarchive/Products/Applications/SailingGPS.app" <<'SWIFT'
+          import Foundation
+          import ImageIO
+          let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
+          for name in ["420", "470", "29er"] {
+              let url = root.appendingPathComponent("class-logo-" + name + ".png")
+              guard let data = try? Data(contentsOf: url),
+                    let source = CGImageSourceCreateWithData(data as CFData, nil),
+                    CGImageSourceCreateImageAtIndex(source, 0, nil) != nil else {
+                  fatalError("Missing or unreadable archived class logo: " + name)
+              }
+              print("Verified archived class logo PNG: " + name)
+          }
+          SWIFT
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/SailingGPS.xcarchive" -exportPath "$RUNNER_TEMP/testflight-export" -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" 2>&1 | tee testflight-logs/export.log
       - name: Upload to App Store Connect for TestFlight
         run: |

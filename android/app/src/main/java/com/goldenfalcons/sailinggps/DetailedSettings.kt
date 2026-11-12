@@ -17,12 +17,52 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         AlertDialog.Builder(activity).setTitle(title).setItems(items.map{it.first}.toTypedArray()){_,index->items[index].second()}.setNegativeButton("閉じる",null).show()
     }
     private fun bool(key:String,default:Boolean=true)=prefs.getBoolean(key,default)
-    private fun toggle(label:String,key:String,default:Boolean=true):Pair<String,()->Unit> {
-        return "$label：${if(bool(key,default)) "ON" else "OFF"}" to {
-            val value=!bool(key,default);prefs.edit().putBoolean(key,value).apply()
-            if(key=="zoneEnabled" && value && Build.VERSION.SDK_INT>=33) ActivityCompat.requestPermissions(activity,arrayOf(Manifest.permission.POST_NOTIFICATIONS),11)
-            refresh();if(key.startsWith("zone")) zones() else display()
+    private fun toggle(label:String,key:String,default:Boolean=true):Pair<String,()->Unit> =
+        "$label：${if(bool(key,default)) "ON" else "OFF"}" to { switchDialog(label,key,default) }
+
+    private fun switchDialog(label:String,key:String,default:Boolean) {
+        val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
+        val column=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.VERTICAL
+            setPadding(20,18,20,18)
+            setBackgroundColor(android.graphics.Color.rgb(22,22,22))
         }
+        column.addView(android.widget.TextView(activity).apply {
+            text=label
+            textSize=20f
+            setTextColor(android.graphics.Color.WHITE)
+            setTypeface(null,android.graphics.Typeface.BOLD)
+            setPadding(0,0,0,12)
+        })
+        val row=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.HORIZONTAL
+            gravity=android.view.Gravity.CENTER_VERTICAL
+            setPadding(0,8,0,8)
+        }
+        row.addView(android.widget.TextView(activity).apply {
+            text="無効                         有効"
+            textSize=15f
+            setTextColor(android.graphics.Color.LTGRAY)
+            layoutParams=android.widget.LinearLayout.LayoutParams(0,-2,1f)
+        })
+        val control=com.google.android.material.switchmaterial.SwitchMaterial(activity).apply {
+            isChecked=bool(key,default)
+            contentDescription=label
+            setOnCheckedChangeListener { _,value ->
+                prefs.edit().putBoolean(key,value).apply()
+                if(key=="zoneEnabled" && value && Build.VERSION.SDK_INT>=33)
+                    ActivityCompat.requestPermissions(activity,arrayOf(Manifest.permission.POST_NOTIFICATIONS),11)
+                refresh()
+            }
+        }
+        row.addView(control)
+        column.addView(row)
+        column.addView(android.widget.Button(activity).apply {
+            text="完了"
+            setOnClickListener { sheet.dismiss() }
+        })
+        sheet.setContentView(column)
+        sheet.show()
     }
     private fun choice(title:String,key:String,labels:List<String>,values:List<String>,default:String) {
         AlertDialog.Builder(activity).setTitle(title).setSingleChoiceItems(labels.toTypedArray(),values.indexOf(prefs.getString(key,default))){dialog,index->

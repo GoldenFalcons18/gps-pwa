@@ -126,6 +126,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var previousRecordedLocation: CLLocation?
     func elapsed(at date: Date) -> Double { elapsedBeforeStart + (recordingStartedAt.map { max(0, date.timeIntervalSince($0)) } ?? 0) }
     @Published var message = "記録を開始してください"
+    @Published var showAlwaysLocationSettingsAlert = false
     @Published var recordingRecoveryMessage: String?
     @Published var waypoints: [Waypoint] = []
     @Published var library = MapLibrary()
@@ -136,6 +137,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var waypointTimeout: Timer?
     private let manager = CLLocationManager()
     private var pendingStart = false
+    private var alwaysAuthorizationRequestAttempted = false
     private var handle: FileHandle?
     private let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     private var activeSessionFile: URL { directory.appendingPathComponent("active-track.txt") }
@@ -189,8 +191,17 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.requestWhenInUseAuthorization()
             return
         }
-        guard [.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) else {
-            message = "設定で位置情報の使用を許可してください"; return
+        if manager.authorizationStatus == .authorizedWhenInUse {
+            pendingStart = true
+            alwaysAuthorizationRequestAttempted = false
+            manager.requestAlwaysAuthorization()
+            message = "画面OFF中も記録するため、位置情報を「常に許可」にしてください"
+            return
+        }
+        guard manager.authorizationStatus == .authorizedAlways else {
+            message = "設定で位置情報を「常に許可」にしてください"
+            showAlwaysLocationSettingsAlert = true
+            return
         }
         do {
             try FileManager.default.createDirectory(at: tracksDirectory, withIntermediateDirectories: true)
@@ -277,7 +288,31 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
                 message = "位置情報の使用を許可してください"
             }
         }
-        if pendingStart && manager.authorizationStatus != .notDetermined { pendingStart = false; start() }
+        if pendingStart {
+            switch manager.authorizationStatus {
+            case .authorizedAlways:
+                pendingStart = false
+                alwaysAuthorizationRequestAttempted = false
+                start()
+            case .authorizedWhenInUse:
+                if !alwaysAuthorizationRequestAttempted {
+                    alwaysAuthorizationRequestAttempted = true
+                    manager.requestAlwaysAuthorization()
+                } else {
+                    pendingStart = false
+                    message = "画面OFF中の記録には「常に許可」が必要です。位置情報設定を変更してください"
+                    showAlwaysLocationSettingsAlert = true
+                }
+            case .denied, .restricted:
+                pendingStart = false
+                message = "画面OFF中の記録には位置情報の「常に許可」が必要です"
+                showAlwaysLocationSettingsAlert = true
+            case .notDetermined:
+                break
+            @unknown default:
+                break
+            }
+        }
         if recording && ![.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { stop(); message = "位置情報の許可が解除されました" }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -873,13 +908,13 @@ struct ContentView: View {
             Spacer(minLength: 0)
             Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
                  .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
-                .onTapGesture { mode = (mode + 1) % 5 }
-            Button { gps.recording ? gps.stop() : gps.start() } label: {
-                HStack(spacing: 3) {
-                    Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
-                    Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
-                }
+            HStack(spacing: 4) {
+                Circle().fill(gps.recording ? Color.green : Color.gray).frame(width: 8, height: 8)
+                Text(gps.recording ? "記録中" : "停止中")
+                    .font(.caption2).foregroundStyle(gps.recording ? Color.green : Color.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(gps.recording ? "GPS記録中" : "GPS記録停止中")
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
@@ -1117,6 +1152,15 @@ struct ContentView: View {
         .onChange(of: gps.waypoints.count) { _, _ in
             if let selected, !gps.waypoints.contains(where: { $0.id == selected }) { self.selected = nil }
         }
+        .alert("位置情報を常に許可", isPresented: $gps.showAlwaysLocationSettingsAlert) {
+            Button("設定を開く") {
+                guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                UIApplication.shared.open(url)
+            }
+            Button("あとで", role: .cancel) {}
+        } message: {
+            Text("画面を消した後も航跡記録を続けるには、位置情報の許可を「常に」に変更してください。")
+        }
     }
 }
 struct ShareView: UIViewControllerRepresentable {
@@ -1125,3 +1169,4 @@ struct ShareView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 @main struct SailingGPSApp: App { var body: some Scene { WindowGroup { ContentView() } } }
+

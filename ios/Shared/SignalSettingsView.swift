@@ -2,6 +2,7 @@ import SwiftUI
 
 #if os(iOS)
 import AudioToolbox
+import AVFoundation
 
 private struct SignalStartAction: Identifiable, Codable, Hashable {
     var id = UUID()
@@ -11,6 +12,30 @@ private struct SignalStartAction: Identifiable, Codable, Hashable {
     var raised = true
     var enabled = true
     var horn = "short"
+
+    private enum CodingKeys: String, CodingKey { case id, flagID, minute, second, raised, enabled, horn }
+
+    init(id: UUID = UUID(), flagID: String = "class-4", minute: Int = 5, second: Int = 0,
+         raised: Bool = true, enabled: Bool = true, horn: String = "short") {
+        self.id = id
+        self.flagID = flagID
+        self.minute = minute
+        self.second = second
+        self.raised = raised
+        self.enabled = enabled
+        self.horn = horn
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        flagID = try values.decodeIfPresent(String.self, forKey: .flagID) ?? "class-4"
+        minute = try values.decodeIfPresent(Int.self, forKey: .minute) ?? 5
+        second = try values.decodeIfPresent(Int.self, forKey: .second) ?? 0
+        raised = try values.decodeIfPresent(Bool.self, forKey: .raised) ?? true
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        horn = try values.decodeIfPresent(String.self, forKey: .horn) ?? "short"
+    }
 
     var title: String {
         "\(SignalSequence.flag(flagID).name)を\(raised ? "掲揚" : "降下")"
@@ -31,22 +56,72 @@ private struct SignalFleetPreset: Identifiable, Codable, Hashable {
     var finishWindowMinutes = 20
     var rule42Override = false
     var orangeEnabled = true
-    var orangeDisplayedMinutes = 4
+    var orangeDisplayedMinutes = 5
     var orangeRemovedMinutes = 4
     var starts: [SignalStartAction] = [
         SignalStartAction(flagID: "class-4", minute: 5, raised: true, horn: "short")
     ]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, sequence, startRule, classFlagID, prepFlagID, raceDelayEnabled, raceDelayMinutes
+        case timeLimitEnabled, raceLimitMinutes, finishWindowMinutes, rule42Override
+        case orangeEnabled, orangeDisplayedMinutes, orangeRemovedMinutes, starts
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try values.decodeIfPresent(String.self, forKey: .name) ?? "OP Au Bp"
+        sequence = try values.decodeIfPresent(String.self, forKey: .sequence) ?? "standard-start"
+        startRule = try values.decodeIfPresent(String.self, forKey: .startRule) ?? "P"
+        classFlagID = try values.decodeIfPresent(String.self, forKey: .classFlagID) ?? "class-4"
+        prepFlagID = try values.decodeIfPresent(String.self, forKey: .prepFlagID) ?? "P"
+        raceDelayEnabled = try values.decodeIfPresent(Bool.self, forKey: .raceDelayEnabled) ?? false
+        raceDelayMinutes = try values.decodeIfPresent(Int.self, forKey: .raceDelayMinutes) ?? 0
+        timeLimitEnabled = try values.decodeIfPresent(Bool.self, forKey: .timeLimitEnabled) ?? false
+        raceLimitMinutes = try values.decodeIfPresent(Int.self, forKey: .raceLimitMinutes) ?? 50
+        finishWindowMinutes = try values.decodeIfPresent(Int.self, forKey: .finishWindowMinutes) ?? 20
+        rule42Override = try values.decodeIfPresent(Bool.self, forKey: .rule42Override) ?? false
+        orangeEnabled = try values.decodeIfPresent(Bool.self, forKey: .orangeEnabled) ?? true
+        orangeDisplayedMinutes = try values.decodeIfPresent(Int.self, forKey: .orangeDisplayedMinutes) ?? 5
+        orangeRemovedMinutes = try values.decodeIfPresent(Int.self, forKey: .orangeRemovedMinutes) ?? 4
+        starts = try values.decodeIfPresent([SignalStartAction].self, forKey: .starts)
+            ?? [SignalStartAction(flagID: classFlagID, minute: 5, raised: true, horn: "short")]
+    }
 
     static let starter = SignalFleetPreset()
     static func load(from value: String) -> [SignalFleetPreset] {
         guard let data = value.data(using: .utf8),
               let saved = try? JSONDecoder().decode([SignalFleetPreset].self, from: data),
               !saved.isEmpty else { return [.starter] }
-        return saved
+        return saved.map { preset in
+            var migrated = preset
+            migrated.sequence = "standard-start"
+            migrated.prepFlagID = SignalSequence.preparationFlagID(forStartRule: migrated.startRule)
+            return migrated
+        }
     }
     static func encode(_ value: [SignalFleetPreset]) -> String {
         guard let data = try? JSONEncoder().encode(value) else { return "[]" }
         return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
+    func activate() {
+        let defaults = UserDefaults.standard
+        defaults.set(name, forKey: "signalFleetStartName")
+        defaults.set("standard-start", forKey: "signalFlagProfile")
+        defaults.set(classFlagID, forKey: "signalCustomClassFlag")
+        defaults.set(SignalSequence.preparationFlagID(forStartRule: startRule), forKey: "signalCustomPrepFlag")
+        defaults.set(orangeEnabled, forKey: "signalOrangeEnabled")
+        defaults.set(orangeDisplayedMinutes, forKey: "signalOrangeDisplayedMinutes")
+        defaults.set(orangeRemovedMinutes, forKey: "signalOrangeRemovedAfterMinutes")
+        defaults.set(raceDelayMinutes > 0, forKey: "signalRaceDelayEnabled")
+        defaults.set(raceDelayMinutes, forKey: "signalRaceDelayMinutes")
+        if let data = try? JSONEncoder().encode(starts), let value = String(data: data, encoding: .utf8) {
+            defaults.set(value, forKey: "signalActiveStartActionsJSON")
+        }
     }
 }
 
@@ -62,7 +137,6 @@ private struct SignalCustomFlag: Identifiable, Codable, Hashable {
     var internationalFlag = "Alpha"
 }
 
-private struct SignalSequenceChoice: Identifiable { let id: String; let name: String }
 private struct SignalColorChoice: Identifiable {
     let name: String
     let color: Color
@@ -88,7 +162,9 @@ private struct SignalFlagSwatch: View {
     }
     var body: some View {
         Group {
-            if flagID.hasPrefix("class-") {
+            if flag.style == "internationalFlag" {
+                SignalInternationalFlagArtwork(name: flag.artworkName ?? flag.name)
+            } else if flagID.hasPrefix("class-") {
                 SignalClassLogoMark(name: String(flagID.dropFirst(6)))
             } else {
                 ZStack {
@@ -110,10 +186,13 @@ struct SignalSettingsView: View {
     @AppStorage("signalVoiceName") private var voiceName = "Kyoko (Enhanced)"
     @AppStorage("signalRadioFriendly") private var radioFriendly = true
     @AppStorage("signalClockOffset") private var clockOffset = 0.0
+    @AppStorage("signalClockAlignmentMode") private var clockAlignmentMode = "manual"
     @AppStorage("signalExternalDisplayEnabled") private var externalDisplay = true
     @AppStorage("signalRemoteFlagsEnabled") private var remoteFlags = false
     @AppStorage("signalBuoyZoneLinked") private var buoyZoneLinked = false
     @AppStorage("signalLogEnabled") private var logEnabled = true
+    @State private var timeSyncMessage = ""
+    @State private var isSyncingTime = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -135,7 +214,34 @@ struct SignalSettingsView: View {
                         Text("端末の標準音声").tag("端末の標準音声")
                     }
                     NavigationLink("Notifications") { SignalNotificationsView() }
-                    LabeledContent("Time Sync", value: String(format: "%.0f秒", clockOffset))
+                    Picker("時間合わせ", selection: $clockAlignmentMode) {
+                        Text("端末時刻で0秒合わせ").tag("manual")
+                        Text("ntp.nict.jpと同期").tag("nict")
+                    }
+                    .onChange(of: clockAlignmentMode) { _, mode in
+                        if mode == "manual" {
+                            clockOffset = 0
+                            timeSyncMessage = "端末の実時刻を基準にします"
+                        } else {
+                            Task { await syncTime() }
+                        }
+                    }
+                    if clockAlignmentMode == "nict" {
+                        Button {
+                            Task { await syncTime() }
+                        } label: {
+                            HStack {
+                                Text(timeSyncMessage.isEmpty
+                                     ? (clockOffset == 0 ? "未同期" : "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）")
+                                     : timeSyncMessage)
+                                Spacer()
+                                if isSyncingTime { ProgressView() } else { Text("今すぐ同期").foregroundStyle(.blue) }
+                            }
+                        }.disabled(isSyncingTime)
+                    } else {
+                        Text("各信号は端末の実時刻のn分00秒を基準に動作します。開始時は設定した最短時間を確保して、次の分00秒に合わせます。")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     NavigationLink("Horn") { SignalHornSettingsView() }
                     Toggle("Remote Flags", isOn: $remoteFlags)
                     Toggle("BuoyZoneと連携", isOn: $buoyZoneLinked)
@@ -159,6 +265,21 @@ struct SignalSettingsView: View {
         }
         .preferredColorScheme(.dark)
     }
+
+    @MainActor
+    private func syncTime() async {
+        isSyncingTime = true
+        defer { isSyncingTime = false }
+        do {
+            let serverTime = try await NICTClock.query()
+            clockOffset = serverTime.timeIntervalSinceNow
+            timeSyncMessage = "同期済み（差 \(String(format: "%+.3f", clockOffset)) 秒）"
+        } catch {
+                    timeSyncMessage = clockOffset == 0
+                        ? "同期に失敗しました。端末時刻を使用中"
+                        : "再同期失敗。前回の補正値を保持（\(String(format: "%+.3f", clockOffset)) 秒）"
+        }
+    }
 }
 
 private struct SignalLogSettingsView: View {
@@ -178,25 +299,45 @@ private struct SignalLogSettingsView: View {
 
 private struct SignalFleetSequencesView: View {
     @AppStorage("signalFleetPresetsJSON") private var savedJSON = ""
+    @AppStorage("signalFleetStartName") private var activeFleetName = "OP Au Bp"
     @State private var presets: [SignalFleetPreset] = [.starter]
     @State private var loaded = false
 
     var body: some View {
         List {
             ForEach($presets) { $preset in
-                NavigationLink {
-                    SignalFleetPresetEditor(preset: $preset)
-                } label: {
-                    HStack {
-                        Image(systemName: "circle")
-                            .foregroundStyle(.orange)
-                        VStack(alignment: .leading) {
-                            Text(preset.name)
-                            Text("\(preset.starts.count) starts · \(sequenceName(preset.sequence))")
-                                .font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Button {
+                        preset.activate()
+                        activeFleetName = preset.name
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: activeFleetName == preset.name ? "checkmark.circle.fill" : "circle")
+                                .font(.title2).foregroundStyle(activeFleetName == preset.name ? .green : .secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(preset.name).font(.body.weight(activeFleetName == preset.name ? .semibold : .regular))
+                                Text(activeFleetName == preset.name ? "選択中 · 信号 \(preset.starts.count)件" : "タップしてこのフリートを選択")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
                         }
+                        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(preset.name)をフリートとして選択")
+                    .accessibilityAddTraits(activeFleetName == preset.name ? .isSelected : [])
+                    NavigationLink {
+                        SignalFleetPresetEditor(preset: $preset)
+                    } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.title3)
+                            .frame(width: 52, height: 58)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("\(preset.name)の設定を編集")
                 }
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 12))
             }
             .onDelete { presets.remove(atOffsets: $0); save() }
             Button {
@@ -220,9 +361,6 @@ private struct SignalFleetSequencesView: View {
     }
 
     private func save() { savedJSON = SignalFleetPreset.encode(presets) }
-    private func sequenceName(_ id: String) -> String {
-        SignalSequence.profiles.first(where: { $0.id == id })?.name ?? "5分シーケンス"
-    }
 }
 
 private struct SignalFleetPresetEditor: View {
@@ -231,16 +369,15 @@ private struct SignalFleetPresetEditor: View {
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
     @AppStorage("signalCustomPrepFlag") private var activePrepFlag = "P"
     @AppStorage("signalOrangeEnabled") private var activeOrangeEnabled = true
+    @AppStorage("signalOrangeDisplayedMinutes") private var activeOrangeDisplayed = 5
     @AppStorage("signalOrangeRemovedAfterMinutes") private var activeOrangeRemoval = 4
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
+    @AppStorage("signalRaceDelayEnabled") private var activeRaceDelayEnabled = false
+    @AppStorage("signalRaceDelayMinutes") private var activeRaceDelayMinutes = 0
     @Environment(\.dismiss) private var dismiss
     @State private var showingAddFlag = false
+    @State private var editingStartFlagID: UUID?
 
-    private let sequences: [SignalSequenceChoice] = [
-        SignalSequenceChoice(id: "standard-start", name: "Rule 26 · 5分"),
-        SignalSequenceChoice(id: "video-20", name: "動画A · 20分"),
-        SignalSequenceChoice(id: "video-13", name: "動画B · 13分"),
-        SignalSequenceChoice(id: "custom-five", name: "カスタム · 5分")
-    ]
     private let rules = ["P", "I", "U", "Z", "Black", "Default"]
 
     var body: some View {
@@ -249,14 +386,21 @@ private struct SignalFleetPresetEditor: View {
                 TextField("Name", text: $preset.name)
             }
             Section("Defaults") {
-                Picker("Start Sequence", selection: $preset.sequence) {
-                    ForEach(sequences) { Text($0.name).tag($0.id) }
-                }
-                Picker("Start Rule", selection: $preset.startRule) {
+                LabeledContent("Start Sequence", value: "Rule 26 · 5 min")
+                Picker("スタートルール／準備信号", selection: $preset.startRule) {
                     ForEach(rules, id: \.self) { Text($0).tag($0) }
                 }
                 NavigationLink {
-                    SignalClassPicker(selection: $preset.classFlagID)
+                    SignalClassPicker(selection: Binding(
+                        get: { preset.classFlagID },
+                        set: { value in
+                            let previous = preset.classFlagID
+                            preset.classFlagID = value
+                            if let index = preset.starts.firstIndex(where: { $0.raised && $0.flagID == previous }) {
+                                preset.starts[index].flagID = value
+                            }
+                        }
+                    ))
                 } label: {
                     HStack {
                         Text("Classes")
@@ -264,11 +408,7 @@ private struct SignalFleetPresetEditor: View {
                         Text(SignalSequence.flag(preset.classFlagID).name).foregroundStyle(.secondary)
                     }
                 }
-                Picker("準備信号", selection: $preset.prepFlagID) {
-                    ForEach(["P", "I", "U", "Z", "black"], id: \.self) { Text($0 == "black" ? "黒旗" : "\($0)旗").tag($0) }
-                }
-                Stepper("次のレースまで：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
-                Toggle("Custom Race Delay", isOn: $preset.raceDelayEnabled)
+                Stepper("Time between races：\(preset.raceDelayMinutes)分", value: $preset.raceDelayMinutes, in: 0...60)
             }
             Section("Time Limits") {
                 Toggle("Enable", isOn: $preset.timeLimitEnabled)
@@ -278,13 +418,13 @@ private struct SignalFleetPresetEditor: View {
                     .disabled(!preset.timeLimitEnabled)
             }
             Section("Rule 42 Override") { Toggle("Enable", isOn: $preset.rule42Override) }
-            Section("Orange Flag") {
-                Toggle("Enable", isOn: $preset.orangeEnabled)
-                Stepper("表示時間：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 1...30)
+            Section("橙旗") {
+                Toggle("シーケンスに橙旗を含める", isOn: $preset.orangeEnabled)
+                Stepper("橙旗掲揚から予告信号まで：\(preset.orangeDisplayedMinutes)分", value: $preset.orangeDisplayedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Stepper("スタート後に降下：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
+                Stepper("スタート後、橙旗を降下するまで：\(preset.orangeRemovedMinutes)分", value: $preset.orangeRemovedMinutes, in: 0...30)
                     .disabled(!preset.orangeEnabled)
-                Text("シーケンス開始前は降下状態です。開始時に掲揚し、設定した時間後に降下します。")
+                Text("シーケンス前は橙旗を降下します。手動で掲揚した場合はその時刻を記録し、指定間隔が経過した時点でクラス旗の手順に進みます。降下も手動で操作できます。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Starts") {
@@ -293,12 +433,22 @@ private struct SignalFleetPresetEditor: View {
                         Button(role: .destructive) {
                             preset.starts.removeAll { $0.id == start.id }
                         } label: { Image(systemName: "minus.circle.fill") }
-                        SignalFlagSwatch(flagID: start.flagID)
+                        .frame(width: 40, height: 48)
+                        .contentShape(Rectangle())
+                        Button { editingStartFlagID = start.id } label: {
+                            SignalFlagSwatch(flagID: start.flagID)
+                                .frame(width: 58, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(start.title)のクラス旗を選択")
                         VStack(alignment: .leading, spacing: 2) {
                             Text(start.title)
-                            TextField("時刻（分）", value: $start.minute, format: .number)
-                                .keyboardType(.numberPad)
-                                .font(.caption)
+                            HStack(spacing: 4) {
+                                TextField("分", value: $start.minute, format: .number).keyboardType(.numberPad).frame(width: 36)
+                                Text(":")
+                                TextField("秒", value: $start.second, format: .number).keyboardType(.numberPad).frame(width: 36)
+                            }.font(.caption).monospacedDigit()
                         }
                         Spacer()
                         Toggle("有効", isOn: $start.enabled).labelsHidden()
@@ -313,21 +463,19 @@ private struct SignalFleetPresetEditor: View {
                     }
                 }
                 Button { showingAddFlag = true } label: {
-                    Label("Add Start…", systemImage: "plus.circle.fill")
+                    Label("スタートを追加", systemImage: "plus.circle.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                 }
             }
+        }
+        .onChange(of: preset.startRule) { _, value in
+            preset.prepFlagID = SignalSequence.preparationFlagID(forStartRule: value)
         }
         .navigationTitle("Fleet Start")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    activeSequence = preset.sequence
-                    activeClassFlag = preset.classFlagID
-                    activePrepFlag = ["P", "I", "U", "Z"].contains(preset.startRule)
-                        ? preset.startRule
-                        : (preset.startRule == "Black" ? "black" : preset.prepFlagID)
-                    activeOrangeEnabled = preset.orangeEnabled
-                    activeOrangeRemoval = preset.orangeRemovedMinutes
+                    preset.activate()
                     dismiss()
                 }.tint(.orange)
             }
@@ -344,18 +492,34 @@ private struct SignalFleetPresetEditor: View {
                 .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完了") { showingAddFlag = false } } }
             }
         }
+        .sheet(isPresented: Binding(
+            get: { editingStartFlagID != nil },
+            set: { if !$0 { editingStartFlagID = nil } }
+        )) {
+            NavigationStack {
+                SignalClassPicker(selection: Binding(
+                    get: { preset.starts.first(where: { $0.id == editingStartFlagID })?.flagID ?? preset.classFlagID },
+                    set: { value in
+                        guard let index = preset.starts.firstIndex(where: { $0.id == editingStartFlagID }) else { return }
+                        preset.starts[index].flagID = value
+                        editingStartFlagID = nil
+                    }
+                ))
+                .navigationTitle("このスタートのクラス旗")
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("完了") { editingStartFlagID = nil } } }
+            }
+        }
         .preferredColorScheme(.dark)
     }
+
 }
 
-private struct SignalClassPicker: View {
+struct SignalClassPicker: View {
     @Binding var selection: String
-    private let categories = ["Multihull", "Keelboat", "Board", "Centerboard"]
-    private let classFlags: [SignalFlagChoice] =
-        ["A-Cat","Dart 18","Formula 18","Hobie","Nacra","Nacra 15","Nacra 17","Paper Tiger","Tornado","Weta","Weta+"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Multihull") } +
-        ["10mR","12mR","15mR","2.4mR","5.5mR","6mR","7mR","8mR","Albin Vega","Dragon","Etchells","Farr 1020","Flying Fifteen","H-Boat","IF-Boat","IOD","J/22","J/24","J/70","J/80","J/105","Melges 24","Monarch","Optimist","RS Aero","Snipe","Starling","Sunfish","Tasar","Topper","WASZP","Wayfarer","Zoom 8"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Keelboat") } +
-        ["Formula Kite","IKA","iQFoil","RS:X","T293","Windsurfer","Wing Foil"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Board") } +
-        ["29er","3.7","420","470","49er","49er FX","Albacore","B14","Cadet","Cherub","Cyclone 13","Europe","Finn","Firebug","Flying 11","Flying Ant","GP14","Hornet","ILCA","International 14","J14","Jollyboat","Laser","Laser Pico","Lightning","Luch","Moth","National 18","OK","Open Skiff","Pirate","RS Feva","Solo","Spiral","Splash","Squib","TP 52","Trias","Viper","X-79","X-99","Yngling"].map { SignalFlagChoice(id:"class-\($0)", name:$0, category:"Centerboard") }
+    private let categories = ["クラスロゴ"]
+    private let classFlags: [SignalFlagChoice] = SignalClassLogoAssets.availableClassNames.map {
+        SignalFlagChoice(id: "class-\($0)", name: $0, category: "クラスロゴ")
+    }
 
     var body: some View {
         List {
@@ -423,6 +587,9 @@ private struct SignalClassFlagSettingsView: View {
 private struct SignalCustomFlagEditor: View {
     @Binding var flag: SignalCustomFlag
     @AppStorage("signalCustomClassFlag") private var activeClassFlag = "class-4"
+    @AppStorage("signalActiveStartActionsJSON") private var activeStartActionsJSON = "[]"
+    @AppStorage("signalClassLogoTextColor") private var activeLogoColor = "#111111"
+    @AppStorage("signalClassLogoBackgroundColor") private var activeLogoBackground = "#FFFFFF"
     @Environment(\.dismiss) private var dismiss
     private let layouts = ["solid", "horizontal", "vertical", "diagonal", "reverseDiagonal"]
     private let colors: [SignalColorChoice] = [
@@ -472,6 +639,7 @@ private struct SignalCustomFlagEditor: View {
             } else {
                 Section("Logo") {
                     NavigationLink("クラスのロゴを選択") { SignalClassPicker(selection: $flag.logoID) }
+                    colorPicker("ロゴ色", selection: $flag.textColor)
                 }
             }
             Section("Preview") {
@@ -482,7 +650,27 @@ private struct SignalCustomFlagEditor: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("この旗を使用") {
-                    if flag.style == "logo" { activeClassFlag = flag.logoID }
+                    switch flag.style {
+                    case "logo":
+                        activeClassFlag = flag.logoID
+                        activeLogoColor = flag.textColor
+                        activeLogoBackground = flag.flagColor
+                    case "international": activeClassFlag = "intl:\(flag.internationalFlag)"
+                    default: activeClassFlag = "text:\(flag.text.isEmpty ? flag.name : flag.text)"
+                    }
+                    // The live sequence uses its saved action rows in
+                    // preference to the standalone class flag setting. Keep
+                    // those rows in sync when this editor activates a logo.
+                    if activeClassFlag.hasPrefix("class-"),
+                       let data = activeStartActionsJSON.data(using: .utf8),
+                       var actions = try? JSONDecoder().decode([SignalStartAction].self, from: data) {
+                        for index in actions.indices where actions[index].flagID.hasPrefix("class-") {
+                            actions[index].flagID = activeClassFlag
+                        }
+                        if let updated = try? JSONEncoder().encode(actions) {
+                            activeStartActionsJSON = String(data: updated, encoding: .utf8) ?? "[]"
+                        }
+                    }
                     dismiss()
                 }.tint(.orange)
             }
@@ -526,222 +714,12 @@ private struct SignalFlagPreview: View {
                             .foregroundStyle(Color(hex: flag.textColor))
                     } else {
                         SignalClassLogoMark(name: flag.text.isEmpty ? flag.logoID.replacingOccurrences(of: "class-", with: "") : flag.text,
-                                            color: Color(hex: flag.textColor))
+                                            color: Color(hex: flag.textColor),
+                                            backgroundColor: Color(hex: flag.flagColor))
                     }
                 }
             }.frame(width: geo.size.width, height: geo.size.height)
         }.clipShape(RoundedRectangle(cornerRadius: 3))
-    }
-}
-
-struct SignalClassLogoMark: View {
-    let name: String
-    var color: Color = .black
-
-    private var mark: String {
-        let value = name.replacingOccurrences(of: "class-", with: "")
-        let marks = [
-            "A-Cat":"A", "Optimist":"O", "Starling":"★", "ILCA":"ILCA",
-            "49er FX":"49er FX", "49er":"49er", "29er":"29er", "420":"420", "470":"470",
-            "Laser":"Laser", "Laser Pico":"Pico", "Laser 4.7":"4.7",
-            "J/22":"J22", "J/24":"J24", "J/70":"J70", "J/80":"J80", "J/105":"J105",
-            "Flying Fifteen":"15", "Flying 11":"11", "International 14":"14",
-            "Formula 18":"F18", "Nacra 17":"N17", "Nacra 15":"N15",
-            "Cyclone 13":"C13", "Melges 24":"M24", "WASZP":"WASZP", "Wing Foil":"Foil"
-        ]
-        if let mark = marks[value] { return mark }
-        let pieces = value.split(separator: " ")
-        if pieces.count > 1 {
-            let initials = pieces.compactMap(\.first).map(String.init).joined()
-            return initials.count >= 2 ? initials : String(value.prefix(8))
-        }
-        return value
-    }
-
-    var body: some View {
-        ZStack {
-            Text(mark)
-                .font(.system(size: 34, weight: .black, design: .rounded))
-                .italic()
-                .minimumScaleFactor(0.28)
-                .lineLimit(1)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(color)
-                .padding(.horizontal, 3)
-            if name == "A-Cat" {
-                VStack(spacing: 3) {
-                    Spacer()
-                    Rectangle().fill(color).frame(width: 35, height: 3)
-                    Rectangle().fill(color).frame(width: 28, height: 3)
-                }.padding(.bottom, 5)
-            } else if name == "Optimist" {
-                Circle().stroke(color, lineWidth: 3).padding(9)
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: 54)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 5))
-        .accessibilityLabel(name)
-    }
-}
-
-private struct SignalInternationalFlagArtwork: View {
-    let name: String
-
-    var body: some View {
-        Canvas { context, size in
-            let bounds = CGRect(origin: .zero, size: size)
-            let white = Color.white, black = Color.black, red = Color(red: 0.86, green: 0.02, blue: 0.08)
-            let blue = Color(red: 0.0, green: 0.12, blue: 0.91), yellow = Color.yellow
-            let colors: [Color]
-            let code = name.lowercased()
-            func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ color: Color) {
-                context.fill(Path(CGRect(x: x * size.width, y: y * size.height, width: w * size.width, height: h * size.height)), with: .color(color))
-            }
-            func polygon(_ points: [CGPoint], _ color: Color) {
-                var path = Path()
-                guard let first = points.first else { return }
-                path.move(to: CGPoint(x: first.x * size.width, y: first.y * size.height))
-                for point in points.dropFirst() { path.addLine(to: CGPoint(x: point.x * size.width, y: point.y * size.height)) }
-                path.closeSubpath()
-                context.fill(path, with: .color(color))
-            }
-            func stripes(_ list: [Color], vertical: Bool) {
-                for (index, color) in list.enumerated() {
-                    let n = CGFloat(list.count), pos = CGFloat(index) / n, extent = 1 / n
-                    if vertical { rect(pos, 0, extent, 1, color) } else { rect(0, pos, 1, extent, color) }
-                }
-            }
-            func cross(_ color: Color, width: CGFloat = 0.22) {
-                rect(0.5 - width / 2, 0, width, 1, color)
-                rect(0, 0.5 - width / 2, 1, width, color)
-            }
-            func diagonalBand(_ low: CGFloat, _ high: CGFloat, _ color: Color) {
-                func clip(_ points: [CGPoint], boundary: CGFloat, keepBelow: Bool) -> [CGPoint] {
-                    guard !points.isEmpty else { return [] }
-                    var output: [CGPoint] = []
-                    for index in points.indices {
-                        let a = points[index], b = points[(index + 1) % points.count]
-                        let fa = a.x + a.y - boundary, fb = b.x + b.y - boundary
-                        let insideA = keepBelow ? fa <= 0 : fa >= 0
-                        let insideB = keepBelow ? fb <= 0 : fb >= 0
-                        if insideA { output.append(a) }
-                        if insideA != insideB {
-                            let t = fa / (fa - fb)
-                            output.append(CGPoint(x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y)))
-                        }
-                    }
-                    return output
-                }
-                var points = [CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:1,y:1),CGPoint(x:0,y:1)]
-                points = clip(points, boundary: high, keepBelow: true)
-                points = clip(points, boundary: low, keepBelow: false)
-                polygon(points, color)
-            }
-            func pennant(_ palette: [Color], stripesVertical: Bool = true) {
-                var pennantPath = Path()
-                pennantPath.move(to: .zero)
-                pennantPath.addLine(to: CGPoint(x: size.width, y: size.height * 0.5))
-                pennantPath.addLine(to: CGPoint(x: 0, y: size.height))
-                pennantPath.closeSubpath()
-                var clipped = context
-                clipped.clip(to: pennantPath)
-                for (index, color) in palette.enumerated() {
-                    let n = CGFloat(palette.count), pos = CGFloat(index) / n, extent = 1 / n
-                    let frame = stripesVertical
-                        ? CGRect(x: pos * size.width, y: 0, width: extent * size.width, height: size.height)
-                        : CGRect(x: 0, y: pos * size.height, width: size.width, height: extent * size.height)
-                    clipped.fill(Path(frame), with: .color(color))
-                }
-            }
-
-            switch code {
-            case "alpha":
-                colors=[white,blue]; rect(0,0,1,1,white); rect(0.5,0,0.5,1,blue)
-                polygon([CGPoint(x:0.72,y:0.34),CGPoint(x:1,y:0.5),CGPoint(x:0.72,y:0.66)],white)
-            case "bravo":
-                colors=[red]; rect(0,0,1,1,red)
-                polygon([CGPoint(x:0.68,y:0.34),CGPoint(x:1,y:0.5),CGPoint(x:0.68,y:0.66)],white)
-            case "charlie": colors=[blue,white,red,white,blue]; stripes(colors,vertical:false)
-            case "delta":
-                colors=[blue,yellow]; rect(0,0,1,1,blue); rect(0,0.12,1,0.24,yellow); rect(0,0.64,1,0.24,yellow)
-            case "echo": colors=[blue,red]; stripes(colors,vertical:false)
-            case "foxtrot": colors=[white]; rect(0,0,1,1,white); polygon([CGPoint(x:0.5,y:0.12),CGPoint(x:0.88,y:0.5),CGPoint(x:0.5,y:0.88),CGPoint(x:0.12,y:0.5)],red)
-            case "golf": colors=[yellow,blue,yellow,blue,yellow]; stripes(colors,vertical:true)
-            case "hotel": colors=[white,red]; stripes(colors,vertical:true)
-            case "india": colors=[yellow]; rect(0,0,1,1,yellow); context.fill(Path(ellipseIn:CGRect(x:size.width*0.27,y:size.height*0.2,width:size.width*0.46,height:size.height*0.6)),with:.color(black))
-            case "juliett": colors=[blue,white,blue]; stripes(colors,vertical:false)
-            case "kilo": colors=[yellow,blue]; stripes(colors,vertical:true)
-            case "lima": colors=[yellow,black,yellow,black]; rect(0,0,0.5,0.5,yellow); rect(0.5,0,0.5,0.5,black); rect(0,0.5,0.5,0.5,black); rect(0.5,0.5,0.5,0.5,yellow)
-            case "mike": colors=[blue]; rect(0,0,1,1,blue); cross(white,width:0.18)
-            case "november": colors=[white,blue]; rect(0,0,1,1,white); for x in 0..<4 { for y in 0..<4 where (x+y)%2==0 { rect(CGFloat(x)/4,CGFloat(y)/4,0.25,0.25,blue) } }
-            case "oscar": colors=[yellow,red]; rect(0,0,1,1,yellow); polygon([CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:0,y:1)],red)
-            case "papa": colors=[blue]; rect(0,0,1,1,blue); rect(0.34,0.30,0.32,0.40,white)
-            case "quebec": colors=[yellow]; rect(0,0,1,1,yellow)
-            case "romeo":
-                colors=[red,yellow]; rect(0,0,1,1,red); cross(yellow,width:0.16)
-            case "sierra": colors=[white,blue]; rect(0,0,1,1,white); rect(0.36,0.34,0.28,0.32,blue)
-            case "tango": colors=[red,white,blue]; stripes(colors,vertical:true)
-            case "uniform": colors=[red,white]; rect(0,0,1,1,white); rect(0,0,0.5,0.5,red); rect(0.5,0.5,0.5,0.5,red)
-            case "victor":
-                colors=[white,red]; rect(0,0,1,1,white)
-                polygon([CGPoint(x:0,y:0),CGPoint(x:0.22,y:0),CGPoint(x:1,y:0.78),CGPoint(x:1,y:1),CGPoint(x:0.78,y:1),CGPoint(x:0,y:0.22)],red)
-                polygon([CGPoint(x:1,y:0),CGPoint(x:1,y:0.22),CGPoint(x:0.22,y:1),CGPoint(x:0,y:1),CGPoint(x:0,y:0.78),CGPoint(x:0.78,y:0)],red)
-            case "whiskey": colors=[blue]; rect(0,0,1,1,blue); rect(0.18,0.12,0.64,0.76,white); rect(0.34,0.30,0.32,0.40,red)
-            case "x-ray": colors=[white]; rect(0,0,1,1,white); cross(blue,width:0.18)
-            case "yankee":
-                colors=[red,yellow]
-                for index in 0..<8 {
-                    let low=CGFloat(index)*0.25, high=low+0.25
-                    diagonalBand(low, high, index % 2 == 0 ? red : yellow)
-                }
-            case "zulu":
-                colors=[black,yellow,blue,red]
-                polygon([CGPoint(x:0,y:0),CGPoint(x:1,y:0),CGPoint(x:0.5,y:0.5)],black)
-                polygon([CGPoint(x:1,y:0),CGPoint(x:1,y:1),CGPoint(x:0.5,y:0.5)],yellow)
-                polygon([CGPoint(x:1,y:1),CGPoint(x:0,y:1),CGPoint(x:0.5,y:0.5)],red)
-                polygon([CGPoint(x:0,y:1),CGPoint(x:0,y:0),CGPoint(x:0.5,y:0.5)],blue)
-            case "answering pennant": colors=[red,white]; pennant([red,white,red,white,red],stripesVertical:true)
-            case "first substitute": colors=[blue,yellow]; pennant([blue,yellow,blue],stripesVertical:true)
-            case "second substitute": colors=[blue,white]; pennant([blue,white,blue],stripesVertical:true)
-            case "third substitute": colors=[black,white]; pennant([black,white,black],stripesVertical:true)
-            case "fourth substitute": colors=[red,yellow]; pennant([red,yellow,red],stripesVertical:true)
-            default:
-                let n = Int(code.filter(\.isNumber)) ?? 0
-                if code.contains("nato") {
-                    colors = [white, blue, red, yellow]
-                    switch n {
-                    case 0:
-                        rect(0,0,1,1,white); cross(blue,width:0.10)
-                        for x in [CGFloat(0.12),CGFloat(0.88)] { for y in [CGFloat(0.12),CGFloat(0.88)] {
-                            rect(x-0.035,y-0.035,0.07,0.07,blue)
-                        } }
-                    case 1: stripes([red,yellow],vertical:false)
-                    case 2: stripes([yellow,red],vertical:false)
-                    case 3: stripes([blue,red],vertical:false)
-                    case 4: rect(0,0,1,1,red); cross(white,width:0.17)
-                    case 5: rect(0,0,1,1,yellow); cross(blue,width:0.17)
-                    case 6:
-                        rect(0,0,1,1,white)
-                        for offset in stride(from: -1.0, through: 1.0, by: 0.25) {
-                            var path = Path()
-                            path.move(to: CGPoint(x: max(0, offset) * size.width, y: max(0, -offset) * size.height))
-                            path.addLine(to: CGPoint(x: min(1, offset + 1) * size.width, y: min(1, 1 - offset) * size.height))
-                            context.stroke(path, with: .color(blue), lineWidth: max(2, size.height * 0.09))
-                        }
-                    case 7: stripes([red,white,red],vertical:true)
-                    case 8: rect(0,0,1,1,yellow); rect(0.4,0,0.2,1,blue)
-                    default: rect(0,0,1,1,blue)
-                    }
-                } else {
-                    let palette: [[Color]] = [[yellow,red,yellow],[white,red],[blue,white],[red,white,blue],[red,white],[yellow,red],[black,white],[yellow,red],[white,red],[yellow,red]]
-                    let p = palette[min(max(n,0),9)]
-                    colors = p
-                    pennant(p, stripesVertical:true)
-                }
-            }
-            context.stroke(Path(bounds), with: .color(.black.opacity(0.75)), lineWidth: max(1, size.width * 0.012))
-        }.aspectRatio(1.5, contentMode: .fit)
     }
 }
 
@@ -750,7 +728,7 @@ private struct SignalInternationalFlagGallery: View {
     private let selection: Binding<String>?
     init(selection: Binding<String>? = nil) { self.selection = selection }
     private var selectedFlag: Binding<String> { selection ?? $storedSelection }
-    private let flags = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute","Fourth Substitute","NATO 0","NATO 1","NATO 2","NATO 3","NATO 4","NATO 5","NATO 6","NATO 7","NATO 8","NATO 9"]
+    private let flags = ["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-Ray","Yankee","Zulu","Pennant 0","Pennant 1","Pennant 2","Pennant 3","Pennant 4","Pennant 5","Pennant 6","Pennant 7","Pennant 8","Pennant 9","Answering Pennant","First Substitute","Second Substitute","Third Substitute"]
 
     var body: some View {
         List {
@@ -836,9 +814,9 @@ private struct SignalNotificationsView: View {
 private struct SignalHornSettingsView: View {
     @AppStorage("signalHornEnabled") private var enabled = true
     @AppStorage("signalHornVolume") private var volume = 0.8
-    @AppStorage("signalShortHornSeconds") private var shortSound = 0.22
-    @AppStorage("signalHornSeconds") private var longSound = 0.7
-    @AppStorage("signalHornGapSeconds") private var gap = 0.18
+    @AppStorage("signalShortHornSeconds") private var shortSound = 3.1
+    @AppStorage("signalHornSeconds") private var longSound = 5.1
+    @AppStorage("signalHornGapSeconds") private var gap = 1.1
 
     var body: some View {
         Form {
@@ -857,13 +835,13 @@ private struct SignalHornSettingsView: View {
                 slider("Volume", value: $volume, range: 0...1, step: 0.05, suffix: "%", multiplier: 100)
             }
             Section("Remote Settings") {
-                slider("Short Sound", value: $shortSound, range: 0.1...1, step: 0.05, suffix: "s")
-                slider("Long Sound", value: $longSound, range: 0.1...5, step: 0.1, suffix: "s")
-                slider("Gap", value: $gap, range: 0.1...2, step: 0.05, suffix: "s")
+                slider("Short Sound", value: $shortSound, range: 0.1...10, step: 0.1, suffix: "s")
+                slider("Long Sound", value: $longSound, range: 0.1...10, step: 0.1, suffix: "s")
+                slider("Gap", value: $gap, range: 0.1...3, step: 0.1, suffix: "s")
             }
             Section("Preview") {
-                Button("短音を試す") { SignalSettingsSound.preview(seconds: shortSound) }
-                Button("長音を試す") { SignalSettingsSound.preview(seconds: longSound) }
+                Button("短音を試す") { SignalSettingsSound.preview(seconds: shortSound, volume: volume) }
+                Button("長音を試す") { SignalSettingsSound.preview(seconds: longSound, volume: volume) }
             }
         }
         .navigationTitle("Remote Horn")
@@ -884,11 +862,35 @@ private struct SignalHornSettingsView: View {
 }
 
 private enum SignalSettingsSound {
-    static func preview(seconds: Double) {
-        AudioServicesPlaySystemSound(1104)
-        DispatchQueue.main.asyncAfter(deadline: .now() + max(0.1, seconds)) {
-            AudioServicesPlaySystemSound(1104)
+    private static var player: AVAudioPlayer?
+
+    static func preview(seconds: Double, volume: Double) {
+        let rate = 22_050.0
+        let duration = max(0.1, seconds)
+        let count = max(1, Int(rate * duration))
+        var samples = Data(capacity: count * 2)
+        for index in 0..<count {
+            let t = Double(index) / rate
+            let envelope = min(min(1, t / 0.08), min(1, (duration - t) / 0.18))
+            let frequency = 218.0 - 7.0 * (t / duration)
+            let fundamental = sin(2 * Double.pi * frequency * t)
+            let harmonics = 0.48 * sin(2 * Double.pi * frequency * 2 * t)
+                + 0.24 * sin(2 * Double.pi * frequency * 3 * t)
+                + 0.12 * sin(2 * Double.pi * frequency * 4 * t)
+                + 0.12 * sin(2 * Double.pi * (frequency + 3.5) * t)
+            var sample = Int16((fundamental * 0.68 + harmonics) * envelope * volume * 0.52 * Double(Int16.max)).littleEndian
+            withUnsafeBytes(of: &sample) { samples.append(contentsOf: $0) }
         }
+        var wav = Data("RIFF".utf8)
+        func append32(_ value: UInt32) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
+        func append16(_ value: UInt16) { var value = value.littleEndian; withUnsafeBytes(of: &value) { wav.append(contentsOf: $0) } }
+        append32(UInt32(36 + samples.count)); wav.append(Data("WAVEfmt ".utf8)); append32(16); append16(1); append16(1)
+        append32(UInt32(rate)); append32(UInt32(rate) * 2); append16(2); append16(16)
+        wav.append(Data("data".utf8)); append32(UInt32(samples.count)); wav.append(samples)
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        player = try? AVAudioPlayer(data: wav)
+        player?.play()
     }
 }
 
@@ -905,3 +907,4 @@ private extension Color {
 }
 
 #endif
+
