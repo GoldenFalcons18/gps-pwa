@@ -574,7 +574,7 @@ struct SignalTimerPanel: View {
             .onChange(of: active) { oldValue, newValue in
                 guard newValue > oldValue else { return }
                 let crossed = (oldValue + 1)...newValue
-                if crossed.contains(where: { sequenceEvents.indices.contains($0) && sequenceEvents[$0].flags.contains(where: { $0.id == "orange" }) }) {
+                if crossed.contains(where: { sequenceEvents.indices.contains($0) && SignalSequence.shouldReleaseManualOrangeOverride(for: sequenceEvents[$0]) }) {
                     orangeManualOverride = false
                     orangeManualUp = false
                     orangeRaisedAt = 0
