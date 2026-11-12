@@ -908,12 +908,13 @@ struct ContentView: View {
             Spacer(minLength: 0)
             Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
                  .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
-                .onTapGesture { mode = (mode + 1) % 5 }
-            Button { gps.recording ? gps.stop() : gps.start() } label: {
-                HStack(spacing: 3) {
-                    Text(gps.recording ? "カウンター\n一時停止" : "記録開始").font(.caption2).foregroundStyle(.orange)
-                    Image(systemName: gps.recording ? "pause.fill" : "record.circle").font(.title2).foregroundStyle(.red)
-                }
+            HStack(spacing: 4) {
+                Circle().fill(gps.recording ? Color.green : Color.gray).frame(width: 8, height: 8)
+                Text(gps.recording ? "記録中" : "停止中")
+                    .font(.caption2).foregroundStyle(gps.recording ? Color.green : Color.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(gps.recording ? "GPS記録中" : "GPS記録停止中")
             }
         }.padding(.horizontal, 5)
     }
