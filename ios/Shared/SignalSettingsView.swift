@@ -449,7 +449,7 @@ private struct SignalFleetPresetEditor: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(start.title)のクラス旗を選択")
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(start.title)
+                            Text("\(SignalSequence.flag(start.flagID == preset.classFlagID ? activeClassFlag : start.flagID).name)を\(start.raised ? "掲揚" : "降下")")
                             HStack(spacing: 4) {
                                 TextField("分", value: $start.minute, format: .number).keyboardType(.numberPad).frame(width: 36)
                                 Text(":")
