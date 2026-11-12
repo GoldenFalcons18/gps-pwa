@@ -137,7 +137,7 @@ class SignalSequenceTest {
         val orangeLower = restart.first { it.flagMarks.any { mark -> mark.id == "橙" } && !it.raised }
         val classWarning = restart.first { it.title.contains("再予告信号") }
 
-        assertFalse(SignalSequence.shouldReleaseManualOrangeOverride(orangeState))
+        assertTrue(!SignalSequence.shouldReleaseManualOrangeOverride(orangeState))
         assertTrue(SignalSequence.shouldReleaseManualOrangeOverride(orangeLower))
         assertEquals(0, classWarning.secondsAfterStart)
         assertEquals(540, orangeLower.secondsAfterStart)
