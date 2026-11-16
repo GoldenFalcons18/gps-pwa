@@ -8,6 +8,11 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
     @Published var reachable = false
     @Published var selectionPending = UserDefaults.standard.object(forKey: "watchSelectionTime") != nil
     @Published var message = ""
+    @Published var signal: WatchSignalSnapshot? = {
+        guard let data = UserDefaults.standard.data(forKey: "watchSignalState") else { return nil }
+        return try? JSONDecoder().decode(WatchSignalSnapshot.self, from: data)
+    }()
+    @Published var signalReceivedAt: Date = UserDefaults.standard.object(forKey: "watchSignalReceivedAt") as? Date ?? .now
     private var pendingTime: Date? = (UserDefaults.standard.object(forKey: "watchSelectionTime") as? Double).map(Date.init(timeIntervalSince1970:))
     override init() {
         super.init()
@@ -61,6 +66,15 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         pendingTime = nil; selectionPending = false; UserDefaults.standard.removeObject(forKey: "watchSelectionTime")
     }
     private func receive(_ context: [String: Any]) {
+        if let data = context["signal"] as? Data, let value = try? JSONDecoder().decode(WatchSignalSnapshot.self, from: data) {
+            DispatchQueue.main.async {
+                guard self.signal == nil || value.sentAt >= self.signal!.sentAt else { return }
+                self.signal = value
+                self.signalReceivedAt = Date()
+                UserDefaults.standard.set(data, forKey: "watchSignalState")
+                UserDefaults.standard.set(self.signalReceivedAt, forKey: "watchSignalReceivedAt")
+            }
+        }
         guard let data = context["waypoints"] as? Data, let value = try? JSONDecoder().decode(WatchWaypointCatalog.self, from: data) else { return }
         DispatchQueue.main.async {
             guard self.catalog == nil || value.sentAt >= self.catalog!.sentAt else { return }
@@ -143,15 +157,45 @@ struct WatchNavigationView: View {
     @State private var targetPicker = false
     private var metric: Bool { receiver.catalog?.metric ?? false }
     private var folders: [String] { Array(Set(receiver.catalog?.waypoints.map(\.folder) ?? [])).sorted() }
+    private func syncedSignal(at date: Date) -> some View {
+        let snapshot = receiver.signal
+        let remaining: TimeInterval? = {
+            guard let snapshot, let eventAt = snapshot.nextEventAt else { return nil }
+            return max(0, eventAt.timeIntervalSince(snapshot.sentAt) - date.timeIntervalSince(receiver.signalReceivedAt))
+        }()
+        let seconds = remaining.map { Int(ceil($0)) }
+        let countdown = seconds.map { String(format: "%02d:%02d", $0 / 60, $0 % 60) } ?? "--:--"
+        return VStack(spacing: 4) {
+            Text(snapshot?.nextTitle ?? "iPhoneと同期待ち")
+                .font(.caption).lineLimit(1).minimumScaleFactor(0.7)
+            Text(countdown)
+                .font(.system(size: 30, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+            if let startAt = snapshot?.classStartAt {
+                Text("クラス旗降下／スタート " + startAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 9)).lineLimit(1)
+            }
+            if let flags = snapshot?.raisedFlags, !flags.isEmpty {
+                Text("掲揚中: " + flags.joined(separator: "・"))
+                    .font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
+            }
+            Text(snapshot?.sequenceRunning == true ? "シーケンス実行中" : "シーケンス待機中")
+                .font(.system(size: 8)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(5)
+    }
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             ScrollView {
                 VStack(spacing: 2) {
                     HStack {
-                        Button("ナビ") { mode = 0 }.foregroundStyle(mode == 0 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
-                        Button("速度") { mode = 1 }.foregroundStyle(mode == 1 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
-                        Button("タイマー") { mode = 2 }.foregroundStyle(mode == 2 ? .orange : .gray).frame(maxWidth: .infinity, minHeight: 22)
-                        Button(useMagnetic ? "磁北":"真北") {useMagnetic.toggle()}.foregroundStyle(.orange).frame(maxWidth:.infinity,minHeight:22)
+                        Button(["ナビ","速度","タイマー"][min(max(mode,0),2)]) { mode = (mode + 1) % 3 }
+                            .foregroundStyle(.orange).frame(maxWidth: .infinity, minHeight: 24)
+                            .accessibilityLabel("モード切替")
+                        Button(useMagnetic ? "磁北":"真北") { useMagnetic.toggle() }
+                            .foregroundStyle(.orange).frame(maxWidth: .infinity,minHeight:24)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     let fix = sensors.fix(at: Date())
@@ -159,7 +203,7 @@ struct WatchNavigationView: View {
                     if mode == 0 { navigation(fix: fix, compass: compass) }
                     else if mode == 1 { speed(fix: fix,compass:compass) }
                     else {
-                        SignalTimerPanel(compact: true)
+                        syncedSignal(at: timeline.date)
                     }
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }

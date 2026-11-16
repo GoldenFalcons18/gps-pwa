@@ -1,14 +1,12 @@
 <?xml version='1.0' encoding='utf-8'?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="#000000">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="6dp">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <LinearLayout android:id="@+id/modeChooser" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
             <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="速度" />
-            <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="地図" />
-            <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="3項目" />
-            <Button android:id="@+id/btnTimerMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="タイマー" />
-            <Button android:id="@+id/btnSignalMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="シグナル" />
-            <Button android:id="@+id/btnFocusNorth" android:layout_width="46dp" android:layout_height="wrap_content" android:text="真北" android:textSize="11sp" android:minWidth="0dp" android:paddingLeft="1dp" android:paddingRight="1dp" android:visibility="gone" />
-            <Button android:id="@+id/btnFocusMenu" android:layout_width="38dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:paddingLeft="0dp" android:paddingRight="0dp" android:visibility="gone" />
+                        <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="地図" />
+                        <Button android:id="@+id/btnFocusMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="3項目" />
+                        <Button android:id="@+id/btnTimerMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="タイマー" />
+                        <Button android:id="@+id/btnSignalMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="シグナル" />
         </LinearLayout>
         <LinearLayout android:id="@+id/focusPanel" android:layout_width="match_parent" android:layout_height="600dp" android:orientation="vertical" android:visibility="gone" />
         <LinearLayout android:id="@+id/timerPanel" android:layout_width="match_parent" android:layout_height="600dp" android:minHeight="520dp" android:orientation="vertical" android:gravity="center" android:padding="16dp" android:visibility="gone">
@@ -106,9 +104,17 @@
                 <TextView android:id="@+id/tvWpCoords" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="--" android:textColor="@color/white" android:textSize="11sp" android:gravity="center" />
             </LinearLayout>
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView android:id="@+id/tvModeTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" android:clickable="false" android:focusable="false" />
-            <TextView android:id="@+id/tvRecordingIndicator" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="6dp" android:paddingEnd="8dp" android:text="○ 停止中" android:textColor="#BBBBBB" android:textSize="12sp" android:contentDescription="GPS記録状態" />
+        <LinearLayout android:id="@+id/modeTitleRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/tvModeTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="スピードメーター" android:textColor="#FFAA00" android:textSize="28sp" android:clickable="true" android:focusable="true" />
+            <TextView android:id="@+id/tvRecordingIndicator" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingStart="6dp" android:paddingEnd="4dp" android:text="○ 停止中" android:textColor="#BBBBBB" android:textSize="12sp" android:contentDescription="GPS記録状態" />
+            <Button android:id="@+id/btnFocusNorth" android:layout_width="46dp" android:layout_height="wrap_content" android:text="真北" android:textSize="11sp" android:minWidth="0dp" android:paddingLeft="1dp" android:paddingRight="1dp" android:visibility="gone" />
+            <Button android:id="@+id/btnFocusMenu" android:layout_width="38dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="メニュー" android:minWidth="0dp" android:paddingLeft="0dp" android:paddingRight="0dp" android:visibility="gone" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/headerRecordingControls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:visibility="gone">
+            <Button android:id="@+id/btnRecordStart" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="記録開始" />
+            <Button android:id="@+id/btnRecordPause" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="一時停止" android:visibility="gone" />
+            <Button android:id="@+id/btnRecordResume" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="記録再開" android:visibility="gone" />
+            <Button android:id="@+id/btnRecordStop" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="記録終了" android:visibility="gone" />
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/panel_bg" android:padding="8dp">

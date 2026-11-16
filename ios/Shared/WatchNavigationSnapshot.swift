@@ -24,3 +24,18 @@ struct WatchNavigationSnapshot: Codable, Equatable {
         return (degrees + 360).truncatingRemainder(dividingBy: 360)
     }
 }
+
+
+struct WatchSignalSnapshot: Codable, Equatable {
+    var nextTitle: String
+    var nextEventAt: Date?
+    var classStartAt: Date?
+    var raisedFlags: [String]
+    var sequenceRunning: Bool
+    var sentAt: Date
+    func countdown(at date: Date) -> String {
+        guard let nextEventAt else { return "--:--" }
+        let seconds = max(0, Int(ceil(nextEventAt.timeIntervalSince(date))))
+        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+}

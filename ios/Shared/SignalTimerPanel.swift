@@ -1,6 +1,10 @@
 import SwiftUI
 import AVFoundation
 
+#if os(iOS)
+private let signalSpeechSynthesizer = AVSpeechSynthesizer()
+#endif
+
 // Rebuild trigger for logo color controls
 
 /// Signal timer with the two elapsed-time sequences transcribed from the supplied videos.
@@ -41,6 +45,7 @@ struct SignalTimerPanel: View {
     @AppStorage("signalPostponementLowerAt") private var postponementLowerAt = 0.0
     @AppStorage("signalPostponementWarningAt") private var postponementWarningAt = 0.0
     @State private var hornPlayer: AVAudioPlayer?
+    @State private var lastAnnouncedEventID: Int?
     @State private var showSettings = false
     @State private var showInterruptOptions = false
     @State private var showSchedule = false
@@ -229,7 +234,7 @@ struct SignalTimerPanel: View {
             hasStarted: sequenceHasStarted,
             firstActionPending: startAt > correctedNow || raceStartPending,
             restartPending: restartWarningAt > correctedNow
-        )
+        ) || (orangeManualOverride && !orangeManualUp)
     }
     private func running(at date: Date) -> Bool {
         startAt > 0 && elapsed(at: date) < Double(events.last?.secondsAfterStart ?? 1200)
@@ -394,15 +399,31 @@ struct SignalTimerPanel: View {
             let isRunning = useRetrySequence
                 ? sequenceElapsed < Double(sequenceEvents.last?.secondsAfterStart ?? 540)
                 : running(at: now)
-            let raceCountdown = secondsUntilRaceStart.map(raceCountdownText)
+            let orangeLowerIsNext = retryPending && postponementFlagUp && postponementLowerAt > correctedNow
+            let nextSignalEvent = runBaseTime.flatMap { base in
+                sequenceEvents.first { event in
+                    event.id != SignalSequence.manualOrangeRaiseRecordEventID &&
+                    base + Double(event.secondsAfterStart) > correctedNow
+                }
+            }
+            let nextSignalTime = orangeLowerIsNext ? postponementLowerAt : nextSignalEvent.flatMap { event in runBaseTime.map { $0 + Double(event.secondsAfterStart) } }
+            let nextSignalTitle = orangeLowerIsNext ? "AP降下" : (nextSignalEvent?.title ?? (retryPending ? "再予告信号待ち" : "次の信号待ち"))
+            let nextSignalCountdown = nextSignalTime.map { countdownText(max(0, $0 - correctedNow)) }
             let raisedFlags = displayedFlags(retryPending: retryPending, useRetrySequence: useRetrySequence, waitingForFirstSignal: waitingForFirstSignal, sequenceEvents: sequenceEvents, sequenceElapsed: sequenceElapsed)
             let raisedFlagIDs = Set(raisedFlags.map(\.id))
+            let watchSignal = WatchSignalSnapshot(
+                nextTitle: nextSignalTitle,
+                nextEventAt: nextSignalTime.map(Date.init(timeIntervalSince1970:)),
+                classStartAt: raceStartTime.map(Date.init(timeIntervalSince1970:)),
+                raisedFlags: raisedFlags.map(\.name),
+                sequenceRunning: isRunning,
+                sentAt: now)
             let highlightedEventID = sequenceEvents.indices.contains(highlighted) ? sequenceEvents[highlighted].id : nil
             let raceSignalControlsEnabled = SignalSequence.canOperateRaceSignals(
                 hasStarted: hasStarted,
                 firstActionPending: waitingForFirstSignal || raceStartPending,
                 restartPending: retryPending
-            )
+            ) || (orangeManualOverride && !orangeManualUp)
             VStack(spacing: compact ? 4 : 8) {
                 HStack(spacing: 5) {
                     Text("⚑").foregroundStyle(.purple)
@@ -420,17 +441,17 @@ struct SignalTimerPanel: View {
                 MastBoard(flags: raisedFlags, compact: compact)
                     .frame(height: compact ? 60 : 112)
                 HStack {
-                    Text(raceStartEvent.map { "\($0.flags.first?.name ?? "") スタート時刻" } ?? (retryPending ? "次の予告信号まで" : (waitingForFirstSignal ? "クラス旗掲揚待ち" : (useRetrySequence ? "再予告信号時刻" : "スタート時刻")))).foregroundStyle(.black)
+                    Text(raceStartEvent.map { "クラス旗 \($0.flags.first?.name ?? "") 降下／スタート時刻" } ?? (retryPending ? "再スタート時刻" : (waitingForFirstSignal ? "クラス旗掲揚待ち" : (useRetrySequence ? "再スタート時刻" : "クラス旗降下／スタート時刻")))).foregroundStyle(.black)
                     Spacer()
                     Text(raceStartTime.map { SignalSequence.clockText(Date(timeIntervalSince1970: $0)) } ?? "TBD")
                         .font(.system(.body, design: .monospaced)).foregroundStyle(.black)
                 }
                 .font(.system(size: compact ? 12 : 16, weight: .medium))
                 HStack(spacing: 8) {
-                    Text(raceStartPending && raceStartEvent != nil ? "↓" : (waitingForFirstSignal ? "◷" : (current.raised ? "↑" : "↓"))).font(.title3.bold()).foregroundStyle(.black)
-                    Text(raceStartPending && raceStartEvent != nil ? "スタートまで" : (waitingForFirstSignal ? "クラス旗掲揚待ち · " + current.title : current.title)).font(.caption).lineLimit(1)
+                    Text(nextSignalEvent?.raised == true ? "↑" : "↓").font(.title3.bold()).foregroundStyle(.black)
+                    Text(nextSignalTitle).font(.caption).lineLimit(1)
                     Spacer()
-                    Text((raceStartTime != nil || restartWarningAt > 0) ? (raceCountdown ?? "--:--") : "--:--")
+                    Text(nextSignalCountdown ?? "--:--")
                         .font(.system(size: compact ? 28 : 38, weight: .medium, design: .monospaced))
                         .monospacedDigit()
                     Circle().fill(Color.gray.opacity(0.65)).frame(width: compact ? 28 : 42, height: compact ? 28 : 42)
@@ -518,6 +539,10 @@ struct SignalTimerPanel: View {
                 #endif
             }
             .padding(compact ? 4 : 8)
+            #if os(iOS)
+            .onAppear { WatchNavigationBridge.shared.setSignalState(watchSignal) }
+            .onChange(of: watchSignal) { _, value in WatchNavigationBridge.shared.setSignalState(value) }
+            #endif
             .background(Color.white)
             .foregroundStyle(.black)
             #if os(iOS)
@@ -588,7 +613,17 @@ struct SignalTimerPanel: View {
                 }
                 guard isRunning else { return }
                 for index in crossed where sequenceEvents.indices.contains(index) {
-                    playHorn(pulses: sequenceEvents[index].hornPulses)
+                    let event = sequenceEvents[index]
+                    playHorn(pulses: event.hornPulses)
+                    #if os(iOS)
+                    if event.id != SignalSequence.manualOrangeRaiseRecordEventID && event.id != lastAnnouncedEventID {
+                        let utterance = AVSpeechUtterance(string: event.title)
+                        utterance.voice = AVSpeechSynthesisVoice(language: "ja-JP")
+                        utterance.rate = AVSpeechUtteranceDefaultSpeechRate
+                        signalSpeechSynthesizer.speak(utterance)
+                        lastAnnouncedEventID = event.id
+                    }
+                    #endif
                 }
             }
         }

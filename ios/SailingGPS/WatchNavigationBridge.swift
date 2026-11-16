@@ -18,6 +18,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     private var location: CLLocation?
     private var metric = false
     private var latest: [String: Any] = [:]
+    private var signal: WatchSignalSnapshot?
     private override init() {
         super.init()
         guard WCSession.isSupported() else { return }
@@ -38,7 +39,8 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         if let id = target?.id { target = points.first { $0.id == id } }
         publish()
     }
-    func updateLocation(_ point: CLLocation) { location = point }
+    func updateLocation(_ point: CLLocation) { location = point; publish() }
+    func setSignalState(_ value: WatchSignalSnapshot) { signal = value; publish() }
     private func selectFromWatch(_ message: [String: Any]) -> Bool {
         guard let id = message["selectTarget"] as? String,
               let time = message["selectionTime"] as? Double,
@@ -54,7 +56,6 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
         return true
     }
     private func publish() {
-        guard waypointsReady else { return }
         let point = location
         let snapshot = WatchNavigationSnapshot(
             name: target?.name,
@@ -62,12 +63,15 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             distanceMeters: target.flatMap { wp in point.map { $0.distance(from: CLLocation(latitude: wp.latitude, longitude: wp.longitude)) } },
             metric: metric, locationTime: point?.timestamp, sentAt: Date())
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date())
-        guard let catalogData = try? JSONEncoder().encode(catalog) else { return }
-        latest = ["navigation": data, "waypoints": catalogData]
+        var context: [String: Any] = ["navigation": data]
+        if waypointsReady {
+            let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date())
+            if let catalogData = try? JSONEncoder().encode(catalog) { context["waypoints"] = catalogData }
+        }
+        if let signal, let signalData = try? JSONEncoder().encode(signal) { context["signal"] = signalData }
+        latest = context
         let session = WCSession.default
         guard WCSession.isSupported(), session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
-        // Context replaces older pending readings instead of queuing obsolete fixes.
         try? session.updateApplicationContext(latest)
         if session.isReachable { session.sendMessage(latest, replyHandler: nil, errorHandler: nil) }
     }
