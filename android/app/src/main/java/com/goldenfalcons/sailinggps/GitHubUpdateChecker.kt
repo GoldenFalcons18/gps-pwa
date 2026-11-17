@@ -23,7 +23,9 @@ class GitHubUpdateChecker(private val activity: AppCompatActivity, private val l
     fun check(manual: Boolean = false) {
         val now = System.currentTimeMillis()
         val previous = preferences.getLong("lastAttempt", 0L)
-        if (!manual && now >= previous && now - previous < 24 * 60 * 60 * 1000L) return
+        // Check on foreground entry at most hourly. This is an in-app prompt,
+        // so checking while the app is closed cannot deliver an update notice.
+        if (!manual && now >= previous && now - previous < 60 * 60 * 1000L) return
         if (closed || !busy.compareAndSet(false, true)) return
         preferences.edit().putLong("lastAttempt", now).apply()
         log("Update check started / manual=$manual / installed=${BuildConfig.VERSION_CODE}")
@@ -34,16 +36,23 @@ class GitHubUpdateChecker(private val activity: AppCompatActivity, private val l
                 val response = get("https://api.github.com/repos/$repository/releases?per_page=100")
                 if (response == null) null else {
                     val releases = JSONArray(response)
-                    var newest: AppUpdate? = null
+                    var latestRelease: JSONObject? = null
+                    var latestMetadataUrl: String? = null
+                    // GitHub returns published releases newest first. Read metadata
+                    // for the newest stable Android release only, avoiding a serial
+                    // request for every historic Android APK.
                     for (index in 0 until releases.length()) {
                         val release = releases.getJSONObject(index)
                         if (!release.optString("tag_name").startsWith("android-v")) continue
                         val metadataUrl = ReleaseUpdateParser.metadataUrl(release, repository) ?: continue
-                        val metadata = JSONObject(get(metadataUrl) ?: error("更新情報が見つかりません"))
-                        val update = ReleaseUpdateParser.parse(release, metadata, repository, BuildConfig.VERSION_CODE, Build.VERSION.SDK_INT)
-                        if (update != null && update.versionCode > (newest?.versionCode ?: -1)) newest = update
+                        latestRelease = release
+                        latestMetadataUrl = metadataUrl
+                        break
                     }
-                    newest
+                    if (latestRelease == null || latestMetadataUrl == null) null else {
+                        val metadata = JSONObject(get(latestMetadataUrl) ?: error("更新情報が見つかりません"))
+                        ReleaseUpdateParser.parse(latestRelease, metadata, repository, BuildConfig.VERSION_CODE, Build.VERSION.SDK_INT)
+                    }
                 }
             }
             activity.runOnUiThread {
