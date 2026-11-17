@@ -20,6 +20,7 @@ class GpsLoggingService : Service(), LocationListener {
     companion object {
         const val ACTION_START = "com.goldenfalcons.sailinggps.START"
         const val ACTION_STOP = "com.goldenfalcons.sailinggps.STOP"
+        const val ACTION_PAUSE = "com.goldenfalcons.sailinggps.PAUSE"
         const val ACTION_LOCATION = "com.goldenfalcons.sailinggps.LOCATION_UPDATE"
         const val ACTION_STATUS = "com.goldenfalcons.sailinggps.STATUS_UPDATE"
         const val CHANNEL_ID = "gps_logging"
@@ -33,6 +34,7 @@ class GpsLoggingService : Service(), LocationListener {
         const val EXTRA_HAS_BEARING = "hasBearing"
         const val EXTRA_COUNT = "count"
         const val EXTRA_RUNNING = "running"
+        const val EXTRA_PAUSED = "paused"
         const val EXTRA_GAP_SECONDS = "gapSeconds"
 
         fun sessionsDir(context: Context) = File(context.filesDir, "tracks").apply { mkdirs() }
@@ -67,6 +69,7 @@ class GpsLoggingService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> stopLogging()
+            ACTION_PAUSE -> pauseLogging()
             else -> startLogging()
         }
         return START_STICKY
@@ -108,11 +111,20 @@ class GpsLoggingService : Service(), LocationListener {
         try {
             locationManager.removeUpdates(this)
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this)
-            broadcastStatus(true)
+            broadcastStatus(true, false)
             debug("GPS logging started")
         } catch (e: Exception) {
             debug("GPS start error: ${e.message}")
         }
+    }
+
+    private fun pauseLogging() {
+        try { locationManager.removeUpdates(this) } catch (_: Exception) {}
+        if (wakeLock?.isHeld == true) wakeLock?.release()
+        wakeLock = null
+        broadcastStatus(false, true)
+        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(1001, notification("GPS記録一時停止 / $count 点"))
+        debug("GPS logging paused")
     }
 
     private fun stopLogging() {
@@ -121,7 +133,7 @@ class GpsLoggingService : Service(), LocationListener {
         wakeLock = null
         previous=null
         activeSessionFile(this).delete()
-        broadcastStatus(false)
+        broadcastStatus(false, false)
         debug("GPS logging stopped")
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -189,9 +201,10 @@ class GpsLoggingService : Service(), LocationListener {
         )
     }
 
-    private fun broadcastStatus(running: Boolean) {
+    private fun broadcastStatus(running: Boolean, paused: Boolean = false) {
         sendBroadcast(Intent(ACTION_STATUS).setPackage(packageName).apply {
             putExtra(EXTRA_RUNNING, running)
+            putExtra(EXTRA_PAUSED, paused)
             putExtra(EXTRA_COUNT, count)
             putExtra(EXTRA_GAP_SECONDS, largestGapSeconds)
         })

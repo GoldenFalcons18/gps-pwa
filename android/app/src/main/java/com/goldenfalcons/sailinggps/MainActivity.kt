@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
     private var running = false
+    private var recordingPaused = false
     private var pendingStartAfterLocationPermission = false
     private var backgroundPermissionPromptShownThisSession = false
     private var gpsGapSeconds = 0L
@@ -89,6 +90,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var focusSog:TextView
     private lateinit var focusCog:TextView
     private lateinit var focusBearing:TextView
+    private lateinit var focusDistance:TextView
     private var mapPanel: NavigationMapPanel? = null
     private val displayPrefs by lazy { getSharedPreferences("display", MODE_PRIVATE) }
 
@@ -171,6 +173,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
                 GpsLoggingService.ACTION_STATUS -> {
                     running = intent.getBooleanExtra(GpsLoggingService.EXTRA_RUNNING, false)
+                    recordingPaused = intent.getBooleanExtra(GpsLoggingService.EXTRA_PAUSED, false)
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
                     gpsGapSeconds = intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS, gpsGapSeconds)
                     updateStatusUi()
@@ -315,9 +318,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setupDisplayModes() {
         setupFocusPanel()
         b.btnFocusMode.text="セーリング"
-        b.tvModeTitle.setOnClickListener(null)
-        b.tvModeTitle.isClickable = false
-        b.tvModeTitle.isFocusable = false
+        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 5) }
+        b.tvModeTitle.isClickable = true
+        b.tvModeTitle.isFocusable = true
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
         b.btnTimerMode.setOnClickListener { setDisplayMode(3) }
         b.btnSignalMode.setOnClickListener { setDisplayMode(4) }
@@ -395,20 +398,37 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupFocusPanel() {
         fun card(label:String,color:Int):Pair<LinearLayout,TextView> {
-            val column=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL;gravity=android.view.Gravity.CENTER;setPadding(8,8,8,8)
-                layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) }
-                background=android.graphics.drawable.GradientDrawable().apply {setColor(Color.BLACK);setStroke(2,Color.GRAY);cornerRadius=10f} }
-            column.addView(TextView(this).apply{text=label;textSize=20f;setTextColor(Color.LTGRAY);gravity=android.view.Gravity.CENTER})
-            val value=TextView(this).apply {text="—";setTextColor(color);textSize=100f;typeface=android.graphics.Typeface.MONOSPACE;gravity=android.view.Gravity.CENTER;setSingleLine()
-                layoutParams=LinearLayout.LayoutParams(-1,0,1f);androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,24,112,1,android.util.TypedValue.COMPLEX_UNIT_SP) }
-            column.addView(value);b.focusPanel.addView(column);return column to value
+            val column=LinearLayout(this).apply {
+                orientation=LinearLayout.VERTICAL; gravity=android.view.Gravity.CENTER; setPadding(6,6,6,6)
+                background=android.graphics.drawable.GradientDrawable().apply { setColor(Color.BLACK); setStroke(2,Color.GRAY); cornerRadius=10f }
+            }
+            val title=TextView(this).apply { text=label; textSize=16f; setTextColor(Color.LTGRAY); gravity=android.view.Gravity.CENTER; setSingleLine() }
+            column.addView(title,LinearLayout.LayoutParams(-1,-2))
+            val value=TextView(this).apply {
+                text="—"; setTextColor(color); textSize=84f; typeface=android.graphics.Typeface.MONOSPACE; gravity=android.view.Gravity.CENTER; setSingleLine()
+                layoutParams=LinearLayout.LayoutParams(-1,0,1f)
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,20,96,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+            }
+            column.addView(value)
+            return column to value
         }
-        focusSog=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN).second
-        focusCog=card("COG（真北）",Color.WHITE).second
-        val targetCard=card("目標方位（真北）",Color.rgb(255,170,0));focusBearing=targetCard.second
-        targetCard.first.setOnClickListener { showNavigationOptions() }
-        targetCard.first.contentDescription="目標方位。タップして目標地点を変更"
-        b.focusPanel.setOnLongClickListener {showNavigationMenu();true}
+        val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN)
+        focusSog=sogValue
+        b.focusPanel.addView(sogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
+        val (cogCard,cogValue)=card("COG（真北）",Color.WHITE)
+        focusCog=cogValue
+        b.focusPanel.addView(cogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
+        val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0))
+        focusBearing=targetValue
+        targetCard.setOnClickListener { showNavigationOptions() }
+        targetCard.contentDescription="目標方位。タップして目標地点を変更"
+        targetRow.addView(targetCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
+        val (distanceCard,distanceValue)=card("目標距離",Color.WHITE)
+        focusDistance=distanceValue
+        targetRow.addView(distanceCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(4,4,0,4) })
+        b.focusPanel.addView(targetRow,LinearLayout.LayoutParams(-1,0,1f))
+        b.focusPanel.setOnLongClickListener { showNavigationMenu(); true }
     }
 
     private fun signalNow():Long=System.currentTimeMillis()+signalClockOffsetMs
@@ -461,10 +481,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun currentSignalEvents():List<SignalEvent> {
         val hasRun=displayPrefs.getLong("signalElapsedStartAt",0L)>0L || displayPrefs.getLong("signalPausedElapsedMs",-1L)>=0L
-        if(!displayPrefs.getBoolean("signalRestartMode",false) && hasRun) {
+        val restartMode=displayPrefs.getBoolean("signalRestartMode",false)
+        if(!restartMode && hasRun) {
             SignalSequence.decodeEvents(displayPrefs.getString("signalRunEventsJSON",null))?.takeIf { it.isNotEmpty() }?.let { return it }
         }
-        return configuredSignalEvents()
+        val events=configuredSignalEvents()
+        val orangeRaisedAt=displayPrefs.getLong("signalOrangeRaisedAtMs",0L)
+        val restartAt=displayPrefs.getLong("signalRestartAt",0L)
+        if(restartMode && displayPrefs.getBoolean("signalOrangeManualOverride",false) && displayPrefs.getBoolean("signalOrangeManualUp",false) && orangeRaisedAt>0L && restartAt>0L) return SignalSequence.recordingManualOrangeRaise(events,orangeRaisedAt,restartAt)
+        return events
     }
 
     private fun configuredSignalEvents():List<SignalEvent> {
@@ -740,7 +765,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val orangeTimeline=if(displayPrefs.getBoolean("signalOrangeManualOverride",false) && displayPrefs.getBoolean("signalOrangeManualUp",false) && raisedOrangeAt>0L)
                         SignalSequence.eventsStartingAtFirstClassWarning(frozen)?.let { events ->
                             val start=SignalTiming.startAfterOrangeRaise(now,raisedOrangeAt,displayPrefs.getInt("signalOrangeDisplayedMinutes",5),displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
-                            start to events
+                            start to SignalSequence.recordingManualOrangeRaise(events,raisedOrangeAt,start)
                         } else null
                     val timeline=orangeTimeline?.second ?: frozen
                     val start=orangeTimeline?.first ?: SignalTiming.scheduledStartAt(now,displayPrefs.getInt("signalMinimumTimeToFirstAction",15))
@@ -857,23 +882,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val running=if(waitingForRestart) false else if(restartMode) restartAt>0L && restartAt<=now && elapsedSeconds<totalSeconds else normalStartAt>0L && normalStartAt<=now && elapsedSeconds<totalSeconds
         val completed=started && !waitingForRestart && elapsedSeconds>=totalSeconds
         val active=when {
-            waitingForRestart -> 0
+            waitingForRestart -> events.indexOfFirst { it.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }.coerceAtLeast(0)
             waitingForFirstSignal || !started -> -1
-            else -> SignalTiming.activeEventIndex(elapsedSeconds,events.map { it.secondsAfterStart }).coerceIn(0,events.lastIndex)
+            else -> {
+                val operational=events.withIndex().filter { it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
+                val operationalIndex=SignalTiming.activeEventIndex(elapsedSeconds,operational.map { it.value.secondsAfterStart }).coerceIn(0,operational.lastIndex)
+                operational[operationalIndex].index
+            }
         }
         val raceSignalControlsEnabled=SignalMastLayout.canOperateRaceSignals(
             hasStarted=started,
             firstActionPending=waitingForFirstSignal || raceStartPending,
             restartPending=waitingForRestart
-        )
+        ) || (displayPrefs.getBoolean("signalOrangeManualOverride",false) && !displayPrefs.getBoolean("signalOrangeManualUp",false))
         val highlighted=if(!started || raceStartPending) raceStartIndex ?: SignalSequence.initialEventIndex(profileIndex) else active
-        val event=events[active.coerceAtLeast(0)]
+        val currentEventIndex=active.coerceAtLeast(0).let { index -> if(events.getOrNull(index)?.id==SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID) events.indexOfFirst { it.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }.coerceAtLeast(0) else index }
+        val event=events[currentEventIndex]
         if(started && !waitingForRestart && active!=signalActiveIndex && events.getOrNull(active)?.let(SignalSequence::shouldReleaseManualOrangeOverride)==true) {
             displayPrefs.edit().remove("signalOrangeManualOverride").remove("signalOrangeManualUp").remove("signalOrangeRaisedAtMs").apply()
         }
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
         val raceStartEvent=events.getOrNull(raceStartIndex ?: -1)
-        val raceStartName=raceStartEvent?.flagMarks?.firstOrNull()?.id?.removePrefix("class-")?.let { "クラス旗 $it スタート時刻" } ?: "スタート時刻"
+        val raceStartName=raceStartEvent?.flagMarks?.firstOrNull()?.id?.removePrefix("class-")?.let { "クラス旗 $it 降下／スタート時刻" } ?: "クラス旗降下／スタート時刻"
         b.tvSignalStartAt.text=if(raceStartAt>0L) raceStartName+"  "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else raceStartName+"  TBD"
         val rowBase=when {
             restartMode && restartAt>0L -> restartAt
@@ -886,28 +916,38 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvSignalTitle.text=if(raceStartPending) "スタートまで" else if(waitingForFirstSignal) "クラス旗掲揚待ち · ${event.title}" else event.title
         b.tvSignalTitle.setBackgroundColor(event.color)
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
-        val raceDeltaMs=if(raceStartAt>0L) raceStartAt-now else 0L
-        val raceWholeSeconds=when {
-            raceDeltaMs>0L -> SignalTiming.countdownSeconds(raceDeltaMs/1000.0)
-            raceDeltaMs<0L -> (-raceDeltaMs/1000L).toInt().coerceAtLeast(0)
-            else -> 0
-        }
-        val raceSign=when {
-            raceDeltaMs>=1000L -> "−"
-            raceDeltaMs<=-1000L -> "+"
-            else -> ""
-        }
-        b.tvSignalCountdown.text=if(raceStartAt>0L) raceSign+"%02d:%02d".format(raceWholeSeconds/60,raceWholeSeconds%60) else "--:--"
         val apLowerAt=displayPrefs.getLong("signalPostponementLowerAtMs",0L)
-        val apLowerRemaining=SignalTiming.countdownSeconds((apLowerAt-now)/1000.0)
+        val apLowerRemainingMs=(apLowerAt-now).coerceAtLeast(0L)
+        val signalTimelineNowMs=if(waitingForFirstSignal) now else rowBase+elapsedMs
+        val upcomingEvent=if(rowBase>0L && !completed) {
+            events.withIndex()
+                .filter { rowBase+it.value.secondsAfterStart*1000L>signalTimelineNowMs && it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
+                .minByOrNull { it.value.secondsAfterStart }
+        } else null
+        val upcomingEventRemainingMs=upcomingEvent?.let {
+            rowBase+it.value.secondsAfterStart*1000L-signalTimelineNowMs
+        }
+        val apLowerIsNext=waitingForRestart && displayPrefs.getBoolean("signalPostponementFlagUp",false) && apLowerAt>now
+        val nextActionRemainingMs=if(apLowerIsNext) apLowerRemainingMs else upcomingEventRemainingMs
+        val nextActionTitle=if(apLowerIsNext) "AP降下" else upcomingEvent?.value?.title ?: when {
+            completed -> "シーケンス終了"
+            waitingForRestart -> "再予告信号待ち"
+            waitingForFirstSignal -> event.title
+            else -> "次の信号待ち"
+        }
+        b.tvSignalCountdown.text=nextActionRemainingMs?.let { remaining ->
+            val seconds=SignalTiming.countdownSeconds(remaining.coerceAtLeast(0L)/1000.0)
+            "%02d:%02d".format(seconds/60,seconds%60)
+        } ?: "--:--"
         b.tvSignalNextLabel.text=when {
-            waitingForRestart && apLowerAt>now -> "AP降下まで  %02d:%02d".format(apLowerRemaining/60,apLowerRemaining%60)
+            nextActionRemainingMs != null -> nextActionTitle
             raceStartPending -> "スタートまで"
             waitingForRestart -> "次の予告信号まで"
             waitingForFirstSignal -> "クラス旗掲揚まで"
             !started -> "開始待ち"
             completed -> "シーケンス終了"
-            !running -> "一時停止"
+            recordingPaused -> "一時停止"
+            !running -> "待機中"
             else -> "レース経過"
         }
         val orangeEnabled=displayPrefs.getBoolean("signalOrangeEnabled",true)
@@ -932,7 +972,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         signalRowEventIndices.forEachIndexed { rowIndex,eventIndex ->
             val rowEvent=events.getOrNull(eventIndex) ?: return@forEachIndexed
             val row=signalRows.getOrNull(rowIndex) ?: return@forEachIndexed
-            val orangeRaiseAlreadyDone=rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
+            val orangeRaiseAlreadyDone=rowEvent.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID && rowEvent.flag=="橙" && rowEvent.raised && raised.any { it.id=="橙" }
             row.visibility=if(orangeRaiseAlreadyDone) View.GONE else View.VISIBLE
             signalRowTimeViews.getOrNull(rowIndex)?.text=if(rowBase>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(rowBase+rowEvent.secondsAfterStart*1000L)) else signalEventTimeLabel(rowEvent,restartMode)
         }
@@ -1022,6 +1062,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
         b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        b.modeTitleRow.visibility = android.view.View.VISIBLE
+        b.modeChooser.visibility = if(mode >= 2) android.view.View.GONE else android.view.View.VISIBLE
+        b.headerRecordingControls.visibility = if(immersive) android.view.View.VISIBLE else android.view.View.GONE
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
@@ -1229,6 +1272,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setupButtons() {
         b.btnStart.setOnClickListener { startGpsLogging() }
         b.btnStop.setOnClickListener { stopGpsLogging() }
+        b.btnRecordStart.setOnClickListener { startGpsLogging() }
+        b.btnRecordPause.setOnClickListener { pauseGpsLogging() }
+        b.btnRecordResume.setOnClickListener { resumeGpsLogging() }
+        b.btnRecordStop.setOnClickListener { stopGpsLogging() }
         b.btnExport.setOnClickListener { exportGpx() }
         b.btnClearTrack.setOnClickListener { clearTrack() }
         b.btnAddWp.setOnClickListener { addWaypointFromInputs() }
@@ -1320,26 +1367,47 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val intent = Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_START)
         ContextCompat.startForegroundService(this, intent)
         running = true
+        recordingPaused = false
         updateStatusUi()
         debug("Start GPS logging requested")
+    }
+
+    private fun pauseGpsLogging() {
+        if (!running) return
+        startService(Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_PAUSE))
+        running=false
+        recordingPaused=true
+        updateStatusUi()
+    }
+
+    private fun resumeGpsLogging() {
+        if (!recordingPaused) return
+        startGpsLogging()
     }
 
     private fun stopGpsLogging() {
         startService(Intent(this, GpsLoggingService::class.java).setAction(GpsLoggingService.ACTION_STOP))
         running = false
+        recordingPaused = false
         updateStatusUi()
         debug("Stop GPS logging requested")
     }
 
     private fun updateStatusUi() {
-        b.tvRecordingIndicator.text = if (running) "● 記録中" else "○ 停止中"
-        b.tvRecordingIndicator.setTextColor(if (running) Color.rgb(0, 255, 56) else Color.LTGRAY)
-        b.tvStatus.text = "状態：${if (running) "記録中" else "停止中"} / 保存点数：$pointCount" + if(gpsGapSeconds>0) " / GPS欠落あり（最大${gpsGapSeconds}秒）" else ""
+        val status=when { running -> "記録中"; recordingPaused -> "一時停止"; else -> "停止中" }
+        b.tvRecordingIndicator.text = when { running -> "● 記録中"; recordingPaused -> "Ⅱ 一時停止"; else -> "○ 停止中" }
+        b.tvRecordingIndicator.setTextColor(when { running -> Color.rgb(0,255,56); recordingPaused -> Color.rgb(255,170,0); else -> Color.LTGRAY })
+        b.tvStatus.text = "状態：$status / 保存点数：$pointCount" + if(gpsGapSeconds>0) " / GPS欠落あり（最大${gpsGapSeconds}秒）" else ""
         b.tvStatus.setTextColor(if (gpsGapSeconds>0) Color.YELLOW else if (running) Color.rgb(0, 255, 56) else Color.WHITE)
+        b.btnStart.text=if(recordingPaused) "記録再開" else "記録開始"
         b.btnStart.visibility = if (running) android.view.View.GONE else android.view.View.VISIBLE
-        b.btnStop.visibility = if (running) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnStop.visibility = if (running || recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
         b.btnStart.isEnabled = !running
-        b.btnStop.isEnabled = running
+        b.btnStop.isEnabled = running || recordingPaused
+        b.btnRecordStart.visibility=if(!running && !recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnRecordPause.visibility=if(running) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnRecordResume.visibility=if(recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnRecordStop.visibility=if(running || recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun updateNavigationUi() {
@@ -1380,6 +1448,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
             ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
             focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,correction)?.let{"${it.roundToInt()%360}°"} ?: "—"
+            ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
+            focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
+                val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
+                if(metricUnits) if(meters<1000) "%.0f m".format(meters) else "%.2f km".format(meters/1000.0)
+                else "%.2f nm".format(meters/1852.0)
+            } else "—"
         }
         val wp = activeWaypoint
         b.tvEte.text = "ETE\n--:--:--"

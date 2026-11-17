@@ -118,6 +118,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var headingUpdatedAt:Date?
     private var foregroundActive = false
     @Published var recording = false
+    @Published var recordingPaused = false
     @Published var track: [CLLocationCoordinate2D] = []
     @Published var recordedDistance = 0.0
     @Published var maximumSpeed = 0.0
@@ -228,7 +229,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             previousRecordedLocation = nil; recordingStartedAt = Date()
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
-            recording = true
+            recording = true; recordingPaused = false
             if CLLocationManager.significantLocationChangeMonitoringAvailable() { manager.startMonitoringSignificantLocationChanges() }
             manager.startUpdatingLocation()
             if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
@@ -267,6 +268,14 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         message = "\(waypoint.name) を「\(waypoint.group ?? defaultWaypointFolder)」に保存しました"
     }
 
+    func pause() {
+        guard recording else { return }
+        elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
+        manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
+        do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
+        handle = nil; recording = false; recordingPaused = true
+        message = "記録一時停止"; log("Recording paused"); preview(foregroundActive)
+    }
     func stop() {
         pendingStart = false
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
@@ -275,7 +284,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
         try? FileManager.default.removeItem(at: activeSessionFile)
         elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
-        handle = nil; recording = false; message = "記録停止"; log("Recording stopped")
+        handle = nil; recording = false; recordingPaused = false; message = "記録停止"; log("Recording stopped")
         preview(foregroundActive)
     }
 
@@ -846,19 +855,28 @@ struct ContentView: View {
         }.background(.black.opacity(0.45))
     }
     private var topControls: some View {
-        HStack {
+        HStack(spacing: 12) {
             Button { gps.saveCurrentWaypoint() } label: { Image(systemName: "mappin.and.ellipse") }
                 .accessibilityLabel("現在地をウェイポイント保存").disabled(gps.savingCurrentWaypoint)
-            Button { mode = (mode + 1) % 5 } label: { Image(systemName: mode == 0 ? "map" : "speedometer") }
-                .accessibilityLabel("表示モードを切替")
             Spacer()
             if mode == 0 { Text(speedUnit).font(.title2.bold()) }
             Spacer()
-            Button { gps.recording ? gps.stop() : gps.start() } label: {
-                Image(systemName: "record.circle.fill").foregroundStyle(.red)
-            }.accessibilityLabel(gps.recording ? "GPS記録停止" : "GPS記録開始")
+            recordingControls
         }.font(.title2).foregroundStyle(.orange).padding(.horizontal, 12).padding(.vertical, 6)
             .background(mode == 0 ? Color.black : Color.black.opacity(0.25))
+    }
+    private var recordingControls: some View {
+        HStack(spacing: 8) {
+            if gps.recording {
+                Button { gps.pause() } label: { Image(systemName: "pause.circle.fill").foregroundStyle(.orange) }.accessibilityLabel("GPS記録を一時停止")
+                Button { gps.stop() } label: { Image(systemName: "stop.circle.fill").foregroundStyle(.red) }.accessibilityLabel("GPS記録を終了")
+            } else if gps.recordingPaused {
+                Button { gps.start() } label: { Image(systemName: "play.circle.fill").foregroundStyle(.green) }.accessibilityLabel("GPS記録を再開")
+                Button { gps.stop() } label: { Image(systemName: "stop.circle.fill").foregroundStyle(.red) }.accessibilityLabel("GPS記録を終了")
+            } else {
+                Button { gps.start(newTrack: true) } label: { Image(systemName: "record.circle").foregroundStyle(.red) }.accessibilityLabel("新しいGPS記録を開始")
+            }
+        }
     }
     private func instrument(_ value: String, label: String, size: CGFloat = 25) -> some View {
         VStack(spacing: 2) {
@@ -906,15 +924,15 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
-                 .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            Button { mode = (mode + 1) % 5 } label: {
+                Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
+                    .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
+            }.buttonStyle(.plain).accessibilityLabel("モード切替")
             HStack(spacing: 4) {
-                Circle().fill(gps.recording ? Color.green : Color.gray).frame(width: 8, height: 8)
-                Text(gps.recording ? "記録中" : "停止中")
-                    .font(.caption2).foregroundStyle(gps.recording ? Color.green : Color.secondary)
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(gps.recording ? "GPS記録中" : "GPS記録停止中")
+                Circle().fill(gps.recording ? Color.green : (gps.recordingPaused ? Color.orange : Color.gray)).frame(width: 8, height: 8)
+                Text(gps.recording ? "記録中" : (gps.recordingPaused ? "一時停止" : "停止中"))
+                    .font(.caption2).foregroundStyle(gps.recording ? Color.green : (gps.recordingPaused ? Color.orange : Color.secondary))
+            }.accessibilityElement(children: .combine)
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
@@ -939,32 +957,24 @@ struct ContentView: View {
         TimelineView(.periodic(from:.now,by:1)) { _ in
             let age=gps.location.map{Date().timeIntervalSince($0.timestamp)} ?? .infinity
             let fresh=age>=0 && age<=15
-            #if DEBUG
-            let preview=ProcessInfo.processInfo.arguments.contains("--preview-focus")
-            #else
-            let preview=false
-            #endif
             let compassFresh=gps.headingUpdatedAt.map{(-5...15).contains(Date().timeIntervalSince($0))} ?? false
-            let magHeading=preview ? 218:(compassFresh ? gps.magneticHeading:nil)
-            let trueHeading=preview ? 210:(compassFresh ? gps.trueHeading:nil)
-            let reading=InstrumentHeading.resolve(course:preview ? 82:InstrumentSettings.course(gps.location?.course,speed:gps.location?.speed,age:age),speed:preview ? 3:(fresh ? gps.location?.speed:nil),magneticHeading:magHeading,trueHeading:trueHeading,magnetic:instrumentMagnetic)
-            let targetValue=InstrumentHeading.bearing(preview ? 144:(fresh ? focusTargetBearing:nil),magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:magHeading,trueHeading:trueHeading))
-            FocusDashboardView(speed:preview ? "12.3":(fresh ? speedText:"—"),
-                course:reading?.value,isCompass:reading?.compass ?? false,
-                targetBearing:targetValue,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,
-                chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+            let reading=InstrumentHeading.resolve(course:InstrumentSettings.course(gps.location?.course,speed:gps.location?.speed,age:age),speed:fresh ? gps.location?.speed:nil,magneticHeading:compassFresh ? gps.magneticHeading:nil,trueHeading:compassFresh ? gps.trueHeading:nil,magnetic:instrumentMagnetic)
+            let targetValue=InstrumentHeading.bearing(fresh ? focusTargetBearing:nil,magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:compassFresh ? gps.magneticHeading:nil,trueHeading:compassFresh ? gps.trueHeading:nil))
+            let distance=gps.location.flatMap { point in target.map { wp in
+                let meters=point.distance(from:CLLocation(latitude:wp.latitude,longitude:wp.longitude))
+                return metricUnits ? (meters < 1000 ? String(format:"%.0f m",meters) : String(format:"%.2f km",meters/1000)) : String(format:"%.2f nm",meters/1852)
+            }} ?? "—"
+            FocusDashboardView(speed:fresh ? speedText:"—",course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
     private var startTimerDashboard: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 4) {
-                ForEach(0..<5) { index in
-                    Button(["スピード","ナビ","セーリング","タイマー","シグナル"][index]) { mode = index }
-                        .frame(maxWidth: .infinity).buttonStyle(.bordered)
-                        .tint(index == mode ? .green : .orange)
-                }
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                modeTitle
+                recordingControls
                 Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal") }
-                    .buttonStyle(.bordered).tint(.orange).accessibilityLabel("メニュー")
+                    .buttonStyle(.plain).foregroundStyle(.orange).accessibilityLabel("メニュー")
             }.font(.caption)
             StartTimerPanel(
                 currentLocation: gps.location.flatMap { Date().timeIntervalSince($0.timestamp) <= 15 && $0.horizontalAccuracy >= 0
@@ -976,14 +986,12 @@ struct ContentView: View {
     }
     private var signalDashboard: some View {
         VStack(spacing: 6) {
-            HStack(spacing: 4) {
-                ForEach(0..<5) { index in
-                    Button(["速度","地図","3項目","タイマー","シグナル"][index]) { mode = index }
-                        .frame(maxWidth: .infinity).buttonStyle(.bordered)
-                        .tint(index == mode ? .green : .orange)
-                }
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                modeTitle
+                recordingControls
                 Button { menuPresented = true } label: { Image(systemName: "line.3.horizontal") }
-                    .buttonStyle(.bordered).tint(.orange).accessibilityLabel("メニュー")
+                    .buttonStyle(.plain).foregroundStyle(.orange).accessibilityLabel("メニュー")
             }.font(.caption)
             SignalTimerPanel()
         }.padding(8).background(.black).preferredColorScheme(.dark)
