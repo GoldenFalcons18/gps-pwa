@@ -919,9 +919,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val apLowerAt=displayPrefs.getLong("signalPostponementLowerAtMs",0L)
         val apLowerRemainingMs=(apLowerAt-now).coerceAtLeast(0L)
         val signalTimelineNowMs=if(waitingForFirstSignal) now else rowBase+elapsedMs
-        val upcomingEvent=if(rowBase>0L && !completed) events.withIndex()
-            .filter { rowBase+it.value.secondsAfterStart*1000L>signalTimelineNowMs && it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
-            .minByOrNull { it.value.secondsAfterStart }
+        val upcomingEvent=if(rowBase>0L && !completed) {
+            events.withIndex()
+                .filter { rowBase+it.value.secondsAfterStart*1000L>signalTimelineNowMs && it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
+                .minByOrNull { it.value.secondsAfterStart }
+        } else null
         val upcomingEventRemainingMs=upcomingEvent?.let {
             rowBase+it.value.secondsAfterStart*1000L-signalTimelineNowMs
         }
