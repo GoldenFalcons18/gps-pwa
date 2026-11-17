@@ -1064,7 +1064,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
         b.modeChooser.visibility = android.view.View.GONE
-        b.headerRecordingControls.visibility = if(immersive) android.view.View.VISIBLE else android.view.View.GONE
+        b.headerRecordingControls.visibility = android.view.View.VISIBLE
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
@@ -1076,7 +1076,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnTimerMode.isEnabled=mode!=3
         b.btnSignalMode.isEnabled=mode!=4
         b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
-        b.btnFocusMenu.visibility=if(immersive) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnFocusMenu.visibility=android.view.View.VISIBLE
+        b.btnCurrentWp.visibility=if(mode==0 || mode==1) android.view.View.VISIBLE else android.view.View.GONE
         displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
         updateNavigationUi()
         debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
@@ -1633,16 +1634,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.settingsPanel.visibility = android.view.View.VISIBLE
         b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) }
     }
-    private fun showActionPanel(title: String, actions: List<Pair<String, () -> Unit>>) {
+    private fun showActionPanel(title: String, actions: List<Pair<String, () -> Unit>>, closeLabel: String = "閉じる", leftColumnCount: Int? = null) {
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12,12,12,12); setBackgroundColor(Color.rgb(15,15,15)) }
         column.addView(TextView(this).apply { text = title; textSize = 17f; setTextColor(Color.WHITE); setPadding(8,8,8,12) })
         val grid = android.widget.GridLayout(this).apply { columnCount = 2 }
-        (actions + ("閉じる" to {})).forEach { (label, action) ->
+        (actions + (closeLabel to {})).forEachIndexed { index, (label, action) ->
             val button = Button(this).apply {
                 text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false
                 background = android.graphics.drawable.GradientDrawable().apply { setColor(Color.rgb(40,40,40)); setStroke(2,Color.rgb(255,170,0)); cornerRadius = 8f }
-                layoutParams = android.widget.GridLayout.LayoutParams().apply { width = 0; height = (76*resources.displayMetrics.density).toInt(); columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f); setMargins(4,4,4,4) }
+                layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                    width = 0
+                    height = (76*resources.displayMetrics.density).toInt()
+                    val split = leftColumnCount?.coerceIn(0, actions.size) 
+                    if (split != null) {
+                        columnSpec = android.widget.GridLayout.spec(if (index < split) 0 else 1, 1f)
+                        rowSpec = android.widget.GridLayout.spec(if (index < split) index else index - split)
+                    } else {
+                        columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f)
+                    }
+                    setMargins(4,4,4,4)
+                }
                 setOnClickListener { dialog.dismiss(); action() }
             }
             grid.addView(button)
@@ -1776,17 +1788,42 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
+    private fun resetTripCounter() {
+        getSharedPreferences("tripCounter", MODE_PRIVATE).edit()
+            .putString("distance", "0")
+            .putString("seconds", "0")
+            .apply()
+        updateNavigationUi()
+        Toast.makeText(this, "カウンターをリセットしました（保存した航跡は保持）", Toast.LENGTH_SHORT).show()
+    }
+
     private fun showNavigationMenu() {
-        showActionPanel("メニュー", listOf(
-            "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
-            "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
-            "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
+        val counterAction = when {
+            running -> "カウンターを一時停止"
+            else -> "カウンターを再開"
+        }
+        val actions = listOf(
+            "新規追跡" to {
+                if (running || recordingPaused) stopGpsLogging()
+                startGpsLogging()
+            },
+            counterAction to {
+                if (running) pauseGpsLogging() else startGpsLogging()
+            },
+            "カウンターをリセット" to { resetTripCounter() },
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
-            "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
+            "追跡・GPX出力" to { exportGpx() },
             "航跡一覧" to { showTrackList() },
-            "モード" to { showDisplayModePicker() }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
-        ))
+            "設定" to { showSettings() },
+            "モード" to { showDisplayModePicker() },
+            "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
+            "目標" to { showNavigationOptions() },
+            "📍 ウェイポイント" to { showWaypointInputs() },
+            "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
+            "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints() }
+        )
+        showActionPanel("メニュー", actions, "完了", leftColumnCount = 9)
     }
 
     private fun showTrackList() {
