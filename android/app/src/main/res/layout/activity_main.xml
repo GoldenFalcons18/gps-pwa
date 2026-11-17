@@ -14,6 +14,7 @@
             <Button android:id="@+id/btnFocusNorth" android:layout_width="46dp" android:layout_height="wrap_content" android:text="真北" android:textSize="11sp" android:minWidth="0dp" android:paddingLeft="1dp" android:paddingRight="1dp" android:visibility="gone" />
             <Button android:id="@+id/btnFocusMenu" android:layout_width="40dp" android:layout_height="42dp" android:background="@android:color/transparent" android:text="☰" android:textColor="#FFAA00" android:textSize="20sp" android:contentDescription="メニュー" android:minWidth="0dp" android:paddingLeft="0dp" android:paddingRight="0dp" android:visibility="gone" />
         </LinearLayout>
+        <LinearLayout android:id="@+id/topActionControls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical|end" android:paddingStart="4dp" android:paddingEnd="4dp" android:visibility="gone" />
         <LinearLayout android:id="@+id/modeChooser" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
             <Button android:id="@+id/btnSpeedMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="速度" />
                         <Button android:id="@+id/btnNavigatorMode" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:minWidth="0dp" android:paddingLeft="2dp" android:paddingRight="2dp" android:textSize="12sp" android:text="地図" />
@@ -99,7 +100,7 @@
             </LinearLayout>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="12sp" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="160dp" android:minHeight="160dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
+        <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="160dp" android:minHeight="160dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.25" android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="目標まで" android:textColor="@color/gray_text" android:textSize="14sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="14sp" android:maxLines="1" android:textStyle="bold" />
                 <TextView android:id="@+id/tvDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="-- NM" android:textColor="@color/white" android:textSize="20sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="12sp" android:autoSizeMaxTextSize="20sp" android:maxLines="1" android:textStyle="bold" />
