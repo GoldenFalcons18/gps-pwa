@@ -1030,12 +1030,32 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun placeModeHeader(mode: Int) {
+        val content = b.focusPanel.parent as LinearLayout
+        val title = b.modeTitleRow
+        val actionRow = b.topActionControls
+        val topActions = if (mode <= 1) actionRow else title
+        listOf(b.headerRecordingControls, b.btnCurrentWp).forEach { view ->
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+            topActions.addView(view)
+        }
+        val menuDestination = if (mode <= 1) {
+            b.tvTime.parent as? android.view.ViewGroup ?: title
+        } else title
+        (b.btnFocusMenu.parent as? android.view.ViewGroup)?.removeView(b.btnFocusMenu)
+        menuDestination.addView(b.btnFocusMenu)
+        (title.parent as? android.view.ViewGroup)?.removeView(title)
+        val targetIndex = content.indexOfChild(b.targetPanel)
+        val insertAt = if (mode <= 1 && targetIndex >= 0) targetIndex + 1 else 0
+        content.addView(title, insertAt.coerceIn(0, content.childCount))
+    }
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
     private fun setDisplayMode(requestedMode:Int) {
         val mode=requestedMode.coerceIn(0,4)
         val immersive=mode>=2
         val wasImmersive=currentDisplayMode>=2
         val content=b.focusPanel.parent as LinearLayout
+        placeModeHeader(mode)
         if(immersive && !wasImmersive) {
             focusHiddenVisibility.clear()
             for(index in 1 until content.childCount) {
@@ -1063,8 +1083,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
         b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
+        b.topActionControls.visibility = if(mode<=1) android.view.View.VISIBLE else android.view.View.GONE
+        b.tvStatus.visibility = android.view.View.GONE
         b.modeChooser.visibility = android.view.View.GONE
-        b.headerRecordingControls.visibility = if(immersive) android.view.View.VISIBLE else android.view.View.GONE
+        b.headerRecordingControls.visibility = android.view.View.VISIBLE
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
@@ -1076,7 +1098,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnTimerMode.isEnabled=mode!=3
         b.btnSignalMode.isEnabled=mode!=4
         b.btnFocusNorth.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
-        b.btnFocusMenu.visibility=if(immersive) android.view.View.VISIBLE else android.view.View.GONE
+        b.btnFocusMenu.visibility=android.view.View.VISIBLE
+        b.btnCurrentWp.visibility=if(mode==0 || mode==1) android.view.View.VISIBLE else android.view.View.GONE
         displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
         updateNavigationUi()
         debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
@@ -1633,16 +1656,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.settingsPanel.visibility = android.view.View.VISIBLE
         b.root.post { (b.root as android.widget.ScrollView).smoothScrollTo(0, b.settingsPanel.top) }
     }
-    private fun showActionPanel(title: String, actions: List<Pair<String, () -> Unit>>) {
+    private fun showActionPanel(title: String, actions: List<Pair<String, () -> Unit>>, closeLabel: String = "閉じる", leftColumnCount: Int? = null) {
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12,12,12,12); setBackgroundColor(Color.rgb(15,15,15)) }
         column.addView(TextView(this).apply { text = title; textSize = 17f; setTextColor(Color.WHITE); setPadding(8,8,8,12) })
         val grid = android.widget.GridLayout(this).apply { columnCount = 2 }
-        (actions + ("閉じる" to {})).forEach { (label, action) ->
+        (actions + (closeLabel to {})).forEachIndexed { index, (label, action) ->
             val button = Button(this).apply {
-                text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false
+                text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false; minHeight = (76*resources.displayMetrics.density).toInt(); maxLines = 3; gravity = android.view.Gravity.CENTER; setPadding(8,8,8,8)
                 background = android.graphics.drawable.GradientDrawable().apply { setColor(Color.rgb(40,40,40)); setStroke(2,Color.rgb(255,170,0)); cornerRadius = 8f }
-                layoutParams = android.widget.GridLayout.LayoutParams().apply { width = 0; height = (76*resources.displayMetrics.density).toInt(); columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f); setMargins(4,4,4,4) }
+                layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                    width = 0
+                    height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    val split = leftColumnCount?.coerceIn(0, actions.size) 
+                    if (split != null) {
+                        columnSpec = android.widget.GridLayout.spec(if (index < split) 0 else 1, 1f)
+                        rowSpec = android.widget.GridLayout.spec(if (index < split) index else index - split)
+                    } else {
+                        columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED,1f)
+                    }
+                    setMargins(4,4,4,4)
+                }
                 setOnClickListener { dialog.dismiss(); action() }
             }
             grid.addView(button)
@@ -1776,17 +1810,149 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
+    private fun showNewWaypointDialog() {
+        var mark = draftMark
+        var color = draftColor
+        val folders = (waypointFolders + mainWaypointFolder).distinct()
+        val name = android.widget.EditText(this).apply {
+            hint = "名前"
+            setSingleLine(true)
+            setText(java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()))
+        }
+        val latitude = android.widget.EditText(this).apply {
+            hint = "緯度（十進度）"
+            inputType = 12290
+            setText(latestLat?.toString() ?: "0")
+        }
+        val longitude = android.widget.EditText(this).apply {
+            hint = "経度（十進度）"
+            inputType = 12290
+            setText(latestLon?.toString() ?: "0")
+        }
+        val folder = android.widget.Spinner(this).apply {
+            adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, folders.map {
+                it + if (it == mainWaypointFolder) " ★デフォルト" else ""
+            })
+            setSelection(folders.indexOf(mainWaypointFolder).coerceAtLeast(0))
+        }
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 8, 24, 8)
+            addView(TextView(this@MainActivity).apply { text = "名前" })
+            addView(name)
+            addView(TextView(this@MainActivity).apply { text = "保存フォルダ" })
+            addView(folder)
+            addView(TextView(this@MainActivity).apply { text = "座標（十進度）" })
+            addView(latitude)
+            addView(longitude)
+            addView(Button(this@MainActivity).apply {
+                text = "マーク・色"
+                setOnClickListener {
+                    WaypointAppearanceDialog.show(this@MainActivity, mark, color) { newMark, newColor ->
+                        mark = newMark
+                        color = newColor
+                    }
+                }
+            })
+        }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("新規ウェイポイント")
+            .setView(form)
+            .setNegativeButton("キャンセル", null)
+            .setPositiveButton("保存", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val lat = latitude.text.toString().toDoubleOrNull()
+                val lon = longitude.text.toString().toDoubleOrNull()
+                if (lat == null || !lat.isFinite() || lat !in -90.0..90.0) {
+                    latitude.error = "緯度は -90〜90 で入力してください"
+                    return@setOnClickListener
+                }
+                if (lon == null || !lon.isFinite() || lon !in -180.0..180.0) {
+                    longitude.error = "経度は -180〜180 で入力してください"
+                    return@setOnClickListener
+                }
+                val point = Waypoint(
+                    name = name.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" },
+                    lat = lat,
+                    lon = lon,
+                    mark = mark,
+                    color = color,
+                    group = folders.getOrElse(folder.selectedItemPosition) { mainWaypointFolder }
+                )
+                waypoints += point
+                waypointStore.saveAll(waypoints)
+                renderWaypointList()
+                updateNavigationUi()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showWaypointManager() {
+        renderWaypointList()
+        val list = b.waypointContainer
+        val parent = list.parent as? android.view.ViewGroup ?: run {
+            showWaypointInputs()
+            return
+        }
+        val index = parent.indexOfChild(list)
+        val params = list.layoutParams
+        parent.removeView(list)
+        val scroll = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+            addView(list)
+        }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("ウェイポイント")
+            .setView(scroll)
+            .setPositiveButton("完了", null)
+            .create()
+        dialog.setOnDismissListener {
+            (list.parent as? android.view.ViewGroup)?.removeView(list)
+            parent.addView(list, index.coerceIn(0, parent.childCount), params)
+        }
+        dialog.show()
+    }
+
+    private fun resetTripCounter() {
+        getSharedPreferences("tripCounter", MODE_PRIVATE).edit()
+            .putString("distance", "0")
+            .putString("seconds", "0")
+            .apply()
+        updateNavigationUi()
+        Toast.makeText(this, "カウンターをリセットしました（保存した航跡は保持）", Toast.LENGTH_SHORT).show()
+    }
+
     private fun showNavigationMenu() {
-        showActionPanel("メニュー", listOf(
-            "目標" to { showNavigationOptions() }, "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
-            "ウェイポイント（近い順）" to { showTargetList(true) }, "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
-            "記録開始" to { startGpsLogging() }, "記録停止" to { stopGpsLogging() },
+        val counterAction = when {
+            running -> "カウンターを一時停止"
+            else -> "カウンターを再開"
+        }
+        val actions = listOf(
+            "新規追跡" to {
+                if (running || recordingPaused) stopGpsLogging()
+                startGpsLogging()
+            },
+            counterAction to {
+                if (running) pauseGpsLogging() else startGpsLogging()
+            },
+            "カウンターをリセット" to { resetTripCounter() },
             "地点・グループ・エリア" to { showMapLibrary() },
             "WPインポート" to { importWaypointsDocument.launch(arrayOf("*/*")) },
-            "GPX出力" to { exportGpx() }, "設定" to { showSettings() },
+            "追跡・GPX出力" to { exportGpx() },
             "航跡一覧" to { showTrackList() },
-            "モード" to { showDisplayModePicker() }, "全ウェイポイント" to { mapPanel?.showWaypoints() }
-        ))
+            "設定" to { showSettings() },
+            "モード" to { showDisplayModePicker() },
+            "新規ウェイポイント" to { showNewWaypointDialog() },
+            "目標" to { showNavigationOptions() },
+            "📍 ウェイポイント" to { showWaypointManager() },
+            "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
+            "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints(); Unit }
+        )
+        showActionPanel("メニュー", actions, "完了", leftColumnCount = 9)
     }
 
     private fun showTrackList() {
