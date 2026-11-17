@@ -1,26 +1,17 @@
 # Sailing GPS Logger
 
-[Android・iPhone・Apple Watch 共通インストールページ](https://goldenfalcons18.github.io/gps-pwa/install/)
+ヨット用GPS計器・航跡記録アプリです。
 
-このURLを共有すると、端末ごとの取得先を選べます。Androidは公開済みの最新版APK、iPhone・WatchはTestFlight公開リンクへ案内します。iPhoneの新規参加にはTestFlight側の受付が有効である必要があります。
-
-## Android版
+## Android
 
 [Android版のダウンロード・更新情報](https://github.com/GoldenFalcons18/gps-pwa/releases/latest)
 
-APKをAndroid端末でダウンロードして開くとインストールできます。必要に応じてダウンロードに使ったブラウザーの「不明なアプリのインストール」を許可してください。
+APKをAndroid端末でダウンロードして開くとインストールできます。必要に応じて、ブラウザーの「不明なアプリのインストール」を許可してください。
 
-1.5.1以降は固定署名で継続配布します。更新はアプリが通知し、APKを上書きインストールできます。メニューから手動確認もできます。旧1.5.0テスト版からは初回だけGPX保存・ウェイポイントの控え・旧版削除が必要です。詳しくは[更新・移行手順](android/UPDATES.md)を確認してください。最新版の実機テストは未完了です。
+更新や旧版からの移行については[更新・移行手順](android/UPDATES.md)を確認してください。
 
-# Sailing GPS Logger Web V8
+## iPhone・Apple Watch
 
-ウェイポイントの座標入力を度分式へ変更しました。
+[TestFlightで取得](https://testflight.apple.com/join/BgNcAsUQ)
 
-入力例:
-- 緯度: 35° 18.0220′ N
-- 経度: 139° 29.2990′ E
-
-入力欄は「度」「分」「N/S または E/W」に分かれています。
-内部では十進度へ自動変換し、距離・方位計算に使用します。
-
-V7までの機能も維持しています。
+iPhoneアプリとApple WatchアプリをTestFlightからインストールできます。
