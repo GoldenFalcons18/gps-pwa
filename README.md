@@ -2,7 +2,7 @@
 
 ヨット用GPS計器・航跡記録アプリです。
 
-[インストール案内ページ](https://goldenfalcons18.github.io/gps-pwa/install/)から、Android版またはiPhone・Apple Watch版をインストールできます。
+[インストールページ](https://goldenfalcons18.github.io/gps-pwa/)を開くと、Android版またはiPhone・Apple Watch版の案内が表示されます。直接開く場合は[/install/](https://goldenfalcons18.github.io/gps-pwa/install/)をご利用ください。
 
 ## Android
 
