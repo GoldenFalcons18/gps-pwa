@@ -918,12 +918,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvSignalTitle.setTextColor(if(android.graphics.Color.luminance(event.color)<0.45f) Color.WHITE else Color.BLACK)
         val apLowerAt=displayPrefs.getLong("signalPostponementLowerAtMs",0L)
         val apLowerRemainingMs=(apLowerAt-now).coerceAtLeast(0L)
+        val signalTimelineNowMs=if(waitingForFirstSignal) now else rowBase+elapsedMs
         val upcomingEvent=if(rowBase>0L && !completed) events.withIndex()
-            .filter { it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID &&
-                (if(waitingForFirstSignal) rowBase+it.value.secondsAfterStart*1000L>now else it.value.secondsAfterStart*1000L>elapsedMs) }
+            .filter { rowBase+it.value.secondsAfterStart*1000L>signalTimelineNowMs && it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID }
             .minByOrNull { it.value.secondsAfterStart }
         val upcomingEventRemainingMs=upcomingEvent?.let {
-            if(waitingForFirstSignal) rowBase+it.value.secondsAfterStart*1000L-now else it.value.secondsAfterStart*1000L-elapsedMs
+            rowBase+it.value.secondsAfterStart*1000L-signalTimelineNowMs
         }
         val apLowerIsNext=waitingForRestart && displayPrefs.getBoolean("signalPostponementFlagUp",false) && apLowerAt>now
         val nextActionRemainingMs=if(apLowerIsNext) apLowerRemainingMs else upcomingEventRemainingMs
