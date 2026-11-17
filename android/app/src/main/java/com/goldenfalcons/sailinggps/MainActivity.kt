@@ -1034,17 +1034,21 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val content = b.focusPanel.parent as LinearLayout
         val title = b.modeTitleRow
         val actionRow = b.topActionControls
-        val destination = if (mode <= 1) actionRow else title
-        listOf(b.headerRecordingControls, b.btnCurrentWp, b.btnFocusMenu).forEach { view ->
+        val topActions = if (mode <= 1) actionRow else title
+        listOf(b.headerRecordingControls, b.btnCurrentWp).forEach { view ->
             (view.parent as? android.view.ViewGroup)?.removeView(view)
-            destination.addView(view)
+            topActions.addView(view)
         }
+        val menuDestination = if (mode <= 1) {
+            b.tvTime.parent as? android.view.ViewGroup ?: title
+        } else title
+        (b.btnFocusMenu.parent as? android.view.ViewGroup)?.removeView(b.btnFocusMenu)
+        menuDestination.addView(b.btnFocusMenu)
         (title.parent as? android.view.ViewGroup)?.removeView(title)
         val targetIndex = content.indexOfChild(b.targetPanel)
         val insertAt = if (mode <= 1 && targetIndex >= 0) targetIndex + 1 else 0
         content.addView(title, insertAt.coerceIn(0, content.childCount))
     }
-
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
     private fun setDisplayMode(requestedMode:Int) {
         val mode=requestedMode.coerceIn(0,4)
