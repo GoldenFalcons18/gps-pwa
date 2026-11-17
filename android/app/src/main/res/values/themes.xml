@@ -8,7 +8,18 @@
         <item name="colorPrimary">@color/orange_target</item>
         <item name="colorSecondary">@color/orange_target</item>
         <item name="materialButtonStyle">@style/SailingButton</item>
+        <item name="alertDialogTheme">@style/SailingAlertDialogTheme</item>
+        <item name="materialAlertDialogTheme">@style/SailingAlertDialogTheme</item>
         <item name="android:colorAccent">@color/orange_target</item>
+    </style>
+    <style name="SailingAlertDialogTheme" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorSurface">#161616</item>
+        <item name="colorOnSurface">#F4F4F4</item>
+        <item name="android:colorBackground">#161616</item>
+        <item name="android:textColorPrimary">#F4F4F4</item>
+        <item name="android:textColorSecondary">#CCCCCC</item>
+        <item name="colorAccent">@color/orange_target</item>
+        <item name="colorControlActivated">@color/orange_target</item>
     </style>
     <style name="SailingButton" parent="Widget.MaterialComponents.Button">
         <item name="backgroundTint">#161616</item>
