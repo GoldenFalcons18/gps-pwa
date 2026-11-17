@@ -1030,12 +1030,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun placeModeHeader(mode: Int) {
+        val content = b.focusPanel.parent as LinearLayout
+        val title = b.modeTitleRow
+        val actionRow = b.topActionControls
+        val destination = if (mode <= 1) actionRow else title
+        listOf(b.headerRecordingControls, b.btnCurrentWp, b.btnFocusMenu).forEach { view ->
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+            destination.addView(view)
+        }
+        (title.parent as? android.view.ViewGroup)?.removeView(title)
+        val targetIndex = content.indexOfChild(b.targetPanel)
+        val insertAt = if (mode <= 1 && targetIndex >= 0) targetIndex + 1 else 0
+        content.addView(title, insertAt.coerceIn(0, content.childCount))
+    }
+
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
     private fun setDisplayMode(requestedMode:Int) {
         val mode=requestedMode.coerceIn(0,4)
         val immersive=mode>=2
         val wasImmersive=currentDisplayMode>=2
         val content=b.focusPanel.parent as LinearLayout
+        placeModeHeader(mode)
         if(immersive && !wasImmersive) {
             focusHiddenVisibility.clear()
             for(index in 1 until content.childCount) {
@@ -1063,6 +1079,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
         b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
+        b.topActionControls.visibility = if(mode<=1) android.view.View.VISIBLE else android.view.View.GONE
         b.modeChooser.visibility = android.view.View.GONE
         b.headerRecordingControls.visibility = android.view.View.VISIBLE
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
