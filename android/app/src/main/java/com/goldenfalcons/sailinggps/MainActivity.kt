@@ -920,7 +920,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val apLowerRemainingMs=(apLowerAt-now).coerceAtLeast(0L)
         val upcomingEvent=if(rowBase>0L && !completed) events.withIndex()
             .filter { it.value.id!=SignalSequence.MANUAL_ORANGE_RAISE_RECORD_ID &&
-                if(waitingForFirstSignal) rowBase+it.value.secondsAfterStart*1000L>now else it.value.secondsAfterStart*1000L>elapsedMs }
+                (if(waitingForFirstSignal) rowBase+it.value.secondsAfterStart*1000L>now else it.value.secondsAfterStart*1000L>elapsedMs) }
             .minByOrNull { it.value.secondsAfterStart }
         val upcomingEventRemainingMs=upcomingEvent?.let {
             if(waitingForFirstSignal) rowBase+it.value.secondsAfterStart*1000L-now else it.value.secondsAfterStart*1000L-elapsedMs

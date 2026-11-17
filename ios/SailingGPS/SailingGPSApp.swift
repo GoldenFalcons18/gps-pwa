@@ -878,7 +878,7 @@ struct ContentView: View {
             }
         }
     }
-    private func instrument(    private func instrument(_ value: String, label: String, size: CGFloat = 25) -> some View {
+    private func instrument(_ value: String, label: String, size: CGFloat = 25) -> some View {
         VStack(spacing: 2) {
             Text(value).font(.system(size: size, weight: .bold, design: .monospaced)).minimumScaleFactor(0.45).lineLimit(1)
             Text(label).font(.caption2).foregroundStyle(.gray).lineLimit(1)
@@ -935,7 +935,7 @@ struct ContentView: View {
             }.accessibilityElement(children: .combine)
         }.padding(.horizontal, 5)
     }
-    private var positionReadings:    private var positionReadings: some View {
+    private var positionReadings: some View {
         HStack(spacing: 5) {
             VStack(spacing: 1) {
                 Text(navigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位").font(.caption2).foregroundStyle(.gray)
