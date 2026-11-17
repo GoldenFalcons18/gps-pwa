@@ -1080,6 +1080,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
         b.topActionControls.visibility = if(mode<=1) android.view.View.VISIBLE else android.view.View.GONE
+        b.tvStatus.visibility = android.view.View.GONE
         b.modeChooser.visibility = android.view.View.GONE
         b.headerRecordingControls.visibility = android.view.View.VISIBLE
         if(immersive) focusHiddenVisibility.keys.forEach{it.visibility=android.view.View.GONE}
