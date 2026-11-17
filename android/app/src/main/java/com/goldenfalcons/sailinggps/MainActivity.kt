@@ -1810,6 +1810,87 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
+    private fun showNewWaypointDialog() {
+        var mark = draftMark
+        var color = draftColor
+        val folders = (waypointFolders + mainWaypointFolder).distinct()
+        val name = android.widget.EditText(this).apply {
+            hint = "名前"
+            setSingleLine(true)
+            setText(java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()))
+        }
+        val latitude = android.widget.EditText(this).apply {
+            hint = "緯度（十進度）"
+            inputType = 12290
+            setText(latestLat?.toString() ?: "0")
+        }
+        val longitude = android.widget.EditText(this).apply {
+            hint = "経度（十進度）"
+            inputType = 12290
+            setText(latestLon?.toString() ?: "0")
+        }
+        val folder = android.widget.Spinner(this).apply {
+            adapter = android.widget.ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, folders.map {
+                it + if (it == mainWaypointFolder) " ★デフォルト" else ""
+            })
+            setSelection(folders.indexOf(mainWaypointFolder).coerceAtLeast(0))
+        }
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 8, 24, 8)
+            addView(TextView(this@MainActivity).apply { text = "名前" })
+            addView(name)
+            addView(TextView(this@MainActivity).apply { text = "保存フォルダ" })
+            addView(folder)
+            addView(TextView(this@MainActivity).apply { text = "座標（十進度）" })
+            addView(latitude)
+            addView(longitude)
+            addView(Button(this@MainActivity).apply {
+                text = "マーク・色"
+                setOnClickListener {
+                    WaypointAppearanceDialog.show(this@MainActivity, mark, color) { newMark, newColor ->
+                        mark = newMark
+                        color = newColor
+                    }
+                }
+            })
+        }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("新規ウェイポイント")
+            .setView(form)
+            .setNegativeButton("キャンセル", null)
+            .setPositiveButton("保存", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+                val lat = latitude.text.toString().toDoubleOrNull()
+                val lon = longitude.text.toString().toDoubleOrNull()
+                if (lat == null || !lat.isFinite() || lat !in -90.0..90.0) {
+                    latitude.error = "緯度は -90〜90 で入力してください"
+                    return@setOnClickListener
+                }
+                if (lon == null || !lon.isFinite() || lon !in -180.0..180.0) {
+                    longitude.error = "経度は -180〜180 で入力してください"
+                    return@setOnClickListener
+                }
+                val point = Waypoint(
+                    name = name.text.toString().trim().ifEmpty { "Waypoint ${waypoints.size + 1}" },
+                    lat = lat,
+                    lon = lon,
+                    mark = mark,
+                    color = color,
+                    group = folders.getOrElse(folder.selectedItemPosition) { mainWaypointFolder }
+                )
+                waypoints += point
+                waypointStore.saveAll(waypoints)
+                renderWaypointList()
+                updateNavigationUi()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
     private fun showWaypointManager() {
         renderWaypointList()
         val list = b.waypointContainer
@@ -1865,7 +1946,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "航跡一覧" to { showTrackList() },
             "設定" to { showSettings() },
             "モード" to { showDisplayModePicker() },
-            "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
+            "新規ウェイポイント" to { showNewWaypointDialog() },
             "目標" to { showNavigationOptions() },
             "📍 ウェイポイント" to { showWaypointManager() },
             "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
