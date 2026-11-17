@@ -1659,11 +1659,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val grid = android.widget.GridLayout(this).apply { columnCount = 2 }
         (actions + (closeLabel to {})).forEachIndexed { index, (label, action) ->
             val button = Button(this).apply {
-                text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false
+                text = label; textSize = 14f; setTextColor(Color.WHITE); isAllCaps = false; minHeight = (76*resources.displayMetrics.density).toInt(); maxLines = 3; gravity = android.view.Gravity.CENTER; setPadding(8,8,8,8)
                 background = android.graphics.drawable.GradientDrawable().apply { setColor(Color.rgb(40,40,40)); setStroke(2,Color.rgb(255,170,0)); cornerRadius = 8f }
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
                     width = 0
-                    height = (76*resources.displayMetrics.density).toInt()
+                    height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     val split = leftColumnCount?.coerceIn(0, actions.size) 
                     if (split != null) {
                         columnSpec = android.widget.GridLayout.spec(if (index < split) 0 else 1, 1f)
@@ -1806,6 +1806,32 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
+    private fun showWaypointManager() {
+        renderWaypointList()
+        val list = b.waypointContainer
+        val parent = list.parent as? android.view.ViewGroup ?: run {
+            showWaypointInputs()
+            return
+        }
+        val index = parent.indexOfChild(list)
+        val params = list.layoutParams
+        parent.removeView(list)
+        val scroll = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+            addView(list)
+        }
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("ウェイポイント")
+            .setView(scroll)
+            .setPositiveButton("完了", null)
+            .create()
+        dialog.setOnDismissListener {
+            (list.parent as? android.view.ViewGroup)?.removeView(list)
+            parent.addView(list, index.coerceIn(0, parent.childCount), params)
+        }
+        dialog.show()
+    }
+
     private fun resetTripCounter() {
         getSharedPreferences("tripCounter", MODE_PRIVATE).edit()
             .putString("distance", "0")
@@ -1837,7 +1863,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "モード" to { showDisplayModePicker() },
             "新規ウェイポイント" to { pendingNavigation = false; showWaypointInputs() },
             "目標" to { showNavigationOptions() },
-            "📍 ウェイポイント" to { showWaypointInputs() },
+            "📍 ウェイポイント" to { showWaypointManager() },
             "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
             "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints(); Unit }
         )
