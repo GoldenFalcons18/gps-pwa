@@ -1821,7 +1821,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "目標" to { showNavigationOptions() },
             "📍 ウェイポイント" to { showWaypointInputs() },
             "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
-            "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints() }
+            "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints(); Unit }
         )
         showActionPanel("メニュー", actions, "完了", leftColumnCount = 9)
     }
