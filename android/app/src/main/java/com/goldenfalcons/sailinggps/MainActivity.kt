@@ -1494,6 +1494,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val instrumentSpeed=if(preview) 3.0 else if(fresh) latestSpeedMps else null
         val instrumentReading=InstrumentHeading.resolve(instrumentCourse,instrumentSpeed,instrumentCompass,declination,useMagnetic)
         val instrumentHeading=instrumentReading?.value
+        b.instrumentView.mode = if(displayPrefs.getString("compassCenterMode","absolute")=="relative") InstrumentView.Mode.RELATIVE else InstrumentView.Mode.ABSOLUTE
         if(::focusSog.isInitialized) {
             val label=(focusSog.parent as LinearLayout).getChildAt(0) as TextView;label.text="SOG / $unit"
             focusSog.text=if(preview) "12.3" else if(fresh) speed?.let{"%.1f".format(java.util.Locale.US,it)} ?: "—" else "—"
