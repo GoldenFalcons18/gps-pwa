@@ -1456,6 +1456,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } ?: "--:--:--"
     }
 
+    private fun setEteDisplay(label: String, value: String) {
+        val content = android.text.SpannableString("$label\n$value")
+        content.setSpan(android.text.style.RelativeSizeSpan(1.65f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        b.tvEte.text = content
+    }
+
     private fun updateNavigationUi() {
         updateRecordingDashboard()
         if(currentDisplayMode==3) updateStartTimerUi()
@@ -1503,7 +1509,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             } else "—"
         }
         val wp = activeWaypoint
-        b.tvEte.text = "ETE\n--:--:--"
+        setEteDisplay("ETE", "--:--:--")
         val lat = latestLat
         val lon = latestLon
         if (wp == null || lat == null || lon == null) {
@@ -1520,7 +1526,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
         val estimateSpeed=if(displayPrefs.getBoolean("arrivalUsesAverage",false)) tripAverageSpeed() else latestSpeedMps
         val eta=displayPrefs.getBoolean("showETA",false)
-        b.tvEte.text = (if(eta) "ETA\n" else "ETE\n")+InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false))
+        setEteDisplay(if(eta) "ETA" else "ETE", InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false)))
         b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
         b.tvDistanceSub.text = ""
         b.tvWpName.text = wp.name
