@@ -62,12 +62,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         override fun run() {
             b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
             if(currentDisplayMode>=2) updateNavigationUi()
+            updateRecordingDashboard()
             if(currentDisplayMode==4) updateSignalUi()
             uiHandler.postDelayed(this, SignalTiming.millisUntilNextSecond(signalNow()))
         }
     }
     private var latestLat: Double? = null
     private var latestLon: Double? = null
+    private var latestAltitudeM: Double? = null
     private var latestSpeedMps: Double? = null
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
@@ -162,6 +164,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestFixAt = intent.getLongExtra(GpsLoggingService.EXTRA_FIX_ELAPSED, 0L)
                     latestLat = intent.getDoubleExtra(GpsLoggingService.EXTRA_LAT, Double.NaN).takeIf { it.isFinite() }
                     latestLon = intent.getDoubleExtra(GpsLoggingService.EXTRA_LON, Double.NaN).takeIf { it.isFinite() }
+                    latestAltitudeM = intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, Double.NaN).takeIf { it.isFinite() }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
@@ -328,7 +331,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnFocusNorth.setOnClickListener { displayPrefs.edit().putBoolean("instrumentMagnetic",!displayPrefs.getBoolean("instrumentMagnetic",false)).apply();updateNavigationUi() }
         b.btnSpeedMode.setOnClickListener { setDisplayMode(0) }
         b.btnNavigatorMode.setOnClickListener { setDisplayMode(true) }
-        b.btnShowWaypoints.setOnClickListener { mapPanel?.showWaypoints() }
         b.btnMenu.setOnClickListener { showNavigationMenu() }
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
         b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("1分","3分","5分","10分"))
@@ -1039,9 +1041,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             (view.parent as? android.view.ViewGroup)?.removeView(view)
             topActions.addView(view)
         }
-        val menuDestination = if (mode <= 1) {
-            b.tvTime.parent as? android.view.ViewGroup ?: title
-        } else title
+        val menuDestination = if (mode <= 1) b.trackingSummaryTop else title
         (b.btnFocusMenu.parent as? android.view.ViewGroup)?.removeView(b.btnFocusMenu)
         menuDestination.addView(b.btnFocusMenu)
         (title.parent as? android.view.ViewGroup)?.removeView(title)
@@ -1433,12 +1433,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnRecordStop.visibility=if(running || recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
     }
 
+    private fun updateRecordingDashboard() {
+        if (!::b.isInitialized) return
+        val counter = getSharedPreferences("tripCounter", MODE_PRIVATE)
+        val seconds = (counter.getString("seconds", "0")?.toDoubleOrNull() ?: 0.0).coerceAtLeast(0.0).toLong()
+        val meters = (counter.getString("distance", "0")?.toDoubleOrNull() ?: 0.0).coerceAtLeast(0.0)
+        val hours = seconds / 3600
+        val minutes = (seconds / 60) % 60
+        val remaining = seconds % 60
+        b.tvRecordingElapsed.text = "%02d:%02d:%02d".format(java.util.Locale.ROOT, hours, minutes, remaining)
+        val trackedDistance = if (metricUnits) meters / 1000.0 else meters / 1852.0
+        b.tvRecordingDistance.text = if (metricUnits) "%.2f km".format(java.util.Locale.US, trackedDistance) else "%.2f nm".format(java.util.Locale.US, trackedDistance)
+        val age = (android.os.SystemClock.elapsedRealtime() - latestFixAt) / 1000.0
+        val fresh = latestFixAt > 0 && age in 0.0..15.0
+        b.tvGpsIndicator.text = if (fresh) "●\\nGPS" else "○\\nGPS"
+        b.tvGpsIndicator.setTextColor(if (fresh) Color.rgb(48, 209, 88) else Color.LTGRAY)
+        b.tvAltitude.text = latestAltitudeM?.let { "%.0f".format(java.util.Locale.US, it) } ?: "--"
+        val speed = latestSpeedMps?.takeIf { it.isFinite() && it > 0.25 }
+        b.tvPace.text = speed?.let {
+            val paceSeconds = ((if (metricUnits) 1000.0 else 1852.0) / it).toLong().coerceAtLeast(0)
+            "%02d:%02d:%02d".format(java.util.Locale.ROOT, paceSeconds / 3600, paceSeconds / 60 % 60, paceSeconds % 60)
+        } ?: "--:--:--"
+    }
+
+    private fun setEteDisplay(label: String, value: String) {
+        val content = android.text.SpannableString("$label\n$value")
+        content.setSpan(android.text.style.RelativeSizeSpan(1.65f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        b.tvEte.text = content
+    }
+
     private fun updateNavigationUi() {
+        updateRecordingDashboard()
         if(currentDisplayMode==3) updateStartTimerUi()
         val threshold=(displayPrefs.getString("zeroSpeedThreshold","0")?.toDoubleOrNull() ?: 0.0)/NavigationUtils.MPS_TO_KT
         val speed = latestSpeedMps?.takeIf { it.isFinite() && it >= 0 }?.let{if(it<threshold) 0.0 else it}?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
         val unit = if (metricUnits) "km/h" else "knot"
         b.tvSpeedUnit.text = "SOG · $unit"
+        b.tvSpeedPanelUnit.text = "SOG · $unit"
         b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
         b.tvLargeSpeed.largeDecimal=displayPrefs.getBoolean("largeDecimal",true)
         b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getStringExtra("previewSpeed")?.toDoubleOrNull() else speed
@@ -1479,7 +1510,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             } else "—"
         }
         val wp = activeWaypoint
-        b.tvEte.text = "ETE\n--:--:--"
+        setEteDisplay("ETE", "--:--:--")
         val lat = latestLat
         val lon = latestLon
         if (wp == null || lat == null || lon == null) {
@@ -1496,7 +1527,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
         val estimateSpeed=if(displayPrefs.getBoolean("arrivalUsesAverage",false)) tripAverageSpeed() else latestSpeedMps
         val eta=displayPrefs.getBoolean("showETA",false)
-        b.tvEte.text = (if(eta) "ETA\n" else "ETE\n")+InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false))
+        setEteDisplay(if(eta) "ETA" else "ETE", InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false)))
         b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
         b.tvDistanceSub.text = ""
         b.tvWpName.text = wp.name
@@ -1949,8 +1980,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "新規ウェイポイント" to { showNewWaypointDialog() },
             "目標" to { showNavigationOptions() },
             "📍 ウェイポイント" to { showWaypointManager() },
-            "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() },
-            "全ウェイポイント" to { setDisplayMode(1); mapPanel?.showWaypoints(); Unit }
+            "現在地に打つ（保存先：$mainWaypointFolder）" to { addCurrentLocationWaypoint() }
         )
         showActionPanel("メニュー", actions, "完了", leftColumnCount = 9)
     }

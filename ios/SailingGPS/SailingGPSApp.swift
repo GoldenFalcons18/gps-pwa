@@ -482,7 +482,6 @@ struct ContentView: View {
     @State private var mapDraftPresented = false
     @State private var following = true
     @State private var mapMetersPerCm = 200.0
-    @State private var showAllRequest = 0
     @StateObject private var gps = GPSRecorder()
     @AppStorage("displayMode") private var mode = 0
     @AppStorage("magneticHeadingMode") private var magnetic = true
@@ -527,7 +526,10 @@ struct ContentView: View {
     private var navigationReference: CoordinateInput.HeadingReading? {
         CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
-    private var heading: Double? { navigationReference?.heading }
+    private var instrumentNavigationReference: CoordinateInput.HeadingReading? {
+        CoordinateInput.headingReference(preferGps: !instrumentMagnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
+    }
+    private var heading: Double? { instrumentNavigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
     @AppStorage("instrumentMagnetic") private var instrumentMagnetic=false
@@ -589,11 +591,17 @@ struct ContentView: View {
         guard let target, let point = gps.location else { return nil }
         return bearing(to: target, from: point)
     }
-    private var compassReferenceHeading: Double? { navigationReference?.heading }
+    private var compassReferenceHeading: Double? { instrumentNavigationReference?.heading }
     private var targetDisplayBearing: Double? {
         guard let bearing = targetBearing else { return nil }
-        guard let reference = navigationReference, let trueHeading = reference.trueHeading else { return nil }
+        guard let reference = instrumentNavigationReference, let trueHeading = reference.trueHeading else { return nil }
         return CoordinateInput.normalizeHeading(bearing - trueHeading + reference.heading)
+    }
+    private var relativeTargetDirection: String {
+        guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
+        let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
+        let hour = Int(floor((relative + 15) / 30)) % 12
+        return "\(hour == 0 ? 12 : hour)時方向"
     }
     private var compass: some View {
         ZStack {
@@ -609,7 +617,7 @@ struct ContentView: View {
                 Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
             VStack(spacing: 4) {
-                Text(navigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
+                Text(instrumentNavigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
                 Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
             }
         }.frame(width: 154, height: 154)
@@ -629,11 +637,13 @@ struct ContentView: View {
         GeometryReader { proxy in
             let dial = min(proxy.size.height, proxy.size.width * 0.45)
             HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("目標", systemImage: "ruler").font(.caption).foregroundStyle(.gray)
-                    Text(targetDistance).font(.system(size: 25, weight: .bold)).minimumScaleFactor(0.45).lineLimit(1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("目標", systemImage: "ruler").font(.caption2).foregroundStyle(.gray)
+                    Text(targetDistance).font(.system(size: 21, weight: .bold)).minimumScaleFactor(0.4).lineLimit(1)
+                    Label("方位", systemImage: "location.north").font(.caption2).foregroundStyle(.gray)
+                    Text(relativeTargetDirection).font(.system(size: 16, weight: .bold)).minimumScaleFactor(0.5).lineLimit(1)
                     Label(showETA ? "目標, ETA":"目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
-                    Text(ete).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.45).lineLimit(1)
+                    Text(ete).font(.system(size: 17, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.4).lineLimit(1)
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)
                 compass.scaleEffect(dial / 154).frame(width: dial, height: dial)
                 VStack(spacing: 8) {
@@ -654,7 +664,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, showAllRequest: showAllRequest, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
             .overlay(alignment: .trailing) {
@@ -673,9 +683,6 @@ struct ContentView: View {
                     .accessibilityLabel("現在地へ追従")
                 Spacer()
                 Text("長押しで地図操作").font(.caption2).padding(4).background(.black.opacity(0.5)).foregroundStyle(.white)
-                Spacer()
-                Button { following = false; showAllRequest += 1 } label: { Image(systemName: "square.3.layers.3d") }
-                    .accessibilityLabel("全ウェイポイント")
             }.font(.title3).tint(.black).buttonStyle(.borderedProminent).padding(8)
         }
     }
@@ -692,6 +699,11 @@ struct ContentView: View {
                     Picker("モード", selection: $mode) { Text("スピードメーター").tag(0); Text("ナビゲーション").tag(1); Text("セーリング").tag(2); Text("タイマー").tag(3); Text("シグナル").tag(4) }
                     Toggle("端末の向きで追従", isOn: $magnetic)
                     Text("OFFではGPS進行方位で追従します").font(.caption)
+                    Picker("計器の方位", selection: $instrumentMagnetic) {
+                        Text("GPS進路・真北").tag(false)
+                        Text("磁気コンパス・磁北").tag(true)
+                    }
+                    Text("地図の追従方位と計器の方位は個別に選べます").font(.caption)
                 }
                 DetailedSettingsView(gps:gps)
                 Section("ウェイポイント") {
@@ -847,7 +859,6 @@ struct ContentView: View {
                         menuTile("目標", detail: target?.name ?? "未設定") { menuAction { navigationOptionsPresented = true } }
                         menuTile("📍 ウェイポイント", detail: "一覧・編集・削除") { menuAction { waypointListPresented = true } }
                         menuTile("現在地に打つ", detail:"保存先：\(mainWaypointFolder)") { menuAction { gps.saveCurrentWaypoint() } }
-                        menuTile("全ウェイポイント", detail: "地図に表示") { menuAction { mode = 1; following = false; showAllRequest += 1 } }
                         menuTile("完了", done: true) { menuPresented = false }
                     }
                 }.padding(4)
@@ -938,7 +949,7 @@ struct ContentView: View {
     private var positionReadings: some View {
         HStack(spacing: 5) {
             VStack(spacing: 1) {
-                Text(navigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位").font(.caption2).foregroundStyle(.gray)
+                Text(instrumentNavigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位").font(.caption2).foregroundStyle(.gray)
                 Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
                     .font(.system(size: 45, weight: .medium, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1)
             }.frame(maxWidth: .infinity)

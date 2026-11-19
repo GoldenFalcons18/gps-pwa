@@ -71,7 +71,6 @@ struct NavigationMapView: UIViewRepresentable {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
-    let showAllRequest: Int
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
 
@@ -107,7 +106,6 @@ struct NavigationMapView: UIViewRepresentable {
     }
     final class Coordinator: NSObject, MKMapViewDelegate {
         var parent: NavigationMapView
-        var lastShowAll = 0
         private var didInitialWaypointFit = false
         private var rendering = false
         private var signature = ""
@@ -288,11 +286,7 @@ struct NavigationMapView: UIViewRepresentable {
                     map.showAnnotations(pins, animated: false)
                 }
             }
-            if lastShowAll != p.showAllRequest {
-                lastShowAll = p.showAllRequest
-                let pins = map.annotations.compactMap { $0 as? Pin }.filter { $0.kind != "course" }
-                if !pins.isEmpty { map.showAnnotations(pins, animated: false) }
-            } else if p.following {
+            if p.following {
                 if shownHeading == nil { shownHeading = p.heading }
                 applyCamera(map)
                 if p.heading != nil { startAnimation() }
