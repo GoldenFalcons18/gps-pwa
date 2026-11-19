@@ -1458,7 +1458,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setEteDisplay(label: String, value: String) {
         val content = android.text.SpannableString("$label\n$value")
-        content.setSpan(android.text.style.RelativeSizeSpan(1.65f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        content.setSpan(android.text.style.RelativeSizeSpan(1.3f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         b.tvEte.text = content
     }
 
@@ -1486,22 +1486,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
         val fresh=latestFixAt>0 && age in 0.0..15.0
         val preview=BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)
+        val useMagnetic=displayPrefs.getBoolean("instrumentMagnetic",false)
+        val compassAge=(android.os.SystemClock.elapsedRealtime()-minOf(magneticSampleAt,accelSampleAt))/1000.0
+        val instrumentCompass=if(preview) 218.0 else magneticHeading?.takeIf{magneticSampleAt>0 && accelSampleAt>0 && compassAge in 0.0..15.0 && compassAccuracy>SensorManager.SENSOR_STATUS_UNRELIABLE}
+        val declination=if(preview) -8.0 else if(latestLat!=null && latestLon!=null) GeomagneticField(latestLat!!.toFloat(),latestLon!!.toFloat(),0f,System.currentTimeMillis()).declination.toDouble() else null
+        val instrumentCourse=if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age)
+        val instrumentSpeed=if(preview) 3.0 else if(fresh) latestSpeedMps else null
+        val instrumentReading=InstrumentHeading.resolve(instrumentCourse,instrumentSpeed,instrumentCompass,declination,useMagnetic)
+        val instrumentHeading=instrumentReading?.value
         if(::focusSog.isInitialized) {
             val label=(focusSog.parent as LinearLayout).getChildAt(0) as TextView;label.text="SOG / $unit"
             focusSog.text=if(preview) "12.3" else if(fresh) speed?.let{"%.1f".format(java.util.Locale.US,it)} ?: "—" else "—"
-            val useMagnetic=displayPrefs.getBoolean("instrumentMagnetic",false)
             b.btnFocusNorth.text=if(useMagnetic) "磁北" else "真北"
-            val compassAge=(android.os.SystemClock.elapsedRealtime()-minOf(magneticSampleAt,accelSampleAt))/1000.0
-            val compass=if(preview) 218.0 else magneticHeading?.takeIf{magneticSampleAt>0 && accelSampleAt>0 && compassAge in 0.0..15.0 && compassAccuracy>SensorManager.SENSOR_STATUS_UNRELIABLE}
-            val correction=if(preview) -8.0 else if(latestLat!=null && latestLon!=null) GeomagneticField(latestLat!!.toFloat(),latestLon!!.toFloat(),0f,System.currentTimeMillis()).declination.toDouble() else null
-            val reading=InstrumentHeading.resolve(if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age),if(preview) 3.0 else if(fresh) latestSpeedMps else null,compass,correction,useMagnetic)
+            val reading=instrumentReading
             ((focusCog.parent as LinearLayout).getChildAt(0) as TextView).text=(if(reading?.compass==true) "コンパス方位" else "COG")+(if(useMagnetic) "（磁北）" else "（真北）")
             focusCog.text=reading?.value?.let{"${it.roundToInt()%360}°"} ?: "—"
             val target=activeWaypoint
             val targetBearing=if(preview) 144.0 else if(fresh && target!=null && latestLat!=null && latestLon!=null && NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)>1)
                 NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
             ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
-            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,correction)?.let{"${it.roundToInt()%360}°"} ?: "—"
+            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)?.let{"${it.roundToInt()%360}°"} ?: "—"
             ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
             focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
                 val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
@@ -1519,7 +1523,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvClock.text = "--時方向"
             b.tvWpName.text = wp?.name ?: "未設定"
             b.tvWpCoords.text = wp?.let { "${displayCoordinate(it.lat,true)}\n${displayCoordinate(it.lon,false)}" } ?: "--"
-            b.instrumentView.update(null, null, heading, reference?.magnetic == true)
+            b.instrumentView.update(null, null, instrumentHeading, useMagnetic)
             return
         }
 
@@ -1533,20 +1537,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvWpName.text = wp.name
         b.tvWpCoords.text = "${displayCoordinate(wp.lat,true)}\n${displayCoordinate(wp.lon,false)}"
 
-        val trueHeading = reference?.trueHeading
-        if (heading != null && trueHeading != null) {
-            val relative = HeadingReference.relative(bearing, trueHeading)
-            val displayBearing = NavigationUtils.normalize360(heading + relative)
+        val targetReferenceBearing=InstrumentHeading.bearing(bearing,useMagnetic,declination)
+        if (instrumentHeading != null && targetReferenceBearing != null) {
+            val relative = HeadingReference.relative(targetReferenceBearing, instrumentHeading)
+            val displayBearing = NavigationUtils.normalize360(instrumentHeading + relative)
             val now = android.os.SystemClock.uptimeMillis()
             if (now - latestHeadingLogAt >= 500) {
                 latestHeadingLogAt = now
-                debug("Nav heading=$heading true=$trueHeading target=$displayBearing relative=$relative source=$source")
+                debug("Nav instrument=$instrumentHeading magnetic=$useMagnetic target=$displayBearing relative=$relative")
             }
             b.tvClock.text = NavigationUtils.relativeClock(relative)
-            b.instrumentView.update(relative, displayBearing, heading, reference?.magnetic == true)
+            b.instrumentView.update(relative, displayBearing, instrumentHeading, useMagnetic)
         } else {
             b.tvClock.text = "方位待ち"
-            b.instrumentView.update(null, null, heading, reference?.magnetic == true)
+            b.instrumentView.update(null, null, instrumentHeading, useMagnetic)
         }
     }
 
@@ -1738,7 +1742,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
     private fun showNavigationOptions() {
         showActionPanel("ナビゲーションのオプション", listOf(
-            "新規ウェイポイント" to { pendingNavigation = true; showWaypointInputs(); b.etWpName.requestFocus() },
+            "新規ウェイポイント" to { pendingNavigation = false; showNewWaypointDialog(makeTarget = true) },
             "既存ウェイポイント（近い順）" to { showTargetList(true) },
             "既存ウェイポイント（最近）" to { showTargetList(false) },
             "目標なし" to { clearTarget() }
@@ -1841,7 +1845,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         dialog.behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 
-    private fun showNewWaypointDialog() {
+    private fun showNewWaypointDialog(makeTarget:Boolean=false) {
         var mark = draftMark
         var color = draftColor
         val folders = (waypointFolders + mainWaypointFolder).distinct()
@@ -1917,6 +1921,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 renderWaypointList()
                 updateNavigationUi()
                 dialog.dismiss()
+                if(makeTarget) confirmTarget(point)
             }
         }
         dialog.show()
@@ -2145,55 +2150,62 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.waypointContainer.addView(Button(this).apply { text=if(waypointFolder==mainWaypointFolder)"このフォルダがデフォルトです" else "このフォルダをデフォルトにする";isEnabled=waypointFolder!=mainWaypointFolder;setOnClickListener{displayPrefs.edit().putString("mainWaypointFolder",waypointFolder).apply();renderWaypointList()} })
         waypoints.filter{it.group==waypointFolder}.forEach { wp ->
             val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(6, 6, 6, 6)
-                setBackgroundColor(if (activeWaypoint?.id == wp.id) Color.rgb(35, 25, 0) else Color.rgb(10, 10, 10))
+                orientation = LinearLayout.VERTICAL
+                setPadding(10, 8, 10, 8)
+                setBackgroundColor(if (activeWaypoint?.id == wp.id) Color.rgb(35, 25, 0) else Color.rgb(18, 18, 18))
             }
             val text = TextView(this).apply {
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 setTextColor(Color.WHITE)
                 textSize = 17f
                 text = "${wp.mark} ${wp.name}\n${displayCoordinate(wp.lat,true)} / ${displayCoordinate(wp.lon,false)}"
+                setPadding(4, 2, 4, 8)
             }
-            val select = Button(this).apply {
-                this.text = if (activeWaypoint?.id == wp.id) "選択中" else "選択"
-                isEnabled = activeWaypoint?.id != wp.id
-                setOnClickListener {
-                    confirmTarget(wp)
-                }
+            row.addView(text,LinearLayout.LayoutParams(-1,-2))
+            val actions=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+            val select=Button(this).apply {
+                this.text=if(activeWaypoint?.id==wp.id) "選択中" else "目標"
+                isEnabled=activeWaypoint?.id!=wp.id
+                setOnClickListener { confirmTarget(wp) }
             }
-            val appearance = Button(this).apply {
-                this.text = "外観"
+            val edit=Button(this).apply {
+                this.text="編集"
+                contentDescription="${wp.name}を編集"
+                setOnClickListener { editWaypoint(wp) }
+            }
+            val appearance=Button(this).apply {
+                this.text="外観"
                 setOnClickListener {
-                    WaypointAppearanceDialog.show(this@MainActivity, wp.mark, wp.color) { mark, color ->
-                        val changed = wp.copy(mark = mark, color = color)
-                        val index = waypoints.indexOfFirst { it.id == wp.id }
-                        if (index >= 0) waypoints[index] = changed
-                        if (activeWaypoint?.id == wp.id) activeWaypoint = changed
-                        waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                    WaypointAppearanceDialog.show(this@MainActivity,wp.mark,wp.color) { mark,color ->
+                        val changed=wp.copy(mark=mark,color=color)
+                        val index=waypoints.indexOfFirst { it.id==wp.id }
+                        if(index>=0) waypoints[index]=changed
+                        if(activeWaypoint?.id==wp.id) activeWaypoint=changed
+                        waypointStore.saveAll(waypoints);renderWaypointList();updateNavigationUi()
                         debug("WP appearance saved ${wp.id} / $color")
                     }
                 }
             }
-            val delete = Button(this).apply {
-                this.text = "削除"
+            val delete=Button(this).apply {
+                this.text="削除"
                 setOnClickListener {
                     library=library.copy(features=library.features.map { f -> if(wp.id in f.waypointIds) f.copy(coordinates=f.points(waypoints),waypointIds=emptyList()) else f })
-                    waypoints.removeAll { it.id == wp.id }
+                    waypoints.removeAll { it.id==wp.id }
                     waypointStore.saveLibrary(waypoints,library)
-                    if (activeWaypoint?.id == wp.id) activeWaypoint = null
-                    waypointStore.saveAll(waypoints)
-                    waypointStore.setActiveId(activeWaypoint?.id)
-                    renderWaypointList()
-                    updateNavigationUi()
-                    debug("WP deleted ${wp.name}")
+                    if(activeWaypoint?.id==wp.id) activeWaypoint=null
+                    waypointStore.saveAll(waypoints);waypointStore.setActiveId(activeWaypoint?.id)
+                    renderWaypointList();updateNavigationUi();debug("WP deleted ${wp.name}")
                 }
             }
-            row.addView(text)
-            row.addView(select)
-            row.addView(appearance)
-            row.addView(delete)
-            b.waypointContainer.addView(row)
+            listOf(select,edit,appearance,delete).forEach { button ->
+                button.isAllCaps=false
+                button.textSize=13f
+                button.minHeight=(48*resources.displayMetrics.density).toInt()
+                actions.addView(button,LinearLayout.LayoutParams(0,-2,1f))
+            }
+            row.addView(actions,LinearLayout.LayoutParams(-1,-2))
+            b.waypointContainer.addView(row,LinearLayout.LayoutParams(-1,-2).apply {
+                bottomMargin=(6*resources.displayMetrics.density).toInt()
+            })
         }
     }
 
