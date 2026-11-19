@@ -533,6 +533,7 @@ struct ContentView: View {
     private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
     @AppStorage("instrumentMagnetic") private var instrumentMagnetic=false
+    @AppStorage("compassCenterRelative") private var compassCenterRelative=false
     @AppStorage("largeDecimal") private var largeDecimal=true
     @AppStorage("coordinateFormat") private var coordinateFormat="dm"
     @AppStorage("twelveHourClock") private var twelveHourClock=false
@@ -630,9 +631,11 @@ struct ContentView: View {
                 Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
             VStack(spacing: 2) {
-                Text("相対方位").font(.caption2)
-                Text(relativeTargetDegrees).font(.system(size: 23, weight: .bold)).foregroundStyle(.green).minimumScaleFactor(0.65).lineLimit(1)
-                Text(targetBearingLabel).font(.system(size: 10, weight: .medium)).foregroundStyle(.gray).minimumScaleFactor(0.7).lineLimit(1)
+                Text(compassCenterRelative ? "相対方位" : "目標方位").font(.caption2)
+                Text(compassCenterRelative ? relativeTargetDegrees : (targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—"))
+                    .font(.system(size: 23, weight: .bold)).foregroundStyle(.green).minimumScaleFactor(0.65).lineLimit(1)
+                Text(compassCenterRelative ? targetBearingLabel : (instrumentNavigationReference?.magnetic == true ? "磁北" : "真北"))
+                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.gray).minimumScaleFactor(0.7).lineLimit(1)
             }
         }.frame(width: 154, height: 154)
         .animation(.linear(duration: 0.12), value: compassDialAngle)
@@ -717,7 +720,11 @@ struct ContentView: View {
                         Text("GPS進路・真北").tag(false)
                         Text("磁気コンパス・磁北").tag(true)
                     }
-                    Text("地図の追従方位と計器の方位は個別に選べます").font(.caption)
+                    Picker("コンパス中央の表示", selection: $compassCenterRelative) {
+                        Text("絶対方位").tag(false)
+                        Text("相対方位（左右）").tag(true)
+                    }
+                    Text("地図の追従方位、計器の北基準、中央の方位表示は個別に選べます").font(.caption)
                 }
                 DetailedSettingsView(gps:gps)
                 Section("ウェイポイント") {
