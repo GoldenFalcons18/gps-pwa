@@ -38,9 +38,11 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$SAILING_KEYSTORE_FILE"
           gradle -p android :app:testDebugUnitTest :app:assembleRelease --no-daemon
           mkdir -p dist
-          cp android/app/build/outputs/apk/release/app-release.apk dist/SailingGpsLogger.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify dist/SailingGpsLogger.apk
-          python3 scripts/release-metadata.py dist/SailingGpsLogger.apk
+          VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
+          APK_NAME="SailingGpsLogger-v$VERSION.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "dist/$APK_NAME"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "dist/$APK_NAME"
+          python3 scripts/release-metadata.py "dist/$APK_NAME"
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -55,19 +57,27 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            adb install dist/SailingGpsLogger.apk
+            VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
+            APK_NAME="SailingGpsLogger-v$VERSION.apk"
+            adb install "dist/$APK_NAME"
             adb shell monkey -p com.goldenfalcons.sailinggps 1
             sleep 5
             adb shell screencap -p /sdcard/release-check.png
             mkdir -p release-check
-            adb pull /sdcard/release-check.png release-check/android-1.7.11.png
+            adb pull /sdcard/release-check.png release-check/android-release.png
       - uses: actions/upload-artifact@v4
         with:
-          name: Android-1.7.11-release-device-check
-          path: release-check/android-1.7.11.png
+          name: Android-release-device-check
+          path: release-check/android-release.png
       - name: Publish signed Android release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
-          gh release create "android-v$VERSION" dist/SailingGpsLogger.apk dist/android-update.json --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          APK_NAME="SailingGpsLogger-v$VERSION.apk"
+          TAG="android-v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "dist/$APK_NAME" dist/android-update.json --clobber
+          else
+            gh release create "$TAG" "dist/$APK_NAME" dist/android-update.json --target "$GITHUB_SHA" --title "Android $VERSION" --notes-file android/RELEASE_NOTES.md
+          fi
