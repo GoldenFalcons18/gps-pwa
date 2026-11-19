@@ -601,7 +601,13 @@ struct ContentView: View {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
         let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
         let hour = Int(floor((relative + 15) / 30)) % 12
-        return "\(hour == 0 ? 12 : hour)時方向"
+        let signed = relative > 180 ? relative - 360 : relative
+        let degrees = Int(abs(signed).rounded())
+        let lateral: String
+        if degrees == 0 { lateral = "正面 0°" }
+        else if degrees == 180 { lateral = "後方 180°" }
+        else { lateral = "\(signed > 0 ? "右" : "左") \(degrees)°" }
+        return "\(hour == 0 ? 12 : hour)時方向\n\(lateral)"
     }
     private var compass: some View {
         ZStack {
@@ -641,7 +647,7 @@ struct ContentView: View {
                     Label("目標", systemImage: "ruler").font(.caption2).foregroundStyle(.gray)
                     Text(targetDistance).font(.system(size: 21, weight: .bold)).minimumScaleFactor(0.4).lineLimit(1)
                     Label("方位", systemImage: "location.north").font(.caption2).foregroundStyle(.gray)
-                    Text(relativeTargetDirection).font(.system(size: 16, weight: .bold)).minimumScaleFactor(0.5).lineLimit(1)
+                    Text(relativeTargetDirection).font(.system(size: 16, weight: .bold)).minimumScaleFactor(0.7).lineLimit(2)
                     Label(showETA ? "目標, ETA":"目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
                     Text(ete).font(.system(size: 17, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.4).lineLimit(1)
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)

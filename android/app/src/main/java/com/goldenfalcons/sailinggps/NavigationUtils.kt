@@ -56,14 +56,15 @@ object NavigationUtils {
     }
 
     fun relativeText(relativeDeg: Double): String {
-        val value = abs(relativeDeg)
+        val signed = normalize180(relativeDeg)
+        val degrees = abs(signed).roundToInt()
         return when {
-            value < 0.5 -> "前方 0°"
-            relativeDeg > 0 -> "右 ${value.roundToInt()}°"
-            else -> "左 ${value.roundToInt()}°"
+            degrees == 0 -> "正面 0°"
+            degrees == 180 -> "後方 180°"
+            signed > 0 -> "右 ${degrees}°"
+            else -> "左 ${degrees}°"
         }
     }
-
     fun dmToDecimal(degrees: Int, minutes: Double, direction: String, isLat: Boolean): Double? {
         val max = if (isLat) 90 else 180
         if (degrees !in 0..max || minutes < 0.0 || minutes >= 60.0) return null
