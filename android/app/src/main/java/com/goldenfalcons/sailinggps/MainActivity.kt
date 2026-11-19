@@ -2168,12 +2168,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 setOnClickListener { confirmTarget(wp) }
             }
             val edit=Button(this).apply {
-                text="編集"
+                this.text="編集"
                 contentDescription="${wp.name}を編集"
                 setOnClickListener { editWaypoint(wp) }
             }
             val appearance=Button(this).apply {
-                text="外観"
+                this.text="外観"
                 setOnClickListener {
                     WaypointAppearanceDialog.show(this@MainActivity,wp.mark,wp.color) { mark,color ->
                         val changed=wp.copy(mark=mark,color=color)
@@ -2186,7 +2186,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 }
             }
             val delete=Button(this).apply {
-                text="削除"
+                this.text="削除"
                 setOnClickListener {
                     library=library.copy(features=library.features.map { f -> if(wp.id in f.waypointIds) f.copy(coordinates=f.points(waypoints),waypointIds=emptyList()) else f })
                     waypoints.removeAll { it.id==wp.id }
