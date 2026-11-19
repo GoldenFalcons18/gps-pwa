@@ -173,14 +173,14 @@ adb logcat -d -s SailingGpsLogger > screenshots/heading-rotation.log
 python3 - <<'PYROTATION'
 import pathlib,re,math
 p=pathlib.Path('screenshots/heading-rotation.log')
-records=[tuple(map(float,m)) for m in re.findall(r'Nav heading=([0-9.Ee+-]+) true=([0-9.Ee+-]+) target=([0-9.Ee+-]+) relative=([0-9.Ee+-]+) source=',p.read_text())]
+records=[(float(heading), magnetic=='true', float(target), float(relative)) for heading,magnetic,target,relative in re.findall(r'Nav instrument=([0-9.Ee+-]+) magnetic=(true|false) target=([0-9.Ee+-]+) relative=([0-9.Ee+-]+)',p.read_text())]
 assert len(records)>=6,records
 wrap=lambda a:(a+180)%360-180
 assert any(abs(wrap(b[0]-a[0]))>40 for a in records for b in records),records
 # The fixed goal bearing must not rotate along with the phone.
 assert max(abs(wrap(row[2]-records[0][2])) for row in records)<0.5,records
-for heading,true,target,relative in records:
-    assert abs(wrap((target-heading)-relative))<0.001,(heading,true,target,relative)
+for heading,magnetic,target,relative in records:
+    assert abs(wrap((target-heading)-relative))<0.001,(heading,magnetic,target,relative)
 captures=list(pathlib.Path('screenshots').glob('Android-heading-*.png'))
 assert len(captures)>=6,captures
 pathlib.Path('screenshots/boat-anchor-result.txt').write_text('PASS: six screenshots were captured while device heading changed and the fixed target bearing remained stable.\n')
