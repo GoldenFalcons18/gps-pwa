@@ -597,17 +597,24 @@ struct ContentView: View {
         guard let reference = instrumentNavigationReference, let trueHeading = reference.trueHeading else { return nil }
         return CoordinateInput.normalizeHeading(bearing - trueHeading + reference.heading)
     }
-    private var relativeTargetDirection: String {
+    private var relativeTargetClock: String {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
         let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
         let hour = Int(floor((relative + 15) / 30)) % 12
+        return "\(hour == 0 ? 12 : hour)時方向"
+    }
+    private var relativeTargetDegrees: String {
+        guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—" }
+        let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
         let signed = relative > 180 ? relative - 360 : relative
         let degrees = Int(abs(signed).rounded())
-        let lateral: String
-        if degrees == 0 { lateral = "正面 0°" }
-        else if degrees == 180 { lateral = "後方 180°" }
-        else { lateral = "\(signed > 0 ? "右" : "左") \(degrees)°" }
-        return "\(hour == 0 ? 12 : hour)時方向\n\(lateral)"
+        if degrees == 0 { return "正面 0°" }
+        if degrees == 180 { return "後方 180°" }
+        return "\(signed > 0 ? "右" : "左") \(degrees)°"
+    }
+    private var targetBearingLabel: String {
+        let north = instrumentNavigationReference?.magnetic == true ? "磁北" : "真北"
+        return "\(north) \(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—")"
     }
     private var compass: some View {
         ZStack {
@@ -622,9 +629,10 @@ struct ContentView: View {
             if let targetAngle = targetDisplayBearing, compassReferenceHeading != nil {
                 Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
-            VStack(spacing: 4) {
-                Text(instrumentNavigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
-                Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
+            VStack(spacing: 2) {
+                Text("相対方位").font(.caption2)
+                Text(relativeTargetDegrees).font(.system(size: 23, weight: .bold)).foregroundStyle(.green).minimumScaleFactor(0.65).lineLimit(1)
+                Text(targetBearingLabel).font(.system(size: 10, weight: .medium)).foregroundStyle(.gray).minimumScaleFactor(0.7).lineLimit(1)
             }
         }.frame(width: 154, height: 154)
         .animation(.linear(duration: 0.12), value: compassDialAngle)
@@ -647,7 +655,7 @@ struct ContentView: View {
                     Label("目標", systemImage: "ruler").font(.caption2).foregroundStyle(.gray)
                     Text(targetDistance).font(.system(size: 21, weight: .bold)).minimumScaleFactor(0.4).lineLimit(1)
                     Label("方位", systemImage: "location.north").font(.caption2).foregroundStyle(.gray)
-                    Text(relativeTargetDirection).font(.system(size: 16, weight: .bold)).minimumScaleFactor(0.7).lineLimit(2)
+                    Text(relativeTargetClock).font(.system(size: 16, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1)
                     Label(showETA ? "目標, ETA":"目標, ETE", systemImage: "clock").font(.caption2).foregroundStyle(.gray)
                     Text(ete).font(.system(size: 17, weight: .bold, design: .monospaced)).foregroundStyle(.orange).minimumScaleFactor(0.4).lineLimit(1)
                 }.frame(width: proxy.size.width * 0.26, alignment: .leading)
