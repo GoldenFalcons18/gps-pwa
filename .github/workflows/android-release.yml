@@ -57,9 +57,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            VERSION=$(sed -n 's/^appVersionName=//p' android/gradle.properties | tr -d '\r')
-            APK_NAME="SailingGpsLogger-v$VERSION.apk"
-            adb install "dist/$APK_NAME"
+            adb install dist/SailingGpsLogger-v*.apk
             adb shell monkey -p com.goldenfalcons.sailinggps 1
             sleep 5
             adb shell screencap -p /sdcard/release-check.png
