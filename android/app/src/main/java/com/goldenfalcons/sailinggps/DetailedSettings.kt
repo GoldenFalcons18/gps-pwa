@@ -154,6 +154,9 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to {
             booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北"))
         },
+        "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to {
+            choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute")
+        },
         "平均速度：${if(bool("arrivalUsesAverage",false)) "使用する" else "使用しない"}" to {
             booleanChoice("予想時間の速度","arrivalUsesAverage",listOf("現在の速度","記録中の平均速度"))
         },

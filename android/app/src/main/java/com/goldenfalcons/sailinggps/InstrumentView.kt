@@ -127,18 +127,20 @@ class InstrumentView @JvmOverloads constructor(
         if (hasTarget) canvas.drawPath(path, paint)
 
         paint.color = Color.LTGRAY
+        val relativeMode = mode == Mode.RELATIVE
+        val northLabel = if (magneticReference) "磁北" else "真北"
         paint.textSize = (radius * 0.30f).coerceIn(12f, 18f)
-        canvas.drawText("相対方位", cx, cy - 13f, paint)
+        canvas.drawText(if (relativeMode) "相対方位" else "目標方位", cx, cy - 13f, paint)
 
         paint.textSize = (radius * 0.62f).coerceIn(24f, 48f)
-        while (paint.measureText(sideText) > w * 0.84f && paint.textSize > 18f) paint.textSize -= 2f
+        val mainText = if (relativeMode) sideText else centerText
+        while (paint.measureText(mainText) > w * 0.84f && paint.textSize > 18f) paint.textSize -= 2f
         paint.color = Color.GREEN
-        canvas.drawText(sideText, cx, cy + 17f, paint)
+        canvas.drawText(mainText, cx, cy + 17f, paint)
 
         paint.textSize = (radius * 0.24f).coerceIn(10f, 16f)
         paint.color = Color.LTGRAY
-        val northLabel = if (magneticReference) "磁北" else "真北"
-        canvas.drawText("$northLabel $centerText", cx, cy + 36f, paint)
+        canvas.drawText(if (relativeMode) "$northLabel $centerText" else northLabel, cx, cy + 36f, paint)
     }
 
     private fun normalize180f(v: Float): Float {
