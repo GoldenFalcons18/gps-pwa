@@ -1458,7 +1458,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setEteDisplay(label: String, value: String) {
         val content = android.text.SpannableString("$label\n$value")
-        content.setSpan(android.text.style.RelativeSizeSpan(1.65f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        content.setSpan(android.text.style.RelativeSizeSpan(1.3f), label.length + 1, content.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         b.tvEte.text = content
     }
 
