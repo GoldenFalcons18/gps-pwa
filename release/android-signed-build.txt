@@ -1,1 +1,1 @@
-1.8.78 versionCode 103 signed release
+1.8.79 versionCode 104 signed release
