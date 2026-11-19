@@ -527,8 +527,7 @@ struct ContentView: View {
         CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
     private var instrumentNavigationReference: CoordinateInput.HeadingReading? {
-        guard instrumentMagnetic else { return navigationReference }
-        return CoordinateInput.headingReference(preferGps: false, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
+        CoordinateInput.headingReference(preferGps: !instrumentMagnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
     private var heading: Double? { instrumentNavigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
