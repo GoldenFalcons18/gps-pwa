@@ -601,7 +601,13 @@ struct ContentView: View {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
         let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
         let hour = Int(floor((relative + 15) / 30)) % 12
-        return "\(hour == 0 ? 12 : hour)時方向"
+        let signed = relative > 180 ? relative - 360 : relative
+        let degrees = Int(abs(signed).rounded())
+        let lateral: String
+        if degrees == 0 { lateral = "正面 0°" }
+        else if degrees == 180 { lateral = "後方 180°" }
+        else { lateral = "\(signed > 0 ? "右" : "左") \(degrees)°" }
+        return "\(hour == 0 ? 12 : hour)時方向 · \(lateral)"
     }
     private var compass: some View {
         ZStack {
