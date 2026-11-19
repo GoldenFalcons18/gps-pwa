@@ -93,7 +93,7 @@
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="172dp" />
+            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="202dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
                 <Button android:textAllCaps="false" android:id="@+id/btnFollow" android:layout_width="wrap_content" android:layout_height="38dp" android:minHeight="36dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:text="追従 1cm≒200m" />
             </LinearLayout>
@@ -118,7 +118,7 @@
         </LinearLayout>
         
         
-        <LinearLayout android:id="@+id/instrumentDashboard" android:layout_width="match_parent" android:layout_height="92dp" android:layout_marginTop="5dp" android:orientation="vertical" android:background="@drawable/panel_bg" android:padding="5dp">
+        <LinearLayout android:id="@+id/instrumentDashboard" android:layout_width="match_parent" android:layout_height="110dp" android:layout_marginTop="5dp" android:orientation="vertical" android:background="@drawable/panel_bg" android:padding="5dp">
             <LinearLayout android:id="@+id/trackingSummaryTop" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
                 <TextView android:id="@+id/tvGpsIndicator" android:layout_width="38dp" android:layout_height="match_parent" android:gravity="center" android:text="○\nGPS" android:textColor="@color/gray_text" android:textSize="12sp" android:textStyle="bold" />
                 <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
@@ -154,7 +154,7 @@
             
             <Button android:id="@+id/btnMenu" android:layout_width="48dp" android:layout_height="wrap_content" android:text="☰" android:contentDescription="ウェイポイント・設定メニュー" android:textColor="#FFAA00" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="64dp" android:layout_weight="1" android:orientation="horizontal" android:background="@drawable/panel_bg">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="68dp" android:minHeight="68dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/panel_bg" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="COG / 船首方位" android:textColor="@color/gray_text" android:textSize="12sp" android:textStyle="bold" />
                 <TextView android:id="@+id/tvCog" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--°" android:textColor="@color/white" android:textSize="30sp" android:textStyle="bold" />
