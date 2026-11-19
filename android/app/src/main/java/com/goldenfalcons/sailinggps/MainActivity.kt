@@ -1469,6 +1469,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val speed = latestSpeedMps?.takeIf { it.isFinite() && it >= 0 }?.let{if(it<threshold) 0.0 else it}?.times(if (metricUnits) 3.6 else NavigationUtils.MPS_TO_KT)
         val unit = if (metricUnits) "km/h" else "knot"
         b.tvSpeedUnit.text = "SOG · $unit"
+        b.tvSpeedPanelUnit.text = "SOG · $unit"
         b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
         b.tvLargeSpeed.largeDecimal=displayPrefs.getBoolean("largeDecimal",true)
         b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getStringExtra("previewSpeed")?.toDoubleOrNull() else speed
