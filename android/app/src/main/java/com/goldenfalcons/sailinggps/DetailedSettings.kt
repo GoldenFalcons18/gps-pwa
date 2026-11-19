@@ -14,7 +14,54 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
     private val currentFolder:String,private val gpsStatus:String,private val refresh:()->Unit) {
     private val prefs=activity.getSharedPreferences("display",Context.MODE_PRIVATE)
     private fun menu(title:String,items:List<Pair<String,()->Unit>>) {
-        AlertDialog.Builder(activity).setTitle(title).setItems(items.map{it.first}.toTypedArray()){_,index->items[index].second()}.setNegativeButton("閉じる",null).show()
+        val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
+        val density=activity.resources.displayMetrics.density
+        val column=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.VERTICAL
+            setPadding((16*density).toInt(),(14*density).toInt(),(16*density).toInt(),(16*density).toInt())
+            setBackgroundColor(android.graphics.Color.rgb(15,15,15))
+        }
+        column.addView(android.widget.TextView(activity).apply {
+            text=title;textSize=22f;setTextColor(android.graphics.Color.WHITE)
+            setTypeface(null,android.graphics.Typeface.BOLD)
+            setPadding((8*density).toInt(),(6*density).toInt(),(8*density).toInt(),(12*density).toInt())
+        })
+        items.forEach { item ->
+            val row=android.widget.TextView(activity).apply {
+                text=item.first;textSize=17f;setTextColor(android.graphics.Color.WHITE)
+                gravity=android.view.Gravity.CENTER_VERTICAL;minHeight=(54*density).toInt()
+                setPadding((14*density).toInt(),(8*density).toInt(),(14*density).toInt(),(8*density).toInt())
+                background=android.graphics.drawable.GradientDrawable().apply { setColor(android.graphics.Color.rgb(30,30,30));cornerRadius=10*density }
+                isClickable=true;isFocusable=true
+                setOnClickListener { sheet.dismiss();item.second() }
+            }
+            column.addView(row,android.widget.LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=(6*density).toInt() })
+        }
+        column.addView(android.widget.Button(activity).apply { text="閉じる";isAllCaps=false;setOnClickListener { sheet.dismiss() } })
+        sheet.setContentView(android.widget.ScrollView(activity).apply { addView(column) })
+        sheet.show()
+        sheet.behavior.state=com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+    }
+    private fun message(title:String,text:String) {
+        val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
+        val density=activity.resources.displayMetrics.density
+        val column=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.VERTICAL
+            setPadding((20*density).toInt(),(18*density).toInt(),(20*density).toInt(),(18*density).toInt())
+            setBackgroundColor(android.graphics.Color.rgb(15,15,15))
+        }
+        column.addView(android.widget.TextView(activity).apply {
+            this.text=title;textSize=22f;setTextColor(android.graphics.Color.WHITE)
+            setTypeface(null,android.graphics.Typeface.BOLD);setPadding(0,0,0,(14*density).toInt())
+        })
+        column.addView(android.widget.TextView(activity).apply {
+            this.text=text;textSize=16f;setTextColor(android.graphics.Color.LTGRAY)
+            setPadding(0,0,0,(16*density).toInt())
+        })
+        column.addView(android.widget.Button(activity).apply { this.text="閉じる";isAllCaps=false;setOnClickListener { sheet.dismiss() } })
+        sheet.setContentView(column)
+        sheet.show()
+        sheet.behavior.state=com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
     private fun bool(key:String,default:Boolean=true)=prefs.getBoolean(key,default)
     private fun toggle(label:String,key:String,default:Boolean=true):Pair<String,()->Unit> =
@@ -65,40 +112,59 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         sheet.show()
     }
     private fun choice(title:String,key:String,labels:List<String>,values:List<String>,default:String) {
-        AlertDialog.Builder(activity).setTitle(title).setSingleChoiceItems(labels.toTypedArray(),values.indexOf(prefs.getString(key,default))){dialog,index->
-            prefs.edit().putString(key,values[index]).apply();refresh();dialog.dismiss()
-        }.setNegativeButton("キャンセル",null).show()
+        val selected=prefs.getString(key,default)
+        menu(title,labels.mapIndexed { index,label ->
+            (if(values.getOrNull(index)==selected) "✓  " else "    ")+label to {
+                prefs.edit().putString(key,values[index]).apply();refresh()
+            }
+        })
+    }
+    private fun booleanChoice(title:String,key:String,labels:List<String>,default:Boolean=false) {
+        val selected=bool(key,default)
+        menu(title,labels.mapIndexed { index,label ->
+            val value=index==1
+            (if(value==selected) "✓  " else "    ")+label to {
+                prefs.edit().putBoolean(key,value).apply();refresh()
+            }
+        })
     }
     private fun number(title:String,key:String,values:List<Int>,default:Int,unit:String) {
-        AlertDialog.Builder(activity).setTitle(title).setSingleChoiceItems(values.map{"$it$unit"}.toTypedArray(),values.indexOf(prefs.getInt(key,default))){dialog,index->
-            prefs.edit().putInt(key,values[index]).apply();refresh();dialog.dismiss()
-        }.setNegativeButton("キャンセル",null).show()
+        val selected=prefs.getInt(key,default)
+        menu(title,values.map { value ->
+            (if(value==selected) "✓  " else "    ")+"$value$unit" to {
+                prefs.edit().putInt(key,value).apply();refresh()
+            }
+        })
     }
     fun show():Unit=menu("設定",listOf("速度・単位・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones,
         "デフォルトの保存先：$currentFolder" to {choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder)},
-        "GPS・アプリ情報" to {AlertDialog.Builder(activity).setTitle("GPS・アプリ情報").setMessage(gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})").setPositiveButton("閉じる",null).show()}))
+        "GPS・アプリ情報" to {message("GPS・アプリ情報",gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")}))
     private fun display():Unit=menu("速度・単位・座標・時刻",listOf(
         "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
-            AlertDialog.Builder(activity).setTitle("単位").setSingleChoiceItems(arrayOf("knot・nm","km/h・m/km"),if(bool("metricUnits",false)) 1 else 0){dialog,index->prefs.edit().putBoolean("metricUnits",index==1).apply();refresh();dialog.dismiss()}.show()
+            booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
         },
         toggle("小数点を大きく表示","largeDecimal"),
         "ゼロ速度の表示補正" to {choice("速度表示だけを補正（記録値は保持）","zeroSpeedThreshold",listOf("補正なし","0.5 knot未満をゼロ","1.0 knot未満をゼロ"),listOf("0","0.5","1.0"),"0")},
         "座標の表示形式" to {choice("座標の表示形式","coordinateFormat",listOf("度分（35°19.0000′N）","度（35.316667°N）","度分秒（35°19′00.0″N）"),listOf("dm","dd","dms"),"dm")},
         toggle("12時間表示","twelveHourClock",false),toggle("画面を自動ロックしない","keepScreenAwake",false)))
     private fun navigation():Unit=menu("ナビゲーション",listOf(
-        "方位ソース：${if(bool("preferGpsHeading",false)) "GPS進行方位を優先" else "磁気コンパスを優先"}" to {
-            prefs.edit().putBoolean("preferGpsHeading",!bool("preferGpsHeading",false)).apply();refresh();navigation()
+        "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
+            booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路"))
         },
-        "予想時間の計算：${if(bool("arrivalUsesAverage",false)) "記録中の平均速度" else "現在の速度"}" to {
-            prefs.edit().putBoolean("arrivalUsesAverage",!bool("arrivalUsesAverage",false)).apply();refresh();navigation()
+        "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to {
+            booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北"))
         },
-        "時間の表示：${if(bool("showETA",false)) "到着時刻（ETA）" else "所要時間（ETE）"}" to {
-            prefs.edit().putBoolean("showETA",!bool("showETA",false)).apply();refresh();navigation()
+        "平均速度：${if(bool("arrivalUsesAverage",false)) "使用する" else "使用しない"}" to {
+            booleanChoice("予想時間の速度","arrivalUsesAverage",listOf("現在の速度","記録中の平均速度"))
         },
-        "計算方法について" to {AlertDialog.Builder(activity).setMessage("目標までの直線距離で計算します。平均速度は有効なGPS位置間の移動距離÷時間です。未取得・低速時は予想を表示しません。").setPositiveButton("閉じる",null).show()}))
+        "時間表示：${if(bool("showETA",false)) "到着時刻（ETA）" else "所要時間（ETE）"}" to {
+            booleanChoice("時間表示","showETA",listOf("所要時間（ETE）","到着時刻（ETA）"))
+        },
+        "方位について" to {message("方位について","地図の追従方位と計器の北基準は別々に設定できます。計器は航行中にGPS進路を使い、磁北を選ぶと偏角を補正します。停止中やGPS進路が不安定なときは磁気コンパスに切り替えます。")},
+        "予想時間について" to {message("予想時間について","目標までの直線距離を、選択した速度で割って計算します。未取得・低速時は予想を表示しません。")}))
     private fun map():Unit=menu("地図",listOf(
         "進路ライン・距離目盛り：${if(bool("showCourse")) "ON" else "OFF"}" to {prefs.edit().putBoolean("showCourse",!bool("showCourse")).apply();refresh();map()},
-        "縮尺・地点表示について" to {AlertDialog.Builder(activity).setMessage("地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。").setPositiveButton("閉じる",null).show()}))
+        "縮尺・地点表示について" to {message("地図について","地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。")}))
     private fun zones():Unit=menu("ゾーンアラート",listOf(
         toggle("有効","zoneEnabled",false),"監視するエリアを選択" to ::selectZones,
         toggle("エリアに入ったら通知","zoneEnter"),toggle("エリアから出たら通知","zoneExit"),toggle("通知音","zoneSound"),toggle("振動","zoneHaptic"),
@@ -108,7 +174,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "端末の通知：${if(NotificationManagerCompat.from(activity).areNotificationsEnabled()) "許可済み" else "許可が必要"}" to {
             activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,activity.packageName))
         },
-        "動作条件について" to {AlertDialog.Builder(activity).setMessage("画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。\n最初の位置は基準として登録し、通知しません。\n境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で確定します。小さい円では十分な精度が必要です。\n音と振動は端末の通知設定にも従います。").setPositiveButton("閉じる",null).show()}))
+        "動作条件について" to {message("動作条件について","画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。\n最初の位置は基準として登録し、通知しません。\n境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で確定します。小さい円では十分な精度が必要です。\n音と振動は端末の通知設定にも従います.")}))
     private fun selectZones() {
         val areas=library.features.filter{it.kind in listOf("circle","area")}
         if(areas.isEmpty()) {AlertDialog.Builder(activity).setMessage("地図ライブラリで円または多角形エリアを作成してください。線は対象外です。").setPositiveButton("閉じる",null).show();return}
