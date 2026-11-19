@@ -1546,7 +1546,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 latestHeadingLogAt = now
                 debug("Nav instrument=$instrumentHeading magnetic=$useMagnetic target=$displayBearing relative=$relative")
             }
-            b.tvClock.text = NavigationUtils.relativeClock(relative)
+            b.tvClock.text = "${NavigationUtils.relativeClock(relative)} · ${NavigationUtils.relativeText(relative)}"
             b.instrumentView.update(relative, displayBearing, instrumentHeading, useMagnetic)
         } else {
             b.tvClock.text = "方位待ち"
