@@ -177,10 +177,39 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "動作条件について" to {message("動作条件について","画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。\n最初の位置は基準として登録し、通知しません。\n境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で確定します。小さい円では十分な精度が必要です。\n音と振動は端末の通知設定にも従います.")}))
     private fun selectZones() {
         val areas=library.features.filter{it.kind in listOf("circle","area")}
-        if(areas.isEmpty()) {AlertDialog.Builder(activity).setMessage("地図ライブラリで円または多角形エリアを作成してください。線は対象外です。").setPositiveButton("閉じる",null).show();return}
+        if(areas.isEmpty()) {message("監視するエリア","地図ライブラリで円または多角形エリアを作成してください。線は対象外です。");return}
         val ids=(prefs.getString("zoneSelected","") ?: "").split(",").filter{it.isNotBlank()}.toMutableSet()
-        AlertDialog.Builder(activity).setTitle("監視するエリア").setMultiChoiceItems(areas.map{it.name+if(it.group.isBlank()) "" else "（${it.group}）"}.toTypedArray(),areas.map{it.id in ids}.toBooleanArray()){_,index,enabled->
-            if(enabled) ids.add(areas[index].id) else ids.remove(areas[index].id)
-        }.setPositiveButton("保存"){_,_->prefs.edit().putString("zoneSelected",ids.sorted().joinToString(",")).apply();refresh()}.setNegativeButton("キャンセル",null).show()
+        val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
+        val density=activity.resources.displayMetrics.density
+        val column=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.VERTICAL
+            setPadding((18*density).toInt(),(16*density).toInt(),(18*density).toInt(),(16*density).toInt())
+            setBackgroundColor(android.graphics.Color.rgb(15,15,15))
+        }
+        column.addView(android.widget.TextView(activity).apply {
+            text="監視するエリア";textSize=22f;setTextColor(android.graphics.Color.WHITE)
+            setTypeface(null,android.graphics.Typeface.BOLD);setPadding(0,0,0,(10*density).toInt())
+        })
+        areas.forEach { area ->
+            column.addView(android.widget.CheckBox(activity).apply {
+                text=area.name+if(area.group.isBlank()) "" else "（${area.group}）"
+                textSize=17f;setTextColor(android.graphics.Color.WHITE);isChecked=area.id in ids
+                minHeight=(52*density).toInt()
+                setOnCheckedChangeListener { _,checked -> if(checked) ids.add(area.id) else ids.remove(area.id) }
+            })
+        }
+        val buttons=android.widget.LinearLayout(activity).apply { orientation=android.widget.LinearLayout.HORIZONTAL }
+        buttons.addView(android.widget.Button(activity).apply { text="キャンセル";isAllCaps=false;setOnClickListener { sheet.dismiss() } },
+            android.widget.LinearLayout.LayoutParams(0,-2,1f))
+        buttons.addView(android.widget.Button(activity).apply {
+            text="保存";isAllCaps=false;setOnClickListener {
+                prefs.edit().putString("zoneSelected",ids.sorted().joinToString(",")).apply()
+                refresh();sheet.dismiss()
+            }
+        },android.widget.LinearLayout.LayoutParams(0,-2,1f))
+        column.addView(buttons)
+        sheet.setContentView(android.widget.ScrollView(activity).apply { addView(column) })
+        sheet.show()
+        sheet.behavior.state=com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
     }
 }
