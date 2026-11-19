@@ -100,7 +100,7 @@
             </LinearLayout>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="12sp" />
         </LinearLayout>
-        <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="160dp" android:minHeight="160dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
+        <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="132dp" android:minHeight="132dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.25" android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="目標まで" android:textColor="@color/gray_text" android:textSize="14sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="14sp" android:maxLines="1" android:textStyle="bold" />
                 <TextView android:id="@+id/tvDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="-- NM" android:textColor="@color/white" android:textSize="20sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="12sp" android:autoSizeMaxTextSize="20sp" android:maxLines="1" android:textStyle="bold" />
@@ -109,7 +109,7 @@
                 <TextView android:id="@+id/tvClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--時方向" android:textColor="@color/white" android:textSize="13sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="13sp" android:maxLines="1" android:textStyle="bold" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.45" android:orientation="vertical" android:gravity="center">
-                <com.goldenfalcons.sailinggps.InstrumentView android:id="@+id/instrumentView" android:layout_width="match_parent" android:layout_height="150dp" />
+                <com.goldenfalcons.sailinggps.InstrumentView android:id="@+id/instrumentView" android:layout_width="match_parent" android:layout_height="122dp" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.30" android:orientation="vertical" android:gravity="center" android:padding="8dp">
                 <Button android:id="@+id/btnSetTarget" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="設定目標" android:textColor="#FFAA00" android:textSize="14sp" />
@@ -120,12 +120,34 @@
         </LinearLayout>
         
         
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="6dp">
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/panel_bg" android:padding="8dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOG" android:textColor="@color/gray_text" android:textSize="12sp" android:textStyle="bold" />
-                <TextView android:id="@+id/tvSog" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-- kt" android:textColor="@color/white" android:textSize="28sp" android:textStyle="bold" />
+        <LinearLayout android:id="@+id/instrumentDashboard" android:layout_width="match_parent" android:layout_height="120dp" android:layout_marginTop="5dp" android:orientation="vertical" android:background="@drawable/panel_bg" android:padding="5dp">
+            <LinearLayout android:id="@+id/trackingSummaryTop" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/tvGpsIndicator" android:layout_width="38dp" android:layout_height="match_parent" android:gravity="center" android:text="○\nGPS" android:textColor="@color/gray_text" android:textSize="12sp" android:textStyle="bold" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="追跡タイマー" android:textColor="@color/gray_text" android:textSize="10sp" />
+                    <TextView android:id="@+id/tvRecordingElapsed" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="00:00:00" android:textColor="@color/white" android:textSize="20sp" android:fontFamily="monospace" android:textStyle="bold" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="追跡距離" android:textColor="@color/gray_text" android:textSize="10sp" />
+                    <TextView android:id="@+id/tvRecordingDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="0.00 nm" android:textColor="@color/white" android:textSize="20sp" android:fontFamily="monospace" android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
-            <TextView android:id="@+id/tvTime" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="時間&#10;--:--:--" android:textSize="22sp" android:textColor="#FFFFFF" android:fontFamily="monospace" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="高度 m" android:textColor="@color/gray_text" android:textSize="10sp" />
+                    <TextView android:id="@+id/tvAltitude" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="--" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="monospace" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="ペース / 海里" android:textColor="@color/gray_text" android:textSize="10sp" />
+                    <TextView android:id="@+id/tvPace" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="--:--:--" android:textColor="@color/white" android:textSize="16sp" android:fontFamily="monospace" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <TextView android:id="@+id/tvSpeedUnit" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="SOG · knot" android:textColor="@color/gray_text" android:textSize="10sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/tvSog" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="-- knot" android:textColor="@color/white" android:textSize="16sp" android:textStyle="bold" />
+                </LinearLayout>
+                <TextView android:id="@+id/tvTime" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="時間\n--:--:--" android:textSize="16sp" android:textColor="#FFFFFF" android:fontFamily="monospace" />
+            </LinearLayout>
+            <Button android:id="@+id/btnFocusMenu" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" android:text="☰" />
         </LinearLayout>
         <TextView android:id="@+id/tvStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/panel_bg" android:padding="4dp" android:text="状態：停止中" android:textColor="@color/white" android:textSize="12sp" android:textStyle="bold" />
         <LinearLayout android:id="@+id/bottomQuickActions" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:visibility="gone">
