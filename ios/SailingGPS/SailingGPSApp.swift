@@ -617,7 +617,7 @@ struct ContentView: View {
                 Image(systemName: "location.north.fill").font(.system(size: 28)).foregroundStyle(.green).offset(y: -55).rotationEffect(.degrees(targetAngle - compassDialAngle))
             }
             VStack(spacing: 4) {
-                Text(navigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
+                Text(instrumentNavigationReference?.magnetic == true ? "目標方位（磁北）" : "目標方位（真北）").font(.caption2)
                 Text(targetDisplayBearing.map { String(format: "%.0f°", $0) } ?? "—").font(.title.bold()).foregroundStyle(.green)
             }
         }.frame(width: 154, height: 154)
