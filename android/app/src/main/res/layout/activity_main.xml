@@ -89,7 +89,7 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/speedPanel" android:layout_width="match_parent" android:layout_height="220dp" android:orientation="vertical" android:gravity="center">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/tvSpeedUnit" android:text="SOG · knot" android:textColor="#FFAA00" android:textSize="24sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/tvSpeedPanelUnit" android:text="SOG · knot" android:textColor="#FFAA00" android:textSize="24sp" />
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
