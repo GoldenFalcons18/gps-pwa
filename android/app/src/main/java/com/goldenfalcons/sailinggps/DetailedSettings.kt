@@ -136,9 +136,26 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             }
         })
     }
-    fun show():Unit=menu("設定",listOf("速度・単位・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones,
+    fun show():Unit=menu("設定",listOf(
+        "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
+            booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
+        },
+        "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
+            booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路"))
+        },
+        "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to {
+            booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北"))
+        },
+        "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to {
+            choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute")
+        },
+        "速度・座標・時刻の詳細設定" to ::display,
+        "ナビゲーションの詳細設定" to ::navigation,
+        "地図" to ::map,
+        "ゾーンアラート" to ::zones,
         "デフォルトの保存先：$currentFolder" to {choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder)},
-        "GPS・アプリ情報" to {message("GPS・アプリ情報",gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")}))
+        "GPS・アプリ情報" to { message("GPS・アプリ情報", gpsStatus + "\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") }
+    ))
     private fun display():Unit=menu("速度・単位・座標・時刻",listOf(
         "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
             booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
@@ -181,6 +198,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "端末の通知：${if(NotificationManagerCompat.from(activity).areNotificationsEnabled()) "許可済み" else "許可が必要"}" to {
             activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,activity.packageName))
         },
+        "各設定の意味" to {message("誤通知を抑える設定","GPS精度：指定した誤差以内の測位だけを判定に使います。境界からの余裕：境界から「GPS誤差」と「設定距離」の大きい方より離れるまで判定を保留します。連続確認回数：同じ側の新しい測位が指定回数続いた時に通知します。値を大きくすると誤通知を抑えやすくなりますが、通知は遅くなります。")},
         "動作条件について" to {message("動作条件について","画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。\n最初の位置は基準として登録し、通知しません。\n境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で確定します。小さい円では十分な精度が必要です。\n音と振動は端末の通知設定にも従います.")}))
     private fun selectZones() {
         val areas=library.features.filter{it.kind in listOf("circle","area")}

@@ -157,6 +157,17 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
+        WatchNavigationBridge.shared.recordingCommandHandler = { [weak self] command in
+            guard let self else { return false }
+            switch command {
+            case "start": self.start(newTrack: true)
+            case "resume": self.start()
+            case "pause": self.pause()
+            case "stop": self.stop()
+            default: return false
+            }
+            return true
+        }
         manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         manager.headingFilter = kCLHeadingFilterNone
         manager.activityType = .otherNavigation
@@ -230,6 +241,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
             recording = true; recordingPaused = false
+            WatchNavigationBridge.shared.setRecordingState(recording: true, paused: false)
             if CLLocationManager.significantLocationChangeMonitoringAvailable() { manager.startMonitoringSignificantLocationChanges() }
             manager.startUpdatingLocation()
             if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
@@ -274,6 +286,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
         handle = nil; recording = false; recordingPaused = true
+        WatchNavigationBridge.shared.setRecordingState(recording: false, paused: true)
         message = "記録一時停止"; log("Recording paused"); preview(foregroundActive)
     }
     func stop() {
@@ -285,6 +298,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         try? FileManager.default.removeItem(at: activeSessionFile)
         elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
         handle = nil; recording = false; recordingPaused = false; message = "記録停止"; log("Recording stopped")
+        WatchNavigationBridge.shared.setRecordingState(recording: false, paused: false)
         preview(foregroundActive)
     }
 
@@ -601,8 +615,10 @@ struct ContentView: View {
     private var relativeTargetClock: String {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
         let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
-        let hour = Int(floor((relative + 15) / 30)) % 12
-        return "\(hour == 0 ? 12 : hour)時方向"
+        let halfHourIndex = Int(floor((relative + 7.5) / 15)) % 24
+        let hour = (halfHourIndex / 2) % 12
+        let half = halfHourIndex % 2 == 1
+        return "\(hour == 0 ? 12 : hour)時\(half ? "半" : "")方向"
     }
     private var relativeTargetDegrees: String {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—" }
@@ -691,9 +707,6 @@ struct ContentView: View {
                     Button { mapMetersPerCm = min(6400, mapMetersPerCm * 2) } label: { Image(systemName: "minus") }
                         .accessibilityLabel("地図を縮小").disabled(mapMetersPerCm >= 6400)
                 }.font(.title2).tint(.orange).buttonStyle(.borderedProminent).padding(8)
-            }
-            .overlay(alignment: .top) {
-                if !following { Button("再度中心に配置") { following = true }.font(.caption).buttonStyle(.borderedProminent).tint(.orange).foregroundStyle(.black).padding(.top, 48) }
             }
             HStack {
                 Button { following = true } label: { Image(systemName: "location.north.fill") }
@@ -930,8 +943,8 @@ struct ContentView: View {
             VStack(spacing: 10) {
                 HStack(alignment: .top, spacing: 5) {
                     VStack(spacing: 2) {
-                        Image(systemName: "location.fill").foregroundStyle(gps.location == nil ? .gray : .green)
-                        Text("GPS").font(.caption2).foregroundStyle(.gray)
+                        Image(systemName: "location.fill").foregroundStyle(gpsQualityColor(for:gps.location))
+                        Text("GPS").font(.caption2).foregroundStyle(gpsQualityColor(for:gps.location))
                     }
                     if mode == 1 {
                         instrument(duration(elapsed), label: "追跡タイマー", size: 26)
@@ -979,7 +992,17 @@ struct ContentView: View {
                 Text(gps.location.map { displayCoordinate($0.coordinate.latitude, isLatitude:true) } ?? "---")
                 Text(gps.location.map { displayCoordinate($0.coordinate.longitude, isLatitude:false) } ?? "---")
             }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
+                .foregroundStyle(.white)
         }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+    }
+
+    private func gpsQualityColor(for point:CLLocation?) -> Color {
+        guard let point else { return .red }
+        let age=Date().timeIntervalSince(point.timestamp)
+        guard age.isFinite, (0...15).contains(age) else { return .red }
+        if point.horizontalAccuracy >= 0 && point.horizontalAccuracy <= 15 { return .green }
+        if point.horizontalAccuracy <= 50 { return .yellow }
+        return .red
     }
     private var focusTargetBearing:Double? {
         guard let target,let point=gps.location,point.distance(from:CLLocation(latitude:target.latitude,longitude:target.longitude))>1 else {return nil}

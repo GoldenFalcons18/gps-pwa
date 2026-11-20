@@ -94,9 +94,7 @@
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
             <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="202dp" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center">
-                <Button android:textAllCaps="false" android:id="@+id/btnFollow" android:layout_width="wrap_content" android:layout_height="38dp" android:minHeight="36dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:text="追従 1cm≒200m" />
-            </LinearLayout>
+            <Button android:id="@+id/btnFollow" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone" android:importantForAccessibility="no" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="10sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="120dp" android:minHeight="120dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
