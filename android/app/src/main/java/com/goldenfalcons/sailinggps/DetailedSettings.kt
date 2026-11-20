@@ -166,8 +166,12 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "方位について" to {message("方位について","地図の追従方位と計器の北基準は別々に設定できます。計器は航行中にGPS進路を使い、磁北を選ぶと偏角を補正します。停止中やGPS進路が不安定なときは磁気コンパスに切り替えます。")},
         "予想時間について" to {message("予想時間について","目標までの直線距離を、選択した速度で割って計算します。未取得・低速時は予想を表示しません。")}))
     private fun map():Unit=menu("地図",listOf(
+        "地図の配色：${when(prefs.getString("mapStyle","liberty")) {"bright"->"明るい";"positron"->"薄い";"dark"->"暗い";else->"標準"}} " to {
+            choice("OpenFreeMapの地図配色","mapStyle",listOf("標準","明るい","薄い","暗い"),listOf("liberty","bright","positron","dark"),"liberty")
+        },
         "進路ライン・距離目盛り：${if(bool("showCourse")) "ON" else "OFF"}" to {prefs.edit().putBoolean("showCourse",!bool("showCourse")).apply();refresh();map()},
-        "縮尺・地点表示について" to {message("地図について","地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。")}))
+        "オフライン地図について" to {message("オフライン地図について","地図画面右側の「保存」から、表示中の範囲を端末に保存できます。1回につき最大3,000タイルまたは50MBまでです。保存範囲を選ぶときにタイル数を確認します。保存地図の一時停止・再開・削除は同じメニューから行えます。OpenFreeMapを利用するため、地図データの通信にはインターネットが必要です。")},
+        "縮尺・地点表示について" to {message("地図について","地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。地図データ：OpenFreeMap（© OpenStreetMap contributors）")}))
     private fun zones():Unit=menu("ゾーンアラート",listOf(
         toggle("有効","zoneEnabled",false),"監視するエリアを選択" to ::selectZones,
         toggle("エリアに入ったら通知","zoneEnter"),toggle("エリアから出たら通知","zoneExit"),toggle("通知音","zoneSound"),toggle("振動","zoneHaptic"),

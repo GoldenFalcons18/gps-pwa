@@ -1684,6 +1684,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints",true),displayPrefs.getBoolean("showCourse",true))
+            mapPanel?.setMapStyle(displayPrefs.getString("mapStyle","liberty") ?: "liberty")
             updateDefaultFolderSetting();renderWaypointList();updateNavigationUi()
         }.show()
     }
