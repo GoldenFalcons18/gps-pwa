@@ -19,6 +19,9 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     private var metric = false
     private var latest: [String: Any] = [:]
     private var signal: WatchSignalSnapshot?
+    private var isRecording = false
+    private var isRecordingPaused = false
+    var recordingCommandHandler: ((String) -> Bool)?
     private override init() {
         super.init()
         guard WCSession.isSupported() else { return }
@@ -41,6 +44,9 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
     }
     func updateLocation(_ point: CLLocation) { location = point; publish() }
     func setSignalState(_ value: WatchSignalSnapshot) { signal = value; publish() }
+    func setRecordingState(recording: Bool, paused: Bool) {
+        isRecording = recording; isRecordingPaused = paused; publish()
+    }
     private func selectFromWatch(_ message: [String: Any]) -> Bool {
         guard let id = message["selectTarget"] as? String,
               let time = message["selectionTime"] as? Double,
@@ -63,7 +69,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             distanceMeters: target.flatMap { wp in point.map { $0.distance(from: CLLocation(latitude: wp.latitude, longitude: wp.longitude)) } },
             metric: metric, locationTime: point?.timestamp, sentAt: Date())
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
-        var context: [String: Any] = ["navigation": data]
+        var context: [String: Any] = ["navigation": data, "recording": isRecording, "recordingPaused": isRecordingPaused]
         if waypointsReady {
             let catalog = WatchWaypointCatalog(waypoints: waypoints.map { WatchWaypoint(id: $0.id.uuidString, name: $0.name, latitude: $0.latitude, longitude: $0.longitude, folder: $0.group ?? "メインフォルダ") }, targetID: target?.id.uuidString, metric: metric, selectionChangedAt: selectionChangedAt, sentAt: Date())
             if let catalogData = try? JSONEncoder().encode(catalog) { context["waypoints"] = catalogData }
@@ -85,6 +91,10 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             guard self.waypointsReady else { replyHandler(["deferred": true]); return }
             var accepted = true
             if message["selectTarget"] != nil { accepted = self.selectFromWatch(message) }
+            var commandAccepted: Bool?
+            if let command = message["recordingCommand"] as? String {
+                commandAccepted = self.recordingCommandHandler?(command) ?? false
+            }
             if let kind = message["registerStartLineWaypoint"] as? String,
                let latitude = message["latitude"] as? Double,
                let longitude = message["longitude"] as? Double,
@@ -96,6 +106,7 @@ final class WatchNavigationBridge: NSObject, WCSessionDelegate {
             }
             self.publish()
             var reply = self.latest; reply["selectionAccepted"] = accepted
+            if let commandAccepted { reply["commandAccepted"] = commandAccepted }
             replyHandler(reply)
         }
     }

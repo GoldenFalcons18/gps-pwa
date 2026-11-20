@@ -78,7 +78,9 @@ struct DetailedSettingsView: View {
                         Picker("使用するGPS精度",selection:$zoneAccuracy) { Text("±20m以内").tag(20.0);Text("±50m以内").tag(50.0);Text("±100m以内").tag(100.0) }
                         Picker("境界からの余裕",selection:$zoneMargin) { Text("5m").tag(5.0);Text("10m").tag(10.0);Text("20m").tag(20.0) }
                         Picker("連続確認回数",selection:$zoneConfirmations) { Text("2回").tag(2);Text("3回").tag(3);Text("5回").tag(5) }
-                        Text("境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で進入・退出を確定します。小さい円では十分な精度が必要です。").font(.caption)
+                        Text("GPS精度：設定した誤差以内の測位だけを判定に使います。誤差が大きい位置は判定を保留します。").font(.caption)
+                        Text("境界からの余裕：境界から、この距離またはGPS誤差の大きい方より離れるまで判定を保留します。").font(.caption)
+                        Text("連続確認回数：同じ側の測位が指定回数続いた時に通知します。回数を増やすと誤通知を抑えやすくなりますが、通知は遅くなります。").font(.caption)
                     }
                 }.navigationTitle("ゾーンアラート").task {
                     let value=await UNUserNotificationCenter.current().notificationSettings()

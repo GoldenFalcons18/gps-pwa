@@ -129,18 +129,20 @@ class InstrumentView @JvmOverloads constructor(
         paint.color = Color.LTGRAY
         val relativeMode = mode == Mode.RELATIVE
         val northLabel = if (magneticReference) "磁北" else "真北"
-        paint.textSize = (radius * 0.30f).coerceIn(12f, 18f)
-        canvas.drawText(if (relativeMode) "相対方位" else "目標方位", cx, cy - 13f, paint)
+        paint.textSize = (radius * 0.25f).coerceIn(11f, 17f)
+        canvas.drawText(if (relativeMode) "相対方位" else "目標方位", cx, cy - radius * 0.16f, paint)
 
-        paint.textSize = (radius * 0.62f).coerceIn(24f, 48f)
+        // Make the primary bearing legible on compact Android layouts while keeping it inside the dial.
         val mainText = if (relativeMode) sideText else centerText
-        while (paint.measureText(mainText) > w * 0.84f && paint.textSize > 18f) paint.textSize -= 2f
+        paint.textSize = (radius * 0.86f).coerceIn(25f, 68f)
+        val maxTextWidth = min(w * 0.90f, radius * 2.05f)
+        while (paint.measureText(mainText) > maxTextWidth && paint.textSize > 18f) paint.textSize -= 1f
         paint.color = Color.GREEN
-        canvas.drawText(mainText, cx, cy + 17f, paint)
+        canvas.drawText(mainText, cx, cy + radius * 0.30f, paint)
 
-        paint.textSize = (radius * 0.24f).coerceIn(10f, 16f)
+        paint.textSize = (radius * 0.22f).coerceIn(9f, 14f)
         paint.color = Color.LTGRAY
-        canvas.drawText(if (relativeMode) "$northLabel $centerText" else northLabel, cx, cy + 36f, paint)
+        canvas.drawText(if (relativeMode) "$northLabel $centerText" else northLabel, cx, cy + radius * 0.68f, paint)
     }
 
     private fun normalize180f(v: Float): Float {

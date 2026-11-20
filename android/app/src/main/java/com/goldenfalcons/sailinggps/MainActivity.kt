@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var latestLat: Double? = null
     private var latestLon: Double? = null
     private var latestAltitudeM: Double? = null
+    private var latestAccuracyM: Double? = null
     private var latestSpeedMps: Double? = null
     private var latestGpsBearing: Double? = null
     private var pointCount = 0
@@ -165,6 +166,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestLat = intent.getDoubleExtra(GpsLoggingService.EXTRA_LAT, Double.NaN).takeIf { it.isFinite() }
                     latestLon = intent.getDoubleExtra(GpsLoggingService.EXTRA_LON, Double.NaN).takeIf { it.isFinite() }
                     latestAltitudeM = intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, Double.NaN).takeIf { it.isFinite() }
+                    latestAccuracyM = intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, Float.NaN).toDouble().takeIf { it.isFinite() && it >= 0.0 }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
@@ -1196,30 +1198,58 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         mapPanel?.updateLocation(lat, lon, mapHeading(), recordTrack = false)
     }
 
-    // Foreground preview never opens the recording file or starts a foreground service.
+    private fun hasLocationPermission():Boolean =
+        ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED
+
+    private fun acceptPreviewLocation(location:Location) {
+        val now=android.os.SystemClock.elapsedRealtime()
+        val fixElapsed=location.elapsedRealtimeNanos/1_000_000L
+        if(fixElapsed<=0L || now-fixElapsed !in 0L..30_000L ||
+            !location.latitude.isFinite() || !location.longitude.isFinite()) return
+        if(latestFixAt>fixElapsed) return
+        ZoneAlerts.check(this,location)
+        latestLat=location.latitude;latestLon=location.longitude
+        latestFixAt=fixElapsed
+        latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
+        latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
+        latestSpeedMps=if(location.hasSpeed()) location.speed.toDouble().coerceAtLeast(0.0) else null
+        latestGpsBearing=if(location.hasBearing()) location.bearing.toDouble() else null
+        updateGpsQualityUi()
+        updateMap();updateNavigationUi()
+    }
+
+    // Keep displaying valid low-accuracy fixes. The quality color warns when the estimate is weak.
     private fun startPreview() {
-        if (!foregroundActive || previewListener != null || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
-        val manager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
-        val listener = object : android.location.LocationListener {
-            override fun onLocationChanged(location: Location) {
-                val age = android.os.SystemClock.elapsedRealtime() - location.elapsedRealtimeNanos / 1_000_000L
-                if (age !in 0..30_000 || location.accuracy < 0) return
-                ZoneAlerts.check(this@MainActivity,location)
-                latestLat = location.latitude; latestLon = location.longitude
-                latestFixAt = location.elapsedRealtimeNanos / 1_000_000L
-                latestSpeedMps = if (location.hasSpeed()) location.speed.toDouble().coerceAtLeast(0.0) else null
-                latestGpsBearing = if (location.hasBearing()) location.bearing.toDouble() else null
-                b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(location.accuracy, location.altitude)
-                updateMap(); updateNavigationUi()
-            }
-            override fun onProviderDisabled(provider: String) { debug("GPS preview provider disabled") }
-            override fun onProviderEnabled(provider: String) { debug("GPS preview provider enabled") }
+        if(!foregroundActive || previewListener!=null || !hasLocationPermission()) return
+        val manager=getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        val fine=ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED
+        val providers=buildList {
+            if(fine) add(android.location.LocationManager.GPS_PROVIDER)
+            add(android.location.LocationManager.NETWORK_PROVIDER)
+        }.distinct()
+        val listener=object:android.location.LocationListener {
+            override fun onLocationChanged(location:Location)=acceptPreviewLocation(location)
+            override fun onProviderDisabled(provider:String) { debug("Location preview provider disabled: $provider") }
+            override fun onProviderEnabled(provider:String) { debug("Location preview provider enabled: $provider") }
         }
-        runCatching {
-            manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER, 1000L, 0f, listener, android.os.Looper.getMainLooper())
-            previewListener = listener
-            debug("GPS preview started (no recording)")
-        }.onFailure { debug("GPS preview: ${it.message}") }
+        val now=android.os.SystemClock.elapsedRealtime()
+        providers.mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
+            .filter { it.elapsedRealtimeNanos>0L && now-it.elapsedRealtimeNanos/1_000_000L in 0L..30_000L }
+            .maxByOrNull { it.elapsedRealtimeNanos }
+            ?.let(::acceptPreviewLocation)
+        var requested=false
+        providers.forEach { provider ->
+            val enabled=runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)
+            if(enabled) runCatching {
+                manager.requestLocationUpdates(provider,1000L,0f,listener,android.os.Looper.getMainLooper())
+                requested=true
+            }.onFailure { debug("Location preview $provider: ${it.message}") }
+        }
+        if(requested) {
+            previewListener=listener
+            debug("Location preview started providers=$providers")
+        } else debug("No enabled location provider for preview")
     }
 
     private fun stopPreview() {
@@ -1230,14 +1260,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQ_LOCATION) {
-            val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-            if (granted) {
+            val fineGranted=ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED
+            val granted=hasLocationPermission()
+            if(granted) {
                 startPreview()
-                if (pendingStartAfterLocationPermission) ensureBackgroundLocationForRecording()
-                else if (!hasBackgroundLocationPermission()) showBackgroundLocationPrompt(false)
-            } else if (pendingStartAfterLocationPermission) {
-                pendingStartAfterLocationPermission = false
-                Toast.makeText(this, "位置情報が許可されていません。設定から許可してください", Toast.LENGTH_LONG).show()
+                if(pendingStartAfterLocationPermission) {
+                    if(fineGranted) ensureBackgroundLocationForRecording()
+                    else {
+                        pendingStartAfterLocationPermission=false
+                        Toast.makeText(this,"GPS記録には正確な位置情報を許可してください",Toast.LENGTH_LONG).show()
+                    }
+                } else if(fineGranted && !hasBackgroundLocationPermission()) showBackgroundLocationPrompt(false)
+            } else if(pendingStartAfterLocationPermission) {
+                pendingStartAfterLocationPermission=false
+                Toast.makeText(this,"位置情報が許可されていません。設定から許可してください",Toast.LENGTH_LONG).show()
             }
         } else if (requestCode == REQ_BACKGROUND_LOCATION) {
             if (hasBackgroundLocationPermission()) {
@@ -1433,6 +1469,31 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnRecordStop.visibility=if(running || recordingPaused) android.view.View.VISIBLE else android.view.View.GONE
     }
 
+    private fun gpsQualityColor():Int {
+        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
+        return when {
+            latestFixAt<=0L || age !in 0.0..15.0 -> Color.RED
+            latestAccuracyM==null -> Color.YELLOW
+            latestAccuracyM!!<=15.0 -> Color.rgb(48,209,88)
+            latestAccuracyM!!<=50.0 -> Color.YELLOW
+            else -> Color.RED
+        }
+    }
+
+    private fun updateGpsQualityUi() {
+        if(!::b.isInitialized) return
+        val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
+        val recent=latestFixAt>0 && age in 0.0..15.0
+        val color=gpsQualityColor()
+        b.tvGpsIndicator.text=if(recent) "●\\nGPS" else "○\\nGPS"
+        b.tvGpsIndicator.setTextColor(color)
+        b.tvGpsInfo.setTextColor(Color.LTGRAY)
+        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
+        val accuracy=latestAccuracyM?.let { "精度 ±%.0f m".format(java.util.Locale.US,it) } ?: "精度不明"
+        val altitude=latestAltitudeM?.let { "高度 %.0f m".format(java.util.Locale.US,it) } ?: "高度 --"
+        b.tvGpsInfo.text=if(latestLat!=null && latestLon!=null) "現在位置\\n$accuracy\\n$altitude" else "GPS\\n受信待ち"
+    }
+
     private fun updateRecordingDashboard() {
         if (!::b.isInitialized) return
         val counter = getSharedPreferences("tripCounter", MODE_PRIVATE)
@@ -1444,10 +1505,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvRecordingElapsed.text = "%02d:%02d:%02d".format(java.util.Locale.ROOT, hours, minutes, remaining)
         val trackedDistance = if (metricUnits) meters / 1000.0 else meters / 1852.0
         b.tvRecordingDistance.text = if (metricUnits) "%.2f km".format(java.util.Locale.US, trackedDistance) else "%.2f nm".format(java.util.Locale.US, trackedDistance)
-        val age = (android.os.SystemClock.elapsedRealtime() - latestFixAt) / 1000.0
-        val fresh = latestFixAt > 0 && age in 0.0..15.0
-        b.tvGpsIndicator.text = if (fresh) "●\\nGPS" else "○\\nGPS"
-        b.tvGpsIndicator.setTextColor(if (fresh) Color.rgb(48, 209, 88) else Color.LTGRAY)
+        updateGpsQualityUi()
         b.tvAltitude.text = latestAltitudeM?.let { "%.0f".format(java.util.Locale.US, it) } ?: "--"
         val speed = latestSpeedMps?.takeIf { it.isFinite() && it > 0.25 }
         b.tvPace.text = speed?.let {
@@ -1477,6 +1535,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${displayCoordinate(latestLat!!, true)}   ${displayCoordinate(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
+        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
         val reference = headingReference()
         val heading = reference?.heading
         val source = if (reference == null) "未取得" else if (reference.magnetic) "磁気コンパス（MAG）" else "GPS対地針路（COG）"
@@ -1618,9 +1677,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 cancelQuickLocation()
                 latestLat = point.latitude; latestLon = point.longitude
                 latestFixAt = android.os.SystemClock.elapsedRealtime()
+                latestAccuracyM = point.accuracy.toDouble().takeIf { point.hasAccuracy() && it.isFinite() && it>=0.0 }
+                latestAltitudeM = point.altitude.takeIf { point.hasAltitude() && it.isFinite() }
                 latestSpeedMps = if (point.hasSpeed()) point.speed.toDouble() else null
                 latestGpsBearing = if (point.hasBearing()) point.bearing.toDouble() else null
-                b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(point.accuracy, point.altitude)
+                updateGpsQualityUi()
                 mapPanel?.updateLocation(point.latitude, point.longitude, mapHeading(), recordTrack = false)
                 saveCurrentLocationWaypoint(point.latitude, point.longitude)
             }
@@ -2097,17 +2158,40 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun editWaypoint(original: Waypoint) {
         var mark = original.mark; var color = original.color
+        val density=resources.displayMetrics.density
+        val inputPadding=(12*density).toInt()
+        val inputBackground=android.content.res.ColorStateList.valueOf(Color.rgb(255,170,0))
         val folders=(waypointFolders+listOf(original.group,mainWaypointFolder)).filter{it.isNotBlank()}.distinct().sorted()
-        val folder=android.widget.Spinner(this).apply { adapter=android.widget.ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""});setSelection(folders.indexOf(original.group).coerceAtLeast(0)) }
-        val name = android.widget.EditText(this).apply { setText(original.name); setSingleLine(true) }
-        val lat = android.widget.EditText(this).apply { setText(original.lat.toString()); hint = "緯度（十進度）"; inputType = 12290 }
-        val lon = android.widget.EditText(this).apply { setText(original.lon.toString()); hint = "経度（十進度）"; inputType = 12290 }
+        val folder=android.widget.Spinner(this).apply {
+            adapter=android.widget.ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""})
+            setSelection(folders.indexOf(original.group).coerceAtLeast(0))
+        }
+        fun editor(value:String,placeholder:String?=null,keyboard:Int?=null)=android.widget.EditText(this).apply {
+            setText(value)
+            if(placeholder!=null) hint=placeholder
+            if(keyboard!=null) inputType=keyboard
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.LTGRAY)
+            textSize=16f
+            backgroundTintList=inputBackground
+            setPadding(inputPadding,inputPadding,inputPadding,inputPadding)
+        }
+        fun label(value:String)=TextView(this@MainActivity).apply {
+            text=value;setTextColor(Color.LTGRAY);textSize=13f
+            setPadding(0,(8*density).toInt(),0,0)
+        }
+        val name=editor(original.name)
+        name.setSingleLine(true)
+        val lat=editor(original.lat.toString(),"緯度（十進度）",12290)
+        val lon=editor(original.lon.toString(),"経度（十進度）",12290)
         val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(24,8,24,8)
-            addView(TextView(this@MainActivity).apply { text = "名前" }); addView(name)
-            addView(TextView(this@MainActivity).apply { text = "保存フォルダ" });addView(folder)
-            addView(TextView(this@MainActivity).apply { text = "緯度・経度（十進度）" }); addView(lat); addView(lon)
-            addView(Button(this@MainActivity).apply { text = "マーク・色"; setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity, mark, color) { m, c -> mark = m; color = c } } })
+            orientation=LinearLayout.VERTICAL
+            setPadding((20*density).toInt(),(8*density).toInt(),(20*density).toInt(),(8*density).toInt())
+            setBackgroundColor(Color.rgb(22,22,22))
+            addView(label("名前"));addView(name)
+            addView(label("保存フォルダ"));addView(folder)
+            addView(label("緯度・経度（十進度）"));addView(lat);addView(lon)
+            addView(Button(this@MainActivity).apply { text="マーク・色";setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity,mark,color) { m,c->mark=m;color=c } } })
         }
         val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントを編集").setView(content)
             .setNegativeButton("キャンセル", null).setPositiveButton("保存", null).create()
@@ -2124,6 +2208,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
         dialog.show()
+        listOf(android.content.DialogInterface.BUTTON_NEGATIVE,android.content.DialogInterface.BUTTON_POSITIVE).forEach { which ->
+            dialog.getButton(which)?.setTextColor(Color.rgb(255,170,0))
+        }
         if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
             fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
             android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
