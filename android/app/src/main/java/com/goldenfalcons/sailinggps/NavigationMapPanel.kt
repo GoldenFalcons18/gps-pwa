@@ -53,6 +53,7 @@ class NavigationMapPanel(
     private var map: MapLibreMap? = null
     private var mapStyle: Style? = null
     private val track = mutableListOf<LatLng>()
+    private var trackRecording = false
     private var waypoints = emptyList<Waypoint>()
     private var features = emptyList<MapFeature>()
     private var activeWaypoint: Waypoint? = null
@@ -209,7 +210,7 @@ class NavigationMapPanel(
         )
         if (style.getLayer("trail-line") == null) style.addLayer(
             LineLayer("trail-line", "trail").withProperties(
-                PropertyFactory.lineColor(Color.rgb(255, 170, 0)),
+                PropertyFactory.lineColor(Expression.get("color")),
                 PropertyFactory.lineWidth(4f)
             )
         )
@@ -314,7 +315,7 @@ class NavigationMapPanel(
     }
 
     private fun refreshAll() {
-        setSource("trail", listOfNotNull(lineFeature(track)))
+        setSource("trail", listOfNotNull(lineFeature(track, JSONObject().put("color", if (trackRecording) "#FFAA00" else "#808080"))))
         val targetPoints = listOfNotNull(current, target)
         setSource("target", listOfNotNull(lineFeature(targetPoints)))
         setSource("course", if (current != null && lastHeading != null) {
@@ -377,7 +378,6 @@ class NavigationMapPanel(
         if (recordTrack && lastTrackPoint != point) {
             lastTrackPoint = point
             track.add(point)
-            if (track.size > 10000) track.removeAt(0)
         }
         refreshAll()
         if (following && bearing != null) applyFollow()
@@ -454,6 +454,12 @@ class NavigationMapPanel(
         log("Map follow enabled / heading-up / boat-at-72-percent")
     }
 
+    fun setTrackRecording(active: Boolean) {
+        if (trackRecording == active) return
+        trackRecording = active
+        refreshAll()
+    }
+
     fun clearTrack() {
         track.clear()
         lastTrackPoint = null
@@ -483,7 +489,6 @@ class NavigationMapPanel(
                         val lon = fields.getOrNull(2)?.toDoubleOrNull()
                         if (lat != null && lon != null && lat in -90.0..90.0 && lon in -180.0..180.0) {
                             restored.addLast(LatLng(lat, lon))
-                            if (restored.size > 10000) restored.removeFirst()
                         }
                     }
                 }
