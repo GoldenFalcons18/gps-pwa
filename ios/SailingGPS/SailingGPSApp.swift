@@ -157,6 +157,17 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
+        WatchNavigationBridge.shared.recordingCommandHandler = { [weak self] command in
+            guard let self else { return false }
+            switch command {
+            case "start": self.start(newTrack: true)
+            case "resume": self.start()
+            case "pause": self.pause()
+            case "stop": self.stop()
+            default: return false
+            }
+            return true
+        }
         manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         manager.headingFilter = kCLHeadingFilterNone
         manager.activityType = .otherNavigation
@@ -230,6 +241,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.allowsBackgroundLocationUpdates = true
             manager.showsBackgroundLocationIndicator = true
             recording = true; recordingPaused = false
+            WatchNavigationBridge.shared.setRecordingState(recording: true, paused: false)
             if CLLocationManager.significantLocationChangeMonitoringAvailable() { manager.startMonitoringSignificantLocationChanges() }
             manager.startUpdatingLocation()
             if CLLocationManager.headingAvailable() { manager.startUpdatingHeading() }
@@ -274,6 +286,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.stopUpdatingLocation(); manager.stopUpdatingHeading()
         do { try handle?.synchronize(); try handle?.close() } catch { fail(error) }
         handle = nil; recording = false; recordingPaused = true
+        WatchNavigationBridge.shared.setRecordingState(recording: false, paused: true)
         message = "記録一時停止"; log("Recording paused"); preview(foregroundActive)
     }
     func stop() {
@@ -285,6 +298,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         try? FileManager.default.removeItem(at: activeSessionFile)
         elapsedBeforeStart = elapsed(at: Date()); recordingStartedAt = nil
         handle = nil; recording = false; recordingPaused = false; message = "記録停止"; log("Recording stopped")
+        WatchNavigationBridge.shared.setRecordingState(recording: false, paused: false)
         preview(foregroundActive)
     }
 
