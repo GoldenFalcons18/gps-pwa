@@ -2097,17 +2097,40 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun editWaypoint(original: Waypoint) {
         var mark = original.mark; var color = original.color
+        val density=resources.displayMetrics.density
+        val inputPadding=(12*density).toInt()
+        val inputBackground=android.content.res.ColorStateList.valueOf(Color.rgb(255,170,0))
         val folders=(waypointFolders+listOf(original.group,mainWaypointFolder)).filter{it.isNotBlank()}.distinct().sorted()
-        val folder=android.widget.Spinner(this).apply { adapter=android.widget.ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""});setSelection(folders.indexOf(original.group).coerceAtLeast(0)) }
-        val name = android.widget.EditText(this).apply { setText(original.name); setSingleLine(true) }
-        val lat = android.widget.EditText(this).apply { setText(original.lat.toString()); hint = "緯度（十進度）"; inputType = 12290 }
-        val lon = android.widget.EditText(this).apply { setText(original.lon.toString()); hint = "経度（十進度）"; inputType = 12290 }
+        val folder=android.widget.Spinner(this).apply {
+            adapter=android.widget.ArrayAdapter(this@MainActivity,android.R.layout.simple_spinner_dropdown_item,folders.map{it + if(it==mainWaypointFolder)" ★デフォルト" else ""})
+            setSelection(folders.indexOf(original.group).coerceAtLeast(0))
+        }
+        fun editor(value:String,placeholder:String?=null,keyboard:Int?=null)=android.widget.EditText(this).apply {
+            setText(value)
+            if(placeholder!=null) hint=placeholder
+            if(keyboard!=null) inputType=keyboard
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.LTGRAY)
+            textSize=16f
+            backgroundTintList=inputBackground
+            setPadding(inputPadding,inputPadding,inputPadding,inputPadding)
+        }
+        fun label(value:String)=TextView(this@MainActivity).apply {
+            text=value;setTextColor(Color.LTGRAY);textSize=13f
+            setPadding(0,(8*density).toInt(),0,0)
+        }
+        val name=editor(original.name)
+        name.setSingleLine(true)
+        val lat=editor(original.lat.toString(),"緯度（十進度）",12290)
+        val lon=editor(original.lon.toString(),"経度（十進度）",12290)
         val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(24,8,24,8)
-            addView(TextView(this@MainActivity).apply { text = "名前" }); addView(name)
-            addView(TextView(this@MainActivity).apply { text = "保存フォルダ" });addView(folder)
-            addView(TextView(this@MainActivity).apply { text = "緯度・経度（十進度）" }); addView(lat); addView(lon)
-            addView(Button(this@MainActivity).apply { text = "マーク・色"; setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity, mark, color) { m, c -> mark = m; color = c } } })
+            orientation=LinearLayout.VERTICAL
+            setPadding((20*density).toInt(),(8*density).toInt(),(20*density).toInt(),(8*density).toInt())
+            setBackgroundColor(Color.rgb(22,22,22))
+            addView(label("名前"));addView(name)
+            addView(label("保存フォルダ"));addView(folder)
+            addView(label("緯度・経度（十進度）"));addView(lat);addView(lon)
+            addView(Button(this@MainActivity).apply { text="マーク・色";setOnClickListener { WaypointAppearanceDialog.show(this@MainActivity,mark,color) { m,c->mark=m;color=c } } })
         }
         val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("ウェイポイントを編集").setView(content)
             .setNegativeButton("キャンセル", null).setPositiveButton("保存", null).create()
