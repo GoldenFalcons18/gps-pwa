@@ -51,7 +51,11 @@ struct NavigationMapView: View {
                 }
                 .alert("オフライン地図を保存", isPresented: $showSaveConfirmation) {
                     Button("保存") {
-                        guard let visibleBounds else { saveMessage = "地図の範囲を取得できませんでした。"; return }
+                        guard let visibleBounds else {
+                            saveMessage = "地図の範囲を取得できませんでした。"
+                            showSaveResult = true
+                            return
+                        }
                         OpenFreeMapOfflineStore.save(bounds: visibleBounds, completion: { message in
                             saveMessage = message
                             showSaveResult = true
@@ -59,7 +63,7 @@ struct NavigationMapView: View {
                     }
                     Button("キャンセル", role: .cancel) {}
                 } message: {
-                    Text("現在表示している範囲を保存します。最大3,000タイルまで保存します。")
+                    Text("現在表示している範囲を保存します。端末全体で最大3,000タイルまで保存します。")
                 }
                 .alert("地図の保存", isPresented: $showSaveResult) {
                     Button("閉じる") { saveMessage = "" }

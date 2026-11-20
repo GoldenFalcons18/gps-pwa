@@ -60,7 +60,7 @@ struct DetailedSettingsView: View {
                         Text("OpenFreeMap（OSM）").tag("openfreemap")
                     }
                     Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    Text(mapProvider == "openfreemap" ? "OpenFreeMapの地図は、表示中の範囲を保存してオフラインで利用できます。1範囲あたり最大3,000タイルです。" : "Appleマップを表示します。地図データの範囲保存はOpenFreeMapで利用できます。").font(.caption)
+                    Text(mapProvider == "openfreemap" ? "OpenFreeMapの地図は、表示中の範囲を保存してオフラインで利用できます。端末全体で最大3,000タイルです。" : "Appleマップを表示します。地図データの範囲保存はOpenFreeMapで利用できます。").font(.caption)
                 }.navigationTitle("地図")
             }
             NavigationLink("ゾーンアラート") {
