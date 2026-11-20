@@ -24,7 +24,7 @@ adb shell am start -n "$APP/.MainActivity"
 sleep 12
 adb exec-out screencap -p > screenshots/Android-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
-if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then cat screenshots/runtime.log; exit 1; fi
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
