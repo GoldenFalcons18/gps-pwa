@@ -1,6 +1,7 @@
 name: iPhone TestFlight upload
 on:
   push:
+    branches: [main]
     paths: ['release/ios-testflight-build-number.txt']
   workflow_dispatch:
     inputs:
