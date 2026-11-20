@@ -135,6 +135,7 @@ PYBOUNDS
 adb shell input tap "$INPUT_X" "$INPUT_Y"
 sleep 1
 adb shell input text MAP_TEST
+sleep 1
 adb shell input keyevent 4
 sleep 1
 adb exec-out screencap -p > screenshots/Android-map-name-entered.png
