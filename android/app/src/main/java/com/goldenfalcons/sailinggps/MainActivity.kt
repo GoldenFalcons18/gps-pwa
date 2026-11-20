@@ -1487,8 +1487,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val color=gpsQualityColor()
         b.tvGpsIndicator.text=if(recent) "●\\nGPS" else "○\\nGPS"
         b.tvGpsIndicator.setTextColor(color)
-        b.tvGpsInfo.setTextColor(color)
-        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) color else Color.LTGRAY)
+        b.tvGpsInfo.setTextColor(Color.LTGRAY)
+        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
         val accuracy=latestAccuracyM?.let { "精度 ±%.0f m".format(java.util.Locale.US,it) } ?: "精度不明"
         val altitude=latestAltitudeM?.let { "高度 %.0f m".format(java.util.Locale.US,it) } ?: "高度 --"
         b.tvGpsInfo.text=if(latestLat!=null && latestLon!=null) "現在位置\\n$accuracy\\n$altitude" else "GPS\\n受信待ち"
@@ -1535,7 +1535,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvPosition.text = if (latestLat != null && latestLon != null)
             "${displayCoordinate(latestLat!!, true)}   ${displayCoordinate(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
-        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) gpsQualityColor() else Color.LTGRAY)
+        b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
         val reference = headingReference()
         val heading = reference?.heading
         val source = if (reference == null) "未取得" else if (reference.magnetic) "磁気コンパス（MAG）" else "GPS対地針路（COG）"
