@@ -136,9 +136,25 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             }
         })
     }
-    fun show():Unit=menu("設定",listOf("速度・単位・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones,
+    fun show():Unit=menu("設定",listOf(
+        "単位：${if(bool("metricUnits",false)) "knot・nm" else "km/h・m/km"}" to {
+            booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
+        },
+        "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
+            booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路"))
+        },
+        "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to {
+            booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北"))
+        },
+        "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to {
+            choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute")
+        },
+        "速度・座標・時刻の詳細設定" to ::display,
+        "ナビゲーションの詳細設定" to ::navigation,
+        "地図" to ::map,
+        "ゾーンアラート" to ::zones,
         "デフォルトの保存先：$currentFolder" to {choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder)},
-        "GPS・アプリ情報" to {message("GPS・アプリ情報",gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")}))
+        "GPS・アプリ情報" to {message("GPS・アプリ情報",gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")})))
     private fun display():Unit=menu("速度・単位・座標・時刻",listOf(
         "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
             booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
