@@ -1,6 +1,7 @@
 name: Android signed release
 on:
   push:
+    branches: [main]
     paths: ['release/android-signed-build.txt']
   workflow_dispatch:
 permissions:
