@@ -142,7 +142,7 @@ class OpenFreeMapOfflineStore(context: Context) {
 
     fun list(callback: (List<OfflineRegion>) -> Unit, onError: (String) -> Unit) {
         manager.listOfflineRegions(object : OfflineManager.ListOfflineRegionsCallback {
-            override fun onList(regions: Array<OfflineRegion>) = callback(regions.toList())
+            override fun onList(regions: Array<OfflineRegion>?) = callback(regions?.toList().orEmpty())
             override fun onError(error: String) = onError(error)
         })
     }
