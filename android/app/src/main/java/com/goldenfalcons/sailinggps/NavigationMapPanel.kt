@@ -109,6 +109,7 @@ class NavigationMapPanel(
             readyMap.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) setFollowing(false)
             }
+            readyMap.addOnCameraIdleListener { logWaypointTouchLocations(readyMap) }
         }
         container.addView(mapView, FrameLayout.LayoutParams(-1, -1))
         val controls = LinearLayout(context).apply {
@@ -158,6 +159,16 @@ class NavigationMapPanel(
         })
 
         log("Map initialized / OpenFreeMap / MapLibre")
+    }
+
+    private fun logWaypointTouchLocations(readyMap: MapLibreMap) {
+        if (!BuildConfig.DEBUG || destroyed) return
+        val origin = IntArray(2)
+        mapView.getLocationOnScreen(origin)
+        waypoints.filter { (it.group ?: "") !in hiddenGroups }.forEach { waypoint ->
+            val point = readyMap.projection.toScreenLocation(LatLng(waypoint.lat, waypoint.lon))
+            android.util.Log.d("SailingUiBounds", "WP_TOUCH id=${waypoint.id} x=${origin[0] + point.x.toInt()} y=${origin[1] + point.y.toInt()}")
+        }
     }
 
     fun setMapStyle(name: String) {
