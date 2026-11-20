@@ -29,7 +29,7 @@ class OpenFreeMapOfflineTest {
     @Test
     fun dateLineCrossingBoundsAreCountedOnBothSides() {
         val count = OpenFreeMapConfig.estimateTileCount(170.0, -10.0, -170.0, 10.0, 2, 2)
-        assertEquals(2L, count)
+        assertEquals(4L, count)
     }
 
     @Test(expected = IllegalArgumentException::class)
