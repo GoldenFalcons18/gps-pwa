@@ -194,6 +194,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "端末の通知：${if(NotificationManagerCompat.from(activity).areNotificationsEnabled()) "許可済み" else "許可が必要"}" to {
             activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,activity.packageName))
         },
+        "各設定の意味" to {message("誤通知を抑える設定","GPS精度：指定した誤差以内の測位だけを判定に使います。境界からの余裕：境界から「GPS誤差」と「設定距離」の大きい方より離れるまで判定を保留します。連続確認回数：同じ側の新しい測位が指定回数続いた時に通知します。値を大きくすると誤通知を抑えやすくなりますが、通知は遅くなります。")},
         "動作条件について" to {message("動作条件について","画面表示中、またはGPS記録中に検知します。アプリ終了・記録停止中のバックグラウンドでは監視しません。\n最初の位置は基準として登録し、通知しません。\n境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で確定します。小さい円では十分な精度が必要です。\n音と振動は端末の通知設定にも従います.")}))
     private fun selectZones() {
         val areas=library.features.filter{it.kind in listOf("circle","area")}
