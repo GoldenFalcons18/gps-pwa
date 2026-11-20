@@ -3,6 +3,7 @@ set -euo pipefail
 APP=com.goldenfalcons.sailinggps
 # The emulator launcher can show a background ANR after cold boot. It is not the app under test.
 adb shell am force-stop com.android.launcher3
+adb uninstall "$APP" >/dev/null 2>&1 || true
 adb install -g apk/*.apk
 adb shell run-as "$APP" mkdir -p shared_prefs
 python3 - <<'PY'
