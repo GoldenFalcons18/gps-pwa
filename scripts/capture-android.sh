@@ -143,7 +143,7 @@ adb shell input tap "$SAVE_X" "$SAVE_Y"
 sleep 2
 adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/map-waypoints.xml
 python3 - <<'PYVERIFY'
-import xml.etree.ElementTree as E,json
+import xml.etree.ElementTree as E,json,pathlib
 root=E.parse('screenshots/map-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 assert len(items)==4,items
