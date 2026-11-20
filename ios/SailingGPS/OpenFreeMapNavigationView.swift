@@ -152,49 +152,51 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         var parent: OpenFreeMapMapView
         weak var map: MLNMapView?
         private var pins: [Pin] = []
-        private var overlays: [MLNPolyline] = []
+        private var boatPin: Pin?
+        private var waypointSignature = ""
         private var cameraUpdateInProgress = false
 
         init(_ parent: OpenFreeMapMapView) { self.parent = parent }
 
         func render(_ map: MLNMapView) {
             self.map = map
-            pins.forEach { map.removeAnnotation($0) }
-            pins.removeAll()
-            if parent.showWaypoints {
-                for waypoint in parent.waypoints {
-                    let pin = Pin()
-                    pin.coordinate = waypoint.coordinate
-                    pin.title = waypoint.name
-                    pin.subtitle = waypoint.note
-                    pin.waypointID = waypoint.id
-                    pin.mark = waypoint.markText ?? waypoint.markSymbol ?? "●"
-                    pins.append(pin)
+            let signature = parent.showWaypoints
+                ? parent.waypoints.map { "\($0.id.uuidString):\($0.latitude):\($0.longitude):\($0.name):\($0.markText ?? $0.markSymbol ?? "●")" }.joined(separator: "|")
+                : "hidden"
+            if signature != waypointSignature {
+                let oldPins = pins.filter { !$0.isBoat }
+                map.removeAnnotations(oldPins)
+                pins.removeAll { !$0.isBoat }
+                if parent.showWaypoints {
+                    let newPins = parent.waypoints.map { waypoint -> Pin in
+                        let pin = Pin()
+                        pin.coordinate = waypoint.coordinate
+                        pin.title = waypoint.name
+                        pin.subtitle = waypoint.note
+                        pin.waypointID = waypoint.id
+                        pin.mark = waypoint.markText ?? waypoint.markSymbol ?? "●"
+                        pins.append(pin)
+                        return pin
+                    }
+                    map.addAnnotations(newPins)
                 }
+                waypointSignature = signature
             }
             if let location = parent.location {
-                let boat = Pin()
-                boat.coordinate = location.coordinate
-                boat.title = "現在地"
-                boat.isBoat = true
-                boat.mark = "▲"
-                pins.append(boat)
+                if let boatPin {
+                    boatPin.coordinate = location.coordinate
+                } else {
+                    let boat = Pin()
+                    boat.coordinate = location.coordinate
+                    boat.title = "現在地"
+                    boat.isBoat = true
+                    boat.mark = "▲"
+                    boatPin = boat
+                    pins.append(boat)
+                    map.addAnnotation(boat)
+                }
             }
-            map.addAnnotations(pins)
-
-            overlays.forEach { map.removeOverlay($0) }
-            overlays.removeAll()
-            if parent.track.count > 1, let line = makeLine(parent.track, title: "track") {
-                overlays.append(line)
-            }
-            if let location = parent.location, let target = parent.waypoints.first(where: { $0.id == parent.selected }) {
-                if let line = makeLine([location.coordinate, target.coordinate], title: "target") { overlays.append(line) }
-            }
-            if parent.showCourse, let location = parent.location, let heading = parent.heading {
-                let destination = Self.destination(from: location.coordinate, bearing: heading, meters: 2500)
-                if let line = makeLine([location.coordinate, destination], title: "course") { overlays.append(line) }
-            }
-            if !overlays.isEmpty { map.addOverlays(overlays) }
+            updateLines(map)
 
             if parent.following, let location = parent.location {
                 cameraUpdateInProgress = true
@@ -203,6 +205,51 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 DispatchQueue.main.async { self.cameraUpdateInProgress = false }
             }
             parent.onViewportChanged(map.visibleCoordinateBounds, map.zoomLevel)
+        }
+
+        private func updateLines(_ map: MLNMapView) {
+            guard let style = map.style else { return }
+            let definitions: [(String, UIColor, CGFloat)] = [
+                ("sailing-track", .systemOrange, 4),
+                ("sailing-target", .systemGreen, 3),
+                ("sailing-course", .white, 2)
+            ]
+            for (sourceID, color, width) in definitions {
+                let layerID = sourceID + "-line"
+                let source: MLNShapeSource
+                if let existing = style.source(withIdentifier: sourceID) as? MLNShapeSource {
+                    source = existing
+                } else {
+                    source = MLNShapeSource(identifier: sourceID, shape: nil, options: nil)
+                    style.addSource(source)
+                }
+                if style.layer(withIdentifier: layerID) == nil {
+                    let layer = MLNLineStyleLayer(identifier: layerID, source: source)
+                    layer.lineColor = NSExpression(forConstantValue: color)
+                    layer.lineWidth = NSExpression(forConstantValue: width)
+                    layer.lineCap = NSExpression(forConstantValue: "round")
+                    style.addLayer(layer)
+                }
+            }
+            (style.source(withIdentifier: "sailing-track") as? MLNShapeSource)?.shape =
+                parent.track.count > 1 ? makeLine(parent.track) : nil
+            let target = parent.location.flatMap { location -> MLNPolyline? in
+                guard let waypoint = parent.waypoints.first(where: { $0.id == parent.selected }) else { return nil }
+                return makeLine([location.coordinate, waypoint.coordinate])
+            }
+            (style.source(withIdentifier: "sailing-target") as? MLNShapeSource)?.shape = target
+            let course = parent.location.flatMap { location -> MLNPolyline? in
+                guard parent.showCourse, let heading = parent.heading else { return nil }
+                return makeLine([location.coordinate, Self.destination(from: location.coordinate, bearing: heading, meters: 2500)])
+            }
+            (style.source(withIdentifier: "sailing-course") as? MLNShapeSource)?.shape = course
+        }
+
+        private func makeLine(_ coordinates: [CLLocationCoordinate2D]) -> MLNPolyline? {
+            guard coordinates.count > 1 else { return nil }
+            var points = coordinates
+            guard let first = points.withUnsafeBufferPointer({ $0.baseAddress }) else { return nil }
+            return MLNPolyline(coordinates: first, count: UInt(points.count))
         }
 
         private func makeLine(_ coordinates: [CLLocationCoordinate2D], title: String) -> MLNPolyline? {
@@ -239,11 +286,15 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
-            if !cameraUpdateInProgress { parent.following = false }
+            if mapView.gestureInProgress && !cameraUpdateInProgress { parent.following = false }
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
             parent.onViewportChanged(mapView.visibleCoordinateBounds, mapView.zoomLevel)
+        }
+
+        func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
+            updateLines(mapView)
         }
 
         func mapView(_ mapView: MLNMapView, strokeColorForShapeAnnotation annotation: MLNShape) -> UIColor {
