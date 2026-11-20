@@ -134,7 +134,7 @@ PYBOUNDS
 )
 adb shell input tap "$INPUT_X" "$INPUT_Y"
 sleep 1
-adb shell input text MAP_TESTx
+adb shell input text maptest
 sleep 1
 adb shell input keyevent 4
 sleep 1
@@ -148,7 +148,7 @@ root=E.parse('screenshots/map-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 assert len(items)==4,items
 point=items[-1]
-assert point['name']=='MAP_TESTx',point
+assert point['name']=='maptest',point
 assert -90<=point['lat']<=90 and -180<=point['lon']<=180
 assert abs(point['lat']-35.318)+abs(point['lon']-139.467)>0.0001,point
 assert next(n.text for n in root if n.get('name')=='activeId')!=point['id']
@@ -224,7 +224,7 @@ import json,pathlib,xml.etree.ElementTree as E
 root=E.parse('screenshots/appearance-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 active=next(n.text for n in root if n.get('name')=='activeId')
-point=next(p for p in items if p['name']=='MAP_TESTx')
+point=next(p for p in items if p['name']=='maptest')
 assert point['id']!=active,point
 assert point['mark']=='灯台' and point['color']=='#12ABCD',point
 assert len(items)==4
@@ -247,7 +247,7 @@ read -r WP_X WP_Y < <(python3 - <<'PYTOUCH'
 import pathlib,re,json,xml.etree.ElementTree as E
 root=E.parse('screenshots/appearance-waypoints.xml').getroot()
 points=json.loads(next(n.text for n in root if n.get('name')=='items'))
-wp=next(p for p in points if p['name']=='MAP_TESTx')
+wp=next(p for p in points if p['name']=='maptest')
 rows=re.findall(r'WP_TOUCH id='+re.escape(wp['id'])+r' x=(-?\d+) y=(-?\d+)',pathlib.Path('screenshots/touch-bounds.log').read_text())
 assert rows,'Waypoint screen bounds missing'
 print(*rows[-1])
@@ -288,8 +288,8 @@ import pathlib,json,xml.etree.ElementTree as E
 def data(path):
  r=E.parse(path).getroot();return json.loads(next(n.text for n in r if n.get('name')=='items')),next(n.text for n in r if n.get('name')=='activeId')
 before,_=data('screenshots/appearance-waypoints.xml');after,target=data('screenshots/edited-waypoints.xml')
-original=next(p for p in before if p['name']=='MAP_TESTx');changed=next(p for p in after if p['id']==original['id'])
-assert changed['name']=='MAP_TESTx_edit',changed
+original=next(p for p in before if p['name']=='maptest');changed=next(p for p in after if p['id']==original['id'])
+assert changed['name']=='maptest_edit',changed
 assert len(after)==len(before)
 for key in ['id','lat','lon','mark','color']:assert changed[key]==original[key],(key,changed,original)
 assert target=='__none__'
@@ -321,7 +321,7 @@ sleep 1
 adb logcat -d -s SailingUiBounds > screenshots/candidate-bounds.log
 read -r ACTION_X ACTION_Y < <(python3 - <<'PYCANDIDATE'
 import pathlib,re
-rows=re.findall(r'ACTION label=[^\n]*MAP_TESTx_edit[^\n]* bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/candidate-bounds.log').read_text())
+rows=re.findall(r'ACTION label=[^\n]*maptest_edit[^\n]* bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/candidate-bounds.log').read_text())
 assert rows
 a,b,c,d=map(int,rows[-1]);print((a+c)//2,(b+d)//2)
 PYCANDIDATE
@@ -351,7 +351,7 @@ import pathlib,json,xml.etree.ElementTree as E
 r=E.parse('screenshots/after-go-waypoints.xml').getroot()
 points=json.loads(next(n.text for n in r if n.get('name')=='items'))
 active=next(n.text for n in r if n.get('name')=='activeId')
-assert next(p for p in points if p['id']==active)['name']=='MAP_TESTx_edit'
+assert next(p for p in points if p['id']==active)['name']=='maptest_edit'
 pathlib.Path('screenshots/navigation-go-result.txt').write_text('PASS: blank long press opens operations before creation; navigation options select a candidate; Go alone commits target.\n')
 PYAFTERGO
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
