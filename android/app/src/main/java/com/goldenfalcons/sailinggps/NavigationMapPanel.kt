@@ -380,7 +380,7 @@ class NavigationMapPanel(
             track.add(point)
         }
         refreshAll()
-        if (following && bearing != null) applyFollow()
+        if (following) applyFollow()
     }
 
     fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
@@ -429,22 +429,18 @@ class NavigationMapPanel(
     private fun applyFollow() {
         val readyMap = map ?: return
         val point = current ?: return
-        val heading = lastHeading ?: return
         val metrics = mapView.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
         val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54, metersPerCm).coerceIn(2.0, 20.0)
-        val center = DisplayNavigation.followCenter(
-            point.latitude, point.longitude, heading, mapView.height.toDouble(), dpi / 2.54, metersPerCm
-        )
         readyMap.cameraPosition = CameraPosition.Builder()
-            .target(LatLng(center.first, center.second))
+            .target(point)
             .zoom(zoom)
-            .bearing(-heading)
+            .bearing(-(lastHeading ?: 0.0))
             .build()
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastFollowLogAt >= 500) {
             lastFollowLogAt = now
-            log("Map follow heading=$heading")
+            log("Map follow / current location centered / heading=$lastHeading")
         }
     }
 
