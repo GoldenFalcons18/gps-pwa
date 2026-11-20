@@ -930,8 +930,8 @@ struct ContentView: View {
             VStack(spacing: 10) {
                 HStack(alignment: .top, spacing: 5) {
                     VStack(spacing: 2) {
-                        Image(systemName: "location.fill").foregroundStyle(gps.location == nil ? .gray : .green)
-                        Text("GPS").font(.caption2).foregroundStyle(.gray)
+                        Image(systemName: "location.fill").foregroundStyle(gpsQualityColor(for:gps.location))
+                        Text("GPS").font(.caption2).foregroundStyle(gpsQualityColor(for:gps.location))
                     }
                     if mode == 1 {
                         instrument(duration(elapsed), label: "追跡タイマー", size: 26)
@@ -979,7 +979,17 @@ struct ContentView: View {
                 Text(gps.location.map { displayCoordinate($0.coordinate.latitude, isLatitude:true) } ?? "---")
                 Text(gps.location.map { displayCoordinate($0.coordinate.longitude, isLatitude:false) } ?? "---")
             }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
+                .foregroundStyle(gpsQualityColor(for:gps.location))
         }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+    }
+
+    private func gpsQualityColor(for point:CLLocation?) -> Color {
+        guard let point else { return .red }
+        let age=Date().timeIntervalSince(point.timestamp)
+        guard age.isFinite, (0...15).contains(age) else { return .red }
+        if point.horizontalAccuracy <= 15 { return .green }
+        if point.horizontalAccuracy <= 50 { return .yellow }
+        return .red
     }
     private var focusTargetBearing:Double? {
         guard let target,let point=gps.location,point.distance(from:CLLocation(latitude:target.latitude,longitude:target.longitude))>1 else {return nil}
