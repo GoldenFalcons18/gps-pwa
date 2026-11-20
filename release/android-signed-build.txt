@@ -1,1 +1,1 @@
-1.8.87 versionCode 112 signed release
+1.8.88 versionCode 113 signed release
