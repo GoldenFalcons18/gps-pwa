@@ -2,7 +2,7 @@ package com.goldenfalcons.sailinggps
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Point
+import android.graphics.PointF
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -479,8 +479,8 @@ class NavigationMapPanel(
     private fun visibleBounds(): LatLngBounds? {
         val readyMap = map ?: return null
         if (mapView.width <= 0 || mapView.height <= 0) return null
-        val nw = readyMap.projection.fromScreenLocation(Point(0, 0))
-        val se = readyMap.projection.fromScreenLocation(Point(mapView.width, mapView.height))
+        val nw = readyMap.projection.fromScreenLocation(PointF(0f, 0f))
+        val se = readyMap.projection.fromScreenLocation(PointF(mapView.width.toFloat(), mapView.height.toFloat()))
         return LatLngBounds.Builder().include(nw).include(se).build()
     }
 
