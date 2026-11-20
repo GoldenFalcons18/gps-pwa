@@ -57,9 +57,9 @@ assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,poin
 assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
 print('One-tap current waypoint saved and selected with recording stopped')
 PY
-adb shell run-as "$APP" sh -c "'test ! -s files/track_points.csv'"
+adb shell run-as "$APP" sh -c "'test ! -e files/active_track.txt && test ! -s files/track_points.csv'"
 adb logcat -d -s SailingGpsLogger > screenshots/gps-preview.log
-if ! grep -q 'GPS preview started' screenshots/gps-preview.log; then exit 1; fi
+if ! grep -q 'Location preview started' screenshots/gps-preview.log; then exit 1; fi
 adb exec-out screencap -p > screenshots/Android-current-waypoint.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
