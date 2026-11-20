@@ -154,7 +154,8 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "地図" to ::map,
         "ゾーンアラート" to ::zones,
         "デフォルトの保存先：$currentFolder" to {choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder)},
-        "GPS・アプリ情報" to {message("GPS・アプリ情報",gpsStatus+"\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")})))
+        "GPS・アプリ情報" to { message("GPS・アプリ情報", gpsStatus + "\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") }
+    ))
     private fun display():Unit=menu("速度・単位・座標・時刻",listOf(
         "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
             booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
