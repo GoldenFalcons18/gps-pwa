@@ -57,6 +57,9 @@ assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,poin
 assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
 print('One-tap current waypoint saved and selected with recording stopped')
 PY
+echo "Recording-state files before preview assertion"
+adb shell run-as "$APP" sh -c "'ls -la files; ls -la files/tracks 2>&1; cat files/active_track.txt 2>&1; wc -c files/track_points.csv 2>&1'"
+adb logcat -d -s SailingGpsLogger > screenshots/gps-preview-before-assert.log
 adb shell run-as "$APP" sh -c "'test ! -e files/active_track.txt && test ! -s files/track_points.csv'"
 adb logcat -d -s SailingGpsLogger > screenshots/gps-preview.log
 if ! grep -q 'Location preview started' screenshots/gps-preview.log; then exit 1; fi
