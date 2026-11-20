@@ -128,7 +128,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     func makeUIView(context: Context) -> MLNMapView {
         let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
         map.delegate = context.coordinator
-        map.pitchEnabled = false
+        map.isPitchEnabled = false
         map.showsCompassView = true
         map.showsAttributionButton = true
         map.centerCoordinate = CLLocationCoordinate2D(latitude: 35.30, longitude: 139.48)
@@ -206,7 +206,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 cameraUpdateInProgress = true
                 let zoom = min(18, max(5, 17 - log2(max(parent.metersPerCm, 12.5) / 25)))
                 map.setCenter(location.coordinate, zoomLevel: zoom, direction: parent.heading ?? 0, animated: false)
-                DispatchQueue.main.async { self.cameraUpdateInProgress = false }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.cameraUpdateInProgress = false }
             }
             parent.onViewportChanged(map.visibleCoordinateBounds, map.zoomLevel)
         }
@@ -290,7 +290,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
-            if mapView.gestureInProgress && !cameraUpdateInProgress { parent.following = false }
+            if !cameraUpdateInProgress { parent.following = false }
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
