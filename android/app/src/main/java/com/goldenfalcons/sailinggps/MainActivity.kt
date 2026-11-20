@@ -1074,7 +1074,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         navigatorMode = navigator
         if (navigator && mapPanel == null) {
             mapPanel = NavigationMapPanel(this, b.mapContainer, { debug(it) }, { lat, lon -> showMapOperations(lat, lon) }) { waypoint -> editWaypoint(waypoint) }
-            mapPanel?.onFollowingChanged = { following -> b.btnFollow.text = if (following) "追従 1cm≒200m" else "再度中心に配置" }
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints", true), displayPrefs.getBoolean("showCourse", true))
             mapPanel?.setWaypoints(waypoints, activeWaypoint, library.hiddenGroups)
             mapPanel?.setFeatures(library.features.filter { it.visible && it.group !in library.hiddenGroups },waypoints)
