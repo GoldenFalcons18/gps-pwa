@@ -829,7 +829,6 @@ struct ContentView: View {
                 operationButton(showMapWaypoints ? "ウェイポイントを非表示" : "ウェイポイントを表示") { showMapWaypoints.toggle(); mapOperationsPresented = false }
                 operationButton(showCourseLine ? "進路ラインを隠す" : "進路ラインを表示") { showCourseLine.toggle(); mapOperationsPresented = false }
             }
-            operationButton("再度中心に配置") { following = true; mapOperationsPresented = false }
         }.padding(8).background(Color(white: 0.08).opacity(0.97)).overlay(RoundedRectangle(cornerRadius: 8).stroke(.orange)).padding(4)
     }
     private var navigationOptions: some View {
