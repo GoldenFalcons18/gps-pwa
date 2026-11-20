@@ -39,6 +39,8 @@ x1,y1,x2,y2,*_=map(int,records[-1])
 print((x1+x2)//2,(y1+y2)//2)
 PY
 )
+echo "Current waypoint button center: $COORDS"
+cat screenshots/ui-bounds.log
 adb emu geo fix 139.467 35.318
 sleep 3
 adb shell input tap $COORDS
@@ -46,6 +48,8 @@ for counter in 1 2 3 4 5; do
   adb emu geo fix 139.467 35.318
   sleep 1
 done
+adb logcat -d -s SailingGpsLogger > screenshots/one-tap-location.log
+cat screenshots/one-tap-location.log
 adb shell run-as "$APP" cat shared_prefs/waypoints.xml > quick-waypoints.xml
 python3 - <<'PY'
 import xml.etree.ElementTree as E,json
