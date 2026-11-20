@@ -16,6 +16,7 @@ struct NavigationMapView: View {
     let showWaypoints: Bool
     let showCourse: Bool
     let track: [CLLocationCoordinate2D]
+    let isRecording: Bool
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
@@ -37,6 +38,7 @@ struct NavigationMapView: View {
                     showWaypoints: showWaypoints,
                     showCourse: showCourse,
                     track: track,
+                    isRecording: isRecording,
                     selected: $selected,
                     following: $following,
                     metersPerCm: metersPerCm,
@@ -72,7 +74,7 @@ struct NavigationMapView: View {
                 AppleNavigationMapView(
                     location: location, heading: heading, waypoints: waypoints, library: library,
                     showWaypoints: showWaypoints, showCourse: showCourse, track: track,
-                    selected: $selected, following: $following, metersPerCm: metersPerCm,
+                    isRecording: isRecording, selected: $selected, following: $following, metersPerCm: metersPerCm,
                     editWaypoint: editWaypoint, createWaypoint: createWaypoint
                 )
             }
@@ -116,6 +118,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     let showWaypoints: Bool
     let showCourse: Bool
     let track: [CLLocationCoordinate2D]
+    let isRecording: Bool
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
@@ -159,6 +162,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         private var boatPin: Pin?
         private var waypointSignature = ""
         private var cameraUpdateInProgress = false
+        private var lastTrackRecording: Bool?
 
         init(_ parent: OpenFreeMapMapView) { self.parent = parent }
 
@@ -213,8 +217,9 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
 
         private func updateLines(_ map: MLNMapView) {
             guard let style = map.style else { return }
+            let trackColor = parent.isRecording ? UIColor.systemOrange : UIColor.systemGray
             let definitions: [(String, UIColor, CGFloat)] = [
-                ("sailing-track", .systemOrange, 4),
+                ("sailing-track", trackColor, 4),
                 ("sailing-target", .systemGreen, 3),
                 ("sailing-course", .white, 2)
             ]
@@ -234,6 +239,10 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                     layer.lineCap = NSExpression(forConstantValue: "round")
                     style.addLayer(layer)
                 }
+            }
+            if lastTrackRecording != parent.isRecording {
+                (style.layer(withIdentifier: "sailing-track-line") as? MLNLineStyleLayer)?.lineColor = NSExpression(forConstantValue: trackColor)
+                lastTrackRecording = parent.isRecording
             }
             (style.source(withIdentifier: "sailing-track") as? MLNShapeSource)?.shape =
                 parent.track.count > 1 ? makeLine(parent.track) : nil

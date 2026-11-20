@@ -358,7 +358,6 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
             previousRecordedLocation = point
             maximumSpeed = max(maximumSpeed, max(0, point.speed))
             track.append(point.coordinate)
-            if track.count > 10000 { track.removeFirst(track.count - 10000) }
         }
     }
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -697,7 +696,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, isRecording: gps.recording && !gps.recordingPaused, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
             .overlay(alignment: .trailing) {

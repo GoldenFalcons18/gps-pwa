@@ -1451,6 +1451,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun updateStatusUi() {
+        mapPanel?.setTrackRecording(running)
         val status=when { running -> "記録中"; recordingPaused -> "一時停止"; else -> "停止中" }
         b.tvRecordingIndicator.text = when { running -> "● 記録中"; recordingPaused -> "Ⅱ 一時停止"; else -> "○ 停止中" }
         b.tvRecordingIndicator.setTextColor(when { running -> Color.rgb(0,255,56); recordingPaused -> Color.rgb(255,170,0); else -> Color.LTGRAY })

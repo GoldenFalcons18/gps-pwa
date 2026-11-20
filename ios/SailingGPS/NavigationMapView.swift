@@ -6,6 +6,7 @@ import MapKit
 /// causes a visible blink while MapKit builds a new renderer.
 private final class LiveLineOverlay: NSObject, MKOverlay {
     private(set) var points: [CLLocationCoordinate2D] = []
+    var strokeColor: UIColor = .systemGray
     private var lastCoordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
     private var lastBoundingMapRect: MKMapRect?
     var coordinate: CLLocationCoordinate2D {
@@ -34,19 +35,17 @@ private final class LiveLineOverlay: NSObject, MKOverlay {
 
 private final class LiveLineRenderer: MKOverlayRenderer {
     private let line: LiveLineOverlay
-    private let color: UIColor
     private let width: CGFloat
 
-    init(overlay: LiveLineOverlay, color: UIColor, width: CGFloat) {
+    init(overlay: LiveLineOverlay, width: CGFloat) {
         self.line = overlay
-        self.color = color
         self.width = width
         super.init(overlay: overlay)
     }
 
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         guard line.points.count > 1 else { return }
-        context.setStrokeColor(color.cgColor)
+        context.setStrokeColor(line.strokeColor.cgColor)
         context.setLineWidth(width / zoomScale)
         context.setLineJoin(.round)
         context.setLineCap(.round)
@@ -68,6 +67,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
     let showWaypoints: Bool
     let showCourse: Bool
     let track: [CLLocationCoordinate2D]
+    let isRecording: Bool
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
@@ -112,6 +112,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
         private var courseHeading: Double?
         private var lastLocationTime: Date?
         private var lastTrackCount = -1
+        private var lastTrackRecording: Bool?
         private weak var map: MKMapView?
         private let courseOverlay = LiveLineOverlay()
         private let trackOverlay = LiveLineOverlay()
@@ -259,9 +260,12 @@ struct AppleNavigationMapView: UIViewRepresentable {
                 map.addOverlay(overlay)
             }
             let locationChanged = lastLocationTime != p.location?.timestamp
-            if locationChanged || lastTrackCount != p.track.count {
+            let trackColor = p.isRecording ? UIColor.systemOrange : UIColor.systemGray
+            trackOverlay.strokeColor = trackColor
+            if locationChanged || lastTrackCount != p.track.count || lastTrackRecording != p.isRecording {
                 lastLocationTime = p.location?.timestamp
                 lastTrackCount = p.track.count
+                lastTrackRecording = p.isRecording
                 trackOverlay.update(p.track)
                 map.renderer(for: trackOverlay)?.setNeedsDisplay()
             }
@@ -304,9 +308,10 @@ struct AppleNavigationMapView: UIViewRepresentable {
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let line = overlay as? LiveLineOverlay {
-                if line === courseOverlay { return LiveLineRenderer(overlay: line, color: .black, width: 2) }
-                if line === targetOverlay { return LiveLineRenderer(overlay: line, color: .green, width: 3) }
-                return LiveLineRenderer(overlay: line, color: .orange, width: 3)
+                if line === courseOverlay { return LiveLineRenderer(overlay: line, width: 2) }
+                if line === targetOverlay { return LiveLineRenderer(overlay: line, width: 3) }
+                line.strokeColor = parent.isRecording ? .systemOrange : .systemGray
+                return LiveLineRenderer(overlay: line, width: 3)
             }
             if let area = overlay as? MKPolygon {
                 let renderer=MKPolygonRenderer(polygon:area);let color=UIColor(waypointColor(area.title?.replacingOccurrences(of:"feature:",with:"") ?? "#00AAFF"));renderer.strokeColor=color;renderer.fillColor=color.withAlphaComponent(0.25);renderer.lineWidth=3;return renderer
