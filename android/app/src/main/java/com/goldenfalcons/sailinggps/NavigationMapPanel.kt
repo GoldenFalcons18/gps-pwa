@@ -17,6 +17,7 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.MapLibre
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -77,6 +78,7 @@ class NavigationMapPanel(
 
     init {
         OpenFreeMapConfig.configure(context)
+        MapLibre.getInstance(context)
         styleName = context.getSharedPreferences("display", Context.MODE_PRIVATE)
             .getString("mapStyle", "liberty") ?: "liberty"
         mapView = MapView(context)
@@ -370,7 +372,7 @@ class NavigationMapPanel(
             .map { LatLng(it.lat, it.lon) } + listOfNotNull(current)
         if (points.isEmpty()) return
         setFollowing(false)
-        val bounds = LatLngBounds.Builder().apply { points.forEach(::include) }.build()
+        val bounds = LatLngBounds.Builder().apply { points.forEach { include(it) } }.build()
         readyMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 32), 350)
         log("Map show waypoints / ${points.size}")
     }
@@ -424,6 +426,7 @@ class NavigationMapPanel(
 
     fun resume() {
         paused = false
+        mapView.onStart()
         mapView.onResume()
         loadTrackFile(GpsLoggingService.trackFile(appContext))
     }
@@ -464,6 +467,7 @@ class NavigationMapPanel(
     fun pause() {
         paused = true
         mapView.onPause()
+        mapView.onStop()
     }
 
     fun destroy() {
