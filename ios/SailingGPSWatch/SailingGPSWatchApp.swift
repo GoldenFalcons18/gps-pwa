@@ -8,6 +8,9 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
     @Published var reachable = false
     @Published var selectionPending = UserDefaults.standard.object(forKey: "watchSelectionTime") != nil
     @Published var message = ""
+    @Published var recording = false
+    @Published var recordingPaused = false
+    @Published var recordingCommandPending = false
     @Published var signal: WatchSignalSnapshot? = {
         guard let data = UserDefaults.standard.data(forKey: "watchSignalState") else { return nil }
         return try? JSONDecoder().decode(WatchSignalSnapshot.self, from: data)
@@ -66,6 +69,8 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
         pendingTime = nil; selectionPending = false; UserDefaults.standard.removeObject(forKey: "watchSelectionTime")
     }
     private func receive(_ context: [String: Any]) {
+        if let value = context["recording"] as? Bool { DispatchQueue.main.async { self.recording = value } }
+        if let value = context["recordingPaused"] as? Bool { DispatchQueue.main.async { self.recordingPaused = value } }
         if let data = context["signal"] as? Data, let value = try? JSONDecoder().decode(WatchSignalSnapshot.self, from: data) {
             DispatchQueue.main.async {
                 guard self.signal == nil || value.sentAt >= self.signal!.sentAt else { return }
@@ -99,6 +104,27 @@ final class WatchNavigationReceiver: NSObject, ObservableObject, WCSessionDelega
                 self.clearPending(); self.receive(reply)
             }
         }, errorHandler: { _ in })
+    }
+    func sendRecordingCommand(_ command: String) {
+        let session = WCSession.default
+        guard session.activationState == .activated, session.isReachable else {
+            message = "iPhoneを起動して接続してください"
+            return
+        }
+        recordingCommandPending = true
+        session.sendMessage(["recordingCommand": command], replyHandler: { [weak self] reply in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.recordingCommandPending = false
+                self.receive(reply)
+                self.message = reply["commandAccepted"] as? Bool == false ? "操作をiPhoneで開始できませんでした" : ""
+            }
+        }, errorHandler: { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.recordingCommandPending = false
+                self?.message = "iPhoneと接続できませんでした"
+            }
+        })
     }
     func refresh() {
         let session = WCSession.default
@@ -186,6 +212,12 @@ struct WatchNavigationView: View {
         .padding(5)
     }
 
+    private func recordButton(_ title: String, symbol: String, command: String) -> some View {
+        Button { receiver.sendRecordingCommand(command) } label: {
+            Label(title, systemImage: symbol).font(.system(size: 9)).lineLimit(1).minimumScaleFactor(0.65)
+                .frame(maxWidth: .infinity, minHeight: 22)
+        }.buttonStyle(.bordered).tint(command == "stop" ? .red : .orange).disabled(receiver.recordingCommandPending)
+    }
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { timeline in
             ScrollView {
@@ -198,6 +230,20 @@ struct WatchNavigationView: View {
                             .foregroundStyle(.orange).frame(maxWidth: .infinity,minHeight:24)
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
+                    HStack(spacing: 3) {
+                        Text(receiver.recording ? "記録中" : (receiver.recordingPaused ? "一時停止" : "停止中"))
+                            .font(.system(size: 8)).foregroundStyle(receiver.recording ? .green : (receiver.recordingPaused ? .orange : .secondary))
+                        Spacer(minLength: 2)
+                        if receiver.recording {
+                            recordButton("一時停止", symbol: "pause.fill", command: "pause")
+                            recordButton("停止", symbol: "stop.fill", command: "stop")
+                        } else if receiver.recordingPaused {
+                            recordButton("再開", symbol: "play.fill", command: "resume")
+                            recordButton("停止", symbol: "stop.fill", command: "stop")
+                        } else {
+                            recordButton("記録開始", symbol: "record.circle", command: "start")
+                        }
+                    }
                     let fix = sensors.fix(at: Date())
                     let compass = sensors.compass(at: Date())
                     if mode == 0 { navigation(fix: fix, compass: compass) }
