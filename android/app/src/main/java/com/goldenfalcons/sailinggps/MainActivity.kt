@@ -396,7 +396,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         bindSignalSeek(b.signalShortHorn,b.tvSignalShortHorn,"signalShortHornMs",3100,50,198,"短音")
         bindSignalSeek(b.signalGap,b.tvSignalGap,"signalGapMs",1100,50,58,"間隔")
         bindSignalSeek(b.signalVolume,b.tvSignalVolume,"signalHornVolume",80,1,100,"音量")
-        b.btnFollow.setOnClickListener { mapPanel?.followLocation() }
         setDisplayMode(if(BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)) 2 else displayPrefs.getInt("displayMode",if(displayPrefs.getBoolean("navigator",false)) 1 else 0))
     }
 
