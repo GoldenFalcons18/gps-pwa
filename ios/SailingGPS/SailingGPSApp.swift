@@ -601,8 +601,10 @@ struct ContentView: View {
     private var relativeTargetClock: String {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—時方向" }
         let relative = CoordinateInput.normalizeHeading(bearing - trueHeading)
-        let hour = Int(floor((relative + 15) / 30)) % 12
-        return "\(hour == 0 ? 12 : hour)時方向"
+        let halfHourIndex = Int(floor((relative + 7.5) / 15)) % 24
+        let hour = (halfHourIndex / 2) % 12
+        let half = halfHourIndex % 2 == 1
+        return "\(hour == 0 ? 12 : hour)時\(half ? "半" : "")方向"
     }
     private var relativeTargetDegrees: String {
         guard let bearing = targetBearing, let trueHeading = instrumentNavigationReference?.trueHeading else { return "—" }
