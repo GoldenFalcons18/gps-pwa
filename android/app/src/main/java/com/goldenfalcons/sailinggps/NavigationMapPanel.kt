@@ -109,6 +109,7 @@ class NavigationMapPanel(
             readyMap.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) setFollowing(false)
             }
+            readyMap.addOnCameraIdleListener { logWaypointTouchLocations(readyMap) }
         }
         container.addView(mapView, FrameLayout.LayoutParams(-1, -1))
         val controls = LinearLayout(context).apply {
@@ -133,7 +134,41 @@ class NavigationMapPanel(
             ))
         }
         container.addView(controls, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.CENTER_VERTICAL))
+
+        val density = context.resources.displayMetrics.density
+        val locate = Button(context).apply {
+            text = "➤"
+            textSize = 27f
+            rotation = -45f
+            setTextColor(Color.WHITE)
+            isAllCaps = false
+            contentDescription = "現在地へ追従"
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(Color.argb(230, 0, 0, 0))
+            }
+            setPadding(0, 0, 0, 0)
+            setOnClickListener { followLocation() }
+        }
+        container.addView(locate, FrameLayout.LayoutParams(
+            (48 * density).toInt(), (48 * density).toInt(),
+            Gravity.BOTTOM or Gravity.START
+        ).apply {
+            leftMargin = (8 * density).toInt()
+            bottomMargin = (8 * density).toInt()
+        })
+
         log("Map initialized / OpenFreeMap / MapLibre")
+    }
+
+    private fun logWaypointTouchLocations(readyMap: MapLibreMap) {
+        if (!BuildConfig.DEBUG || destroyed) return
+        val origin = IntArray(2)
+        mapView.getLocationOnScreen(origin)
+        waypoints.filter { (it.group ?: "") !in hiddenGroups }.forEach { waypoint ->
+            val point = readyMap.projection.toScreenLocation(LatLng(waypoint.lat, waypoint.lon))
+            android.util.Log.d("SailingUiBounds", "WP_TOUCH id=${waypoint.id} x=${origin[0] + point.x.toInt()} y=${origin[1] + point.y.toInt()}")
+        }
     }
 
     fun setMapStyle(name: String) {

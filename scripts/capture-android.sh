@@ -3,6 +3,7 @@ set -euo pipefail
 APP=com.goldenfalcons.sailinggps
 # The emulator launcher can show a background ANR after cold boot. It is not the app under test.
 adb shell am force-stop com.android.launcher3
+adb uninstall "$APP" >/dev/null 2>&1 || true
 adb install -g apk/*.apk
 adb shell run-as "$APP" mkdir -p shared_prefs
 python3 - <<'PY'
@@ -24,7 +25,7 @@ adb shell am start -n "$APP/.MainActivity"
 sleep 12
 adb exec-out screencap -p > screenshots/Android-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
-if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi
+if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then cat screenshots/runtime.log; exit 1; fi
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
@@ -38,6 +39,8 @@ x1,y1,x2,y2,*_=map(int,records[-1])
 print((x1+x2)//2,(y1+y2)//2)
 PY
 )
+echo "Current waypoint button center: $COORDS"
+cat screenshots/ui-bounds.log
 adb emu geo fix 139.467 35.318
 sleep 3
 adb shell input tap $COORDS
@@ -45,6 +48,8 @@ for counter in 1 2 3 4 5; do
   adb emu geo fix 139.467 35.318
   sleep 1
 done
+adb logcat -d -s SailingGpsLogger > screenshots/one-tap-location.log
+cat screenshots/one-tap-location.log
 adb shell run-as "$APP" cat shared_prefs/waypoints.xml > quick-waypoints.xml
 python3 - <<'PY'
 import xml.etree.ElementTree as E,json
@@ -56,9 +61,12 @@ assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,poin
 assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
 print('One-tap current waypoint saved and selected with recording stopped')
 PY
-adb shell run-as "$APP" sh -c "'test ! -s files/track_points.csv'"
+echo "Recording-state files before preview assertion"
+adb shell run-as "$APP" sh -c "'ls -la files; ls -la files/tracks 2>&1; cat files/active_track.txt 2>&1; wc -c files/track_points.csv 2>&1; true'"
+adb logcat -d -s SailingGpsLogger > screenshots/gps-preview-before-assert.log
+adb shell run-as "$APP" sh -c "'test ! -e files/active_track.txt && test ! -s files/track_points.csv'"
 adb logcat -d -s SailingGpsLogger > screenshots/gps-preview.log
-if ! grep -q 'GPS preview started' screenshots/gps-preview.log; then exit 1; fi
+if ! grep -q 'Location preview started' screenshots/gps-preview.log; then exit 1; fi
 adb exec-out screencap -p > screenshots/Android-current-waypoint.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then exit 1; fi

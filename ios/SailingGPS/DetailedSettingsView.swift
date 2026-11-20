@@ -11,6 +11,7 @@ struct DetailedSettingsView: View {
     @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
     @AppStorage("showETA") private var showETA=false
     @AppStorage("showCourseLine") private var showCourse=true
+    @AppStorage("mapProvider") private var mapProvider="apple"
     @AppStorage("zoneEnabled") private var zoneEnabled=false
     @AppStorage("zoneSelected") private var zoneSelected=""
     @AppStorage("zoneEnter") private var zoneEnter=true
@@ -54,8 +55,12 @@ struct DetailedSettingsView: View {
             }
             NavigationLink("地図") {
                 Form {
+                    Picker("地図サービス",selection:$mapProvider) {
+                        Text("Appleマップ").tag("apple")
+                        Text("OpenFreeMap（OSM）").tag("openfreemap")
+                    }
                     Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    Text("地図の＋／−で航行中も縮尺を変更できます。地点名とマークの大きさは目標地点も同じです。").font(.caption)
+                    Text(mapProvider == "openfreemap" ? "OpenFreeMapの地図は、表示中の範囲を保存してオフラインで利用できます。端末全体で最大3,000タイルです。" : "Appleマップを表示します。地図データの範囲保存はOpenFreeMapで利用できます。").font(.caption)
                 }.navigationTitle("地図")
             }
             NavigationLink("ゾーンアラート") {
@@ -78,7 +83,9 @@ struct DetailedSettingsView: View {
                         Picker("使用するGPS精度",selection:$zoneAccuracy) { Text("±20m以内").tag(20.0);Text("±50m以内").tag(50.0);Text("±100m以内").tag(100.0) }
                         Picker("境界からの余裕",selection:$zoneMargin) { Text("5m").tag(5.0);Text("10m").tag(10.0);Text("20m").tag(20.0) }
                         Picker("連続確認回数",selection:$zoneConfirmations) { Text("2回").tag(2);Text("3回").tag(3);Text("5回").tag(5) }
-                        Text("境界からGPS誤差と余裕の大きい方以上に離れ、指定回数連続した位置で進入・退出を確定します。小さい円では十分な精度が必要です。").font(.caption)
+                        Text("GPS精度：設定した誤差以内の測位だけを判定に使います。誤差が大きい位置は判定を保留します。").font(.caption)
+                        Text("境界からの余裕：境界から、この距離またはGPS誤差の大きい方より離れるまで判定を保留します。").font(.caption)
+                        Text("連続確認回数：同じ側の測位が指定回数続いた時に通知します。回数を増やすと誤通知を抑えやすくなりますが、通知は遅くなります。").font(.caption)
                     }
                 }.navigationTitle("ゾーンアラート").task {
                     let value=await UNUserNotificationCenter.current().notificationSettings()

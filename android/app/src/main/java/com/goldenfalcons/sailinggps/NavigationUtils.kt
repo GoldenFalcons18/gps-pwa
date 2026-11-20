@@ -50,9 +50,11 @@ object NavigationUtils {
     }
 
     fun relativeClock(relativeDeg: Double): String {
-        val idx = floor((relativeDeg + 15.0) / 30.0).toInt()
-        val n = ((idx % 12) + 12) % 12
-        return "${if (n == 0) 12 else n}時方向"
+        if (!relativeDeg.isFinite()) return "—時方向"
+        val halfHourIndex = floor((normalize360(relativeDeg) + 7.5) / 15.0).toInt() % 24
+        val hour = (halfHourIndex / 2) % 12
+        val half = halfHourIndex % 2 == 1
+        return "${if (hour == 0) 12 else hour}時${if (half) "半" else ""}方向"
     }
 
     fun relativeText(relativeDeg: Double): String {
