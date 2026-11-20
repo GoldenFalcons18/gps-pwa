@@ -435,12 +435,12 @@ class NavigationMapPanel(
         readyMap.cameraPosition = CameraPosition.Builder()
             .target(point)
             .zoom(zoom)
-            .bearing(0.0)
+            .bearing(-(lastHeading ?: 0.0))
             .build()
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastFollowLogAt >= 500) {
             lastFollowLogAt = now
-            log("Map follow north-up / current location centered")
+            log("Map follow / current location centered / heading=$lastHeading")
         }
     }
 
