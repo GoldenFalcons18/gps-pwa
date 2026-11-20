@@ -563,7 +563,8 @@ class NavigationMapPanel(
 
     private fun showOfflineRegionActions(region: org.maplibre.android.offline.OfflineRegion) {
         region.getStatus(object : org.maplibre.android.offline.OfflineRegion.OfflineRegionStatusCallback {
-            override fun onStatus(status: org.maplibre.android.offline.OfflineRegionStatus) {
+            override fun onStatus(status: org.maplibre.android.offline.OfflineRegionStatus?) {
+                status ?: return
                 val size = status.completedResourceSize / 1024 / 1024
                 val downloading = status.downloadState == org.maplibre.android.offline.OfflineRegion.STATE_ACTIVE
                 val actions = if (downloading) arrayOf("一時停止", "削除") else arrayOf("ダウンロード再開", "削除")
@@ -580,7 +581,7 @@ class NavigationMapPanel(
                     }
                     .setNegativeButton("閉じる", null).show()
             }
-            override fun onError(error: String) = Toast.makeText(appContext, error, Toast.LENGTH_LONG).show()
+            override fun onError(error: String?) = Toast.makeText(appContext, error ?: "保存地図を確認できませんでした", Toast.LENGTH_LONG).show()
         })
     }
 
