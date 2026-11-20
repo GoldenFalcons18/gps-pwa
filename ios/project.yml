@@ -4,6 +4,9 @@ options:
   deploymentTarget:
     iOS: '17.0'
 packages:
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    from: 6.0.0
   ZIPFoundation:
     url: https://github.com/weichsel/ZIPFoundation.git
     exactVersion: 0.9.20
@@ -28,6 +31,7 @@ targets:
       - target: SailingGPSWatch
         embed: true
       - package: ZIPFoundation
+      - package: MapLibre
     info:
       path: SailingGPS/Info.plist
       properties:

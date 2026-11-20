@@ -11,6 +11,7 @@ struct DetailedSettingsView: View {
     @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
     @AppStorage("showETA") private var showETA=false
     @AppStorage("showCourseLine") private var showCourse=true
+    @AppStorage("mapProvider") private var mapProvider="apple"
     @AppStorage("zoneEnabled") private var zoneEnabled=false
     @AppStorage("zoneSelected") private var zoneSelected=""
     @AppStorage("zoneEnter") private var zoneEnter=true
@@ -54,8 +55,12 @@ struct DetailedSettingsView: View {
             }
             NavigationLink("地図") {
                 Form {
+                    Picker("地図サービス",selection:$mapProvider) {
+                        Text("Appleマップ").tag("apple")
+                        Text("OpenFreeMap（OSM）").tag("openfreemap")
+                    }
                     Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    Text("地図の＋／−で航行中も縮尺を変更できます。地点名とマークの大きさは目標地点も同じです。").font(.caption)
+                    Text(mapProvider == "openfreemap" ? "OpenFreeMapの地図は、表示中の範囲を保存してオフラインで利用できます。1範囲あたり最大3,000タイルです。" : "Appleマップを表示します。地図データの範囲保存はOpenFreeMapで利用できます。").font(.caption)
                 }.navigationTitle("地図")
             }
             NavigationLink("ゾーンアラート") {

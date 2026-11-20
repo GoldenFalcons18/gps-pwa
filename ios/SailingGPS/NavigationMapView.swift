@@ -60,7 +60,7 @@ private final class LiveLineRenderer: MKOverlayRenderer {
 }
 
 /// Map projection and course marks are display-only; they never enter the recorded track.
-struct NavigationMapView: UIViewRepresentable {
+struct AppleNavigationMapView: UIViewRepresentable {
     let location: CLLocation?
     let heading: Double?
     let waypoints: [Waypoint]
@@ -105,7 +105,7 @@ struct NavigationMapView: UIViewRepresentable {
         var markText: String?
     }
     final class Coordinator: NSObject, MKMapViewDelegate {
-        var parent: NavigationMapView
+        var parent: AppleNavigationMapView
         private var didInitialWaypointFit = false
         private var rendering = false
         private var signature = ""
@@ -193,7 +193,7 @@ struct NavigationMapView: UIViewRepresentable {
             courseOverlay.update(coordinates)
             map.renderer(for: courseOverlay)?.setNeedsDisplay()
         }
-        init(_ parent: NavigationMapView) { self.parent = parent }
+        init(_ parent: AppleNavigationMapView) { self.parent = parent }
 
         @objc func longPress(_ gesture: UILongPressGestureRecognizer) {
             guard gesture.state == .began, let map = gesture.view as? MKMapView else { return }
