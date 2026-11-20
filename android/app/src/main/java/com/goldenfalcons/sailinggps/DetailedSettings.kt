@@ -137,7 +137,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         })
     }
     fun show():Unit=menu("設定",listOf(
-        "単位：${if(bool("metricUnits",false)) "knot・nm" else "km/h・m/km"}" to {
+        "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
             booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
         },
         "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
