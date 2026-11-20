@@ -1205,7 +1205,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun acceptPreviewLocation(location:Location) {
         val now=android.os.SystemClock.elapsedRealtime()
         val fixElapsed=location.elapsedRealtimeNanos/1_000_000L
-        if(fixElapsed<=0L || now-fixElapsed !in 0..30_000 ||
+        if(fixElapsed<=0L || now-fixElapsed !in 0L..30_000L ||
             !location.latitude.isFinite() || !location.longitude.isFinite()) return
         if(latestFixAt>fixElapsed) return
         ZoneAlerts.check(this,location)
@@ -1235,7 +1235,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         val now=android.os.SystemClock.elapsedRealtime()
         providers.mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
-            .filter { it.elapsedRealtimeNanos>0L && now-it.elapsedRealtimeNanos/1_000_000L in 0..30_000 }
+            .filter { it.elapsedRealtimeNanos>0L && now-it.elapsedRealtimeNanos/1_000_000L in 0L..30_000L }
             .maxByOrNull { it.elapsedRealtimeNanos }
             ?.let(::acceptPreviewLocation)
         var requested=false
@@ -1677,9 +1677,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 cancelQuickLocation()
                 latestLat = point.latitude; latestLon = point.longitude
                 latestFixAt = android.os.SystemClock.elapsedRealtime()
+                latestAccuracyM = point.accuracy.toDouble().takeIf { point.hasAccuracy() && it.isFinite() && it>=0.0 }
+                latestAltitudeM = point.altitude.takeIf { point.hasAltitude() && it.isFinite() }
                 latestSpeedMps = if (point.hasSpeed()) point.speed.toDouble() else null
                 latestGpsBearing = if (point.hasBearing()) point.bearing.toDouble() else null
-                b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(point.accuracy, point.altitude)
+                updateGpsQualityUi()
                 mapPanel?.updateLocation(point.latitude, point.longitude, mapHeading(), recordTrack = false)
                 saveCurrentLocationWaypoint(point.latitude, point.longitude)
             }
