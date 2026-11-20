@@ -1484,7 +1484,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
         val recent=latestFixAt>0 && age in 0.0..15.0
         val color=gpsQualityColor()
-        b.tvGpsIndicator.text=if(recent) "●\\nGPS" else "○\\nGPS"
+        b.tvGpsIndicator.text=if(recent) "●\nGPS" else "○\nGPS"
         b.tvGpsIndicator.setTextColor(color)
         b.tvGpsInfo.setTextColor(Color.LTGRAY)
         b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)

@@ -266,19 +266,19 @@ class NavigationMapPanel(
         )
         if (style.getLayer("boat-dot") == null) style.addLayer(
             CircleLayer("boat-dot", "boat").withProperties(
-                PropertyFactory.circleRadius(8f),
-                PropertyFactory.circleColor(Color.rgb(10, 25, 45)),
+                PropertyFactory.circleRadius(10f),
+                PropertyFactory.circleColor(Color.RED),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
-                PropertyFactory.circleStrokeWidth(2f)
+                PropertyFactory.circleStrokeWidth(2.5f)
             )
         )
         if (style.getLayer("boat-heading") == null) style.addLayer(
             SymbolLayer("boat-heading", "boat").withProperties(
                 PropertyFactory.textField("▲"),
-                PropertyFactory.textSize(16f),
-                PropertyFactory.textColor(Color.WHITE),
-                PropertyFactory.textHaloColor(Color.BLACK),
-                PropertyFactory.textHaloWidth(1f),
+                PropertyFactory.textSize(22f),
+                PropertyFactory.textColor(Color.RED),
+                PropertyFactory.textHaloColor(Color.WHITE),
+                PropertyFactory.textHaloWidth(2f),
                 PropertyFactory.textRotate(Expression.get("bearing"))
             )
         )
