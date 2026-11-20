@@ -266,19 +266,19 @@ class NavigationMapPanel(
         )
         if (style.getLayer("boat-dot") == null) style.addLayer(
             CircleLayer("boat-dot", "boat").withProperties(
-                PropertyFactory.circleRadius(10f),
-                PropertyFactory.circleColor(Color.RED),
+                PropertyFactory.circleRadius(8f),
+                PropertyFactory.circleColor(Color.rgb(10, 25, 45)),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
-                PropertyFactory.circleStrokeWidth(2.5f)
+                PropertyFactory.circleStrokeWidth(2f)
             )
         )
         if (style.getLayer("boat-heading") == null) style.addLayer(
             SymbolLayer("boat-heading", "boat").withProperties(
                 PropertyFactory.textField("▲"),
-                PropertyFactory.textSize(22f),
-                PropertyFactory.textColor(Color.RED),
-                PropertyFactory.textHaloColor(Color.WHITE),
-                PropertyFactory.textHaloWidth(2f),
+                PropertyFactory.textSize(16f),
+                PropertyFactory.textColor(Color.WHITE),
+                PropertyFactory.textHaloColor(Color.BLACK),
+                PropertyFactory.textHaloWidth(1f),
                 PropertyFactory.textRotate(Expression.get("bearing"))
             )
         )
@@ -380,7 +380,7 @@ class NavigationMapPanel(
             track.add(point)
         }
         refreshAll()
-        if (following && bearing != null) applyFollow()
+        if (following) applyFollow()
     }
 
     fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
@@ -429,22 +429,18 @@ class NavigationMapPanel(
     private fun applyFollow() {
         val readyMap = map ?: return
         val point = current ?: return
-        val heading = lastHeading ?: return
         val metrics = mapView.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
         val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54, metersPerCm).coerceIn(2.0, 20.0)
-        val center = DisplayNavigation.followCenter(
-            point.latitude, point.longitude, heading, mapView.height.toDouble(), dpi / 2.54, metersPerCm
-        )
         readyMap.cameraPosition = CameraPosition.Builder()
-            .target(LatLng(center.first, center.second))
+            .target(point)
             .zoom(zoom)
-            .bearing(-heading)
+            .bearing(0.0)
             .build()
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastFollowLogAt >= 500) {
             lastFollowLogAt = now
-            log("Map follow heading=$heading")
+            log("Map follow north-up / current location centered")
         }
     }
 
