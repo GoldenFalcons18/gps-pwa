@@ -3,6 +3,7 @@ package com.goldenfalcons.sailinggps
 import android.content.Context
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import org.maplibre.android.MapLibre
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.http.HttpIdentifier
@@ -28,6 +29,8 @@ object OpenFreeMapConfig {
     @Synchronized
     fun configure(context: Context) {
         if (configured) return
+        // Initialize the SDK before touching HttpRequestUtil; its static initializer validates MapLibre.
+        MapLibre.getInstance(context.applicationContext)
         // MapLibre's default User-Agent includes the app package, version, and Android version.
         // Limit both the dispatcher and per-host concurrency to OpenFreeMap's allowed four.
         val dispatcher = Dispatcher().apply {
