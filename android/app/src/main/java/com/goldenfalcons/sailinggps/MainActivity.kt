@@ -1800,7 +1800,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "座標をコピー" to { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("座標",coords)); Toast.makeText(this,"座標をコピーしました",Toast.LENGTH_SHORT).show() },
             (if (showWaypoints) "ウェイポイントを非表示" else "ウェイポイントを表示") to { displayPrefs.edit().putBoolean("showWaypoints",!showWaypoints).apply(); mapPanel?.setDisplayOptions(!showWaypoints,showCourse) },
             (if (showCourse) "進路ラインを隠す" else "進路ラインを表示") to { displayPrefs.edit().putBoolean("showCourse",!showCourse).apply(); mapPanel?.setDisplayOptions(showWaypoints,!showCourse) },
-            "再度中心に配置" to { mapPanel?.followLocation() }
         ))
     }
     private fun showNavigationOptions() {
