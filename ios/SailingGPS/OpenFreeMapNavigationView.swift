@@ -20,6 +20,7 @@ struct NavigationMapView: View {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
+    let onMetersPerCmChanged: (Double) -> Void
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
     @AppStorage("mapProvider") private var provider = "apple"
@@ -43,6 +44,7 @@ struct NavigationMapView: View {
                     selected: $selected,
                     following: $following,
                     metersPerCm: metersPerCm,
+                    onMetersPerCmChanged: onMetersPerCmChanged,
                     editWaypoint: editWaypoint,
                     createWaypoint: createWaypoint,
                     onViewportChanged: { bounds, zoom in visibleBounds = SavedMapBounds(value: bounds, zoom: zoom) }
@@ -68,6 +70,7 @@ struct NavigationMapView: View {
                     location: location, heading: heading, waypoints: waypoints, library: library,
                     showWaypoints: showWaypoints, showCourse: showCourse, track: track,
                     isRecording: isRecording, selected: $selected, following: $following, metersPerCm: metersPerCm,
+                    onMetersPerCmChanged: onMetersPerCmChanged,
                     editWaypoint: editWaypoint, createWaypoint: createWaypoint
                 )
             }
@@ -291,6 +294,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
+    let onMetersPerCmChanged: (Double) -> Void
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
     let onViewportChanged: (MLNCoordinateBounds, Double) -> Void
@@ -334,6 +338,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         private var waypointSignature = ""
         private var cameraUpdateInProgress = false
         private var lastTrackRecording: Bool?
+        private var userScaleChangePending = false
 
         init(_ parent: OpenFreeMapMapView) { self.parent = parent }
 
@@ -479,11 +484,28 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, regionWillChangeAnimated animated: Bool) {
-            if !cameraUpdateInProgress { parent.following = false }
+            let interacting = mapView.gestureRecognizers?.contains {
+                $0.state == .began || $0.state == .changed
+            } ?? false
+            if interacting {
+                userScaleChangePending = true
+                if !cameraUpdateInProgress { parent.following = false }
+            }
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
             parent.onViewportChanged(mapView.visibleCoordinateBounds, mapView.zoomLevel)
+            guard userScaleChangePending else { return }
+            userScaleChangePending = false
+            let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
+            let left = mapView.convert(CGPoint(x: 0, y: mapView.bounds.midY), toCoordinateFrom: mapView)
+            let right = mapView.convert(CGPoint(x: mapView.bounds.maxX, y: mapView.bounds.midY), toCoordinateFrom: mapView)
+            let physicalWidthCm = mapView.bounds.width / pointsPerCm
+            guard physicalWidthCm > 0 else { return }
+            let scale = CLLocation(latitude: left.latitude, longitude: left.longitude)
+                .distance(from: CLLocation(latitude: right.latitude, longitude: right.longitude)) / physicalWidthCm
+            guard scale.isFinite, scale > 0, abs(scale - parent.metersPerCm) / parent.metersPerCm > 0.02 else { return }
+            DispatchQueue.main.async { self.parent.onMetersPerCmChanged(min(max(scale, 12.5), 6400)) }
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
