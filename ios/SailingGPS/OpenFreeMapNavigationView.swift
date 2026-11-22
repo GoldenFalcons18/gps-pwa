@@ -167,7 +167,7 @@ struct OfflineRegionPickerView: View {
                 )
                 .frame(height: 240)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                Text("オレンジ枠が保存範囲です。枠の外に見える地図が、このズームで一度に表示される周囲の広さです。")
+                Text("地図全体がこのズームで一度に見える範囲です。オレンジ枠がダウンロード範囲です。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
