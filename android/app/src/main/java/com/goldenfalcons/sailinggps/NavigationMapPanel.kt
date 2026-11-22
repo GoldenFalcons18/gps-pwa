@@ -643,15 +643,23 @@ class NavigationMapPanel(
         content.addView(previewSelector)
         val maxPreviewTitle = text("最小ズームの見え方", 13f)
         content.addView(maxPreviewTitle)
+        val zoomPreviewFrame = FrameLayout(appContext)
         val zoomPreviewView = MapView(appContext).apply { onCreate(null) }
-        content.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
+        zoomPreviewFrame.addView(zoomPreviewView, FrameLayout.LayoutParams(-1, dp(240)))
+        val savedBoundsOverlay = OfflineZoomBoundsOverlay(appContext)
+        zoomPreviewFrame.addView(savedBoundsOverlay, FrameLayout.LayoutParams(-1, dp(240)))
+        content.addView(zoomPreviewFrame, LinearLayout.LayoutParams(-1, dp(240)))
+        val previewHelp = text("地図全体がこのズームで一度に見える範囲です。オレンジ枠がダウンロード範囲です。", 12f).apply {
+            setTextColor(Color.LTGRAY)
+        }
+        content.addView(previewHelp)
         var zoomPreviewMap: MapLibreMap? = null
         var selectedBounds: LatLngBounds? = null
         var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
         var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         fun updateZoomPreview() {
             val shownZoom = if (previewMinimumZoom) minZoom else maxZoom
-            maxPreviewTitle.text = (if (previewMinimumZoom) "最小" else "最大") + "ズーム " + shownZoom + " の見え方（保存範囲とは別に確認）"
+            maxPreviewTitle.text = (if (previewMinimumZoom) "最小" else "最大") + "ズーム " + shownZoom + " の一画面表示"
             minPreviewButton.isEnabled = !previewMinimumZoom
             maxPreviewButton.isEnabled = previewMinimumZoom
             val bounds = selectedBounds
@@ -660,6 +668,7 @@ class NavigationMapPanel(
             } ?: initialCamera.target ?: LatLng(35.30, 139.48)
             zoomPreviewMap?.cameraPosition = CameraPosition.Builder(initialCamera)
                 .target(center).zoom(shownZoom.toDouble()).bearing(0.0).tilt(0.0).build()
+            savedBoundsOverlay.update(zoomPreviewMap, bounds)
         }
         val nameInput = AppCompatEditText(appContext).apply {
             hint = "保存名"
@@ -774,6 +783,7 @@ class NavigationMapPanel(
         zoomPreviewView.getMapAsync { zoomMap ->
             zoomMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
                 zoomPreviewMap = zoomMap
+                zoomMap.addOnCameraIdleListener { savedBoundsOverlay.invalidate() }
                 updateZoomPreview()
                 zoomMap.uiSettings.setAllGesturesEnabled(false)
             }
@@ -850,6 +860,46 @@ class NavigationMapPanel(
             .setNegativeButton("キャンセル", null).show()
     }
 }
+
+    private class OfflineZoomBoundsOverlay(context: Context) : View(context) {
+        private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(36, 255, 153, 0)
+            style = Paint.Style.FILL
+        }
+        private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(255, 153, 0)
+            style = Paint.Style.STROKE
+            strokeWidth = 3f * resources.displayMetrics.density
+        }
+        private var map: MapLibreMap? = null
+        private var bounds: LatLngBounds? = null
+
+        fun update(map: MapLibreMap?, bounds: LatLngBounds?) {
+            this.map = map
+            this.bounds = bounds
+            invalidate()
+        }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val currentMap = map ?: return
+            val currentBounds = bounds ?: return
+            val corners = listOf(
+                LatLng(currentBounds.latitudeSouth, currentBounds.longitudeWest),
+                LatLng(currentBounds.latitudeNorth, currentBounds.longitudeWest),
+                LatLng(currentBounds.latitudeNorth, currentBounds.longitudeEast),
+                LatLng(currentBounds.latitudeSouth, currentBounds.longitudeEast)
+            )
+            val pixels = corners.map { runCatching { currentMap.projection.toScreenLocation(it) }.getOrNull() ?: return }
+            val path = Path().apply {
+                moveTo(pixels.first().x, pixels.first().y)
+                pixels.drop(1).forEach { lineTo(it.x, it.y) }
+                close()
+            }
+            canvas.drawPath(path, fill)
+            canvas.drawPath(path, border)
+        }
+    }
 
     private class OfflineRegionFrame(context: Context) : View(context) {
         private val density = resources.displayMetrics.density
