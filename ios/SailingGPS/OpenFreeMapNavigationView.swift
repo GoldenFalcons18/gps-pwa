@@ -360,6 +360,8 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
+    let courseLineLengthMeters: Int
+    let courseMarkIntervalMeters: Int
     let track: [CLLocationCoordinate2D]
     let isRecording: Bool
     @Binding var selected: UUID?
@@ -545,9 +547,11 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 for pin in coursePins.values { map.removeAnnotation(pin) }
                 coursePins.removeAll()
             }
-            for (distance, pin) in coursePins where !validDistances.contains(distance) {
-                map.removeAnnotation(pin)
-                coursePins.removeValue(forKey: distance)
+            let staleDistances = coursePins.keys.filter { !validDistances.contains($0) }
+            for distance in staleDistances {
+                if let pin = coursePins.removeValue(forKey: distance) {
+                    map.removeAnnotation(pin)
+                }
             }
         }
 
