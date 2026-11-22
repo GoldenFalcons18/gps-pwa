@@ -664,34 +664,51 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 view.subviews.forEach { $0.removeFromSuperview() }
                 return view
             }
-            view.bounds = CGRect(x: 0, y: 0, width: 34, height: 34)
-            view.backgroundColor = pin.isBoat ? UIColor.black : UIColor(waypointColor(pin.colorName))
-            view.layer.cornerRadius = 17
-            view.layer.borderWidth = 1.5
-            view.layer.borderColor = UIColor.white.cgColor
+            view.bounds = CGRect(x: 0, y: 0, width: 156, height: 54)
+            view.centerOffset = CGPoint(x: 0, y: 10)
+            view.backgroundColor = .clear
+            view.layer.cornerRadius = 0
+            view.layer.borderWidth = 0
             view.subviews.forEach { $0.removeFromSuperview() }
+
+            let marker = UIView(frame: CGRect(x: 61, y: 0, width: 34, height: 34))
+            marker.backgroundColor = pin.isBoat ? UIColor.black : UIColor(waypointColor(pin.colorName))
+            marker.layer.cornerRadius = 17
+            marker.layer.borderWidth = 1.5
+            marker.layer.borderColor = UIColor.white.cgColor
+            view.addSubview(marker)
             if let markText = pin.markText, !markText.isEmpty {
-                let label = UILabel(frame: view.bounds)
-                label.text = markText
-                label.textColor = .white
-                label.font = .boldSystemFont(ofSize: 16)
-                label.textAlignment = .center
-                label.adjustsFontSizeToFitWidth = true
-                label.minimumScaleFactor = 0.6
-                view.addSubview(label)
+                let mark = UILabel(frame: marker.bounds)
+                mark.text = markText
+                mark.textColor = .white
+                mark.font = .boldSystemFont(ofSize: 16)
+                mark.textAlignment = .center
+                mark.adjustsFontSizeToFitWidth = true
+                mark.minimumScaleFactor = 0.6
+                marker.addSubview(mark)
             } else {
-                let image = UIImageView(frame: view.bounds.insetBy(dx: 7, dy: 7))
+                let image = UIImageView(frame: marker.bounds.insetBy(dx: 7, dy: 7))
                 image.image = MarineMarks.image(pin.markSymbol ?? "flag.fill").withRenderingMode(.alwaysTemplate)
                 image.tintColor = .white
                 image.contentMode = .scaleAspectFit
-                view.addSubview(image)
+                marker.addSubview(image)
+            }
+            if !pin.isBoat, let name = pin.title, !name.isEmpty {
+                let nameLabel = UILabel(frame: CGRect(x: 0, y: 36, width: 156, height: 17))
+                nameLabel.text = name
+                nameLabel.textColor = .white
+                nameLabel.backgroundColor = UIColor.black.withAlphaComponent(0.82)
+                nameLabel.font = .systemFont(ofSize: 12, weight: .semibold)
+                nameLabel.textAlignment = .center
+                nameLabel.adjustsFontSizeToFitWidth = true
+                nameLabel.minimumScaleFactor = 0.65
+                nameLabel.lineBreakMode = .byTruncatingTail
+                nameLabel.layer.cornerRadius = 4
+                nameLabel.clipsToBounds = true
+                view.addSubview(nameLabel)
             }
             return view
         }
 
-        func mapView(_ mapView: MLNMapView, didSelect annotation: MLNAnnotation) {
-            guard let pin = annotation as? Pin, let id = pin.waypointID else { return }
-            parent.selected = id
-        }
     }
 }
