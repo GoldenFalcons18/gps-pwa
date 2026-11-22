@@ -317,6 +317,7 @@ private struct OfflineRegionMap: UIViewRepresentable {
         let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
         map.delegate = context.coordinator
         map.isPitchEnabled = false
+        map.isRotateEnabled = false
         if let initial {
             let center = CLLocationCoordinate2D(
                 latitude: (initial.value.sw.latitude + initial.value.ne.latitude) / 2,
