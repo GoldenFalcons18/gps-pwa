@@ -31,7 +31,7 @@ def token
   der_signature = key.sign("SHA256", signing_input)
   sequence = OpenSSL::ASN1.decode(der_signature)
   raw_signature = sequence.value.map do |integer|
-    integer.value.to_s(2).rjust(32, "\0")[-32, 32]
+    [integer.value.to_i.to_s(16).rjust(64, "0")[-64, 64]].pack("H*")
   end.join
   "#{signing_input}.#{b64url(raw_signature)}"
 end
