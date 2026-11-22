@@ -1,7 +1,7 @@
 # 1.8.94
 - 地図上にウェイポイント名を表示し、タップで目標が切り替わらないよう修正。
 - 地点の移動先には実在するグループだけを表示。グループがない場合は作成案内を表示。
-- Android versionCode 119、iPhone／Watch build 129。
+- Android versionCode 119、iPhone／Watch build 130。
 
 # 1.8.93
 - AndroidとiPhoneの設定からオフライン地図の保存を開始でき、保存する範囲と最大ズームの見え方を分けて確認できます。
