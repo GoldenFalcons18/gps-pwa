@@ -183,7 +183,7 @@ else
   request(
     "POST",
     "/betaGroups/#{URI.encode_www_form_component(group_id)}/relationships/builds",
-    data: [{ type: "builds", id: build.fetch("id") }]
+    { data: [{ type: "builds", id: build.fetch("id") }] }
   )
   puts "Assigned processed build #{build_number} to the TestFlight group #{GROUP_NAME}."
 end
