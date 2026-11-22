@@ -13,6 +13,16 @@ abort("Missing required environment variables: #{missing.join(', ')}") unless mi
 
 APP_BUNDLE_ID = "com.goldenfalcons.sailinggps"
 GROUP_NAME = "使用者"
+TEST_LOCALE = "ja"
+TEST_NOTES = <<~NOTES.freeze
+  【今回のテスト内容】
+  ・GPS：現在地・受信精度表示、進路／方位表示
+  ・地図：現在地追従、ウェイポイントの表示・追加・編集
+  ・航跡：記録開始、一時停止／再開、停止
+  ・セーリング／シグナル：表示、タイマー、旗操作と音響
+  ・Apple Watch：記録操作とiPhoneとの連携
+  不具合はTestFlightの「フィードバックを送信」から、再現手順と画面を添えて報告してください。
+NOTES
 API_ROOT = "https://api.appstoreconnect.apple.com/v1"
 
 def b64url(data)
@@ -38,7 +48,7 @@ end
 
 def request(method, path, body = nil)
   uri = URI("#{API_ROOT}#{path}")
-  klass = { "GET" => Net::HTTP::Get, "POST" => Net::HTTP::Post }.fetch(method)
+  klass = { "GET" => Net::HTTP::Get, "POST" => Net::HTTP::Post, "PATCH" => Net::HTTP::Patch }.fetch(method)
   req = klass.new(uri)
   req["Authorization"] = "Bearer #{token}"
   req["Accept"] = "application/json"
@@ -111,6 +121,57 @@ loop do
   abort("Timed out waiting for Apple to process build #{build_number}. Rerun this workflow to finish group assignment.") if Time.now >= deadline
   sleep 60
 end
+
+
+localizations_query = query("limit" => "200", "fields[betaBuildLocalizations]" => "locale,whatsNew")
+localizations = request(
+  "GET",
+  "/builds/#{URI.encode_www_form_component(build.fetch("id"))}/betaBuildLocalizations?#{localizations_query}"
+)["data"] || []
+japanese_localizations = localizations.select { |item| item.dig("attributes", "locale") == TEST_LOCALE }
+abort("Multiple Japanese TestFlight localizations found for build #{build_number}; refusing to choose.") if japanese_localizations.length > 1
+
+if japanese_localizations.empty?
+  request(
+    "POST",
+    "/betaBuildLocalizations",
+    {
+      data: {
+        type: "betaBuildLocalizations",
+        attributes: { locale: TEST_LOCALE, whatsNew: TEST_NOTES },
+        relationships: { build: { data: { type: "builds", id: build.fetch("id") } } }
+      }
+    }
+  )
+  puts "Created Japanese TestFlight test notes for build #{build_number}."
+else
+  localization = japanese_localizations.first
+  if localization.dig("attributes", "whatsNew") == TEST_NOTES
+    puts "Japanese TestFlight test notes are already current for build #{build_number}."
+  else
+    request(
+      "PATCH",
+      "/betaBuildLocalizations/#{URI.encode_www_form_component(localization.fetch("id"))}",
+      {
+        data: {
+          type: "betaBuildLocalizations",
+          id: localization.fetch("id"),
+          attributes: { whatsNew: TEST_NOTES }
+        }
+      }
+    )
+    puts "Updated Japanese TestFlight test notes for build #{build_number}."
+  end
+end
+
+verified_localizations = request(
+  "GET",
+  "/builds/#{URI.encode_www_form_component(build.fetch("id"))}/betaBuildLocalizations?#{localizations_query}"
+)["data"] || []
+verified = verified_localizations.select do |item|
+  item.dig("attributes", "locale") == TEST_LOCALE && item.dig("attributes", "whatsNew") == TEST_NOTES
+end
+abort("Japanese TestFlight test notes verification failed for build #{build_number}.") unless verified.length == 1
 
 relationship_query = query("limit" => "200")
 existing = request("GET", "/betaGroups/#{URI.encode_www_form_component(group_id)}/relationships/builds?#{relationship_query}")["data"] || []
