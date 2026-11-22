@@ -460,5 +460,34 @@ adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < signal-prefer
 adb shell am start -W -n "$APP/.MainActivity" >/dev/null
 sleep 3
 adb exec-out screencap -p > screenshots/Android-signal.png
+# Open the signal settings screen and capture the iPhone-parity section/navigation layout.
+adb shell uiautomator dump /sdcard/signal-window.xml >/dev/null
+adb shell cat /sdcard/signal-window.xml > screenshots/signal-window.xml
+SIGNAL_SETTINGS_COORDS=$(python3 - <<'PYSIGNALUI'
+import pathlib, re, xml.etree.ElementTree as E
+root=E.fromstring(pathlib.Path('screenshots/signal-window.xml').read_text())
+for node in root.iter('node'):
+    if node.attrib.get('resource-id','').endswith('btnSignalSettings'):
+        bounds=node.attrib.get('bounds','')
+        m=re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',bounds)
+        if m:
+            x1,y1,x2,y2=map(int,m.groups())
+            print((x1+x2)//2,(y1+y2)//2)
+            break
+else:
+    raise SystemExit('Signal settings button was not visible')
+PYSIGNALUI
+)
+adb shell input tap $SIGNAL_SETTINGS_COORDS
+sleep 3
+adb exec-out screencap -p > screenshots/Android-signal-settings.png
+adb shell uiautomator dump /sdcard/signal-settings-window.xml >/dev/null
+adb shell cat /sdcard/signal-settings-window.xml > screenshots/signal-settings-window.xml
+python3 - <<'PYSIGNALCHECK'
+import pathlib
+xml=pathlib.Path('screenshots/signal-settings-window.xml').read_text()
+for label in ('General Settings','Fleet Start Sequences','フリート手順を管理','旗の設定','クラス旗を編集'):
+    assert label in xml, f'Missing settings row: {label}'
+PYSIGNALCHECK
 adb logcat -d -s AndroidRuntime > screenshots/signal-runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/signal-runtime.log; then exit 1; fi
