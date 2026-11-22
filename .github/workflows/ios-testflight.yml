@@ -137,7 +137,9 @@ jobs:
           xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$APPSTORE_KEY_ID" --apiIssuer "$APPSTORE_ISSUER_ID" 2>&1 | tee testflight-logs/upload.log
           echo 'Upload sent. Waiting for Apple processing before assigning the build to the TestFlight users group.' >> "$GITHUB_STEP_SUMMARY"
       - name: Add Japanese test notes and assign TestFlight users group
-        run: ruby scripts/associate-testflight-users-group.rb 2>&1 | tee testflight-logs/group-assignment.log
+        run: |
+          set -euo pipefail
+          ruby scripts/associate-testflight-users-group.rb 2>&1 | tee testflight-logs/group-assignment.log
       - name: Save build and upload logs
         if: always()
         uses: actions/upload-artifact@v4
