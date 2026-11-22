@@ -520,7 +520,15 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 guard parent.showCourse, let heading = parent.heading else { return nil }
                 let length = parent.courseLineLengthMeters.clamped(to: 100...5000)
                 let interval = parent.courseMarkIntervalMeters.clamped(to: 25...length)
-                return makeLine([location.coordinate, Self.destination(from: location.coordinate, bearing: heading, meters: Double(length))])
+                let distances = Array(stride(from: interval, through: length, by: interval))
+                var coordinates = [location.coordinate]
+                coordinates.append(contentsOf: distances.map {
+                    Self.destination(from: location.coordinate, bearing: heading, meters: Double($0))
+                })
+                if distances.last != length {
+                    coordinates.append(Self.destination(from: location.coordinate, bearing: heading, meters: Double(length)))
+                }
+                return makeLine(coordinates)
             }
             (style.source(withIdentifier: "sailing-course") as? MLNShapeSource)?.shape = course
 
