@@ -444,3 +444,21 @@ adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < focus-magneti
 adb shell am start -W -n "$APP/.MainActivity" --ez previewFocus true >/dev/null
 sleep 2
 adb exec-out screencap -p > screenshots/Android-focus-magnetic.png
+
+# Capture signal mode at rest so sequence rows and the collapsed horn disclosure are visible.
+adb shell am force-stop "$APP"
+python3 - <<'PYSIGNAL'
+import xml.etree.ElementTree as E
+p='screenshots/focus-preferences.xml'
+root=E.parse(p).getroot()
+node=next((n for n in root if n.get('name')=='displayMode'),None)
+if node is None: node=E.SubElement(root,'int',name='displayMode')
+node.set('value','4')
+E.ElementTree(root).write('signal-preferences.xml',encoding='utf-8',xml_declaration=True)
+PYSIGNAL
+adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'" < signal-preferences.xml
+adb shell am start -W -n "$APP/.MainActivity" >/dev/null
+sleep 3
+adb exec-out screencap -p > screenshots/Android-signal.png
+adb logcat -d -s AndroidRuntime > screenshots/signal-runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/signal-runtime.log; then exit 1; fi
