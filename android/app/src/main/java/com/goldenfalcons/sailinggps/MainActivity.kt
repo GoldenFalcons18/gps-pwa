@@ -1769,7 +1769,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         return if(duration>0) distance/duration else null
     }
     private fun showSettings() {
-        DetailedSettings(this,library,waypointFolders,mainWaypointFolder,b.tvGpsInfo.text.toString()) {
+        DetailedSettings(this,library,waypointFolders,mainWaypointFolder,b.tvGpsInfo.text.toString(), {
+            if (mapPanel == null) setDisplayMode(1)
+            mapPanel?.openOfflineMapSettings()
+        }) {
             if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints",true),displayPrefs.getBoolean("showCourse",true))

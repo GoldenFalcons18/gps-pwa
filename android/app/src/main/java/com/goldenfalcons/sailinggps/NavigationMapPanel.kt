@@ -206,7 +206,7 @@ class NavigationMapPanel(
     fun setDisplayOptions(waypointsVisible: Boolean, courseVisible: Boolean) {
         showWaypoints = waypointsVisible
         showCourse = courseVisible
-        applyVisibility()
+        refreshAll()
     }
 
     private fun installLayers(style: Style) {
@@ -336,17 +336,23 @@ class NavigationMapPanel(
         setSource("trail", listOfNotNull(lineFeature(track, JSONObject().put("color", if (trackRecording) "#FFAA00" else "#808080"))))
         val targetPoints = listOfNotNull(current, target)
         setSource("target", listOfNotNull(lineFeature(targetPoints)))
+        val displayPrefs = appContext.getSharedPreferences("display", Context.MODE_PRIVATE)
+        val courseLength = displayPrefs.getInt("courseLineLengthMeters", 500).coerceIn(100, 5000)
+        val markInterval = displayPrefs.getInt("courseMarkIntervalMeters", 100).coerceIn(25, courseLength)
+        val markDistances = generateSequence(markInterval) { it + markInterval }.takeWhile { it <= courseLength }.toList()
         setSource("course", if (current != null && lastHeading != null) {
             val origin = current!!
-            val projected = (100..500 step 100).map { d ->
-                DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, d.toDouble())
+            val projected = markDistances.map { distance ->
+                DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, distance.toDouble())
                     .let { LatLng(it.first, it.second) }
             }
-            listOfNotNull(lineFeature(listOf(origin) + projected))
+            val end = DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, courseLength.toDouble())
+                .let { LatLng(it.first, it.second) }
+            listOfNotNull(lineFeature(listOf(origin) + projected + end))
         } else emptyList())
         setSource("course-dots", if (current != null && lastHeading != null) {
-            (100..500 step 100).map { d ->
-                val p = DisplayNavigation.destination(current!!.latitude, current!!.longitude, lastHeading!!, d.toDouble())
+            markDistances.map { distance ->
+                val p = DisplayNavigation.destination(current!!.latitude, current!!.longitude, lastHeading!!, distance.toDouble())
                 pointFeature(p.first, p.second)
             }
         } else emptyList())
@@ -554,6 +560,10 @@ class NavigationMapPanel(
         return LatLngBounds.Builder().include(nw).include(se).build()
     }
 
+    fun openOfflineMapSettings() {
+        showOfflineMenu()
+    }
+
     private fun showOfflineMenu() {
         AlertDialog.Builder(appContext)
             .setTitle("オフライン地図")
@@ -582,13 +592,30 @@ class NavigationMapPanel(
         }
         val mapFrame = FrameLayout(appContext)
         val preview = MapView(appContext).apply { onCreate(null) }
-        mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(300)))
+        mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(250)))
         mapFrame.addView(OfflineRegionFrame(appContext), FrameLayout.LayoutParams(-1, -1))
-        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(300)))
+        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(250)))
 
         val boundsText = text("地図を読み込み中…", 12f)
-        boundsText.setPadding(0, dp(8), 0, dp(6))
+        boundsText.setPadding(0, dp(6), 0, dp(4))
         root.addView(boundsText)
+        val maxPreviewTitle = text("最大ズームの見え方", 13f)
+        root.addView(maxPreviewTitle)
+        val zoomPreviewView = MapView(appContext).apply { onCreate(null) }
+        root.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
+        var zoomPreviewMap: MapLibreMap? = null
+        var selectedBounds: LatLngBounds? = null
+        var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
+        var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
+        fun updateZoomPreview() {
+            maxPreviewTitle.text = "最大ズーム $maxZoom の見え方（保存範囲とは別に確認）"
+            val bounds = selectedBounds
+            val center = bounds?.let {
+                LatLng((it.latitudeNorth + it.latitudeSouth) / 2.0, (it.longitudeEast + it.longitudeWest) / 2.0)
+            } ?: initialCamera.target ?: LatLng(35.30, 139.48)
+            zoomPreviewMap?.cameraPosition = CameraPosition.Builder(initialCamera)
+                .target(center).zoom(maxZoom.toDouble()).bearing(0.0).tilt(0.0).build()
+        }
         val nameInput = AppCompatEditText(appContext).apply {
             hint = "保存名"
             setSingleLine(true)
@@ -598,8 +625,6 @@ class NavigationMapPanel(
         }
         root.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
 
-        var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
-        var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         val minLabel = text("最小ズーム: $minZoom")
         val minSeek = SeekBar(appContext).apply { max = 18; progress = minZoom }
         val maxLabel = text("最大ズーム: $maxZoom")
@@ -611,8 +636,8 @@ class NavigationMapPanel(
         root.addView(maxSeek, LinearLayout.LayoutParams(-1, dp(36)))
         root.addView(countLabel)
 
-        var selectedBounds: LatLngBounds? = null
         fun updateEstimate() {
+            updateZoomPreview()
             val bounds = selectedBounds
             if (bounds == null) {
                 boundsText.text = "地図範囲を読み込み中…"
@@ -659,6 +684,8 @@ class NavigationMapPanel(
             dialog.window?.setLayout(-1, (appContext.resources.displayMetrics.heightPixels * 0.86).toInt())
             preview.onStart()
             preview.onResume()
+            zoomPreviewView.onStart()
+            zoomPreviewView.onResume()
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val bounds = selectedBounds
                 if (bounds == null) {
@@ -694,10 +721,20 @@ class NavigationMapPanel(
             preview.onPause()
             preview.onStop()
             preview.onDestroy()
+            zoomPreviewView.onPause()
+            zoomPreviewView.onStop()
+            zoomPreviewView.onDestroy()
+        }
+        zoomPreviewView.getMapAsync { zoomMap ->
+            zoomMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
+                zoomPreviewMap = zoomMap
+                updateZoomPreview()
+                zoomMap.uiSettings.setAllGesturesEnabled(false)
+            }
         }
         preview.getMapAsync { previewMap ->
             previewMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
-                previewMap.cameraPosition = CameraPosition.Builder(initialCamera).build()
+                previewMap.cameraPosition = CameraPosition.Builder(initialCamera).bearing(0.0).tilt(0.0).build()
                 fun refreshBounds() {
                     if (preview.width <= 0 || preview.height <= 0) return
                     val insetX = preview.width * 0.08f
@@ -707,6 +744,8 @@ class NavigationMapPanel(
                     selectedBounds = runCatching { LatLngBounds.Builder().include(nw).include(se).build() }.getOrNull()
                     updateEstimate()
                 }
+                previewMap.uiSettings.setRotateGesturesEnabled(false)
+                previewMap.uiSettings.setTiltGesturesEnabled(false)
                 previewMap.addOnCameraIdleListener { refreshBounds() }
                 preview.post { refreshBounds() }
             }

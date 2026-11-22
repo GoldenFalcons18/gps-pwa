@@ -3,7 +3,7 @@ import MapLibre
 import CoreLocation
 import UIKit
 
-private struct SavedMapBounds {
+struct SavedMapBounds {
     let value: MLNCoordinateBounds
     let zoom: Double
 }
@@ -24,6 +24,8 @@ struct NavigationMapView: View {
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
     @AppStorage("mapProvider") private var provider = "apple"
+    @AppStorage("courseLineLengthMeters") private var courseLineLengthMeters = 500
+    @AppStorage("courseMarkIntervalMeters") private var courseMarkIntervalMeters = 100
     @State private var visibleBounds: SavedMapBounds?
     @State private var showOfflinePicker = false
     @State private var showSaveResult = false
@@ -39,6 +41,8 @@ struct NavigationMapView: View {
                     library: library,
                     showWaypoints: showWaypoints,
                     showCourse: showCourse,
+                    courseLineLengthMeters: courseLineLengthMeters,
+                    courseMarkIntervalMeters: courseMarkIntervalMeters,
                     track: track,
                     isRecording: isRecording,
                     selected: $selected,
@@ -68,7 +72,10 @@ struct NavigationMapView: View {
             } else {
                 AppleNavigationMapView(
                     location: location, heading: heading, waypoints: waypoints, library: library,
-                    showWaypoints: showWaypoints, showCourse: showCourse, track: track,
+                    showWaypoints: showWaypoints, showCourse: showCourse,
+                    courseLineLengthMeters: courseLineLengthMeters,
+                    courseMarkIntervalMeters: courseMarkIntervalMeters,
+                    track: track,
                     isRecording: isRecording, selected: $selected, following: $following, metersPerCm: metersPerCm,
                     onMetersPerCmChanged: onMetersPerCmChanged,
                     editWaypoint: editWaypoint, createWaypoint: createWaypoint
@@ -78,7 +85,7 @@ struct NavigationMapView: View {
     }
 }
 
-private enum OpenFreeMapOfflineStore {
+enum OpenFreeMapOfflineStore {
     static let styleURL = URL(string: "https://tiles.openfreemap.org/styles/liberty")!
 
     static func save(bounds: MLNCoordinateBounds, minZoom: Int, maxZoom: Int, name: String, completion: @escaping (String) -> Void) {
@@ -107,7 +114,7 @@ private enum OpenFreeMapOfflineStore {
     }
 }
 
-private struct OfflineRegionPickerView: View {
+struct OfflineRegionPickerView: View {
     @Environment(\.dismiss) private var dismiss
     let initialBounds: SavedMapBounds?
     let onSave: (MLNCoordinateBounds, Int, Int, String) -> Void
@@ -149,7 +156,8 @@ private struct OfflineRegionPickerView: View {
                         .foregroundStyle(.white)
                         .allowsHitTesting(false)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .frame(height: 300)
 
                 if let selectedBounds {
                     let sw = selectedBounds.value.sw
@@ -161,6 +169,14 @@ private struct OfflineRegionPickerView: View {
                 } else {
                     Text("地図範囲を読み込み中…").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
                 }
+
+                Text("最大ズーム \(maxZoom) の地図表示").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
+                OfflineZoomPreviewMap(
+                    bounds: selectedBounds ?? initialBounds,
+                    zoom: Double(maxZoom)
+                )
+                .frame(height: 145)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 TextField("保存名", text: $name)
                     .textFieldStyle(.roundedBorder)
@@ -237,6 +253,59 @@ private struct OfflineRegionPickerView: View {
     }
 }
 
+private struct OfflineZoomPreviewMap: UIViewRepresentable {
+    let bounds: SavedMapBounds?
+    let zoom: Double
+
+    func makeUIView(context: Context) -> MLNMapView {
+        let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
+        map.isPitchEnabled = false
+        map.isScrollEnabled = false
+        map.isZoomEnabled = false
+        map.isRotateEnabled = false
+        return map
+    }
+
+    func updateUIView(_ map: MLNMapView, context: Context) {
+        let center: CLLocationCoordinate2D
+        if let bounds {
+            center = CLLocationCoordinate2D(
+                latitude: (bounds.value.sw.latitude + bounds.value.ne.latitude) / 2,
+                longitude: (bounds.value.sw.longitude + bounds.value.ne.longitude) / 2
+            )
+        } else {
+            center = CLLocationCoordinate2D(latitude: 35.30, longitude: 139.48)
+        }
+        if abs(map.zoomLevel - zoom) > 0.05 || CLLocation(latitude: map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
+            .distance(from: CLLocation(latitude: center.latitude, longitude: center.longitude)) > 5 {
+            map.setCenter(center, zoomLevel: zoom, animated: false)
+        }
+    }
+}
+
+struct OfflineMapSettingsAction: View {
+    @State private var showingPicker = false
+    @State private var showingResult = false
+    @State private var result = ""
+
+    var body: some View {
+        Button("オフライン地図を保存") { showingPicker = true }
+            .fullScreenCover(isPresented: $showingPicker) {
+                OfflineRegionPickerView(initialBounds: nil) { bounds, minZoom, maxZoom, name in
+                    OpenFreeMapOfflineStore.save(bounds: bounds, minZoom: minZoom, maxZoom: maxZoom, name: name) { message in
+                        result = message
+                        showingResult = true
+                    }
+                }
+            }
+            .alert("オフライン地図", isPresented: $showingResult) {
+                Button("閉じる") { result = "" }
+            } message: {
+                Text(result)
+            }
+    }
+}
+
 private struct OfflineRegionMap: UIViewRepresentable {
     let initial: SavedMapBounds?
     let onViewportChanged: (MLNCoordinateBounds, Double) -> Void
@@ -246,6 +315,7 @@ private struct OfflineRegionMap: UIViewRepresentable {
         let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
         map.delegate = context.coordinator
         map.isPitchEnabled = false
+        map.isRotateEnabled = false
         if let initial {
             let center = CLLocationCoordinate2D(
                 latitude: (initial.value.sw.latitude + initial.value.ne.latitude) / 2,
@@ -289,6 +359,8 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
+    let courseLineLengthMeters: Int
+    let courseMarkIntervalMeters: Int
     let track: [CLLocationCoordinate2D]
     let isRecording: Bool
     @Binding var selected: UUID?
@@ -328,6 +400,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         var markText: String?
         var markSymbol: String?
         var colorName: String?
+        var courseDistance: Int?
     }
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
@@ -335,6 +408,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         weak var map: MLNMapView?
         private var pins: [Pin] = []
         private var boatPin: Pin?
+        private var coursePins: [Int: Pin] = [:]
         private var waypointSignature = ""
         private var cameraUpdateInProgress = false
         private var previousMetersPerCm: Double?
@@ -409,7 +483,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             let definitions: [(String, UIColor, CGFloat)] = [
                 ("sailing-track", trackColor, 4),
                 ("sailing-target", .systemGreen, 3),
-                ("sailing-course", .white, 2)
+                ("sailing-course", .black, 2)
             ]
             for (sourceID, color, width) in definitions {
                 let layerID = sourceID + "-line"
@@ -443,9 +517,49 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             (style.source(withIdentifier: "sailing-target") as? MLNShapeSource)?.shape = target
             let course = parent.location.flatMap { location -> MLNPolyline? in
                 guard parent.showCourse, let heading = parent.heading else { return nil }
-                return makeLine([location.coordinate, Self.destination(from: location.coordinate, bearing: heading, meters: 2500)])
+                let length = parent.courseLineLengthMeters.clamped(to: 100...5000)
+                let interval = parent.courseMarkIntervalMeters.clamped(to: 25...length)
+                let distances = Array(stride(from: interval, through: length, by: interval))
+                var coordinates = [location.coordinate]
+                coordinates.append(contentsOf: distances.map {
+                    Self.destination(from: location.coordinate, bearing: heading, meters: Double($0))
+                })
+                if distances.last != length {
+                    coordinates.append(Self.destination(from: location.coordinate, bearing: heading, meters: Double(length)))
+                }
+                return makeLine(coordinates)
             }
             (style.source(withIdentifier: "sailing-course") as? MLNShapeSource)?.shape = course
+
+            let validDistances = Set(stride(
+                from: parent.courseMarkIntervalMeters.clamped(to: 25...parent.courseLineLengthMeters.clamped(to: 100...5000)),
+                through: parent.courseLineLengthMeters.clamped(to: 100...5000),
+                by: parent.courseMarkIntervalMeters.clamped(to: 25...parent.courseLineLengthMeters.clamped(to: 100...5000))
+            ))
+            if parent.showCourse, let location = parent.location, let heading = parent.heading {
+                for distance in validDistances {
+                    let pin: Pin
+                    if let existing = coursePins[distance] {
+                        pin = existing
+                    } else {
+                        pin = Pin()
+                        pin.courseDistance = distance
+                        pin.title = "\(distance) m"
+                        coursePins[distance] = pin
+                        map.addAnnotation(pin)
+                    }
+                    pin.coordinate = Self.destination(from: location.coordinate, bearing: heading, meters: Double(distance))
+                }
+            } else {
+                for pin in coursePins.values { map.removeAnnotation(pin) }
+                coursePins.removeAll()
+            }
+            let staleDistances = coursePins.keys.filter { !validDistances.contains($0) }
+            for distance in staleDistances {
+                if let pin = coursePins.removeValue(forKey: distance) {
+                    map.removeAnnotation(pin)
+                }
+            }
         }
 
         private func makeLine(_ coordinates: [CLLocationCoordinate2D]) -> MLNPolyline? {
@@ -538,9 +652,18 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MLNMapView, viewFor annotation: MLNAnnotation) -> MLNAnnotationView? {
             guard let pin = annotation as? Pin else { return nil }
-            let id = pin.isBoat ? "boat" : "waypoint"
+            let id = pin.courseDistance != nil ? "course-distance" : (pin.isBoat ? "boat" : "waypoint")
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id) ?? MLNAnnotationView(annotation: pin, reuseIdentifier: id)
             view.annotation = pin
+            if let distance = pin.courseDistance {
+                view.bounds = CGRect(x: 0, y: 0, width: 8, height: 8)
+                view.backgroundColor = .black
+                view.layer.cornerRadius = 4
+                view.layer.borderWidth = 1
+                view.layer.borderColor = UIColor.white.cgColor
+                view.subviews.forEach { $0.removeFromSuperview() }
+                return view
+            }
             view.bounds = CGRect(x: 0, y: 0, width: 34, height: 34)
             view.backgroundColor = pin.isBoat ? UIColor.black : UIColor(waypointColor(pin.colorName))
             view.layer.cornerRadius = 17
