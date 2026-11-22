@@ -116,6 +116,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     let location: CLLocation?
     let heading: Double?
     let waypoints: [Waypoint]
+    let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
     let track: [CLLocationCoordinate2D]
@@ -206,7 +207,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                     boat.coordinate = location.coordinate
                     boat.title = "現在地"
                     boat.isBoat = true
-                    boat.mark = "▲"
+                    boat.markText = "▲"
                     boatPin = boat
                     pins.append(boat)
                     map.addAnnotation(boat)
@@ -345,9 +346,9 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             view.layer.borderWidth = 1.5
             view.layer.borderColor = UIColor.white.cgColor
             view.subviews.forEach { $0.removeFromSuperview() }
-            if let markText = pin.markText, !markText.isEmpty || pin.isBoat {
+            if let markText = pin.markText, !markText.isEmpty {
                 let label = UILabel(frame: view.bounds)
-                label.text = pin.isBoat ? "▲" : markText
+                label.text = markText
                 label.textColor = .white
                 label.font = .boldSystemFont(ofSize: 16)
                 label.textAlignment = .center
