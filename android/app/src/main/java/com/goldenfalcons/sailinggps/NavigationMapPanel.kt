@@ -435,11 +435,12 @@ class NavigationMapPanel(
 
     private fun synchronizeScaleFromCamera(readyMap: MapLibreMap) {
         val camera = readyMap.cameraPosition
+        val cameraTarget = camera.target ?: current ?: return
         val metrics = mapView.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
         val pixelsPerCm = dpi / 2.54
         val metersPerCmAtCenter = 156543.033928 *
-            kotlin.math.cos(Math.toRadians(camera.target.latitude)).coerceAtLeast(0.000001) *
+            kotlin.math.cos(Math.toRadians(cameraTarget.latitude)).coerceAtLeast(0.000001) *
             pixelsPerCm / 2.0.pow(camera.zoom)
         if (metersPerCmAtCenter.isFinite() && metersPerCmAtCenter > 0) {
             metersPerCm = metersPerCmAtCenter.coerceIn(12.5, 6400.0)
@@ -665,7 +666,7 @@ class NavigationMapPanel(
                     { _, bytes, count, pausedBySize ->
                         if (pausedBySize) Toast.makeText(
                             appContext,
-                            "保存を安全のため一時停止しました（約$countタイル / ${bytes / 1024 / 1024}MB）。範囲を小さくして再保存してください。",
+                            "保存を安全のため一時停止しました（約${count}タイル / ${bytes / 1024 / 1024}MB）。範囲を小さくして再保存してください。",
                             Toast.LENGTH_LONG
                         ).show()
                         else if (count > 0 && count % 100L == 0L) log("Offline map / $name / $count tiles")
