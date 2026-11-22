@@ -201,7 +201,8 @@ struct OfflineRegionPickerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
-            .navigationTitle("オフラインマップ")
+        }
+        .navigationTitle("オフラインマップ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
