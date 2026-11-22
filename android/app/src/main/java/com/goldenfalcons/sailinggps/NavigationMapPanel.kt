@@ -250,7 +250,7 @@ class NavigationMapPanel(
                 PropertyFactory.textHaloColor(Color.BLACK),
                 PropertyFactory.textHaloWidth(1.5f),
                 PropertyFactory.textOffset(arrayOf(0f, 1.4f)),
-                PropertyFactory.textAllowOverlap(true)
+                PropertyFactory.textAllowOverlap(false)
             )
         )
         if (style.getLayer("waypoint-marks") == null) style.addLayer(
@@ -261,7 +261,7 @@ class NavigationMapPanel(
                 PropertyFactory.textHaloColor(Color.BLACK),
                 PropertyFactory.textHaloWidth(1f),
                 PropertyFactory.textOffset(arrayOf(0f, -0.1f)),
-                PropertyFactory.textAllowOverlap(true)
+                PropertyFactory.textAllowOverlap(false)
             )
         )
         if (style.getLayer("boat-dot") == null) style.addLayer(
@@ -435,7 +435,7 @@ class NavigationMapPanel(
         readyMap.cameraPosition = CameraPosition.Builder()
             .target(point)
             .zoom(zoom)
-            .bearing(-(lastHeading ?: 0.0))
+            .bearing(lastHeading ?: 0.0)
             .build()
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastFollowLogAt >= 500) {
