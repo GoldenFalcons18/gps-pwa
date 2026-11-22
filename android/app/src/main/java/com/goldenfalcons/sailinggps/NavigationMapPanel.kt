@@ -120,7 +120,10 @@ class NavigationMapPanel(
             readyMap.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) setFollowing(false)
             }
-            readyMap.addOnCameraIdleListener { logWaypointTouchLocations(readyMap) }
+            readyMap.addOnCameraIdleListener {
+                if (!following) synchronizeScaleFromCamera(readyMap)
+                logWaypointTouchLocations(readyMap)
+            }
         }
         container.addView(mapView, FrameLayout.LayoutParams(-1, -1))
         val controls = LinearLayout(context).apply {
@@ -427,6 +430,19 @@ class NavigationMapPanel(
             readyMap.animateCamera(CameraUpdateFactory.newCameraPosition(
                 CameraPosition.Builder(currentPosition).zoom((currentPosition.zoom + delta).coerceIn(2.0, 20.0)).build()
             ), 180)
+        }
+    }
+
+    private fun synchronizeScaleFromCamera(readyMap: MapLibreMap) {
+        val camera = readyMap.cameraPosition
+        val metrics = mapView.resources.displayMetrics
+        val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
+        val pixelsPerCm = dpi / 2.54
+        val metersPerCmAtCenter = 156543.033928 *
+            kotlin.math.cos(Math.toRadians(camera.target.latitude)).coerceAtLeast(0.000001) *
+            pixelsPerCm / 2.0.pow(camera.zoom)
+        if (metersPerCmAtCenter.isFinite() && metersPerCmAtCenter > 0) {
+            metersPerCm = metersPerCmAtCenter.coerceIn(12.5, 6400.0)
         }
     }
 
