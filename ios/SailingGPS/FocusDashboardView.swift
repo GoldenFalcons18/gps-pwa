@@ -98,13 +98,14 @@ struct FocusDashboardView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("メニュー")
             }
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 card("SOG / " + unit, speed, .green)
+                    .frame(height: 88)
                 card((isCompass ? "コンパス方位" : "COG") + (magnetic ? "（磁北）" : "（真北）"),
                      course.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
                      .white)
+                    .frame(height: 88)
             }
-            .frame(height: 150)
             HStack(spacing: 8) {
                 Button(action: chooseTarget) {
                     card("目標方位" + (magnetic ? "（磁北）" : "（真北）"),
