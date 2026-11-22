@@ -190,10 +190,14 @@ end
 
 submission_path = "/builds/#{URI.encode_www_form_component(build.fetch("id"))}/betaAppReviewSubmission?#{query("fields[betaAppReviewSubmissions]" => "betaReviewState,submittedDate")}"
 submission = request("GET", submission_path, nil, allow_not_found: true)
-if submission
-  state = submission.dig("data", "attributes", "betaReviewState")
-  puts "Build #{build_number} already has a beta review submission (#{state || "status unavailable"})."
+state = submission&.dig("data", "attributes", "betaReviewState")
+case state
+when "WAITING_FOR_REVIEW", "IN_REVIEW", "APPROVED"
+  puts "Build #{build_number} already has a Beta App Review state of #{state}."
+when "REJECTED"
+  abort("Build #{build_number} was rejected by Beta App Review; a new build is required.")
 else
+  puts "Build #{build_number} has no active Beta App Review state; submitting it now."
   result = request(
     "POST",
     "/betaAppReviewSubmissions",
