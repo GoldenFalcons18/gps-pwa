@@ -15,8 +15,6 @@ struct NavigationMapView: View {
     let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
-    let courseLineLengthMeters: Int
-    let courseMarkIntervalMeters: Int
     let track: [CLLocationCoordinate2D]
     let isRecording: Bool
     @Binding var selected: UUID?
