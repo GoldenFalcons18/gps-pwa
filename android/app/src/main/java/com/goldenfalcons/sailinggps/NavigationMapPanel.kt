@@ -614,7 +614,7 @@ class NavigationMapPanel(
                 LatLng((it.latitudeNorth + it.latitudeSouth) / 2.0, (it.longitudeEast + it.longitudeWest) / 2.0)
             } ?: initialCamera.target ?: LatLng(35.30, 139.48)
             zoomPreviewMap?.cameraPosition = CameraPosition.Builder(initialCamera)
-                .target(center).zoom(maxZoom.toDouble()).build()
+                .target(center).zoom(maxZoom.toDouble()).bearing(0.0).tilt(0.0).build()
         }
         val nameInput = AppCompatEditText(appContext).apply {
             hint = "保存名"
@@ -744,6 +744,8 @@ class NavigationMapPanel(
                     selectedBounds = runCatching { LatLngBounds.Builder().include(nw).include(se).build() }.getOrNull()
                     updateEstimate()
                 }
+                previewMap.uiSettings.setRotateGesturesEnabled(false)
+                previewMap.uiSettings.setTiltGesturesEnabled(false)
                 previewMap.addOnCameraIdleListener { refreshBounds() }
                 preview.post { refreshBounds() }
             }
