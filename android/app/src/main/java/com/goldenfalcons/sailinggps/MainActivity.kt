@@ -355,6 +355,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .putString("signalPrepFlag",selectedPrepFlag).apply()
         buildSignalRows()
         b.btnSignalSettings.setOnClickListener { startActivity(Intent(this, SignalSettingsActivity::class.java)) }
+        val hornSettingsExpanded=displayPrefs.getBoolean("signalHornSettingsExpanded",false)
+        b.signalHornSettingsContainer.visibility=if(hornSettingsExpanded) View.VISIBLE else View.GONE
+        b.btnSignalHornSettingsToggle.text=if(hornSettingsExpanded) "ホーン設定 ▾" else "ホーン設定 ▸"
+        b.btnSignalHornSettingsToggle.setOnClickListener {
+            val expand=b.signalHornSettingsContainer.visibility!=View.VISIBLE
+            b.signalHornSettingsContainer.visibility=if(expand) View.VISIBLE else View.GONE
+            b.btnSignalHornSettingsToggle.text=if(expand) "ホーン設定 ▾" else "ホーン設定 ▸"
+            displayPrefs.edit().putBoolean("signalHornSettingsExpanded",expand).apply()
+        }
         b.btnSignalOrange.setOnClickListener {
             val current = if (displayPrefs.getBoolean("signalOrangeManualOverride", false))
                 displayPrefs.getBoolean("signalOrangeManualUp", false)
@@ -468,7 +477,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         currentSignalEvents().forEachIndexed { eventIndex,event ->
             val row=LinearLayout(this).apply {
                 orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
-                layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
+                layoutParams=LinearLayout.LayoutParams(-1,(26*resources.displayMetrics.density).roundToInt()).apply {setMargins(0,1,0,1)}
                 background=android.graphics.drawable.GradientDrawable().apply {setColor(0xffeeeeee.toInt());cornerRadius=3f}
             }
             row.addView(TextView(this).apply {text=if(event.raised) "↑" else "↓";textSize=19f;setTextColor(Color.BLACK);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(32,-1)})
