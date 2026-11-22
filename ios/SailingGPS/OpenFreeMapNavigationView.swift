@@ -35,6 +35,7 @@ struct NavigationMapView: View {
                     location: location,
                     heading: heading,
                     waypoints: waypoints,
+                    library: library,
                     showWaypoints: showWaypoints,
                     showCourse: showCourse,
                     track: track,
@@ -152,7 +153,9 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
     final class Pin: MLNPointAnnotation {
         var waypointID: UUID?
         var isBoat = false
-        var mark = "●"
+        var markText: String?
+        var markSymbol: String?
+        var colorName: String?
     }
 
     final class Coordinator: NSObject, MLNMapViewDelegate {
@@ -168,21 +171,26 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
 
         func render(_ map: MLNMapView) {
             self.map = map
-            let signature = parent.showWaypoints
-                ? parent.waypoints.map { "\($0.id.uuidString):\($0.latitude):\($0.longitude):\($0.name):\($0.markText ?? $0.markSymbol ?? "●")" }.joined(separator: "|")
-                : "hidden"
+            let visibleWaypoints = parent.showWaypoints
+                ? parent.waypoints.filter { !parent.library.hiddenGroups.contains($0.group ?? "") }
+                : []
+            let signature = visibleWaypoints.map {
+                "\($0.id.uuidString):\($0.latitude):\($0.longitude):\($0.name):\($0.markText ?? ""):\($0.markSymbol ?? "flag.fill"):\($0.colorName ?? "orange")"
+            }.joined(separator: "|") + "|" + parent.library.hiddenGroups.sorted().joined(separator: ",")
             if signature != waypointSignature {
                 let oldPins = pins.filter { !$0.isBoat }
                 map.removeAnnotations(oldPins)
                 pins.removeAll { !$0.isBoat }
                 if parent.showWaypoints {
-                    let newPins = parent.waypoints.map { waypoint -> Pin in
+                    let newPins = visibleWaypoints.map { waypoint -> Pin in
                         let pin = Pin()
                         pin.coordinate = waypoint.coordinate
                         pin.title = waypoint.name
                         pin.subtitle = waypoint.note
                         pin.waypointID = waypoint.id
-                        pin.mark = waypoint.markText ?? waypoint.markSymbol ?? "●"
+                        pin.markText = waypoint.markText
+                        pin.markSymbol = waypoint.markSymbol
+                        pin.colorName = waypoint.colorName
                         pins.append(pin)
                         return pin
                     }
@@ -212,7 +220,6 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 map.setCenter(location.coordinate, zoomLevel: zoom, direction: parent.heading ?? 0, animated: false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.cameraUpdateInProgress = false }
             }
-            parent.onViewportChanged(map.visibleCoordinateBounds, map.zoomLevel)
         }
 
         private func updateLines(_ map: MLNMapView) {
@@ -247,7 +254,9 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             (style.source(withIdentifier: "sailing-track") as? MLNShapeSource)?.shape =
                 parent.track.count > 1 ? makeLine(parent.track) : nil
             let target = parent.location.flatMap { location -> MLNPolyline? in
-                guard let waypoint = parent.waypoints.first(where: { $0.id == parent.selected }) else { return nil }
+                guard let waypoint = parent.waypoints.first(where: {
+                    $0.id == parent.selected && !parent.library.hiddenGroups.contains($0.group ?? "")
+                }) else { return nil }
                 return makeLine([location.coordinate, waypoint.coordinate])
             }
             (style.source(withIdentifier: "sailing-target") as? MLNShapeSource)?.shape = target
@@ -289,7 +298,10 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             guard gesture.state == .began, let map else { return }
             parent.following = false
             let coordinate = map.convert(gesture.location(in: map), toCoordinateFrom: map)
-            let hit = parent.waypoints.min {
+            let visibleWaypoints = parent.showWaypoints
+                ? parent.waypoints.filter { !parent.library.hiddenGroups.contains($0.group ?? "") }
+                : []
+            let hit = visibleWaypoints.min {
                 CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
                 < CLLocation(latitude: $1.latitude, longitude: $1.longitude).distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
             }.flatMap { waypoint -> Waypoint? in
@@ -328,19 +340,27 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: id) ?? MLNAnnotationView(annotation: pin, reuseIdentifier: id)
             view.annotation = pin
             view.bounds = CGRect(x: 0, y: 0, width: 34, height: 34)
-            view.backgroundColor = pin.isBoat ? UIColor.black : UIColor.systemOrange
+            view.backgroundColor = pin.isBoat ? UIColor.black : UIColor(waypointColor(pin.colorName))
             view.layer.cornerRadius = 17
             view.layer.borderWidth = 1.5
             view.layer.borderColor = UIColor.white.cgColor
-            let label = UILabel(frame: view.bounds)
-            label.text = pin.mark
-            label.textColor = .white
-            label.font = .boldSystemFont(ofSize: 16)
-            label.textAlignment = .center
-            label.adjustsFontSizeToFitWidth = true
-            label.minimumScaleFactor = 0.6
             view.subviews.forEach { $0.removeFromSuperview() }
-            view.addSubview(label)
+            if let markText = pin.markText, !markText.isEmpty || pin.isBoat {
+                let label = UILabel(frame: view.bounds)
+                label.text = pin.isBoat ? "▲" : markText
+                label.textColor = .white
+                label.font = .boldSystemFont(ofSize: 16)
+                label.textAlignment = .center
+                label.adjustsFontSizeToFitWidth = true
+                label.minimumScaleFactor = 0.6
+                view.addSubview(label)
+            } else {
+                let image = UIImageView(frame: view.bounds.insetBy(dx: 7, dy: 7))
+                image.image = MarineMarks.image(pin.markSymbol ?? "flag.fill").withRenderingMode(.alwaysTemplate)
+                image.tintColor = .white
+                image.contentMode = .scaleAspectFit
+                view.addSubview(image)
+            }
             return view
         }
 
