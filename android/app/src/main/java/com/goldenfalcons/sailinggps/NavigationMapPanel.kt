@@ -93,6 +93,17 @@ class NavigationMapPanel(
         styleName = context.getSharedPreferences("display", Context.MODE_PRIVATE)
             .getString("mapStyle", "liberty") ?: "liberty"
         mapView = MapView(context)
+        // Keep pan, pinch and long-press map gestures inside the map instead of
+        // letting the dashboard ScrollView steal the touch sequence.
+        mapView.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE ->
+                    view.parent?.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
+            }
+            false
+        }
         mapView.onCreate(null)
         mapView.getMapAsync { readyMap ->
             map = readyMap
