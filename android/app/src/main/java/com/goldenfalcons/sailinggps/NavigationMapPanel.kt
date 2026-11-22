@@ -592,13 +592,28 @@ class NavigationMapPanel(
         }
         val mapFrame = FrameLayout(appContext)
         val preview = MapView(appContext).apply { onCreate(null) }
-        mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(300)))
+        mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(250)))
         mapFrame.addView(OfflineRegionFrame(appContext), FrameLayout.LayoutParams(-1, -1))
-        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(300)))
+        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(250)))
 
         val boundsText = text("地図を読み込み中…", 12f)
-        boundsText.setPadding(0, dp(8), 0, dp(6))
+        boundsText.setPadding(0, dp(6), 0, dp(4))
         root.addView(boundsText)
+        val maxPreviewTitle = text("最大ズームの見え方", 13f)
+        root.addView(maxPreviewTitle)
+        val zoomPreviewView = MapView(appContext).apply { onCreate(null) }
+        root.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
+        var zoomPreviewMap: MapLibreMap? = null
+        var selectedBounds: LatLngBounds? = null
+        fun updateZoomPreview() {
+            maxPreviewTitle.text = "最大ズーム $maxZoom の見え方（保存範囲とは別に確認）"
+            val bounds = selectedBounds
+            val center = bounds?.let {
+                LatLng((it.latitudeNorth + it.latitudeSouth) / 2.0, (it.longitudeEast + it.longitudeWest) / 2.0)
+            } ?: initialCamera.target ?: LatLng(35.30, 139.48)
+            zoomPreviewMap?.cameraPosition = CameraPosition.Builder(initialCamera)
+                .target(center).zoom(maxZoom.toDouble()).build()
+        }
         val nameInput = AppCompatEditText(appContext).apply {
             hint = "保存名"
             setSingleLine(true)
@@ -621,8 +636,8 @@ class NavigationMapPanel(
         root.addView(maxSeek, LinearLayout.LayoutParams(-1, dp(36)))
         root.addView(countLabel)
 
-        var selectedBounds: LatLngBounds? = null
         fun updateEstimate() {
+            updateZoomPreview()
             val bounds = selectedBounds
             if (bounds == null) {
                 boundsText.text = "地図範囲を読み込み中…"
@@ -669,6 +684,8 @@ class NavigationMapPanel(
             dialog.window?.setLayout(-1, (appContext.resources.displayMetrics.heightPixels * 0.86).toInt())
             preview.onStart()
             preview.onResume()
+            zoomPreviewView.onStart()
+            zoomPreviewView.onResume()
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val bounds = selectedBounds
                 if (bounds == null) {
@@ -704,6 +721,16 @@ class NavigationMapPanel(
             preview.onPause()
             preview.onStop()
             preview.onDestroy()
+            zoomPreviewView.onPause()
+            zoomPreviewView.onStop()
+            zoomPreviewView.onDestroy()
+        }
+        zoomPreviewView.getMapAsync { zoomMap ->
+            zoomMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
+                zoomPreviewMap = zoomMap
+                updateZoomPreview()
+                zoomMap.uiSettings.setAllGesturesEnabled(false)
+            }
         }
         preview.getMapAsync { previewMap ->
             previewMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
