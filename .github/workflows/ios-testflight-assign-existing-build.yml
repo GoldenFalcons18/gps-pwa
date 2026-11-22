@@ -1,0 +1,45 @@
+name: Assign existing TestFlight build to 使用者
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Existing App Store Connect build number to add to the external 使用者 group"
+        required: true
+        default: "127"
+permissions:
+  contents: read
+concurrency:
+  group: iphone-testflight-group-assignment
+  cancel-in-progress: false
+jobs:
+  assign:
+    runs-on: macos-15
+    timeout-minutes: 40
+    environment: testflight
+    env:
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_PRIVATE_KEY_BASE64: ${{ secrets.APPSTORE_PRIVATE_KEY_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate configuration
+        run: |
+          set -euo pipefail
+          test -n "$APPSTORE_KEY_ID"
+          test -n "$APPSTORE_ISSUER_ID"
+          test -n "$APPSTORE_PRIVATE_KEY_BASE64"
+          [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]{0,3}$ ]]
+          mkdir -p testflight-logs
+      - name: Update test notes and assign existing build
+        run: |
+          set -euo pipefail
+          ruby scripts/associate-testflight-users-group.rb 2>&1 | tee testflight-logs/group-assignment.log
+      - name: Save assignment log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestFlight-group-assignment-${{ inputs.build_number }}
+          path: testflight-logs/group-assignment.log
+          if-no-files-found: ignore
+          retention-days: 14
