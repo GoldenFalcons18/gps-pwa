@@ -96,7 +96,7 @@
             <com.goldenfalcons.sailinggps.SpeedDisplayView android:id="@+id/tvLargeSpeed" android:layout_width="match_parent" android:layout_height="175dp" android:gravity="center" android:text="--.-" android:textColor="#00FF38" android:textSize="130sp" android:textStyle="bold" android:fontFamily="monospace" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="48sp" android:autoSizeMaxTextSize="150sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/navigatorPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="202dp" />
+            <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="240dp" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="10sp" />
         </LinearLayout>
         <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="120dp" android:minHeight="120dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
