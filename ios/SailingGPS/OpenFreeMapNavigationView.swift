@@ -112,6 +112,7 @@ private struct OfflineRegionPickerView: View {
     @State private var minZoom = 8
     @State private var maxZoom = 12
     @State private var name = "オフライン地図"
+    @State private var didInitializeZoom = false
 
     private var tileCount: Int64 {
         guard let selectedBounds else { return 0 }
@@ -124,7 +125,8 @@ private struct OfflineRegionPickerView: View {
             VStack(spacing: 12) {
                 OfflineRegionMap(initial: initialBounds) { bounds, zoom in
                     selectedBounds = SavedMapBounds(value: bounds, zoom: zoom)
-                    if selectedBounds != nil && maxZoom == 12 {
+                    if !didInitializeZoom {
+                        didInitializeZoom = true
                         maxZoom = Int(zoom.rounded()).clamped(to: 4...18)
                         minZoom = max(4, maxZoom - 2)
                     }
