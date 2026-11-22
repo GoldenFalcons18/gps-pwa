@@ -37,7 +37,10 @@ class MapLibraryDialog(private val context: Context, private val points: () -> L
         d.setOnShowListener { d.getButton(-1).setOnClickListener { val name=input.text.toString().trim();if(name.isBlank())input.error="入力してください" else {done(name);d.dismiss()} } };d.show()
     }
     private fun groupList(): Unit = menu("グループ",listOf("＋ 新規グループ" to { textInput("グループ名"){g->save(points(),state().copy(groups=(state().groups+g).distinct()));groupList()} },"地点の所属を変更" to { selected("移動する地点"){selected->
-        val ids=selected.map{it.id}.toSet();val names=listOf("")+groups();menu("移動先",names.map{g->g.ifEmpty{"メインフォルダ"} to {save(points().map{if(it.id in ids)it.copy(group=g) else it},state());groupList()}})
+        val ids=selected.map{it.id}.toSet()
+        val destinations=groups()
+        if(destinations.isEmpty()) Toast.makeText(context,"移動先グループがありません。先にグループを作成してください。",Toast.LENGTH_LONG).show()
+        else menu("移動先",destinations.map{g->g to {save(points().map{if(it.id in ids)it.copy(group=g) else it},state());groupList()}})
     } })+groups().map{g->"${if(g in state().hiddenGroups)"非表示" else "表示"} · $g (${points().count{it.group==g}})" to { groupActions(g) }})
     private fun groupActions(g: String): Unit =menu(g,listOf(
         "表示 / 非表示" to {val hidden=state().hiddenGroups.toMutableSet();if(!hidden.add(g))hidden.remove(g);save(points(),state().copy(hiddenGroups=hidden));groupList()},

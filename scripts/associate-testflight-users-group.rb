@@ -17,7 +17,8 @@ TEST_LOCALE = "ja"
 TEST_NOTES = <<~NOTES.freeze
   【今回のテスト内容】
   ・GPS：現在地・受信精度表示、進路／方位表示
-  ・地図：現在地追従、ウェイポイントの表示・追加・編集
+  ・地図：現在地追従、ウェイポイント名の表示・追加・編集、地点タップと目標選択
+  ・地点管理：グループ選択と移動
   ・航跡：記録開始、一時停止／再開、停止
   ・セーリング／シグナル：表示、タイマー、旗操作と音響
   ・Apple Watch：記録操作とiPhoneとの連携
@@ -46,7 +47,7 @@ def token
   "#{signing_input}.#{b64url(raw_signature)}"
 end
 
-def request(method, path, body = nil)
+def request(method, path, body = nil, allow_not_found: false)
   uri = URI("#{API_ROOT}#{path}")
   klass = { "GET" => Net::HTTP::Get, "POST" => Net::HTTP::Post, "PATCH" => Net::HTTP::Patch }.fetch(method)
   req = klass.new(uri)
@@ -59,6 +60,7 @@ def request(method, path, body = nil)
   response = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 20, read_timeout: 45) do |http|
     http.request(req)
   end
+  return nil if allow_not_found && response.code == "404"
   unless response.is_a?(Net::HTTPSuccess) || response.code == "204"
     detail = begin
       parsed = JSON.parse(response.body)
@@ -184,4 +186,24 @@ else
     data: [{ type: "builds", id: build.fetch("id") }]
   )
   puts "Assigned processed build #{build_number} to the TestFlight group #{GROUP_NAME}."
+end
+
+submission_path = "/builds/#{URI.encode_www_form_component(build.fetch("id"))}/betaAppReviewSubmission?#{query("fields[betaAppReviewSubmissions]" => "betaReviewState,submittedDate")}"
+submission = request("GET", submission_path, nil, allow_not_found: true)
+if submission
+  state = submission.dig("data", "attributes", "betaReviewState")
+  puts "Build #{build_number} already has a beta review submission (#{state || "status unavailable"})."
+else
+  result = request(
+    "POST",
+    "/betaAppReviewSubmissions",
+    {
+      data: {
+        type: "betaAppReviewSubmissions",
+        relationships: { build: { data: { type: "builds", id: build.fetch("id") } } }
+      }
+    }
+  )
+  state = result.dig("data", "attributes", "betaReviewState")
+  puts "Submitted build #{build_number} for Beta App Review (#{state || "submitted"})."
 end
