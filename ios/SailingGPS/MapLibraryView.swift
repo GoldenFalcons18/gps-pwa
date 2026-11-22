@@ -42,8 +42,15 @@ struct MapLibraryView: View {
                             Menu { Button("名前を変更"){renameGroup=g;renamedGroup=g};Button("削除・地点はメインフォルダへ",role:.destructive){confirmGroup=g} } label:{Image(systemName:"ellipsis.circle")}
                         }
                     }
-                    Picker("選択した地点の移動先",selection:$destinationGroup){Text("メインフォルダ").tag("");ForEach(groups,id:\.self){Text($0).tag($0)}}
-                    Button("選択した\(selected.count)地点を移動") { commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup.isEmpty ? "メインフォルダ" : destinationGroup};return w},gps.library) }.disabled(selected.isEmpty)
+                    if !groups.isEmpty {
+                        Picker("選択した地点の移動先",selection:$destinationGroup){ForEach(groups,id:\.self){Text($0).tag($0)}}
+                    } else {
+                        Text("移動先グループがありません。先にグループを作成してください。").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Button("選択した\(selected.count)地点を移動") {
+                        guard groups.contains(destinationGroup) else { return }
+                        commit(gps.waypoints.map{w in var w=w;if selected.contains(w.id){w.group=destinationGroup};return w},gps.library)
+                    }.disabled(selected.isEmpty || !groups.contains(destinationGroup))
                 }
                 Section("エリア・直線") {
                     HStack { Button("円"){featureDraft=MapFeature(name:"円エリア",kind:"circle")};Spacer();Button("囲み"){featureDraft=MapFeature(name:"囲みエリア",kind:"area")};Spacer();Button("直線"){featureDraft=MapFeature(name:"直線",kind:"line")} }
@@ -60,6 +67,7 @@ struct MapLibraryView: View {
                 }
             }.buttonStyle(.borderless)
                 .onAppear {
+                    if !groups.contains(destinationGroup) { destinationGroup = groups.first ?? "" }
                     #if DEBUG
                     if ProcessInfo.processInfo.arguments.contains("--preview-circle-editor") { featureDraft=MapFeature(name:gps.waypoints.first?.name ?? "円エリア",kind:"circle",waypointIDs:gps.waypoints.first.map{[$0.id]} ?? []) }
                     #endif
