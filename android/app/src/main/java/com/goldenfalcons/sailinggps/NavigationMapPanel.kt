@@ -560,6 +560,10 @@ class NavigationMapPanel(
         return LatLngBounds.Builder().include(nw).include(se).build()
     }
 
+    fun openOfflineMapSettings() {
+        showOfflineMenu()
+    }
+
     private fun showOfflineMenu() {
         AlertDialog.Builder(appContext)
             .setTitle("オフライン地図")
