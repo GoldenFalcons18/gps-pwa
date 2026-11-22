@@ -186,8 +186,8 @@ struct AppleNavigationMapView: UIViewRepresentable {
                 map.removeAnnotations(existingDots)
                 return
             }
-            let length = parent.courseLineLengthMeters.clamped(to: 100...5000)
-            let interval = parent.courseMarkIntervalMeters.clamped(to: 25...length)
+            let length = min(max(parent.courseLineLengthMeters, 100), 5000)
+            let interval = min(max(parent.courseMarkIntervalMeters, 25), length)
             let distances = Array(stride(from: interval, through: length, by: interval))
             var coordinates = [location.coordinate]
             for distance in distances {
