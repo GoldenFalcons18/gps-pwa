@@ -595,7 +595,7 @@ class NavigationMapPanel(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(12))
         }
-        root.addView(content, ScrollView.LayoutParams(-1, -2))
+        root.addView(content, android.view.ViewGroup.LayoutParams(-1, -2))
         val mapFrame = FrameLayout(appContext)
         val preview = MapView(appContext).apply {
             onCreate(null)
