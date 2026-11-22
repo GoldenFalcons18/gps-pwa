@@ -605,6 +605,8 @@ class NavigationMapPanel(
         root.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
         var zoomPreviewMap: MapLibreMap? = null
         var selectedBounds: LatLngBounds? = null
+        var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
+        var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         fun updateZoomPreview() {
             maxPreviewTitle.text = "最大ズーム $maxZoom の見え方（保存範囲とは別に確認）"
             val bounds = selectedBounds
@@ -623,8 +625,6 @@ class NavigationMapPanel(
         }
         root.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
 
-        var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
-        var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         val minLabel = text("最小ズーム: $minZoom")
         val minSeek = SeekBar(appContext).apply { max = 18; progress = minZoom }
         val maxLabel = text("最大ズーム: $maxZoom")
