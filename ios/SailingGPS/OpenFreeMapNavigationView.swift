@@ -337,6 +337,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         private var boatPin: Pin?
         private var waypointSignature = ""
         private var cameraUpdateInProgress = false
+        private var previousMetersPerCm: Double?
         private var lastTrackRecording: Bool?
         private var userScaleChangePending = false
 
@@ -344,6 +345,11 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
 
         func render(_ map: MLNMapView) {
             self.map = map
+            if let previousMetersPerCm, previousMetersPerCm != parent.metersPerCm, !parent.following {
+                let zoom = map.zoomLevel + log2(previousMetersPerCm / parent.metersPerCm)
+                map.zoomLevel = min(max(zoom, 2), 20)
+            }
+            previousMetersPerCm = parent.metersPerCm
             let visibleWaypoints = parent.showWaypoints
                 ? parent.waypoints.filter { !parent.library.hiddenGroups.contains($0.group ?? "") }
                 : []
@@ -505,7 +511,9 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
             let scale = CLLocation(latitude: left.latitude, longitude: left.longitude)
                 .distance(from: CLLocation(latitude: right.latitude, longitude: right.longitude)) / physicalWidthCm
             guard scale.isFinite, scale > 0, abs(scale - parent.metersPerCm) / parent.metersPerCm > 0.02 else { return }
-            DispatchQueue.main.async { self.parent.onMetersPerCmChanged(min(max(scale, 12.5), 6400)) }
+            let calibratedScale = min(max(scale, 12.5), 6400)
+            previousMetersPerCm = calibratedScale
+            DispatchQueue.main.async { self.parent.onMetersPerCmChanged(calibratedScale) }
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
