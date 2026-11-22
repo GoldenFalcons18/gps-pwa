@@ -251,6 +251,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         requestNeededPermissions()
         if (BuildConfig.DEBUG) {
             var previousBounds = ""
+            var previousSignalSettingsBounds = ""
             b.root.viewTreeObserver.addOnGlobalLayoutListener {
                 val button = android.graphics.Rect()
                 val map = android.graphics.Rect()
@@ -260,6 +261,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         previousBounds = bounds
                         Log.d("SailingUiBounds", bounds)
                     }
+                }
+                val signalButton = android.graphics.Rect()
+                val signalBounds = if (b.btnSignalSettings.getGlobalVisibleRect(signalButton))
+                    "SIGNAL_SETTINGS bounds=${signalButton.left},${signalButton.top},${signalButton.right},${signalButton.bottom}" else ""
+                if (signalBounds.isNotEmpty() && signalBounds != previousSignalSettingsBounds) {
+                    previousSignalSettingsBounds = signalBounds
+                    Log.d("SailingUiBounds", signalBounds)
                 }
             }
         }
