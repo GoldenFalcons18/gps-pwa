@@ -649,7 +649,7 @@ class NavigationMapPanel(
         val savedBoundsOverlay = OfflineZoomBoundsOverlay(appContext)
         zoomPreviewFrame.addView(savedBoundsOverlay, FrameLayout.LayoutParams(-1, dp(240)))
         content.addView(zoomPreviewFrame, LinearLayout.LayoutParams(-1, dp(240)))
-        val previewHelp = text("オレンジ枠が保存範囲です。枠の外に見える地図が、このズームで一度に表示される周囲の広さです。", 12f).apply {
+        val previewHelp = text("地図全体がこのズームで一度に見える範囲です。オレンジ枠がダウンロード範囲です。", 12f).apply {
             setTextColor(Color.LTGRAY)
         }
         content.addView(previewHelp)
@@ -659,7 +659,7 @@ class NavigationMapPanel(
         var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         fun updateZoomPreview() {
             val shownZoom = if (previewMinimumZoom) minZoom else maxZoom
-            maxPreviewTitle.text = (if (previewMinimumZoom) "最小" else "最大") + "ズーム " + shownZoom + " の表示範囲（オレンジ枠が保存範囲）"
+            maxPreviewTitle.text = (if (previewMinimumZoom) "最小" else "最大") + "ズーム " + shownZoom + " の一画面表示"
             minPreviewButton.isEnabled = !previewMinimumZoom
             maxPreviewButton.isEnabled = previewMinimumZoom
             val bounds = selectedBounds
