@@ -400,27 +400,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupFocusPanel() {
+        // Match the iPhone sailing dashboard: SOG/heading on the first row,
+        // then target bearing/distance on the second row.
+        val screenWidthSp = (resources.displayMetrics.widthPixels / resources.displayMetrics.density * 0.12f)
+            .coerceIn(32f, 58f)
         fun card(label:String,color:Int):Pair<LinearLayout,TextView> {
             val column=LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL; gravity=android.view.Gravity.CENTER; setPadding(6,6,6,6)
                 background=android.graphics.drawable.GradientDrawable().apply { setColor(Color.BLACK); setStroke(2,Color.GRAY); cornerRadius=10f }
             }
-            val title=TextView(this).apply { text=label; textSize=16f; setTextColor(Color.LTGRAY); gravity=android.view.Gravity.CENTER; setSingleLine() }
+            val title=TextView(this).apply {
+                text=label; textSize=15f; setTextColor(Color.LTGRAY)
+                gravity=android.view.Gravity.CENTER; setSingleLine()
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,10,18,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+            }
             column.addView(title,LinearLayout.LayoutParams(-1,-2))
             val value=TextView(this).apply {
-                text="—"; setTextColor(color); textSize=84f; typeface=android.graphics.Typeface.MONOSPACE; gravity=android.view.Gravity.CENTER; setSingleLine()
+                text="—"; setTextColor(color); textSize=screenWidthSp
+                typeface=android.graphics.Typeface.MONOSPACE; gravity=android.view.Gravity.CENTER
+                setSingleLine(); ellipsize=android.text.TextUtils.TruncateAt.END
+                includeFontPadding=false
                 layoutParams=LinearLayout.LayoutParams(-1,0,1f)
-                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,20,96,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                    this,18,screenWidthSp.toInt(),1,android.util.TypedValue.COMPLEX_UNIT_SP
+                )
             }
             column.addView(value)
             return column to value
         }
+        val topRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN)
         focusSog=sogValue
-        b.focusPanel.addView(sogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
+        topRow.addView(sogCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
         val (cogCard,cogValue)=card("COG（真北）",Color.WHITE)
         focusCog=cogValue
-        b.focusPanel.addView(cogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
+        topRow.addView(cogCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(4,4,0,4) })
+        b.focusPanel.addView(topRow,LinearLayout.LayoutParams(-1,0,1.63f))
+
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0))
         focusBearing=targetValue
