@@ -43,30 +43,31 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             orientation=android.widget.LinearLayout.VERTICAL
             setPadding((18*density).toInt(),(8*density).toInt(),(18*density).toInt(),(28*density).toInt())
         }
-        val group=android.widget.LinearLayout(activity).apply {
-            orientation=android.widget.LinearLayout.VERTICAL
-            background=android.graphics.drawable.GradientDrawable().apply {
-                setColor(android.graphics.Color.rgb(28,28,30));cornerRadius=18*density
-            }
-            clipToOutline=true
-        }
-        items.forEachIndexed { index,item ->
-            val row=android.widget.TextView(activity).apply {
-                text=item.first;textSize=17f;setTextColor(android.graphics.Color.WHITE)
-                gravity=android.view.Gravity.CENTER_VERTICAL
-                minHeight=(54*density).toInt()
-                setPadding((16*density).toInt(),(10*density).toInt(),(16*density).toInt(),(10*density).toInt())
-                isClickable=true;isFocusable=true
-                setOnClickListener { sheet.dismiss();item.second() }
-            }
-            group.addView(row,android.widget.LinearLayout.LayoutParams(-1,-2))
-            if(index<items.lastIndex) group.addView(android.view.View(activity).apply {
-                setBackgroundColor(android.graphics.Color.rgb(58,58,60))
-            },android.widget.LinearLayout.LayoutParams(-1,(1*density).toInt()).apply {
-                leftMargin=(16*density).toInt();rightMargin=(16*density).toInt()
+        sections.forEach { (sectionTitle,items) ->
+            if(sectionTitle.isNotBlank()) content.addView(android.widget.TextView(activity).apply {
+                text=sectionTitle;textSize=13f;setTextColor(android.graphics.Color.LTGRAY)
+                setPadding((8*density).toInt(),(16*density).toInt(),(8*density).toInt(),(8*density).toInt())
             })
+            val group=android.widget.LinearLayout(activity).apply {
+                orientation=android.widget.LinearLayout.VERTICAL
+                background=android.graphics.drawable.GradientDrawable().apply {
+                    setColor(android.graphics.Color.rgb(28,28,30));cornerRadius=18*density
+                }
+                clipToOutline=true
+            }
+            items.forEachIndexed { index,item ->
+                val row=android.widget.TextView(activity).apply {
+                    text=item.first;textSize=17f;setTextColor(android.graphics.Color.WHITE)
+                    gravity=android.view.Gravity.CENTER_VERTICAL;minHeight=(54*density).toInt()
+                    setPadding((16*density).toInt(),(10*density).toInt(),(16*density).toInt(),(10*density).toInt())
+                    isClickable=true;isFocusable=true;setOnClickListener { sheet.dismiss();item.second() }
+                }
+                group.addView(row,android.widget.LinearLayout.LayoutParams(-1,-2))
+                if(index<items.lastIndex) group.addView(android.view.View(activity).apply { setBackgroundColor(android.graphics.Color.rgb(58,58,60)) },
+                    android.widget.LinearLayout.LayoutParams(-1,(1*density).toInt()).apply { leftMargin=(16*density).toInt();rightMargin=(16*density).toInt() })
+            }
+            content.addView(group)
         }
-        content.addView(group)
         scroll.addView(content)
         root.addView(scroll,android.widget.LinearLayout.LayoutParams(-1,0,1f))
         sheet.setContentView(root)
