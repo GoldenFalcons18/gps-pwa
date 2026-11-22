@@ -71,6 +71,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
     @Binding var selected: UUID?
     @Binding var following: Bool
     let metersPerCm: Double
+    let onMetersPerCmChanged: (Double) -> Void
     let editWaypoint: (Waypoint) -> Void
     let createWaypoint: (CLLocationCoordinate2D) -> Void
 
@@ -123,6 +124,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
         private var scaleSignature = ""
         private var wasFollowing = false
         private var previousScale: Double?
+        private var userScaleChangePending = false
         func stopAnimation() {
             displayLink?.invalidate(); displayLink = nil; frameTime = 0
         }
@@ -304,7 +306,24 @@ struct AppleNavigationMapView: UIViewRepresentable {
                     if gesture.state == UIGestureRecognizer.State.began || gesture.state == UIGestureRecognizer.State.changed { interacting = true }
                 }
             }
-            if interacting && parent.following { DispatchQueue.main.async { self.parent.following = false } }
+            if interacting {
+                userScaleChangePending = true
+                if parent.following { DispatchQueue.main.async { self.parent.following = false } }
+            }
+        }
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            guard userScaleChangePending else { return }
+            userScaleChangePending = false
+            let pointsPerCm = (UIDevice.current.userInterfaceIdiom == .pad ? 132.0 : 163.0) / 2.54
+            let left = mapView.convert(CGPoint(x: 0, y: mapView.bounds.midY), toCoordinateFrom: mapView)
+            let right = mapView.convert(CGPoint(x: mapView.bounds.maxX, y: mapView.bounds.midY), toCoordinateFrom: mapView)
+            let physicalWidthCm = mapView.bounds.width / pointsPerCm
+            guard physicalWidthCm > 0 else { return }
+            let scale = CLLocation(latitude: left.latitude, longitude: left.longitude)
+                .distance(from: CLLocation(latitude: right.latitude, longitude: right.longitude)) / physicalWidthCm
+            guard scale.isFinite, scale > 0, abs(scale - parent.metersPerCm) / parent.metersPerCm > 0.02 else { return }
+            previousScale = min(max(scale, 12.5), 6400)
+            DispatchQueue.main.async { self.parent.onMetersPerCmChanged(min(max(scale, 12.5), 6400)) }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let line = overlay as? LiveLineOverlay {

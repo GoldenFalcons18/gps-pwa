@@ -1367,11 +1367,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCurrentWp.setOnClickListener { addCurrentLocationWaypoint() }
 
         b.btnRelativeMode.setOnClickListener {
+            displayPrefs.edit().putString("compassCenterMode", "relative").apply()
             b.instrumentView.mode = InstrumentView.Mode.RELATIVE
             updateNavigationUi()
             debug("Instrument mode=RELATIVE")
         }
         b.btnAbsoluteMode.setOnClickListener {
+            displayPrefs.edit().putString("compassCenterMode", "absolute").apply()
             b.instrumentView.mode = InstrumentView.Mode.ABSOLUTE
             updateNavigationUi()
             debug("Instrument mode=ABSOLUTE")
