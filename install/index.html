@@ -13,8 +13,8 @@
 <header><img class="app-mark" src="../ios/SailingGPS/Assets.xcassets/AppIcon.appiconset/AppIcon.png" alt="Sailing GPSアイコン" width="72" height="72"><div><h1>Sailing GPS</h1><p>お使いの端末を選んでインストール。<br>このページのURLひとつで共有できます。</p></div></header>
 <div class="grid">
 <section class="card" aria-labelledby="android-heading"><span class="tag">ANDROID</span><h2 id="android-heading">Android版</h2><p class="sub">APKをダウンロードしてインストールします。</p>
-<a class="action" id="android-download" href="https://github.com/GoldenFalcons18/gps-pwa/releases/latest">Android版を取得</a>
-<p class="detail" id="android-version" aria-live="polite">最新版のダウンロードへ進みます</p>
+<a class="action" id="android-download" href="https://github.com/GoldenFalcons18/gps-pwa/releases/latest/download/SailingGpsLogger-v1.8.91.apk">Android版を取得</a>
+<p class="detail" id="android-version" aria-live="polite">最新版 1.8.91 ・ 47.8 MB</p>
 <ol><li>APKファイルをダウンロードして開きます。</li><li>初回に許可を求められたら、使用したブラウザーからのインストールを許可します。</li><li>アプリを開き、位置情報を許可します。</li></ol>
 <p class="note">更新時も同じページから取得できます。すでにインストール済みの場合は、アプリを削除せず上書き更新してください。</p></section>
 <section class="card" aria-labelledby="iphone-heading"><span class="tag">iPHONE / APPLE WATCH</span><h2 id="iphone-heading">iPhone・Watch版</h2><p class="sub">TestFlightからテスト版をインストールします。</p>
@@ -33,7 +33,7 @@
   if(!response.ok)throw Error('release');
   const releases=await response.json();
   const release=releases.find(item=>!item.draft&&!item.prerelease&&/^android-v[0-9]/i.test(item.tag_name||''));
-  const asset=release?.assets?.find(item=>/^SailingGpsLogger(?:-[0-9][0-9.]*)?\.apk$/i.test(item.name||''));
+  const asset=release?.assets?.find(item=>/^SailingGpsLogger(?:-v?[0-9][0-9.]*)?\.apk$/i.test(item.name||''));
   if(!asset)throw Error('asset');
   const url=new URL(asset.browser_download_url);
   if(url.origin!=='https://github.com'||!url.pathname.startsWith('/GoldenFalcons18/gps-pwa/releases/download/'))throw Error('url');
