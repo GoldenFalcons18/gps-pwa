@@ -66,6 +66,8 @@ struct AppleNavigationMapView: UIViewRepresentable {
     let library: MapLibrary
     let showWaypoints: Bool
     let showCourse: Bool
+    let courseLineLengthMeters: Int
+    let courseMarkIntervalMeters: Int
     let track: [CLLocationCoordinate2D]
     let isRecording: Bool
     @Binding var selected: UUID?
@@ -184,8 +186,11 @@ struct AppleNavigationMapView: UIViewRepresentable {
                 map.removeAnnotations(existingDots)
                 return
             }
+            let length = parent.courseLineLengthMeters.clamped(to: 100...5000)
+            let interval = parent.courseMarkIntervalMeters.clamped(to: 25...length)
+            let distances = Array(stride(from: interval, through: length, by: interval))
             var coordinates = [location.coordinate]
-            for distance in stride(from: 100, through: 500, by: 100) {
+            for distance in distances {
                 let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(distance))
                 let coordinate = CLLocationCoordinate2D(latitude: q.latitude, longitude: q.longitude)
                 coordinates.append(coordinate)
@@ -193,6 +198,12 @@ struct AppleNavigationMapView: UIViewRepresentable {
                 if let dot = existingDots.first(where: { $0.title == title }) { dot.coordinate = coordinate }
                 else { let dot = Pin(); dot.kind = "course"; dot.title = title; dot.coordinate = coordinate; map.addAnnotation(dot) }
             }
+            if distances.last != length {
+                let q = CoordinateInput.destination(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, bearing: heading, meters: Double(length))
+                coordinates.append(CLLocationCoordinate2D(latitude: q.latitude, longitude: q.longitude))
+            }
+            let validTitles = Set(distances.map { "\($0) m" })
+            map.removeAnnotations(existingDots.filter { !validTitles.contains($0.title ?? "") })
             courseOverlay.update(coordinates)
             map.renderer(for: courseOverlay)?.setNeedsDisplay()
         }
@@ -223,7 +234,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
             previousScale = p.metersPerCm
             if p.following != wasFollowing { scaleSignature = ""; wasFollowing = p.following }
             let librarySignature = (try? JSONEncoder().encode(p.library)).map { String(decoding:$0,as:UTF8.self) } ?? ""
-            let key = "\(librarySignature)|\(p.waypoints.map{$0.group ?? ""}.joined())|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.showWaypoints)|\(p.showCourse)"
+            let key = "\(librarySignature)|\(p.waypoints.map{$0.group ?? ""}.joined())|\(p.selected?.uuidString ?? "")|\(p.waypoints.map { "\($0.id)|\($0.name)|\($0.latitude)|\($0.longitude)|\($0.colorName ?? "orange")|\($0.markSymbol ?? "flag.fill")|\($0.markText ?? "")" }.joined())|\(p.showWaypoints)|\(p.showCourse)|\(p.courseLineLengthMeters)|\(p.courseMarkIntervalMeters)"
             let staticChanged = key != signature
             if staticChanged {
                 signature = key
