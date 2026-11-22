@@ -104,6 +104,179 @@ private enum OpenFreeMapOfflineStore {
     }
 }
 
+private struct OfflineRegionPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    let initialBounds: SavedMapBounds?
+    let onSave: (MLNCoordinateBounds, Int, Int, String) -> Void
+    @State private var selectedBounds: SavedMapBounds?
+    @State private var minZoom = 8
+    @State private var maxZoom = 12
+    @State private var name = "オフライン地図"
+
+    private var tileCount: Int64 {
+        guard let selectedBounds else { return 0 }
+        return Self.estimate(selectedBounds.value, minZoom: minZoom, maxZoom: maxZoom)
+    }
+    private var saveAllowed: Bool { tileCount > 0 && tileCount <= 3_000 }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 12) {
+                OfflineRegionMap(initial: initialBounds) { bounds, zoom in
+                    selectedBounds = SavedMapBounds(value: bounds, zoom: zoom)
+                    if selectedBounds != nil && maxZoom == 12 {
+                        maxZoom = Int(zoom.rounded()).clamped(to: 4...18)
+                        minZoom = max(4, maxZoom - 2)
+                    }
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 2)
+                        .inset(by: 24)
+                        .stroke(Color.orange, lineWidth: 2)
+                        .allowsHitTesting(false)
+                }
+                .overlay(alignment: .top) {
+                    Text("枠内を保存します · 地図を動かして範囲を選択")
+                        .font(.footnote.bold())
+                        .padding(8)
+                        .frame(maxWidth: .infinity)
+                        .background(.black.opacity(0.65))
+                        .foregroundStyle(.white)
+                        .allowsHitTesting(false)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if let selectedBounds {
+                    let sw = selectedBounds.value.sw
+                    let ne = selectedBounds.value.ne
+                    Text(String(format: "南西 %.4f°, %.4f°   北東 %.4f°, %.4f°", sw.latitude, sw.longitude, ne.latitude, ne.longitude))
+                        .font(.caption.monospacedDigit())
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text("地図範囲を読み込み中…").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                TextField("保存名", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("最小ズーム")
+                        Spacer()
+                        Text("\(minZoom)").monospacedDigit()
+                    }
+                    Slider(value: Binding(
+                        get: { Double(minZoom) },
+                        set: { minZoom = min(Int($0.rounded()), maxZoom) }
+                    ), in: 4...18, step: 1)
+                    HStack {
+                        Text("最大ズーム")
+                        Spacer()
+                        Text("\(maxZoom)").monospacedDigit()
+                    }
+                    Slider(value: Binding(
+                        get: { Double(maxZoom) },
+                        set: { maxZoom = max(Int($0.rounded()), minZoom) }
+                    ), in: 4...18, step: 1)
+                }
+                .font(.footnote)
+                .padding(.horizontal, 4)
+
+                Text(tileCount <= 3_000
+                     ? "保存タイル: \(tileCount.formatted()) / 3,000"
+                     : "保存タイル: \(tileCount.formatted())（上限 3,000。範囲またはズームを小さくしてください）")
+                    .font(.callout.bold())
+                    .foregroundStyle(saveAllowed ? .white : .red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(12)
+            .navigationTitle("オフラインマップ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        guard let selectedBounds, saveAllowed else { return }
+                        onSave(selectedBounds.value, minZoom, maxZoom, name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "オフライン地図" : name)
+                        dismiss()
+                    }.disabled(!saveAllowed)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .tint(.orange)
+    }
+
+    private static func estimate(_ bounds: MLNCoordinateBounds, minZoom: Int, maxZoom: Int) -> Int64 {
+        let west = bounds.sw.longitude, east = bounds.ne.longitude
+        let south = max(-85.05112878, min(85.05112878, bounds.sw.latitude))
+        let north = max(-85.05112878, min(85.05112878, bounds.ne.latitude))
+        guard west.isFinite, east.isFinite, south.isFinite, north.isFinite, south <= north else { return 0 }
+        var total: Int64 = 0
+        for zoom in minZoom...maxZoom {
+            let n = pow(2.0, Double(zoom))
+            let maxIndex = Int64(n) - 1
+            let x0 = Int64(floor((west + 180) / 360 * n)).clamped(to: 0...maxIndex)
+            let x1 = Int64(floor((east + 180) / 360 * n)).clamped(to: 0...maxIndex)
+            func y(_ latitude: Double) -> Int64 {
+                let radians = latitude * .pi / 180
+                return Int64(floor((1 - asinh(tan(radians)) / .pi) / 2 * n)).clamped(to: 0...maxIndex)
+            }
+            let yNorth = y(north), ySouth = y(south)
+            let xCount = east >= west ? x1 - x0 + 1 : maxIndex + 1 - x0 + x1 + 1
+            let rows = ySouth - yNorth + 1
+            if xCount > 3_000 || rows > 3_000 || xCount * rows > 3_000 - total { return 3_001 }
+            total += xCount * rows
+        }
+        return total
+    }
+}
+
+private struct OfflineRegionMap: UIViewRepresentable {
+    let initial: SavedMapBounds?
+    let onViewportChanged: (MLNCoordinateBounds, Double) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onViewportChanged) }
+    func makeUIView(context: Context) -> MLNMapView {
+        let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
+        map.delegate = context.coordinator
+        map.isPitchEnabled = false
+        if let initial {
+            let center = CLLocationCoordinate2D(
+                latitude: (initial.value.sw.latitude + initial.value.ne.latitude) / 2,
+                longitude: (initial.value.sw.longitude + initial.value.ne.longitude) / 2
+            )
+            map.setCenter(center, zoomLevel: initial.zoom, animated: false)
+        } else {
+            map.setCenter(CLLocationCoordinate2D(latitude: 35.30, longitude: 139.48), zoomLevel: 11, animated: false)
+        }
+        return map
+    }
+    func updateUIView(_ map: MLNMapView, context: Context) {
+        context.coordinator.onViewportChanged = onViewportChanged
+    }
+
+    final class Coordinator: NSObject, MLNMapViewDelegate {
+        var onViewportChanged: (MLNCoordinateBounds, Double) -> Void
+        init(_ onViewportChanged: @escaping (MLNCoordinateBounds, Double) -> Void) {
+            self.onViewportChanged = onViewportChanged
+        }
+        func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) { report(mapView) }
+        func mapViewDidFinishLoadingMap(_ mapView: MLNMapView) { report(mapView) }
+        private func report(_ map: MLNMapView) {
+            let inset: CGFloat = 24
+            guard map.bounds.width > inset * 2, map.bounds.height > inset * 2 else { return }
+            let sw = map.convert(CGPoint(x: inset, y: map.bounds.height - inset), toCoordinateFrom: map)
+            let ne = map.convert(CGPoint(x: map.bounds.width - inset, y: inset), toCoordinateFrom: map)
+            onViewportChanged(MLNCoordinateBounds(sw: sw, ne: ne), map.zoomLevel)
+        }
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self { min(max(self, range.lowerBound), range.upperBound) }
+}
+
 private struct OpenFreeMapMapView: UIViewRepresentable {
     let location: CLLocation?
     let heading: Double?
