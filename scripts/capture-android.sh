@@ -135,9 +135,35 @@ PYBOUNDS
 adb shell input tap "$INPUT_X" "$INPUT_Y"
 sleep 1
 adb shell input text MAP_TEST
-sleep 3
+sleep 1
 adb shell input keyevent 4
 sleep 1
+adb shell uiautomator dump /sdcard/waypoint-name.xml >/dev/null
+adb shell cat /sdcard/waypoint-name.xml > screenshots/waypoint-name-window.xml
+ENTERED_NAME=$(python3 - <<'PYNAME'
+import pathlib,xml.etree.ElementTree as E
+root=E.fromstring(pathlib.Path('screenshots/waypoint-name-window.xml').read_text())
+print(next((n.attrib.get('text','') for n in root.iter('node') if n.attrib.get('class')=='android.widget.EditText'), ''))
+PYNAME
+)
+# Android emulator IME intermittently drops the final key; verify the field and complete it if needed.
+if [ "$ENTERED_NAME" = "MAP_TES" ]; then
+  adb shell input tap "$INPUT_X" "$INPUT_Y"
+  adb shell input keyevent 123
+  adb shell input text T
+  sleep 1
+  adb shell input keyevent 4
+  sleep 1
+  adb shell uiautomator dump /sdcard/waypoint-name.xml >/dev/null
+  adb shell cat /sdcard/waypoint-name.xml > screenshots/waypoint-name-window.xml
+  ENTERED_NAME=$(python3 - <<'PYNAME'
+import pathlib,xml.etree.ElementTree as E
+root=E.fromstring(pathlib.Path('screenshots/waypoint-name-window.xml').read_text())
+print(next((n.attrib.get('text','') for n in root.iter('node') if n.attrib.get('class')=='android.widget.EditText'), ''))
+PYNAME
+)
+fi
+[ "$ENTERED_NAME" = "MAP_TEST" ]
 adb exec-out screencap -p > screenshots/Android-map-name-entered.png
 adb shell input tap "$SAVE_X" "$SAVE_Y"
 sleep 2
