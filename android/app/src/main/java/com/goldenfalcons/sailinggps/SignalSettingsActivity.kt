@@ -77,8 +77,8 @@ class SignalSettingsActivity : AppCompatActivity() {
         section("Fleet Start Sequences")
         row("フリート手順を管理", "選択・編集") { navigate(Page("fleets", "Fleet Start Sequences")) }
         section("旗の設定")
-        row("クラス旗を編集", "編集") { navigate(Page("flags", "旗の設定")) }
-        row("国際信号旗", "一覧") { navigate(Page("flags", "旗の設定")) }
+        row("クラス旗を編集", "編集") { flagEditor() }
+        row("国際信号旗", "一覧") { internationalFlags() }
     }
 
     private fun buildFleetList() {
