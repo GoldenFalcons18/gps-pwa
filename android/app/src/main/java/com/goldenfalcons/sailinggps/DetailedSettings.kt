@@ -11,7 +11,7 @@ import androidx.core.app.NotificationManagerCompat
 
 /** Each change persists immediately, and the instrument screen reads the same preferences. */
 class DetailedSettings(private val activity:Activity,private val library:MapLibrary,private val folders:List<String>,
-    private val currentFolder:String,private val gpsStatus:String,private val refresh:()->Unit) {
+    private val currentFolder:String,private val gpsStatus:String,private val openOfflineMap:()->Unit = {},private val refresh:()->Unit) {
     private val prefs=activity.getSharedPreferences("display",Context.MODE_PRIVATE)
     private fun menu(title:String,items:List<Pair<String,()->Unit>>) = menuSections(title,listOf("" to items))
     private fun menuSections(title:String,sections:List<Pair<String,List<Pair<String,()->Unit>>>>) {
@@ -219,7 +219,8 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "進路ライン・距離目盛り：${if(bool("showCourse")) "ON" else "OFF"}" to {prefs.edit().putBoolean("showCourse",!bool("showCourse")).apply();refresh();map()},
         "進路ラインの長さ：${prefs.getInt("courseLineLengthMeters",500)}m" to {number("進路ラインの長さ","courseLineLengthMeters",listOf(250,500,1000,2500,5000),500,"m")},
         "距離目盛りの間隔：${prefs.getInt("courseMarkIntervalMeters",100)}m" to {number("距離目盛りの間隔","courseMarkIntervalMeters",listOf(25,50,100,250,500),100,"m")},
-        "オフライン地図について" to {message("オフライン地図について","地図画面右側の「保存」から、表示中の範囲を端末に保存できます。1回につき最大3,000タイルまたは50MBまでです。保存範囲を選ぶときにタイル数を確認します。保存地図の一時停止・再開・削除は同じメニューから行えます。OpenFreeMapを利用するため、地図データの通信にはインターネットが必要です。")},
+        "オフライン地図を保存・管理" to {openOfflineMap()},
+        "オフライン地図について" to {message("オフライン地図について","地図範囲の選択と最大ズームの確認は専用画面で行います。範囲を選んで保存した地図は端末内に保存され、同じ画面から一時停止・再開・削除できます。")},
         "縮尺・地点表示について" to {message("地図について","地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。地図データ：OpenFreeMap（© OpenStreetMap contributors）")}))
     private fun zones():Unit=menu("ゾーンアラート",listOf(
         toggle("有効","zoneEnabled",false),"監視するエリアを選択" to ::selectZones,
