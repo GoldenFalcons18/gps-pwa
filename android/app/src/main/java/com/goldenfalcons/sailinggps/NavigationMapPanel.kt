@@ -597,7 +597,16 @@ class NavigationMapPanel(
         }
         root.addView(content, ScrollView.LayoutParams(-1, -2))
         val mapFrame = FrameLayout(appContext)
-        val preview = MapView(appContext).apply { onCreate(null) }
+        val preview = MapView(appContext).apply {
+            onCreate(null)
+            setOnTouchListener { view, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> view.parent?.requestDisallowInterceptTouchEvent(true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                false
+            }
+        }
         mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(250)))
         mapFrame.addView(OfflineRegionFrame(appContext), FrameLayout.LayoutParams(-1, -1))
         content.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(250)))
