@@ -66,7 +66,9 @@ class SignalSettingsActivity : AppCompatActivity() {
         row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "Siri Japanese", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
         valueRow("時刻サーバー", "ntp.nict.jp")
-        row("時刻サーバーと同期", prefs.getString("signalClockSyncStatus", "今すぐ同期") ?: "今すぐ同期") { clockAlignment() }
+        val clockOffsetMs = prefs.getLong("signalClockOffsetMs", 0L)
+        val syncStatus = if (clockOffsetMs == 0L) "未同期" else "同期済み（補正 %+.3f 秒）".format(clockOffsetMs / 1000.0)
+        row(syncStatus, "今すぐ同期") { clockAlignment() }
         row("秒を00に合わせる", "アプリ時刻を基準") { alignClockZero() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
