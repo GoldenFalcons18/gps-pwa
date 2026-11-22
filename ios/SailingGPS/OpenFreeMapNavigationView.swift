@@ -338,6 +338,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
         private var waypointSignature = ""
         private var cameraUpdateInProgress = false
         private var previousMetersPerCm: Double?
+        private var followZoomOffset: Double?
         private var lastTrackRecording: Bool?
         private var userScaleChangePending = false
 
@@ -395,7 +396,8 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
 
             if parent.following, let location = parent.location {
                 cameraUpdateInProgress = true
-                let zoom = min(18, max(5, 17 - log2(max(parent.metersPerCm, 12.5) / 25)))
+                let baseZoom = 17 - log2(max(parent.metersPerCm, 12.5) / 25)
+                let zoom = min(18, max(5, baseZoom + (followZoomOffset ?? 0)))
                 map.setCenter(location.coordinate, zoomLevel: zoom, direction: parent.heading ?? 0, animated: false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self.cameraUpdateInProgress = false }
             }
@@ -512,6 +514,8 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 .distance(from: CLLocation(latitude: right.latitude, longitude: right.longitude)) / physicalWidthCm
             guard scale.isFinite, scale > 0, abs(scale - parent.metersPerCm) / parent.metersPerCm > 0.02 else { return }
             let calibratedScale = min(max(scale, 12.5), 6400)
+            let baseZoom = 17 - log2(max(calibratedScale, 12.5) / 25)
+            followZoomOffset = mapView.zoomLevel - baseZoom
             previousMetersPerCm = calibratedScale
             DispatchQueue.main.async { self.parent.onMetersPerCmChanged(calibratedScale) }
         }
