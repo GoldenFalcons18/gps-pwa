@@ -606,21 +606,22 @@ class NavigationMapPanel(
         boundsText.setPadding(0, dp(6), 0, dp(4))
         content.addView(boundsText)
         var previewMinimumZoom = true
+        var updateEstimateAction: (() -> Unit)? = null
         val previewSelector = LinearLayout(appContext).apply { orientation = LinearLayout.HORIZONTAL }
         lateinit var minPreviewButton: Button
         lateinit var maxPreviewButton: Button
         minPreviewButton = Button(appContext).apply {
             text = "最小ズーム"
-            setOnClickListener { previewMinimumZoom = true; updateEstimate() }
+            setOnClickListener { previewMinimumZoom = true; updateEstimateAction?.invoke() }
         }
         maxPreviewButton = Button(appContext).apply {
             text = "最大ズーム"
-            setOnClickListener { previewMinimumZoom = false; updateEstimate() }
+            setOnClickListener { previewMinimumZoom = false; updateEstimateAction?.invoke() }
         }
         previewSelector.addView(minPreviewButton, LinearLayout.LayoutParams(0, dp(42), 1f))
         previewSelector.addView(maxPreviewButton, LinearLayout.LayoutParams(0, dp(42), 1f))
         content.addView(previewSelector)
-        val maxPreviewTitle = text("最小ズーム " + minZoom + " の見え方", 13f)
+        val maxPreviewTitle = text("最小ズームの見え方", 13f)
         content.addView(maxPreviewTitle)
         val zoomPreviewView = MapView(appContext).apply { onCreate(null) }
         content.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
@@ -679,6 +680,7 @@ class NavigationMapPanel(
                 "保存タイル: $tiles / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}"
             else "保存タイル: $tiles（上限超過。範囲またはズームを小さくしてください）"
         }
+        updateEstimateAction = { updateEstimate() }
         minSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 minZoom = progress.coerceAtMost(maxZoom)
