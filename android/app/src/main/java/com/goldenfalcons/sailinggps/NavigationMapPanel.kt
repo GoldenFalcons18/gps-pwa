@@ -206,7 +206,7 @@ class NavigationMapPanel(
     fun setDisplayOptions(waypointsVisible: Boolean, courseVisible: Boolean) {
         showWaypoints = waypointsVisible
         showCourse = courseVisible
-        applyVisibility()
+        refreshAll()
     }
 
     private fun installLayers(style: Style) {
@@ -336,17 +336,23 @@ class NavigationMapPanel(
         setSource("trail", listOfNotNull(lineFeature(track, JSONObject().put("color", if (trackRecording) "#FFAA00" else "#808080"))))
         val targetPoints = listOfNotNull(current, target)
         setSource("target", listOfNotNull(lineFeature(targetPoints)))
+        val displayPrefs = appContext.getSharedPreferences("display", Context.MODE_PRIVATE)
+        val courseLength = displayPrefs.getInt("courseLineLengthMeters", 500).coerceIn(100, 5000)
+        val markInterval = displayPrefs.getInt("courseMarkIntervalMeters", 100).coerceIn(25, courseLength)
+        val markDistances = generateSequence(markInterval) { it + markInterval }.takeWhile { it <= courseLength }.toList()
         setSource("course", if (current != null && lastHeading != null) {
             val origin = current!!
-            val projected = (100..500 step 100).map { d ->
-                DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, d.toDouble())
+            val projected = markDistances.map { distance ->
+                DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, distance.toDouble())
                     .let { LatLng(it.first, it.second) }
             }
-            listOfNotNull(lineFeature(listOf(origin) + projected))
+            val end = DisplayNavigation.destination(origin.latitude, origin.longitude, lastHeading!!, courseLength.toDouble())
+                .let { LatLng(it.first, it.second) }
+            listOfNotNull(lineFeature(listOf(origin) + projected + end))
         } else emptyList())
         setSource("course-dots", if (current != null && lastHeading != null) {
-            (100..500 step 100).map { d ->
-                val p = DisplayNavigation.destination(current!!.latitude, current!!.longitude, lastHeading!!, d.toDouble())
+            markDistances.map { distance ->
+                val p = DisplayNavigation.destination(current!!.latitude, current!!.longitude, lastHeading!!, distance.toDouble())
                 pointFeature(p.first, p.second)
             }
         } else emptyList())
