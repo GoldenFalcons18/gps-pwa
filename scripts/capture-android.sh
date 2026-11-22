@@ -149,7 +149,7 @@ items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 assert len(items)==4,items
 point=items[-1]
 assert point['name'].startswith('MAP_TE') and len(point['name'])>=7,point
-assert -90<=point['lat']<=90 and -180<=point['lon']<=180
+assert -90<=point['lat']<=90 and -180<=point['lon']<=180,point
 assert abs(point['lat']-35.318)+abs(point['lon']-139.467)>0.0001,point
 assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
 print('Map long press saved a separate coordinate and selected the new target')
