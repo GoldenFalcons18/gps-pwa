@@ -322,6 +322,7 @@ struct AppleNavigationMapView: UIViewRepresentable {
             let scale = CLLocation(latitude: left.latitude, longitude: left.longitude)
                 .distance(from: CLLocation(latitude: right.latitude, longitude: right.longitude)) / physicalWidthCm
             guard scale.isFinite, scale > 0, abs(scale - parent.metersPerCm) / parent.metersPerCm > 0.02 else { return }
+            previousScale = min(max(scale, 12.5), 6400)
             DispatchQueue.main.async { self.parent.onMetersPerCmChanged(min(max(scale, 12.5), 6400)) }
         }
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
