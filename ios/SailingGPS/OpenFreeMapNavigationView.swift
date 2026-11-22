@@ -53,11 +53,6 @@ struct NavigationMapView: View {
                     createWaypoint: createWaypoint,
                     onViewportChanged: { bounds, zoom in visibleBounds = SavedMapBounds(value: bounds, zoom: zoom) }
                 )
-                .overlay(alignment: .bottomTrailing) {
-                    Button("地図を保存") { showOfflinePicker = true }
-                        .font(.caption).buttonStyle(.borderedProminent).tint(.orange)
-                        .foregroundStyle(.black).padding(8)
-                }
                 .fullScreenCover(isPresented: $showOfflinePicker) {
                     OfflineRegionPickerView(initialBounds: visibleBounds) { bounds, minZoom, maxZoom, name in
                         OpenFreeMapOfflineStore.save(bounds: bounds, minZoom: minZoom, maxZoom: maxZoom, name: name) { message in
@@ -123,6 +118,7 @@ struct OfflineRegionPickerView: View {
     @State private var maxZoom = 12
     @State private var name = "オフライン地図"
     @State private var didInitializeZoom = false
+    @State private var previewMinimumZoom = true
 
     private var tileCount: Int64 {
         guard let selectedBounds else { return 0 }
@@ -132,7 +128,8 @@ struct OfflineRegionPickerView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            ScrollView {
+                VStack(spacing: 12) {
                 OfflineRegionMap(initial: initialBounds) { bounds, zoom in
                     selectedBounds = SavedMapBounds(value: bounds, zoom: zoom)
                     if !didInitializeZoom {
@@ -170,10 +167,18 @@ struct OfflineRegionPickerView: View {
                     Text("地図範囲を読み込み中…").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Text("最大ズーム \(maxZoom) の地図表示").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    Button("最小ズーム") { previewMinimumZoom = true }
+                        .buttonStyle(.bordered).tint(previewMinimumZoom ? .orange : .gray)
+                    Button("最大ズーム") { previewMinimumZoom = false }
+                        .buttonStyle(.bordered).tint(previewMinimumZoom ? .gray : .orange)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text("\(previewMinimumZoom ? "最小" : "最大")ズーム \(previewMinimumZoom ? minZoom : maxZoom) の地図表示")
+                    .font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
                 OfflineZoomPreviewMap(
                     bounds: selectedBounds ?? initialBounds,
-                    zoom: Double(maxZoom)
+                    zoom: Double(previewMinimumZoom ? minZoom : maxZoom)
                 )
                 .frame(height: 145)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
