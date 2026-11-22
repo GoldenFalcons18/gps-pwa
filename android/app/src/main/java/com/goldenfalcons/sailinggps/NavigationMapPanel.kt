@@ -1,7 +1,10 @@
 package com.goldenfalcons.sailinggps
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PointF
 import android.view.Gravity
 import android.view.MotionEvent
@@ -9,6 +12,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.AppCompatEditText
@@ -39,6 +44,7 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 /** OpenFreeMap rendering with the same navigation overlays and GPS samples as the recorder. */
 class NavigationMapPanel(
@@ -530,56 +536,154 @@ class NavigationMapPanel(
             .show()
     }
 
-    private fun askOfflineZoom() {
-        val bounds = visibleBounds() ?: run {
-            Toast.makeText(appContext, "地図の準備ができてからお試しください", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val readyMap = map ?: return
-        val max = floor(readyMap.cameraPosition.zoom).toInt().coerceIn(6, 17)
-        val candidates = (max downTo (max - 6).coerceAtLeast(0)).mapNotNull { high ->
-            val low = (high - 2).coerceAtLeast(0)
-            val tiles = OpenFreeMapConfig.estimateTileCount(
-                bounds.longitudeWest, bounds.latitudeSouth, bounds.longitudeEast, bounds.latitudeNorth, low, high
-            )
-            if (tiles <= OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD) "${low}〜${high}（約${tiles}タイル）" to (low to high) else null
-        }
-        if (candidates.isEmpty()) {
-            AlertDialog.Builder(appContext).setTitle("保存範囲が広すぎます")
-                .setMessage("地図を拡大して範囲を小さくしてから、もう一度お試しください。")
-                .setPositiveButton("閉じる", null).show()
-            return
-        }
-        AlertDialog.Builder(appContext).setTitle("保存する地図の詳しさ")
-            .setItems(candidates.map { it.first }.toTypedArray()) { _, index ->
-                askOfflineName(bounds, candidates[index].second.first, candidates[index].second.second)
-            }
-            .setNegativeButton("キャンセル", null).show()
-    }
+    private fun askOfflineZoom() = showOfflineRegionPicker()
 
-    private fun askOfflineName(bounds: LatLngBounds, minZoom: Int, maxZoom: Int) {
-        val input = AppCompatEditText(appContext).apply { hint = "保存名"; setSingleLine(true) }
-        AlertDialog.Builder(appContext).setTitle("保存地図の名前")
-            .setView(input)
-            .setMessage("1回の保存は最大3,000タイル・50MBです。")
-            .setPositiveButton("保存") { _, _ ->
-                val name = input.text?.toString()?.trim().orEmpty().ifBlank { "保存地図" }
+    private fun showOfflineRegionPicker() {
+        val sourceMap = map ?: return
+        val initialCamera = sourceMap.cameraPosition
+        val density = appContext.resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).roundToInt()
+        fun text(value: String, size: Float = 14f) = TextView(appContext).apply {
+            this.text = value
+            textSize = size
+            setTextColor(Color.WHITE)
+        }
+        val root = LinearLayout(appContext).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(8), dp(12), dp(4))
+        }
+        val mapFrame = FrameLayout(appContext)
+        val preview = MapView(appContext).apply { onCreate(null) }
+        mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(300)))
+        mapFrame.addView(OfflineRegionFrame(appContext), FrameLayout.LayoutParams(-1, -1))
+        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(300)))
+
+        val boundsText = text("地図を読み込み中…", 12f)
+        boundsText.setPadding(0, dp(8), 0, dp(6))
+        root.addView(boundsText)
+        val nameInput = AppCompatEditText(appContext).apply {
+            hint = "保存名"
+            setSingleLine(true)
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.LTGRAY)
+            setText("オフライン地図")
+        }
+        root.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
+
+        var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
+        var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
+        val minLabel = text("最小ズーム: $minZoom")
+        val minSeek = SeekBar(appContext).apply { max = 18; progress = minZoom }
+        val maxLabel = text("最大ズーム: $maxZoom")
+        val maxSeek = SeekBar(appContext).apply { max = 18; progress = maxZoom }
+        val countLabel = text("保存タイル: -- / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}", 13f)
+        root.addView(minLabel)
+        root.addView(minSeek, LinearLayout.LayoutParams(-1, dp(36)))
+        root.addView(maxLabel)
+        root.addView(maxSeek, LinearLayout.LayoutParams(-1, dp(36)))
+        root.addView(countLabel)
+
+        var selectedBounds: LatLngBounds? = null
+        fun updateEstimate() {
+            val bounds = selectedBounds
+            if (bounds == null) {
+                boundsText.text = "地図範囲を読み込み中…"
+                countLabel.text = "保存タイル: -- / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}"
+                return
+            }
+            boundsText.text = "枠内の範囲  南西 %.4f°, %.4f° 〜 北東 %.4f°, %.4f°".format(
+                java.util.Locale.US, bounds.latitudeSouth, bounds.longitudeWest,
+                bounds.latitudeNorth, bounds.longitudeEast
+            )
+            val tiles = OpenFreeMapConfig.estimateTileCount(
+                bounds.longitudeWest, bounds.latitudeSouth, bounds.longitudeEast, bounds.latitudeNorth, minZoom, maxZoom
+            )
+            countLabel.text = if (tiles <= OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD)
+                "保存タイル: $tiles / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}"
+            else "保存タイル: $tiles（上限超過。範囲またはズームを小さくしてください）"
+        }
+        minSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                minZoom = progress.coerceAtMost(maxZoom)
+                minLabel.text = "最小ズーム: $minZoom"
+                updateEstimate()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        maxSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                maxZoom = progress.coerceAtLeast(minZoom)
+                maxLabel.text = "最大ズーム: $maxZoom"
+                updateEstimate()
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        val dialog = AlertDialog.Builder(appContext)
+            .setTitle("オフライン地図の保存範囲")
+            .setView(root)
+            .setNegativeButton("キャンセル", null)
+            .setPositiveButton("ダウンロード開始", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setLayout(-1, (appContext.resources.displayMetrics.heightPixels * 0.86).toInt())
+            preview.onStart()
+            preview.onResume()
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val bounds = selectedBounds
+                if (bounds == null) {
+                    Toast.makeText(appContext, "地図範囲を取得できませんでした", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                val tiles = OpenFreeMapConfig.estimateTileCount(
+                    bounds.longitudeWest, bounds.latitudeSouth, bounds.longitudeEast, bounds.latitudeNorth, minZoom, maxZoom
+                )
+                if (tiles !in 1..OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD) {
+                    Toast.makeText(appContext, "範囲またはズームを小さくしてください", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                val name = nameInput.text?.toString()?.trim().orEmpty().ifBlank { "オフライン地図" }
                 offlineStore.createRegion(
                     name, bounds, minZoom.toDouble(), maxZoom.toDouble(),
                     OpenFreeMapConfig.styleUrl(styleName),
-                    { _, bytes, tiles, pausedBySize ->
+                    { _, bytes, count, pausedBySize ->
                         if (pausedBySize) Toast.makeText(
                             appContext,
-                            "保存を安全のため一時停止しました（約${tiles}タイル / ${bytes / 1024 / 1024}MB）。範囲を小さくして再保存してください。",
+                            "保存を安全のため一時停止しました（約$countタイル / ${bytes / 1024 / 1024}MB）。範囲を小さくして再保存してください。",
                             Toast.LENGTH_LONG
                         ).show()
-                        else if (tiles > 0 && tiles % 100L == 0L) log("Offline map / $name / $tiles tiles")
+                        else if (count > 0 && count % 100L == 0L) log("Offline map / $name / $count tiles")
                     },
                     { error -> Toast.makeText(appContext, error, Toast.LENGTH_LONG).show() }
                 )
-                Toast.makeText(appContext, "地図の保存を開始しました", Toast.LENGTH_SHORT).show()
+                Toast.makeText(appContext, "「$name」の保存を開始しました", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
             }
-            .setNegativeButton("キャンセル", null).show()
+        }
+        dialog.setOnDismissListener {
+            preview.onPause()
+            preview.onStop()
+            preview.onDestroy()
+        }
+        preview.getMapAsync { previewMap ->
+            previewMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
+                previewMap.cameraPosition = CameraPosition.Builder(initialCamera).build()
+                fun refreshBounds() {
+                    if (preview.width <= 0 || preview.height <= 0) return
+                    val insetX = preview.width * 0.08f
+                    val insetY = preview.height * 0.10f
+                    val nw = previewMap.projection.fromScreenLocation(PointF(insetX, insetY))
+                    val se = previewMap.projection.fromScreenLocation(PointF(preview.width - insetX, preview.height - insetY))
+                    selectedBounds = runCatching { LatLngBounds.Builder().include(nw).include(se).build() }.getOrNull()
+                    updateEstimate()
+                }
+                previewMap.addOnCameraIdleListener { refreshBounds() }
+                preview.post { refreshBounds() }
+            }
+        }
+        dialog.show()
     }
 
     private fun listOfflineMaps() {
@@ -633,3 +737,24 @@ class NavigationMapPanel(
             .setNegativeButton("キャンセル", null).show()
     }
 }
+
+    private class OfflineRegionFrame(context: Context) : View(context) {
+        private val density = resources.displayMetrics.density
+        private val shade = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(145, 0, 0, 0); style = Paint.Style.FILL }
+        private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(255, 153, 0); style = Paint.Style.STROKE; strokeWidth = 2.5f * density
+        }
+        init { isClickable = false; isFocusable = false }
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val insetX = width * 0.08f
+            val insetY = height * 0.10f
+            val mask = Path().apply {
+                fillType = Path.FillType.EVEN_ODD
+                addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW)
+                addRect(insetX, insetY, width - insetX, height - insetY, Path.Direction.CW)
+            }
+            canvas.drawPath(mask, shade)
+            canvas.drawRect(insetX, insetY, width - insetX, height - insetY, border)
+        }
+    }
