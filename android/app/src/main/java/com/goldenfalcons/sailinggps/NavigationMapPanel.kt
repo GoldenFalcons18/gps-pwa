@@ -76,6 +76,8 @@ class NavigationMapPanel(
     private var destroyed = false
     private var lastTrackPoint: LatLng? = null
     private var lastFollowLogAt = 0L
+    private var pendingManualZoom: Double? = null
+    private var followZoomOffset = 0.0
     private val offlineStore by lazy { OpenFreeMapOfflineStore(appContext) }
     var onFollowingChanged: ((Boolean) -> Unit)? = null
 
@@ -118,7 +120,10 @@ class NavigationMapPanel(
                 true
             }
             readyMap.addOnCameraMoveStartedListener { reason ->
-                if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) setFollowing(false)
+                if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                    pendingManualZoom = null
+                    setFollowing(false)
+                }
             }
             readyMap.addOnCameraIdleListener {
                 if (!following) synchronizeScaleFromCamera(readyMap)
@@ -426,9 +431,13 @@ class NavigationMapPanel(
             metersPerCm = (metersPerCm / 2.0.pow(delta)).coerceIn(12.5, 6400.0)
             applyFollow()
         } else {
+            // Accumulate taps against the requested camera zoom, not the intermediate
+            // camera position while MapLibre is still animating the previous tap.
             val currentPosition = readyMap.cameraPosition
+            val targetZoom = ((pendingManualZoom ?: currentPosition.zoom) + delta).coerceIn(2.0, 20.0)
+            pendingManualZoom = targetZoom
             readyMap.animateCamera(CameraUpdateFactory.newCameraPosition(
-                CameraPosition.Builder(currentPosition).zoom((currentPosition.zoom + delta).coerceIn(2.0, 20.0)).build()
+                CameraPosition.Builder(currentPosition).zoom(targetZoom).build()
             ), 180)
         }
     }
@@ -444,6 +453,10 @@ class NavigationMapPanel(
             pixelsPerCm / 2.0.pow(camera.zoom)
         if (metersPerCmAtCenter.isFinite() && metersPerCmAtCenter > 0) {
             metersPerCm = metersPerCmAtCenter.coerceIn(12.5, 6400.0)
+            val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
+            val baseZoom = DisplayNavigation.zoom(cameraTarget.latitude, dpi / 2.54, metersPerCm)
+            followZoomOffset = camera.zoom - baseZoom
+            pendingManualZoom = null
         }
     }
 
@@ -452,7 +465,7 @@ class NavigationMapPanel(
         val point = current ?: return
         val metrics = mapView.resources.displayMetrics
         val dpi = metrics.xdpi.takeIf { it.isFinite() && it > 50f } ?: metrics.densityDpi.toFloat()
-        val zoom = DisplayNavigation.zoom(point.latitude, dpi / 2.54, metersPerCm).coerceIn(2.0, 20.0)
+        val zoom = (DisplayNavigation.zoom(point.latitude, dpi / 2.54, metersPerCm) + followZoomOffset).coerceIn(2.0, 20.0)
         readyMap.cameraPosition = CameraPosition.Builder()
             .target(point)
             .zoom(zoom)
