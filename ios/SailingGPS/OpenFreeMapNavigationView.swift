@@ -27,10 +27,6 @@ struct NavigationMapView: View {
     @AppStorage("courseLineLengthMeters") private var courseLineLengthMeters = 500
     @AppStorage("courseMarkIntervalMeters") private var courseMarkIntervalMeters = 100
     @State private var visibleBounds: SavedMapBounds?
-    @State private var showOfflinePicker = false
-    @State private var showSaveResult = false
-    @State private var saveMessage = ""
-
     var body: some View {
         Group {
             if provider == "openfreemap" {
@@ -53,22 +49,6 @@ struct NavigationMapView: View {
                     createWaypoint: createWaypoint,
                     onViewportChanged: { bounds, zoom in visibleBounds = SavedMapBounds(value: bounds, zoom: zoom) }
                 )
-                .overlay(alignment: .bottomTrailing) {
-                    Button("地図を保存") { showOfflinePicker = true }
-                        .font(.caption).buttonStyle(.borderedProminent).tint(.orange)
-                        .foregroundStyle(.black).padding(8)
-                }
-                .fullScreenCover(isPresented: $showOfflinePicker) {
-                    OfflineRegionPickerView(initialBounds: visibleBounds) { bounds, minZoom, maxZoom, name in
-                        OpenFreeMapOfflineStore.save(bounds: bounds, minZoom: minZoom, maxZoom: maxZoom, name: name) { message in
-                            saveMessage = message
-                            showSaveResult = true
-                        }
-                    }
-                }
-                .alert("地図の保存", isPresented: $showSaveResult) {
-                    Button("閉じる") { saveMessage = "" }
-                } message: { Text(saveMessage) }
             } else {
                 AppleNavigationMapView(
                     location: location, heading: heading, waypoints: waypoints, library: library,
@@ -123,6 +103,7 @@ struct OfflineRegionPickerView: View {
     @State private var maxZoom = 12
     @State private var name = "オフライン地図"
     @State private var didInitializeZoom = false
+    @State private var previewMinimumZoom = true
 
     private var tileCount: Int64 {
         guard let selectedBounds else { return 0 }
@@ -132,7 +113,8 @@ struct OfflineRegionPickerView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            ScrollView {
+                VStack(spacing: 12) {
                 OfflineRegionMap(initial: initialBounds) { bounds, zoom in
                     selectedBounds = SavedMapBounds(value: bounds, zoom: zoom)
                     if !didInitializeZoom {
@@ -170,10 +152,18 @@ struct OfflineRegionPickerView: View {
                     Text("地図範囲を読み込み中…").font(.caption).frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Text("最大ズーム \(maxZoom) の地図表示").font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    Button("最小ズーム") { previewMinimumZoom = true }
+                        .buttonStyle(.bordered).tint(previewMinimumZoom ? .orange : .gray)
+                    Button("最大ズーム") { previewMinimumZoom = false }
+                        .buttonStyle(.bordered).tint(previewMinimumZoom ? .gray : .orange)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text("\(previewMinimumZoom ? "最小" : "最大")ズーム \(previewMinimumZoom ? minZoom : maxZoom) の地図表示")
+                    .font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
                 OfflineZoomPreviewMap(
                     bounds: selectedBounds ?? initialBounds,
-                    zoom: Double(maxZoom)
+                    zoom: Double(previewMinimumZoom ? minZoom : maxZoom)
                 )
                 .frame(height: 145)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -211,7 +201,8 @@ struct OfflineRegionPickerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(12)
-            .navigationTitle("オフラインマップ")
+        }
+        .navigationTitle("オフラインマップ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }

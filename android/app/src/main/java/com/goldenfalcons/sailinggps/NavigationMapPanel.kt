@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.SeekBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -92,6 +93,17 @@ class NavigationMapPanel(
         styleName = context.getSharedPreferences("display", Context.MODE_PRIVATE)
             .getString("mapStyle", "liberty") ?: "liberty"
         mapView = MapView(context)
+        // Keep pan, pinch and long-press map gestures inside the map instead of
+        // letting the dashboard ScrollView steal the touch sequence.
+        mapView.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE ->
+                    view.parent?.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                    view.parent?.requestDisallowInterceptTouchEvent(false)
+            }
+            false
+        }
         mapView.onCreate(null)
         mapView.getMapAsync { readyMap ->
             map = readyMap
@@ -135,29 +147,32 @@ class NavigationMapPanel(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
         }
-        listOf("＋" to "地図を拡大", "−" to "地図を縮小", "保存" to "オフライン地図").forEachIndexed { index, entry ->
+        listOf("＋" to "地図を拡大", "−" to "地図を縮小").forEachIndexed { index, entry ->
             controls.addView(Button(context).apply {
                 text = entry.first
                 contentDescription = entry.second
+                textSize = 20f
                 isAllCaps = false
-                setOnClickListener {
-                    when (index) {
-                        0 -> zoomBy(1.0)
-                        1 -> zoomBy(-1.0)
-                        else -> showOfflineMenu()
-                    }
+                setTextColor(Color.WHITE)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = 8 * context.resources.displayMetrics.density
+                    setColor(Color.argb(220, 20, 20, 20))
                 }
+                setPadding(0, 0, 0, 0)
+                minWidth = 0
+                minHeight = 0
+                setOnClickListener { zoomBy(if (index == 0) 1.0 else -1.0) }
             }, LinearLayout.LayoutParams(
-                (50 * context.resources.displayMetrics.density).toInt(),
-                (48 * context.resources.displayMetrics.density).toInt()
-            ))
+                (40 * context.resources.displayMetrics.density).toInt(),
+                (40 * context.resources.displayMetrics.density).toInt()
+            ).apply { bottomMargin = (4 * context.resources.displayMetrics.density).toInt() })
         }
         container.addView(controls, FrameLayout.LayoutParams(-2, -2, Gravity.END or Gravity.CENTER_VERTICAL))
 
         val density = context.resources.displayMetrics.density
         val locate = Button(context).apply {
             text = "➤"
-            textSize = 27f
+            textSize = 22f
             rotation = -45f
             setTextColor(Color.WHITE)
             isAllCaps = false
@@ -170,7 +185,7 @@ class NavigationMapPanel(
             setOnClickListener { followLocation() }
         }
         container.addView(locate, FrameLayout.LayoutParams(
-            (48 * density).toInt(), (48 * density).toInt(),
+            (40 * density).toInt(), (40 * density).toInt(),
             Gravity.BOTTOM or Gravity.START
         ).apply {
             leftMargin = (8 * density).toInt()
@@ -586,35 +601,65 @@ class NavigationMapPanel(
             textSize = size
             setTextColor(Color.WHITE)
         }
-        val root = LinearLayout(appContext).apply {
+        val root = ScrollView(appContext)
+        val content = LinearLayout(appContext).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(8), dp(12), dp(4))
+            setPadding(dp(12), dp(8), dp(12), dp(12))
         }
+        root.addView(content, android.view.ViewGroup.LayoutParams(-1, -2))
         val mapFrame = FrameLayout(appContext)
-        val preview = MapView(appContext).apply { onCreate(null) }
+        val preview = MapView(appContext).apply {
+            onCreate(null)
+            setOnTouchListener { view, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> view.parent?.requestDisallowInterceptTouchEvent(true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                false
+            }
+        }
         mapFrame.addView(preview, FrameLayout.LayoutParams(-1, dp(250)))
         mapFrame.addView(OfflineRegionFrame(appContext), FrameLayout.LayoutParams(-1, -1))
-        root.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(250)))
+        content.addView(mapFrame, LinearLayout.LayoutParams(-1, dp(250)))
 
         val boundsText = text("地図を読み込み中…", 12f)
         boundsText.setPadding(0, dp(6), 0, dp(4))
-        root.addView(boundsText)
-        val maxPreviewTitle = text("最大ズームの見え方", 13f)
-        root.addView(maxPreviewTitle)
+        content.addView(boundsText)
+        var previewMinimumZoom = true
+        var updateEstimateAction: (() -> Unit)? = null
+        val previewSelector = LinearLayout(appContext).apply { orientation = LinearLayout.HORIZONTAL }
+        lateinit var minPreviewButton: Button
+        lateinit var maxPreviewButton: Button
+        minPreviewButton = Button(appContext).apply {
+            text = "最小ズーム"
+            setOnClickListener { previewMinimumZoom = true; updateEstimateAction?.invoke() }
+        }
+        maxPreviewButton = Button(appContext).apply {
+            text = "最大ズーム"
+            setOnClickListener { previewMinimumZoom = false; updateEstimateAction?.invoke() }
+        }
+        previewSelector.addView(minPreviewButton, LinearLayout.LayoutParams(0, dp(42), 1f))
+        previewSelector.addView(maxPreviewButton, LinearLayout.LayoutParams(0, dp(42), 1f))
+        content.addView(previewSelector)
+        val maxPreviewTitle = text("最小ズームの見え方", 13f)
+        content.addView(maxPreviewTitle)
         val zoomPreviewView = MapView(appContext).apply { onCreate(null) }
-        root.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
+        content.addView(zoomPreviewView, LinearLayout.LayoutParams(-1, dp(145)))
         var zoomPreviewMap: MapLibreMap? = null
         var selectedBounds: LatLngBounds? = null
         var minZoom = (floor(initialCamera.zoom).toInt() - 2).coerceIn(4, 18)
         var maxZoom = floor(initialCamera.zoom).toInt().coerceIn(4, 18)
         fun updateZoomPreview() {
-            maxPreviewTitle.text = "最大ズーム $maxZoom の見え方（保存範囲とは別に確認）"
+            val shownZoom = if (previewMinimumZoom) minZoom else maxZoom
+            maxPreviewTitle.text = (if (previewMinimumZoom) "最小" else "最大") + "ズーム " + shownZoom + " の見え方（保存範囲とは別に確認）"
+            minPreviewButton.isEnabled = !previewMinimumZoom
+            maxPreviewButton.isEnabled = previewMinimumZoom
             val bounds = selectedBounds
             val center = bounds?.let {
                 LatLng((it.latitudeNorth + it.latitudeSouth) / 2.0, (it.longitudeEast + it.longitudeWest) / 2.0)
             } ?: initialCamera.target ?: LatLng(35.30, 139.48)
             zoomPreviewMap?.cameraPosition = CameraPosition.Builder(initialCamera)
-                .target(center).zoom(maxZoom.toDouble()).bearing(0.0).tilt(0.0).build()
+                .target(center).zoom(shownZoom.toDouble()).bearing(0.0).tilt(0.0).build()
         }
         val nameInput = AppCompatEditText(appContext).apply {
             hint = "保存名"
@@ -623,18 +668,18 @@ class NavigationMapPanel(
             setHintTextColor(Color.LTGRAY)
             setText("オフライン地図")
         }
-        root.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
+        content.addView(nameInput, LinearLayout.LayoutParams(-1, dp(48)))
 
         val minLabel = text("最小ズーム: $minZoom")
         val minSeek = SeekBar(appContext).apply { max = 18; progress = minZoom }
         val maxLabel = text("最大ズーム: $maxZoom")
         val maxSeek = SeekBar(appContext).apply { max = 18; progress = maxZoom }
         val countLabel = text("保存タイル: -- / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}", 13f)
-        root.addView(minLabel)
-        root.addView(minSeek, LinearLayout.LayoutParams(-1, dp(36)))
-        root.addView(maxLabel)
-        root.addView(maxSeek, LinearLayout.LayoutParams(-1, dp(36)))
-        root.addView(countLabel)
+        content.addView(minLabel)
+        content.addView(minSeek, LinearLayout.LayoutParams(-1, dp(36)))
+        content.addView(maxLabel)
+        content.addView(maxSeek, LinearLayout.LayoutParams(-1, dp(36)))
+        content.addView(countLabel)
 
         fun updateEstimate() {
             updateZoomPreview()
@@ -655,6 +700,7 @@ class NavigationMapPanel(
                 "保存タイル: $tiles / ${OpenFreeMapConfig.MAX_TILES_PER_DOWNLOAD}"
             else "保存タイル: $tiles（上限超過。範囲またはズームを小さくしてください）"
         }
+        updateEstimateAction = { updateEstimate() }
         minSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 minZoom = progress.coerceAtMost(maxZoom)

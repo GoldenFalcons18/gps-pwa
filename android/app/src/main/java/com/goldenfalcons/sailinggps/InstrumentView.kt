@@ -62,7 +62,8 @@ class InstrumentView @JvmOverloads constructor(
         val delta = normalize180f(compassHeading - previous)
         val shown = previous + delta * (1 - exp(-dt / 0.12)).toFloat()
         displayedHeading = shown
-        currentAngle = if (mode == Mode.RELATIVE) targetAngle - shown else targetAngle
+        // Keep the compass rose moving with the boat in both display modes, as on iPhone.
+        currentAngle = targetAngle - shown
         if (abs(delta) > 0.05f) postInvalidateOnAnimation()
 
         paint.style = Paint.Style.STROKE
@@ -71,7 +72,7 @@ class InstrumentView @JvmOverloads constructor(
         canvas.drawCircle(cx, cy, radius, paint)
 
         canvas.save()
-        if (mode == Mode.RELATIVE) canvas.rotate(-(displayedHeading ?: compassHeading), cx, cy)
+        canvas.rotate(-(displayedHeading ?: compassHeading), cx, cy)
         // outer ticks
         for (deg in 0 until 360 step 10) {
             val a = Math.toRadians((deg - 90).toDouble())

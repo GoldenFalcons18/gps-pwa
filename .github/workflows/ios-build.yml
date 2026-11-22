@@ -2,6 +2,8 @@ name: iPhone compile check
 # Color customization compile recheck
 on:
   workflow_dispatch:
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios-build.yml']
   push:
     paths: ['ios/**', '.github/workflows/ios-build.yml']
 permissions:
