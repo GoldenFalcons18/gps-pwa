@@ -276,7 +276,7 @@ private struct OfflineZoomPreviewMap: UIViewRepresentable {
             ]
             let savedArea = MLNPolyline(coordinates: &corners, count: UInt(corners.count))
             savedArea.title = "offline-save-bounds"
-            map.addOverlay(savedArea)
+            map.add(savedArea)
         }
         let center: CLLocationCoordinate2D
         if let bounds {
