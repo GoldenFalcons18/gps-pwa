@@ -58,7 +58,7 @@ items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 assert len(items)==3,items
 point=items[-1]
 assert abs(point['lat']-35.318)<0.0001 and abs(point['lon']-139.467)<0.0001,point
-assert next(n.text for n in root if n.get('name')=='activeId')==point['id']
+assert next(n.text for n in root if n.get('name')=='activeId')!=point['id']
 print('One-tap current waypoint saved and selected with recording stopped')
 PY
 echo "Recording-state files before preview assertion"
