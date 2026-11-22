@@ -27,10 +27,6 @@ struct NavigationMapView: View {
     @AppStorage("courseLineLengthMeters") private var courseLineLengthMeters = 500
     @AppStorage("courseMarkIntervalMeters") private var courseMarkIntervalMeters = 100
     @State private var visibleBounds: SavedMapBounds?
-    @State private var showOfflinePicker = false
-    @State private var showSaveResult = false
-    @State private var saveMessage = ""
-
     var body: some View {
         Group {
             if provider == "openfreemap" {
@@ -53,17 +49,6 @@ struct NavigationMapView: View {
                     createWaypoint: createWaypoint,
                     onViewportChanged: { bounds, zoom in visibleBounds = SavedMapBounds(value: bounds, zoom: zoom) }
                 )
-                .fullScreenCover(isPresented: $showOfflinePicker) {
-                    OfflineRegionPickerView(initialBounds: visibleBounds) { bounds, minZoom, maxZoom, name in
-                        OpenFreeMapOfflineStore.save(bounds: bounds, minZoom: minZoom, maxZoom: maxZoom, name: name) { message in
-                            saveMessage = message
-                            showSaveResult = true
-                        }
-                    }
-                }
-                .alert("地図の保存", isPresented: $showSaveResult) {
-                    Button("閉じる") { saveMessage = "" }
-                } message: { Text(saveMessage) }
             } else {
                 AppleNavigationMapView(
                     location: location, heading: heading, waypoints: waypoints, library: library,
