@@ -665,7 +665,7 @@ private struct OpenFreeMapMapView: UIViewRepresentable {
                 return view
             }
             view.bounds = CGRect(x: 0, y: 0, width: 156, height: 54)
-            view.centerOffset = CGPoint(x: 0, y: 10)
+            view.centerOffset = CGVector(dx: 0, dy: 10)
             view.backgroundColor = .clear
             view.layer.cornerRadius = 0
             view.layer.borderWidth = 0
