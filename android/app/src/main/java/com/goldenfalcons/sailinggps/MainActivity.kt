@@ -925,7 +925,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
         val raceStartEvent=events.getOrNull(raceStartIndex ?: -1)
         val raceStartName=raceStartEvent?.flagMarks?.firstOrNull()?.id?.removePrefix("class-")?.let { "クラス旗 $it 降下／スタート時刻" } ?: "クラス旗降下／スタート時刻"
-        b.tvSignalStartAt.text=if(raceStartAt>0L) raceStartName+"  "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else raceStartName+"  TBD"
+        b.tvSignalStartName.text=raceStartName
+        b.tvSignalStartAt.text=if(raceStartAt>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else "TBD"
         val rowBase=when {
             restartMode && restartAt>0L -> restartAt
             restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
