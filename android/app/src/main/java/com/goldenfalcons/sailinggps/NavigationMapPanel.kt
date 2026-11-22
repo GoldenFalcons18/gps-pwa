@@ -98,8 +98,12 @@ class NavigationMapPanel(
                 mapStyle = style
                 installLayers(style)
                 refreshAll()
-                readyMap.cameraPosition = CameraPosition.Builder()
-                    .target(LatLng(35.30, 139.48)).zoom(12.0).build()
+                if (following && current != null) {
+                    applyFollow()
+                } else {
+                    readyMap.cameraPosition = CameraPosition.Builder()
+                        .target(current ?: LatLng(35.30, 139.48)).zoom(12.0).build()
+                }
             }
             readyMap.addOnMapLongClickListener { location ->
                 setFollowing(false)
@@ -400,13 +404,7 @@ class NavigationMapPanel(
         this.hiddenGroups = hiddenGroups.toSet()
         target = active?.let { LatLng(it.lat, it.lon) }
         refreshAll()
-        if (this.waypoints.isNotEmpty() && !didInitialWaypointFit) {
-            didInitialWaypointFit = true
-            showWaypoints()
-        }
     }
-
-    private var didInitialWaypointFit = false
 
     fun showWaypoints() {
         val readyMap = map ?: return
