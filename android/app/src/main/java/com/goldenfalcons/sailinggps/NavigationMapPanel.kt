@@ -734,7 +734,7 @@ class NavigationMapPanel(
         }
         preview.getMapAsync { previewMap ->
             previewMap.setStyle(OpenFreeMapConfig.styleUrl(styleName)) {
-                previewMap.cameraPosition = CameraPosition.Builder(initialCamera).build()
+                previewMap.cameraPosition = CameraPosition.Builder(initialCamera).bearing(0.0).tilt(0.0).build()
                 fun refreshBounds() {
                     if (preview.width <= 0 || preview.height <= 0) return
                     val insetX = preview.width * 0.08f
