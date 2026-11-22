@@ -696,7 +696,7 @@ struct ContentView: View {
     }
     private var mapPanel: some View {
         ZStack(alignment: .bottom) {
-            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, isRecording: gps.recording && !gps.recordingPaused, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
+            NavigationMapView(location: gps.location, heading: mapHeading, waypoints: gps.waypoints, library: gps.library, showWaypoints: showMapWaypoints, showCourse: showCourseLine, track: gps.track, isRecording: gps.recording && !gps.recordingPaused, selected: $selected, following: $following, metersPerCm: mapMetersPerCm, onMetersPerCmChanged: { mapMetersPerCm = $0 }, editWaypoint: { editorDraft = $0 }, createWaypoint: { coordinate in
                 mapOperationsCoordinate = coordinate; mapOperationsPresented = true
             })
             .overlay(alignment: .trailing) {
