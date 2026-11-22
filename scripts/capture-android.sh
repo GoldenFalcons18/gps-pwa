@@ -108,10 +108,13 @@ print(int(x1+(x2-x1)*.25),int(y1+(y2-y1)*.60))
 PYMAP
 )
 read -r MAP_X MAP_Y <<< "$MAP_POINT"
-adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1200
-sleep 1
+adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1800
+for attempt in 1 2 3 4 5; do
+  sleep 1
+  adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
+  if grep -q 'MAPOPS create=' screenshots/map-operations-bounds.log; then break; fi
+done
 adb exec-out screencap -p > screenshots/Android-map-operations.png
-adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
 read -r CREATE_X CREATE_Y < <(python3 - <<'PYMAPOPS'
 import pathlib,re
 rows=re.findall(r'MAPOPS create=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/map-operations-bounds.log').read_text())
@@ -134,6 +137,8 @@ PYBOUNDS
 )
 adb shell input tap "$INPUT_X" "$INPUT_Y"
 sleep 1
+# Replace the generated default name deterministically before entering the test label.
+adb shell input keycombination 113 29
 adb shell input text MAP_TEST
 sleep 3
 adb shell input keyevent 4
