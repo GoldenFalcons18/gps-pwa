@@ -159,14 +159,18 @@ struct OfflineRegionPickerView: View {
                         .buttonStyle(.bordered).tint(previewMinimumZoom ? .gray : .orange)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text("\(previewMinimumZoom ? "最小" : "最大")ズーム \(previewMinimumZoom ? minZoom : maxZoom) の地図表示")
+                Text("\(previewMinimumZoom ? "最小" : "最大")ズーム \(previewMinimumZoom ? minZoom : maxZoom) の表示範囲")
                     .font(.caption.bold()).frame(maxWidth: .infinity, alignment: .leading)
                 OfflineZoomPreviewMap(
                     bounds: selectedBounds ?? initialBounds,
                     zoom: Double(previewMinimumZoom ? minZoom : maxZoom)
                 )
-                .frame(height: 145)
+                .frame(height: 240)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+                Text("オレンジ枠が保存範囲です。枠の外に見える地図が、このズームで一度に表示される周囲の広さです。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 TextField("保存名", text: $name)
                     .textFieldStyle(.roundedBorder)
@@ -248,8 +252,11 @@ private struct OfflineZoomPreviewMap: UIViewRepresentable {
     let bounds: SavedMapBounds?
     let zoom: Double
 
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeUIView(context: Context) -> MLNMapView {
         let map = MLNMapView(frame: .zero, styleURL: OpenFreeMapOfflineStore.styleURL)
+        map.delegate = context.coordinator
         map.isPitchEnabled = false
         map.isScrollEnabled = false
         map.isZoomEnabled = false
@@ -258,6 +265,19 @@ private struct OfflineZoomPreviewMap: UIViewRepresentable {
     }
 
     func updateUIView(_ map: MLNMapView, context: Context) {
+        map.removeOverlays(map.overlays)
+        if let bounds {
+            var corners = [
+                CLLocationCoordinate2D(latitude: bounds.value.sw.latitude, longitude: bounds.value.sw.longitude),
+                CLLocationCoordinate2D(latitude: bounds.value.ne.latitude, longitude: bounds.value.sw.longitude),
+                CLLocationCoordinate2D(latitude: bounds.value.ne.latitude, longitude: bounds.value.ne.longitude),
+                CLLocationCoordinate2D(latitude: bounds.value.sw.latitude, longitude: bounds.value.ne.longitude),
+                CLLocationCoordinate2D(latitude: bounds.value.sw.latitude, longitude: bounds.value.sw.longitude)
+            ]
+            let savedArea = MLNPolyline(coordinates: &corners, count: corners.count)
+            savedArea.title = "offline-save-bounds"
+            map.addOverlay(savedArea)
+        }
         let center: CLLocationCoordinate2D
         if let bounds {
             center = CLLocationCoordinate2D(
@@ -270,6 +290,16 @@ private struct OfflineZoomPreviewMap: UIViewRepresentable {
         if abs(map.zoomLevel - zoom) > 0.05 || CLLocation(latitude: map.centerCoordinate.latitude, longitude: map.centerCoordinate.longitude)
             .distance(from: CLLocation(latitude: center.latitude, longitude: center.longitude)) > 5 {
             map.setCenter(center, zoomLevel: zoom, animated: false)
+        }
+    }
+
+    final class Coordinator: NSObject, MLNMapViewDelegate {
+        func mapView(_ mapView: MLNMapView, strokeColorForShapeAnnotation annotation: MLNShape) -> UIColor {
+            .systemOrange
+        }
+
+        func mapView(_ mapView: MLNMapView, lineWidthForPolylineAnnotation annotation: MLNPolyline) -> CGFloat {
+            3
         }
     }
 }
