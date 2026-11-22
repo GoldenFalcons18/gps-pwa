@@ -19,7 +19,7 @@ struct FocusDashboardView: View {
     let chooseTarget: () -> Void
     let openMenu: () -> Void
 
-    private func card(_ label: String, _ value: String, _ color: Color) -> some View {
+    private func card(_ label: String, _ value: String, _ color: Color, valueScale: CGFloat = 0.24) -> some View {
         GeometryReader { bounds in
             VStack(spacing: 4) {
                 Text(label)
@@ -28,7 +28,7 @@ struct FocusDashboardView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(value)
-                    .font(.system(size: min(bounds.size.width * 0.24, bounds.size.height * 0.58),
+                    .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.52),
                                   weight: .bold, design: .monospaced))
                     .minimumScaleFactor(0.45)
                     .lineLimit(1)
@@ -98,22 +98,23 @@ struct FocusDashboardView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("メニュー")
             }
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
                 card("SOG / " + unit, speed, .green)
+                    .frame(height: 88)
                 card((isCompass ? "コンパス方位" : "COG") + (magnetic ? "（磁北）" : "（真北）"),
                      course.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
                      .white)
+                    .frame(height: 88)
             }
-            .frame(height: 150)
             HStack(spacing: 8) {
                 Button(action: chooseTarget) {
                     card("目標方位" + (magnetic ? "（磁北）" : "（真北）"),
                          targetBearing.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
-                         .orange)
+                         .orange, valueScale: 0.21)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("タップして目標地点を変更")
-                card("目標距離", targetDistance, .white)
+                card("目標距離", targetDistance, .white, valueScale: 0.21)
             }
             .frame(height: 92)
         }

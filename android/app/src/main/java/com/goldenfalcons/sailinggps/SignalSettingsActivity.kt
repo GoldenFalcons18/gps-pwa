@@ -12,55 +12,97 @@ import androidx.appcompat.app.AppCompatActivity
 class SignalSettingsActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("display", Context.MODE_PRIVATE) }
     private lateinit var list: LinearLayout
+    private lateinit var pageTitle: TextView
+    private data class Page(val id: String, val title: String, val fleet: String = "")
+    private var currentPage = Page("root", "Settings")
+    private val pageStack = mutableListOf<Page>()
     private val white = Color.WHITE
     private val orange = 0xFFFFAA00.toInt()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = 0xFF111111.toInt()
-        val page = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF1C1C1E.toInt()) }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(0xFF1C1C1E.toInt()) }
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL; setPadding(16, 8, 16, 8) }
-        header.addView(Button(this).apply { text = "‹"; textSize = 24f; setOnClickListener { finish() } })
-        header.addView(TextView(this).apply { text = "Settings"; textSize = 22f; setTextColor(white); gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(0,-2,1f) })
+        header.addView(Button(this).apply { text = "‹"; textSize = 24f; setOnClickListener { goBack() } })
+        pageTitle = TextView(this).apply { text = currentPage.title; textSize = 22f; setTextColor(white); gravity = Gravity.CENTER; layoutParams = LinearLayout.LayoutParams(0,-2,1f) }
+        header.addView(pageTitle)
         header.addView(Button(this).apply { text = "完了"; setTextColor(orange); setOnClickListener { finish() } })
-        page.addView(header)
+        root.addView(header)
         list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12, 0, 12, 20) }
-        page.addView(ScrollView(this).apply { addView(list) })
-        setContentView(page)
+        root.addView(ScrollView(this).apply { addView(list) })
+        setContentView(root)
+        build()
+    }
+
+    private fun navigate(next: Page) {
+        pageStack.add(currentPage)
+        currentPage = next
+        pageTitle.text = next.title
+        build()
+    }
+
+    private fun goBack() {
+        if (pageStack.isEmpty()) { finish(); return }
+        currentPage = pageStack.removeAt(pageStack.lastIndex)
+        pageTitle.text = currentPage.title
         build()
     }
 
     private fun build() {
         list.removeAllViews()
+        when (currentPage.id) {
+            "fleets" -> buildFleetList()
+            "flags" -> buildFlagSettings()
+            else -> buildRoot()
+        }
+        android.util.Log.d("SignalSettingsUi", "Rendered page=${currentPage.id} title=${currentPage.title} rows=${list.childCount}")
+    }
+
+    private fun buildRoot() {
+        section("Mode")
+        valueRow("Mode", "Fleet")
         section("General Settings")
-        row("Mode", "Fleet") {}
-        row("Minimum lead time to zero", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "s") { number("次の分00秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
-        row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "端末の標準音声"), "signalVoiceName") }
+        row("次の分00秒までの最短時間", prefs.getInt("signalMinimumTimeToFirstAction", 15).toString() + "秒") { number("次の分00秒までの最短時間", "signalMinimumTimeToFirstAction", 15, 0, 120) }
+        row("Voice", prefs.getString("signalVoiceName", "Kyoko (Enhanced)") ?: "") { choose("Voice", listOf("Kyoko (Enhanced)", "Siri Japanese", "端末の標準音声"), "signalVoiceName") }
         row("Notifications", "Management (Radio)") { notifications() }
-        row("時刻サーバー同期", "ntp.nict.jp と同期") { clockAlignment() }
-        row("秒を00に合わせる", "現在のアプリ時刻") { alignClockZero() }
+        valueRow("時刻サーバー", "ntp.nict.jp")
+        val clockOffsetMs = prefs.getLong("signalClockOffsetMs", 0L)
+        val syncStatus = if (clockOffsetMs == 0L) "未同期" else "同期済み（補正 %+.3f 秒）".format(clockOffsetMs / 1000.0)
+        row(syncStatus, "今すぐ同期") { clockAlignment() }
+        row("秒を00に合わせる", "アプリ時刻を基準") { alignClockZero() }
         row("Horn", if (prefs.getBoolean("signalHornEnabled", true)) "Virtual" else "Disabled") { horn() }
         switch("Remote Flags (alpha)", "signalRemoteFlagsEnabled", false)
-        switch("BuoyZone", "signalBuoyZoneLinked", false)
+        switch("BuoyZoneと連携", "signalBuoyZoneLinked", false)
         switch("External Display", "signalExternalDisplayEnabled", true)
         row("Log", "記録設定") { simpleSwitch("Log", "signalLogEnabled", true) }
 
         section("Fleet Start Sequences")
+        row("フリート手順を管理", "選択・編集") { navigate(Page("fleets", "Fleet Start Sequences")) }
+        section("旗の設定")
+        row("クラス旗を編集", "編集") { flagEditor() }
+        row("国際信号旗", "一覧") { internationalFlags() }
+    }
+
+    private fun buildFleetList() {
         val names = prefs.getStringSet("signalFleetPresetNames", setOf("OP Au Bp")) ?: setOf("OP Au Bp")
         val activeFleet = prefs.getString("signalFleetStartName", "OP Au Bp") ?: "OP Au Bp"
         names.sorted().forEach { name -> fleetPresetRow(name, name == activeFleet) }
-        row("＋ Fleet Start", "Add") { addFleet() }
+        row("＋ Fleet Start", "追加") { addFleet() }
+    }
 
-        section("$activeFleet · Starts")
-        val storedStarts=readStartEntries()
-        val obsoletePrepRows=setOf("P","I","U","Z","BLACK")
-        val starts=storedStarts.filterNot { it.substringBefore("·").trim().uppercase() in obsoletePrepRows }
-        if(starts!=storedStarts) saveStartEntries(starts)
-        starts.forEach { entry -> row(entry,"−") { saveStartEntries(readStartEntries().filterNot { it == entry }); saveFleetConfig(activeFleet); build() } }
-        row("＋ Add Start…","›") { addStart() }
-        section("Class Flags")
-        row("クラス旗を編集","編集") { flagEditor() }
-        row("International Flag","一覧") { internationalFlags() }
+    private fun buildFlagSettings() {
+        section("旗の設定")
+        row("クラス旗を編集", "編集") { flagEditor() }
+        row("国際信号旗", "一覧") { internationalFlags() }
+    }
+
+    private fun valueRow(title: String, value: String) {
+        val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; minimumHeight = 50; setPadding(6, 4, 4, 4) }
+        r.addView(TextView(this).apply { text = title; textSize = 15f; setTextColor(white); layoutParams = LinearLayout.LayoutParams(0, -2, 1f) })
+        r.addView(TextView(this).apply { text = value; textSize = 14f; setTextColor(orange) })
+        list.addView(r)
+        list.addView(View(this).apply { setBackgroundColor(0xFF444448.toInt()) }, LinearLayout.LayoutParams(-1, 1))
     }
 
     private fun section(title: String) {
@@ -80,17 +122,16 @@ class SignalSettingsActivity : AppCompatActivity() {
             minimumHeight = 66
             setPadding(4, 4, 4, 4)
         }
-        container.addView(Button(this).apply {
-            text = if (active) "✓  $name\n選択中" else "$name\nタップして選択"
+        container.addView(TextView(this).apply {
+            text = (if (active) "✓  " else "○  ") + name + if (active) "\n選択中" else "\nタップして選択"
             textSize = 15f
-            isAllCaps = false
             setTextColor(if (active) 0xFF65D885.toInt() else white)
-            minimumHeight = 58
-            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, -1, 1f)
             setOnClickListener { selectFleet(name) }
         })
         container.addView(Button(this).apply {
-            text = "編集"
+            text = "設定"
             isAllCaps = false
             minimumWidth = (76 * resources.displayMetrics.density).toInt()
             minimumHeight = 56

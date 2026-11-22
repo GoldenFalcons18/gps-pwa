@@ -13,34 +13,68 @@ import androidx.core.app.NotificationManagerCompat
 class DetailedSettings(private val activity:Activity,private val library:MapLibrary,private val folders:List<String>,
     private val currentFolder:String,private val gpsStatus:String,private val refresh:()->Unit) {
     private val prefs=activity.getSharedPreferences("display",Context.MODE_PRIVATE)
-    private fun menu(title:String,items:List<Pair<String,()->Unit>>) {
+    private fun menu(title:String,items:List<Pair<String,()->Unit>>) = menuSections(title,listOf("" to items))
+    private fun menuSections(title:String,sections:List<Pair<String,List<Pair<String,()->Unit>>>>) {
         val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
         val density=activity.resources.displayMetrics.density
-        val column=android.widget.LinearLayout(activity).apply {
+        val root=android.widget.LinearLayout(activity).apply {
             orientation=android.widget.LinearLayout.VERTICAL
-            setPadding((16*density).toInt(),(14*density).toInt(),(16*density).toInt(),(16*density).toInt())
-            setBackgroundColor(android.graphics.Color.rgb(15,15,15))
+            setBackgroundColor(android.graphics.Color.rgb(0,0,0))
         }
-        column.addView(android.widget.TextView(activity).apply {
+        val header=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.HORIZONTAL
+            gravity=android.view.Gravity.CENTER_VERTICAL
+            setPadding((20*density).toInt(),(10*density).toInt(),(20*density).toInt(),(10*density).toInt())
+        }
+        header.addView(android.widget.TextView(activity).apply {
             text=title;textSize=22f;setTextColor(android.graphics.Color.WHITE)
             setTypeface(null,android.graphics.Typeface.BOLD)
-            setPadding((8*density).toInt(),(6*density).toInt(),(8*density).toInt(),(12*density).toInt())
+            layoutParams=android.widget.LinearLayout.LayoutParams(0,-2,1f)
         })
-        items.forEach { item ->
-            val row=android.widget.TextView(activity).apply {
-                text=item.first;textSize=17f;setTextColor(android.graphics.Color.WHITE)
-                gravity=android.view.Gravity.CENTER_VERTICAL;minHeight=(54*density).toInt()
-                setPadding((14*density).toInt(),(8*density).toInt(),(14*density).toInt(),(8*density).toInt())
-                background=android.graphics.drawable.GradientDrawable().apply { setColor(android.graphics.Color.rgb(30,30,30));cornerRadius=10*density }
-                isClickable=true;isFocusable=true
-                setOnClickListener { sheet.dismiss();item.second() }
-            }
-            column.addView(row,android.widget.LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=(6*density).toInt() })
+        header.addView(android.widget.TextView(activity).apply {
+            text="完了";textSize=17f;setTextColor(android.graphics.Color.rgb(255,159,10))
+            gravity=android.view.Gravity.CENTER
+            setPadding((12*density).toInt(),(8*density).toInt(),(4*density).toInt(),(8*density).toInt())
+            setOnClickListener { sheet.dismiss() }
+        })
+        root.addView(header)
+        val scroll=android.widget.ScrollView(activity)
+        val content=android.widget.LinearLayout(activity).apply {
+            orientation=android.widget.LinearLayout.VERTICAL
+            setPadding((18*density).toInt(),(8*density).toInt(),(18*density).toInt(),(28*density).toInt())
         }
-        column.addView(android.widget.Button(activity).apply { text="閉じる";isAllCaps=false;setOnClickListener { sheet.dismiss() } })
-        sheet.setContentView(android.widget.ScrollView(activity).apply { addView(column) })
+        sections.forEach { (sectionTitle,items) ->
+            if(sectionTitle.isNotBlank()) content.addView(android.widget.TextView(activity).apply {
+                text=sectionTitle;textSize=13f;setTextColor(android.graphics.Color.LTGRAY)
+                setPadding((8*density).toInt(),(16*density).toInt(),(8*density).toInt(),(8*density).toInt())
+            })
+            val group=android.widget.LinearLayout(activity).apply {
+                orientation=android.widget.LinearLayout.VERTICAL
+                background=android.graphics.drawable.GradientDrawable().apply {
+                    setColor(android.graphics.Color.rgb(28,28,30));cornerRadius=18*density
+                }
+                clipToOutline=true
+            }
+            items.forEachIndexed { index,item ->
+                val row=android.widget.TextView(activity).apply {
+                    text=item.first;textSize=17f;setTextColor(android.graphics.Color.WHITE)
+                    gravity=android.view.Gravity.CENTER_VERTICAL;minHeight=(54*density).toInt()
+                    setPadding((16*density).toInt(),(10*density).toInt(),(16*density).toInt(),(10*density).toInt())
+                    isClickable=true;isFocusable=true;setOnClickListener { sheet.dismiss();item.second() }
+                }
+                group.addView(row,android.widget.LinearLayout.LayoutParams(-1,-2))
+                if(index<items.lastIndex) group.addView(android.view.View(activity).apply { setBackgroundColor(android.graphics.Color.rgb(58,58,60)) },
+                    android.widget.LinearLayout.LayoutParams(-1,(1*density).toInt()).apply { leftMargin=(16*density).toInt();rightMargin=(16*density).toInt() })
+            }
+            content.addView(group)
+        }
+        scroll.addView(content)
+        root.addView(scroll,android.widget.LinearLayout.LayoutParams(-1,0,1f))
+        sheet.setContentView(root)
         sheet.show()
         sheet.behavior.state=com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+        sheet.behavior.skipCollapsed=true
+        sheet.window?.setLayout(-1,-1)
     }
     private fun message(title:String,text:String) {
         val sheet=com.google.android.material.bottomsheet.BottomSheetDialog(activity)
@@ -136,26 +170,22 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             }
         })
     }
-    fun show():Unit=menu("設定",listOf(
-        "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
-            booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))
-        },
-        "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
-            booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路"))
-        },
-        "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to {
-            booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北"))
-        },
-        "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to {
-            choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute")
-        },
-        "速度・座標・時刻の詳細設定" to ::display,
-        "ナビゲーションの詳細設定" to ::navigation,
-        "地図" to ::map,
-        "ゾーンアラート" to ::zones,
-        "デフォルトの保存先：$currentFolder" to {choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder)},
-        "GPS・アプリ情報" to { message("GPS・アプリ情報", gpsStatus + "\n\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") }
+    fun show():Unit=menuSections("設定",listOf(
+        "表示" to listOf(
+            "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to { booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km")) },
+            "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to { booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路")) },
+            "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to { booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北")) },
+            "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to { choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute") }
+        ),
+        "詳細設定" to listOf(
+            "速度・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones
+        ),
+        "ウェイポイント" to listOf(
+            "デフォルトの保存先：$currentFolder" to { choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder) }
+        ),
+        "GPS" to listOf("GPS・アプリ情報" to { message("GPS・アプリ情報",gpsStatus+"\\n\\nSailing GPS ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") })
     ))
+
     private fun display():Unit=menu("速度・単位・座標・時刻",listOf(
         "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to {
             booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km"))

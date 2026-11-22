@@ -251,6 +251,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         requestNeededPermissions()
         if (BuildConfig.DEBUG) {
             var previousBounds = ""
+            var previousSignalSettingsBounds = ""
             b.root.viewTreeObserver.addOnGlobalLayoutListener {
                 val button = android.graphics.Rect()
                 val map = android.graphics.Rect()
@@ -260,6 +261,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         previousBounds = bounds
                         Log.d("SailingUiBounds", bounds)
                     }
+                }
+                val signalButton = android.graphics.Rect()
+                val signalBounds = if (b.btnSignalSettings.getGlobalVisibleRect(signalButton))
+                    "SIGNAL_SETTINGS bounds=${signalButton.left},${signalButton.top},${signalButton.right},${signalButton.bottom}" else ""
+                if (signalBounds.isNotEmpty() && signalBounds != previousSignalSettingsBounds) {
+                    previousSignalSettingsBounds = signalBounds
+                    Log.d("SailingUiBounds", signalBounds)
                 }
             }
         }
@@ -355,6 +363,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .putString("signalPrepFlag",selectedPrepFlag).apply()
         buildSignalRows()
         b.btnSignalSettings.setOnClickListener { startActivity(Intent(this, SignalSettingsActivity::class.java)) }
+        val hornSettingsExpanded=displayPrefs.getBoolean("signalHornSettingsExpanded",false)
+        b.signalHornSettingsContainer.visibility=if(hornSettingsExpanded) View.VISIBLE else View.GONE
+        b.btnSignalHornSettingsToggle.text=if(hornSettingsExpanded) "ホーン設定 ▾" else "ホーン設定 ▸"
+        b.btnSignalHornSettingsToggle.setOnClickListener {
+            val expand=b.signalHornSettingsContainer.visibility!=View.VISIBLE
+            b.signalHornSettingsContainer.visibility=if(expand) View.VISIBLE else View.GONE
+            b.btnSignalHornSettingsToggle.text=if(expand) "ホーン設定 ▾" else "ホーン設定 ▸"
+            displayPrefs.edit().putBoolean("signalHornSettingsExpanded",expand).apply()
+        }
         b.btnSignalOrange.setOnClickListener {
             val current = if (displayPrefs.getBoolean("signalOrangeManualOverride", false))
                 displayPrefs.getBoolean("signalOrangeManualUp", false)
@@ -400,34 +417,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupFocusPanel() {
-        fun card(label:String,color:Int):Pair<LinearLayout,TextView> {
+        fun card(label:String,color:Int,valueMaxSp:Int=84):Pair<LinearLayout,TextView> {
             val column=LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL; gravity=android.view.Gravity.CENTER; setPadding(6,6,6,6)
                 background=android.graphics.drawable.GradientDrawable().apply { setColor(Color.BLACK); setStroke(2,Color.GRAY); cornerRadius=10f }
             }
-            val title=TextView(this).apply { text=label; textSize=16f; setTextColor(Color.LTGRAY); gravity=android.view.Gravity.CENTER; setSingleLine() }
+            val title=TextView(this).apply {
+                text=label; textSize=16f; setTextColor(Color.LTGRAY)
+                gravity=android.view.Gravity.CENTER; setSingleLine()
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,10,18,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+            }
             column.addView(title,LinearLayout.LayoutParams(-1,-2))
             val value=TextView(this).apply {
-                text="—"; setTextColor(color); textSize=84f; typeface=android.graphics.Typeface.MONOSPACE; gravity=android.view.Gravity.CENTER; setSingleLine()
+                text="—"; setTextColor(color); textSize=valueMaxSp.toFloat()
+                typeface=android.graphics.Typeface.MONOSPACE; gravity=android.view.Gravity.CENTER
+                setSingleLine(); ellipsize=android.text.TextUtils.TruncateAt.END
+                includeFontPadding=false
                 layoutParams=LinearLayout.LayoutParams(-1,0,1f)
-                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,20,96,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(
+                    this,18,valueMaxSp,1,android.util.TypedValue.COMPLEX_UNIT_SP
+                )
             }
             column.addView(value)
             return column to value
         }
-        val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN)
+        val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN,84)
         focusSog=sogValue
         b.focusPanel.addView(sogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
-        val (cogCard,cogValue)=card("COG（真北）",Color.WHITE)
+        val (cogCard,cogValue)=card("COG（真北）",Color.WHITE,84)
         focusCog=cogValue
         b.focusPanel.addView(cogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0))
+        val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),46)
         focusBearing=targetValue
         targetCard.setOnClickListener { showNavigationOptions() }
         targetCard.contentDescription="目標方位。タップして目標地点を変更"
         targetRow.addView(targetCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
-        val (distanceCard,distanceValue)=card("目標距離",Color.WHITE)
+        val (distanceCard,distanceValue)=card("目標距離",Color.WHITE,46)
         focusDistance=distanceValue
         targetRow.addView(distanceCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(4,4,0,4) })
         b.focusPanel.addView(targetRow,LinearLayout.LayoutParams(-1,0,1f))
@@ -459,7 +485,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         currentSignalEvents().forEachIndexed { eventIndex,event ->
             val row=LinearLayout(this).apply {
                 orientation=LinearLayout.HORIZONTAL;gravity=android.view.Gravity.CENTER_VERTICAL;setPadding(7,3,7,3)
-                layoutParams=LinearLayout.LayoutParams(-1,0,1f).apply {setMargins(0,1,0,1)}
+                layoutParams=LinearLayout.LayoutParams(-1,(26*resources.displayMetrics.density).roundToInt()).apply {setMargins(0,1,0,1)}
                 background=android.graphics.drawable.GradientDrawable().apply {setColor(0xffeeeeee.toInt());cornerRadius=3f}
             }
             row.addView(TextView(this).apply {text=if(event.raised) "↑" else "↓";textSize=19f;setTextColor(Color.BLACK);gravity=android.view.Gravity.CENTER;layoutParams=LinearLayout.LayoutParams(32,-1)})
@@ -907,7 +933,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val clock=java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(now))
         val raceStartEvent=events.getOrNull(raceStartIndex ?: -1)
         val raceStartName=raceStartEvent?.flagMarks?.firstOrNull()?.id?.removePrefix("class-")?.let { "クラス旗 $it 降下／スタート時刻" } ?: "クラス旗降下／スタート時刻"
-        b.tvSignalStartAt.text=if(raceStartAt>0L) raceStartName+"  "+java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else raceStartName+"  TBD"
+        b.tvSignalStartName.text=raceStartName
+        b.tvSignalStartAt.text=if(raceStartAt>0L) java.text.SimpleDateFormat("HH:mm:ss",java.util.Locale.JAPAN).format(java.util.Date(raceStartAt)) else "TBD"
         val rowBase=when {
             restartMode && restartAt>0L -> restartAt
             restartMode && restartPaused>=0L -> displayPrefs.getLong("signalRestartPausedAtMs",now)-restartPaused
