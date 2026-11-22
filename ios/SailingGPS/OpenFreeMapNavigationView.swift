@@ -24,7 +24,7 @@ struct NavigationMapView: View {
     let createWaypoint: (CLLocationCoordinate2D) -> Void
     @AppStorage("mapProvider") private var provider = "apple"
     @State private var visibleBounds: SavedMapBounds?
-    @State private var showSaveConfirmation = false
+    @State private var showOfflinePicker = false
     @State private var showSaveResult = false
     @State private var saveMessage = ""
 
@@ -48,25 +48,17 @@ struct NavigationMapView: View {
                     onViewportChanged: { bounds, zoom in visibleBounds = SavedMapBounds(value: bounds, zoom: zoom) }
                 )
                 .overlay(alignment: .bottomTrailing) {
-                    Button("地図を保存") { showSaveConfirmation = true }
+                    Button("地図を保存") { showOfflinePicker = true }
                         .font(.caption).buttonStyle(.borderedProminent).tint(.orange)
                         .foregroundStyle(.black).padding(8)
                 }
-                .alert("オフライン地図を保存", isPresented: $showSaveConfirmation) {
-                    Button("保存") {
-                        guard let visibleBounds else {
-                            saveMessage = "地図の範囲を取得できませんでした。"
-                            showSaveResult = true
-                            return
-                        }
-                        OpenFreeMapOfflineStore.save(bounds: visibleBounds, completion: { message in
+                .fullScreenCover(isPresented: $showOfflinePicker) {
+                    OfflineRegionPickerView(initialBounds: visibleBounds) { bounds, minZoom, maxZoom, name in
+                        OpenFreeMapOfflineStore.save(bounds: bounds, minZoom: minZoom, maxZoom: maxZoom, name: name) { message in
                             saveMessage = message
                             showSaveResult = true
-                        })
+                        }
                     }
-                    Button("キャンセル", role: .cancel) {}
-                } message: {
-                    Text("現在表示している範囲を保存します。端末全体で最大3,000タイルまで保存します。")
                 }
                 .alert("地図の保存", isPresented: $showSaveResult) {
                     Button("閉じる") { saveMessage = "" }
@@ -86,17 +78,17 @@ struct NavigationMapView: View {
 private enum OpenFreeMapOfflineStore {
     static let styleURL = URL(string: "https://tiles.openfreemap.org/styles/liberty")!
 
-    static func save(bounds: SavedMapBounds, completion: @escaping (String) -> Void) {
+    static func save(bounds: MLNCoordinateBounds, minZoom: Int, maxZoom: Int, name: String, completion: @escaping (String) -> Void) {
         let storage = MLNOfflineStorage.shared
         storage.setMaximumAllowedMapboxTiles(3000)
         let region = MLNTilePyramidOfflineRegion(
             styleURL: styleURL,
-            bounds: bounds.value,
-            fromZoomLevel: max(4, bounds.zoom - 1),
-            toZoomLevel: min(18, bounds.zoom + 2)
+            bounds: bounds,
+            fromZoomLevel: Double(minZoom),
+            toZoomLevel: Double(maxZoom)
         )
         let context = (try? JSONSerialization.data(withJSONObject: [
-            "name": "表示範囲",
+            "name": name,
             "provider": "OpenFreeMap"
         ])) ?? Data()
         storage.addPack(for: region, withContext: context) { pack, error in
