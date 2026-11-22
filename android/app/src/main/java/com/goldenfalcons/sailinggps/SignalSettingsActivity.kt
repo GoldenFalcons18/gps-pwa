@@ -56,6 +56,7 @@ class SignalSettingsActivity : AppCompatActivity() {
             "flags" -> buildFlagSettings()
             else -> buildRoot()
         }
+        android.util.Log.d("SignalSettingsUi", "Rendered page=${currentPage.id} title=${currentPage.title} rows=${list.childCount}")
     }
 
     private fun buildRoot() {
