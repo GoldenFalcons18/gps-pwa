@@ -6,6 +6,8 @@ on:
         description: Build signed APK and create a draft release
         type: boolean
         default: false
+  pull_request:
+    paths: ['android/**', 'scripts/**', '.github/workflows/android-build.yml']
   push:
     paths: ['android/**', 'scripts/**', '.github/workflows/android-build.yml']
 permissions:
