@@ -11,6 +11,8 @@ struct DetailedSettingsView: View {
     @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
     @AppStorage("showETA") private var showETA=false
     @AppStorage("showCourseLine") private var showCourse=true
+    @AppStorage("courseLineLengthMeters") private var courseLineLengthMeters=500
+    @AppStorage("courseMarkIntervalMeters") private var courseMarkIntervalMeters=100
     @AppStorage("mapProvider") private var mapProvider="apple"
     @AppStorage("zoneEnabled") private var zoneEnabled=false
     @AppStorage("zoneSelected") private var zoneSelected=""
@@ -60,7 +62,15 @@ struct DetailedSettingsView: View {
                         Text("OpenFreeMap（OSM）").tag("openfreemap")
                     }
                     Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    Text(mapProvider == "openfreemap" ? "OpenFreeMapの地図は、表示中の範囲を保存してオフラインで利用できます。端末全体で最大3,000タイルです。" : "Appleマップを表示します。地図データの範囲保存はOpenFreeMapで利用できます。").font(.caption)
+                    Picker("進路ラインの長さ",selection:$courseLineLengthMeters) {
+                        Text("250 m").tag(250);Text("500 m").tag(500);Text("1 km").tag(1000);Text("2.5 km").tag(2500);Text("5 km").tag(5000)
+                    }
+                    Picker("距離目盛りの間隔",selection:$courseMarkIntervalMeters) {
+                        Text("25 m").tag(25);Text("50 m").tag(50);Text("100 m").tag(100);Text("250 m").tag(250);Text("500 m").tag(500)
+                    }
+                    Text("ラインと目盛りはAppleマップ・OpenFreeMapで同じ長さと間隔を使います。").font(.caption)
+                    OfflineMapSettingsAction()
+                    Text(mapProvider == "openfreemap" ? "OpenFreeMapを端末に保存すると、通信がない場所でも表示できます。保存範囲は地図画面で別に選びます。" : "オフライン保存にはOpenFreeMapを使用します。").font(.caption)
                 }.navigationTitle("地図")
             }
             NavigationLink("ゾーンアラート") {
