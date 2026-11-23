@@ -34,9 +34,9 @@ adb shell am force-stop com.android.launcher3
 adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
 COORDS=$(python3 - <<'PY'
 import pathlib,re
-records=re.findall(r'UI current=(\\d+),(\\d+),(\\d+),(\\d+) map=(\\d+),(\\d+),(\\d+),(\\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records,'No fresh visible layout bounds'
-x1,y1,x2,y2,*_=map(int,records[-1])
+records=re.findall(r'CURRENT_BUTTON bounds=(\\d+),(\\d+),(\\d+),(\\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
+assert records,'No fresh current waypoint button bounds'
+x1,y1,x2,y2=map(int,records[-1])
 assert x2>x1 and y2>y1,(x1,y1,x2,y2)
 print((x1+x2)//2,(y1+y2)//2)
 PY
