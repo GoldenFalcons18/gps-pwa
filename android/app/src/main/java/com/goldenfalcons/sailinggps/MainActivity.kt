@@ -1379,6 +1379,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnAddWp.setOnClickListener { addWaypointFromInputs() }
         b.btnWpAppearance.setOnClickListener { chooseDraftAppearance() }
         b.btnCurrentWp.setOnClickListener { addCurrentLocationWaypoint() }
+        if (BuildConfig.DEBUG) b.btnCurrentWp.viewTreeObserver.addOnGlobalLayoutListener {
+            val xy = IntArray(2); b.btnCurrentWp.getLocationOnScreen(xy)
+            android.util.Log.d("SailingUiBounds", "CURRENT_BUTTON bounds=${xy[0]},${xy[1]},${xy[0]+b.btnCurrentWp.width},${xy[1]+b.btnCurrentWp.height}")
+        }
 
         b.btnRelativeMode.setOnClickListener {
             displayPrefs.edit().putString("compassCenterMode", "relative").apply()
