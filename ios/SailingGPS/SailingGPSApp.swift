@@ -1276,35 +1276,106 @@ struct ShareView: UIViewControllerRepresentable {
 private struct NumericCompassTape: View {
     let heading: Double?
     let label: String
+    @State private var tapeHeading: Double = 0
+
     var body: some View {
         GeometryReader { proxy in
             HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(label).font(.caption2).foregroundStyle(.gray).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.caption2)
+                        .foregroundStyle(label == "磁気コンパス利用不可" ? .red : .gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                     Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
                         .font(.system(size: 39, weight: .medium, design: .monospaced))
-                        .minimumScaleFactor(0.55).lineLimit(1)
-                }.frame(width: proxy.size.width * 0.36, alignment: .leading)
-                Rectangle().fill(.orange).frame(width: 1)
-                GeometryReader { scale in
-                    let center = scale.size.width / 2
-                    ZStack {
-                        ForEach(-4...4, id: \.self) { step in
-                            let value = Int((heading ?? 0).rounded()) + step * 10
-                            let normalized = (value % 360 + 360) % 360
-                            VStack(spacing: 3) {
-                                Rectangle().fill(Color.white.opacity(step == 0 ? 0.95 : 0.65))
-                                    .frame(width: step == 0 ? 2 : 1, height: step % 3 == 0 ? 21 : 11)
-                                if step % 3 == 0 {
-                                    Text("\(normalized)°").font(.system(size: 10, design: .monospaced)).foregroundStyle(.white)
-                                }
-                            }.position(x: center + CGFloat(step) * center / 4, y: scale.size.height / 2)
-                        }
-                        Rectangle().fill(.orange.opacity(0.9)).frame(width: 1, height: scale.size.height)
-                            .position(x: center, y: scale.size.height / 2)
-                    }
+                        .minimumScaleFactor(0.55)
+                        .lineLimit(1)
                 }
-            }.padding(.horizontal, 7).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+                .frame(width: proxy.size.width * 0.36, alignment: .leading)
+
+                Rectangle()
+                    .fill(.orange)
+                    .frame(width: 1)
+
+                GeometryReader { scale in
+                    let width = scale.size.width
+                    let height = scale.size.height
+                    let center = width / 2
+                    let degreesVisible: CGFloat = 48
+                    let pointsPerDegree = width / degreesVisible
+                    let wholeHeading = floor(tapeHeading)
+                    let fraction = CGFloat(tapeHeading - wholeHeading)
+                    let baseDegree = Int(wholeHeading)
+                    let baseline = height * 0.76
+
+                    ZStack(alignment: .topLeading) {
+                        RoundedRectangle(cornerRadius: 7)
+                            .stroke(Color.gray.opacity(0.75), lineWidth: 1)
+
+                        Path { path in
+                            path.move(to: CGPoint(x: 5, y: baseline))
+                            path.addLine(to: CGPoint(x: width - 5, y: baseline))
+                        }
+                        .stroke(Color.gray.opacity(0.8), lineWidth: 1)
+
+                        ForEach(-24...24, id: \.self) { step in
+                            let rawDegree = baseDegree + step
+                            let degree = (rawDegree % 360 + 360) % 360
+                            let x = center + CGFloat(step) * pointsPerDegree - fraction * pointsPerDegree
+                            let major = degree.isMultiple(of: 30)
+                            let medium = degree.isMultiple(of: 10)
+                            let tickHeight = major ? height * 0.31 : (medium ? height * 0.21 : height * 0.11)
+
+                            Path { path in
+                                path.move(to: CGPoint(x: x, y: baseline - tickHeight))
+                                path.addLine(to: CGPoint(x: x, y: baseline))
+                            }
+                            .stroke(Color.white.opacity(major ? 0.95 : (medium ? 0.72 : 0.43)),
+                                    style: StrokeStyle(lineWidth: major ? 1.6 : 1, lineCap: .round))
+
+                            if major {
+                                Text(String(format: "%03d°", degree))
+                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.white)
+                                    .position(x: x, y: height * 0.90)
+                            }
+                        }
+
+                        Path { path in
+                            path.move(to: CGPoint(x: center, y: 4))
+                            path.addLine(to: CGPoint(x: center - 5, y: 14))
+                            path.addLine(to: CGPoint(x: center + 5, y: 14))
+                            path.closeSubpath()
+                        }
+                        .fill(.orange)
+
+                        Path { path in
+                            path.move(to: CGPoint(x: center, y: 14))
+                            path.addLine(to: CGPoint(x: center, y: baseline))
+                        }
+                        .stroke(.orange, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                    }
+                    .clipped()
+                    .accessibilityLabel("コンパステープ")
+                }
+            }
+            .padding(.horizontal, 7)
+            .overlay(alignment: .top) {
+                Rectangle().fill(.gray).frame(height: 1)
+            }
+        }
+        .onAppear {
+            if let heading { tapeHeading = heading }
+        }
+        .onChange(of: heading) { _, newHeading in
+            guard let newHeading, newHeading.isFinite else { return }
+            let normalizedCurrent = ((tapeHeading.truncatingRemainder(dividingBy: 360)) + 360)
+                .truncatingRemainder(dividingBy: 360)
+            let delta = ((newHeading - normalizedCurrent + 540).truncatingRemainder(dividingBy: 360)) - 180
+            withAnimation(.linear(duration: 0.24)) {
+                tapeHeading += delta
+            }
         }
     }
 }
