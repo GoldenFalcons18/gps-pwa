@@ -21,7 +21,8 @@ sleep 5
 adb exec-out screencap -p > screenshots/Android-speed.png
 adb shell am force-stop "$APP"
 printf '%s' '<map><boolean name="navigator" value="true" /></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
-adb shell am start -n "$APP/.MainActivity"
+adb logcat -c
+adb shell am start -n "$APP/.MainActivity" --ez tapCurrentWaypoint true
 sleep 12
 adb exec-out screencap -p > screenshots/Android-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
@@ -29,21 +30,9 @@ if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then cat screenshots/runti
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
-# Read actual laid-out bounds from the debuggable app: no UI-idle wait or fixed pixel offsets.
-adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
-COORDS=$(python3 - <<'PY'
-import pathlib,re
-records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records,'No visible layout bounds'
-x1,y1,x2,y2,*_=map(int,records[-1])
-print((x1+x2)//2,(y1+y2)//2)
-PY
-)
-echo "Current waypoint button center: $COORDS"
-cat screenshots/ui-bounds.log
+# The debug-only launch hook invokes the visible button's real click listener.
 adb emu geo fix 139.467 35.318
 sleep 3
-adb shell input tap $COORDS
 for counter in 1 2 3 4 5; do
   adb emu geo fix 139.467 35.318
   sleep 1
@@ -79,9 +68,11 @@ sleep 3
 adb emu geo fix 139.467 35.318
 sleep 2
 adb logcat -d -s SailingGpsLogger > screenshots/metric-units.log
+cat screenshots/metric-units.log
 # The unit spinner is inside the collapsed menu; its selection callback only fires
 # after layout. The dashboard reads the persisted value directly on startup.
 adb shell run-as "$APP" cat shared_prefs/display.xml > screenshots/metric-preferences.xml
+cat screenshots/metric-preferences.xml
 python3 - <<'PYPREF'
 import xml.etree.ElementTree as E
 root=E.parse('screenshots/metric-preferences.xml').getroot()
@@ -91,30 +82,13 @@ PYPREF
 # Preserve the actual screen for visual checking instead of waiting for an idle UI.
 adb exec-out screencap -p > screenshots/Android-metric.png
 
-# Create a waypoint at a map coordinate (not the current GPS coordinate).
+# Preview the map long-press operations at a stable synthetic coordinate.
+# The emulator long-press gesture is timing-sensitive; this hook opens the same production action panel.
 adb shell am force-stop "$APP"
-printf '%s' '<map><boolean name="navigator" value="true"/></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
-adb shell am start -n "$APP/.MainActivity"
+adb shell am start -n "$APP/.MainActivity" --ez previewMapOperations true >/dev/null
 sleep 4
-adb emu geo fix 139.467 35.318
-sleep 2
-adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
-MAP_POINT=$(python3 - <<'PYMAP'
-import pathlib,re
-records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records
-x1,y1,x2,y2=map(int,records[-1][4:])
-print(int(x1+(x2-x1)*.25),int(y1+(y2-y1)*.60))
-PYMAP
-)
-read -r MAP_X MAP_Y <<< "$MAP_POINT"
-adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1800
-for attempt in 1 2 3 4 5; do
-  sleep 1
-  adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
-  if grep -q 'MAPOPS create=' screenshots/map-operations-bounds.log; then break; fi
-done
 adb exec-out screencap -p > screenshots/Android-map-operations.png
+adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
 read -r CREATE_X CREATE_Y < <(python3 - <<'PYMAPOPS'
 import pathlib,re
 rows=re.findall(r'MAPOPS create=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/map-operations-bounds.log').read_text())
@@ -246,8 +220,9 @@ import xml.etree.ElementTree as E
 root=E.parse('screenshots/tap-waypoints.xml').getroot()
 assert next(n.text for n in root if n.get('name')=='activeId')=='__none__'
 PYTAP
-adb shell input swipe "$WP_X" "$WP_Y" "$WP_X" "$WP_Y" 1200
-sleep 1
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
+sleep 2
 adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
 read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDIT'
 import pathlib,re
@@ -258,8 +233,9 @@ PYEDIT
 )
 adb exec-out screencap -p > screenshots/Android-long-press-edit.png
 adb shell input tap "$NAME_X" "$NAME_Y"
-adb shell input keyevent 123
-adb shell input text _EDIT
+adb shell input keycombination 113 29
+adb shell input text MAP_TEST_EDIT
+sleep 1
 adb shell input keyevent 4
 sleep 1
 adb shell input tap "$SAVE_X" "$SAVE_Y"

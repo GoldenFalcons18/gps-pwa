@@ -8,7 +8,7 @@ object HeadingReference {
         val gps = course?.takeIf { it.isFinite() && it >= 0 && speed != null && speed.isFinite() && speed >= 0.25 }
         if (preferGps && gps != null) return Reading(NavigationUtils.normalize360(gps), NavigationUtils.normalize360(gps), false)
         if (mag != null) return Reading(NavigationUtils.normalize360(mag), declination?.takeIf { it.isFinite() }?.let { NavigationUtils.normalize360(mag + it) }, true)
-        return gps?.let { Reading(NavigationUtils.normalize360(it), NavigationUtils.normalize360(it), false) }
+        return if (preferGps) gps?.let { Reading(NavigationUtils.normalize360(it), NavigationUtils.normalize360(it), false) } else null
     }
     fun relative(target: Double, heading: Double) = NavigationUtils.normalize180(target - heading)
 }

@@ -19,9 +19,12 @@ class HeadingReferenceTest {
     @Test fun gpsModeUsesCourseAndStationaryFallsBackToCompass() {
         assertFalse(HeadingReference.resolve(true, 26.0, -7.9, 200.0, 3.0)!!.magnetic)
         assertTrue(HeadingReference.resolve(true, 26.0, -7.9, 200.0, 0.0)!!.magnetic)
-        assertFalse(HeadingReference.resolve(false, null, null, 200.0, 3.0)!!.magnetic)
+        assertNull(HeadingReference.resolve(false, null, null, 200.0, 3.0))
         assertNull(HeadingReference.resolve(true, null, null, -1.0, 3.0))
         assertNull(HeadingReference.resolve(true, null, null, Double.NaN, 3.0))
+    }
+    @Test fun magneticModeReportsUnavailableInsteadOfUsingGpsCourse() {
+        assertNull(HeadingReference.resolve(false, null, null, 200.0, 3.0))
     }
     @Test fun northCrossingUsesTheShortArc() {
         assertEquals(2.0, HeadingReference.relative(1.0, 359.0), 0.0001)

@@ -10,10 +10,11 @@ object InstrumentHeading {
         return NavigationUtils.normalize360(value-correction)
     }
     fun resolve(course:Double?,speed:Double?,magneticHeading:Double?,declination:Double?,magnetic:Boolean):Reading? {
+        val compass=valid(magneticHeading)
+        if(magnetic) return compass?.let { Reading(it,true) }
         val gps=valid(course)
-        if(speed!=null && speed.isFinite() && speed>=0.25 && gps!=null) return bearing(gps,magnetic,declination)?.let{Reading(it,false)}
-        val compass=valid(magneticHeading) ?: return null
-        val heading=if(magnetic) compass else declination?.takeIf{it.isFinite()}?.let{NavigationUtils.normalize360(compass+it)}
-        return heading?.let{Reading(it,true)}
+        if(speed!=null && speed.isFinite() && speed>=0.25 && gps!=null) return Reading(gps,false)
+        val trueHeading=compass?.let { declination?.takeIf{d->d.isFinite()}?.let{d->NavigationUtils.normalize360(it+d)} }
+        return trueHeading?.let{Reading(it,true)}
     }
 }

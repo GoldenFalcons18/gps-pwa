@@ -115,6 +115,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var location: CLLocation?
     @Published var magneticHeading: Double?
     @Published var trueHeading: Double?
+    @Published var headingAccuracy: Double = -1
     @Published var headingUpdatedAt:Date?
     private var foregroundActive = false
     @Published var recording = false
@@ -339,7 +340,15 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
         if recording && ![.authorizedAlways, .authorizedWhenInUse].contains(manager.authorizationStatus) { stop(); message = "位置情報の許可が解除されました" }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        if newHeading.headingAccuracy >= 0 { headingUpdatedAt=newHeading.timestamp; magneticHeading = newHeading.magneticHeading; trueHeading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : nil }
+        headingUpdatedAt = newHeading.timestamp
+        headingAccuracy = newHeading.headingAccuracy
+        if newHeading.headingAccuracy >= 0 {
+            magneticHeading = newHeading.magneticHeading
+            trueHeading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : nil
+        } else {
+            magneticHeading = nil
+            trueHeading = nil
+        }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for point in locations where point.horizontalAccuracy >= 0 && abs(point.timestamp.timeIntervalSinceNow) < 30 {
@@ -536,17 +545,28 @@ struct ContentView: View {
     @State private var pendingNavigationEditor = false
     @AppStorage("showMapWaypoints") private var showMapWaypoints = true
     @AppStorage("showCourseLine") private var showCourseLine = true
+    private var freshMagneticHeading: Double? {
+        guard CLLocationManager.headingAvailable(), gps.headingAccuracy >= 0,
+              let updated = gps.headingUpdatedAt, Date().timeIntervalSince(updated) >= 0,
+              Date().timeIntervalSince(updated) <= 15 else { return nil }
+        return gps.magneticHeading
+    }
+    private var freshTrueHeading: Double? {
+        guard freshMagneticHeading != nil else { return nil }
+        return gps.trueHeading
+    }
     private var navigationReference: CoordinateInput.HeadingReading? {
-        CoordinateInput.headingReference(preferGps: !magnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
+        CoordinateInput.headingReference(preferGps: !magnetic, magnetic: freshMagneticHeading, trueHeading: freshTrueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
     private var instrumentNavigationReference: CoordinateInput.HeadingReading? {
-        CoordinateInput.headingReference(preferGps: !instrumentMagnetic, magnetic: gps.magneticHeading, trueHeading: gps.trueHeading, course: gps.location?.course, speed: gps.location?.speed)
+        CoordinateInput.headingReference(preferGps: !instrumentMagnetic, magnetic: freshMagneticHeading, trueHeading: freshTrueHeading, course: gps.location?.course, speed: gps.location?.speed)
     }
     private var heading: Double? { instrumentNavigationReference?.heading }
     private var mapHeading: Double? { navigationReference?.trueHeading }
     private var speedUnit: String { metricUnits ? "km/h" : "knot" }
     @AppStorage("instrumentMagnetic") private var instrumentMagnetic=false
     @AppStorage("compassCenterRelative") private var compassCenterRelative=false
+    @AppStorage("bottomCompassStyle") private var bottomCompassStyle="coordinates"
     @AppStorage("largeDecimal") private var largeDecimal=true
     @AppStorage("coordinateFormat") private var coordinateFormat="dm"
     @AppStorage("twelveHourClock") private var twelveHourClock=false
@@ -979,19 +999,26 @@ struct ContentView: View {
         }.padding(.horizontal, 5)
     }
     private var positionReadings: some View {
-        HStack(spacing: 5) {
-            VStack(spacing: 1) {
-                Text(instrumentNavigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位").font(.caption2).foregroundStyle(.gray)
-                Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
-                    .font(.system(size: 45, weight: .medium, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1)
-            }.frame(maxWidth: .infinity)
-            Rectangle().fill(.orange).frame(width: 1)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(gps.location.map { displayCoordinate($0.coordinate.latitude, isLatitude:true) } ?? "---")
-                Text(gps.location.map { displayCoordinate($0.coordinate.longitude, isLatitude:false) } ?? "---")
-            }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
-                .foregroundStyle(.white)
-        }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+        Group {
+            if bottomCompassStyle == "numericTape" {
+                NumericCompassTape(heading: heading, label: instrumentMagnetic && freshMagneticHeading == nil ? "磁気コンパス利用不可" : (instrumentMagnetic ? "磁気コンパス" : "GPS進行方位"))
+            } else {
+                HStack(spacing: 5) {
+                    VStack(spacing: 1) {
+                        Text(instrumentMagnetic && freshMagneticHeading == nil ? "磁気コンパス利用不可" : (instrumentNavigationReference?.magnetic == true ? "コンパス（磁）" : "GPS進行方位"))
+                            .font(.caption2).foregroundStyle(instrumentMagnetic && freshMagneticHeading == nil ? .red : .gray)
+                        Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
+                            .font(.system(size: 45, weight: .medium, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1)
+                    }.frame(maxWidth: .infinity)
+                    Rectangle().fill(.orange).frame(width: 1)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(gps.location.map { displayCoordinate($0.coordinate.latitude, isLatitude:true) } ?? "---")
+                        Text(gps.location.map { displayCoordinate($0.coordinate.longitude, isLatitude:false) } ?? "---")
+                    }.font(.system(size: 23, weight: .bold, design: .monospaced)).minimumScaleFactor(0.5).lineLimit(1).frame(maxWidth: .infinity)
+                        .foregroundStyle(.white)
+                }.padding(.horizontal, 5).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+            }
+        }
     }
 
     private func gpsQualityColor(for point:CLLocation?) -> Color {
@@ -1231,3 +1258,40 @@ struct ShareView: UIViewControllerRepresentable {
 }
 @main struct SailingGPSApp: App { var body: some Scene { WindowGroup { ContentView() } } }
 
+
+
+private struct NumericCompassTape: View {
+    let heading: Double?
+    let label: String
+    var body: some View {
+        GeometryReader { proxy in
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(label).font(.caption2).foregroundStyle(.gray).lineLimit(1)
+                    Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
+                        .font(.system(size: 39, weight: .medium, design: .monospaced))
+                        .minimumScaleFactor(0.55).lineLimit(1)
+                }.frame(width: proxy.size.width * 0.36, alignment: .leading)
+                Rectangle().fill(.orange).frame(width: 1)
+                GeometryReader { scale in
+                    let center = scale.size.width / 2
+                    ZStack {
+                        ForEach(-4...4, id: \.self) { step in
+                            let value = Int((heading ?? 0).rounded()) + step * 10
+                            let normalized = (value % 360 + 360) % 360
+                            VStack(spacing: 3) {
+                                Rectangle().fill(Color.white.opacity(step == 0 ? 0.95 : 0.65))
+                                    .frame(width: step == 0 ? 2 : 1, height: step % 3 == 0 ? 21 : 11)
+                                if step % 3 == 0 {
+                                    Text("\(normalized)°").font(.system(size: 10, design: .monospaced)).foregroundStyle(.white)
+                                }
+                            }.position(x: center + CGFloat(step) * center / 4, y: scale.size.height / 2)
+                        }
+                        Rectangle().fill(.orange.opacity(0.9)).frame(width: 1, height: scale.size.height)
+                            .position(x: center, y: scale.size.height / 2)
+                    }
+                }
+            }.padding(.horizontal, 7).overlay(alignment: .top) { Rectangle().fill(.gray).frame(height: 1) }
+        }
+    }
+}
