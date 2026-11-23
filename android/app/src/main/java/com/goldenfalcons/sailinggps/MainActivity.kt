@@ -232,6 +232,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.root.post { editWaypoint(waypoints.last()) }
         }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewLibrary", false)) b.root.post { showMapLibrary() }
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewWaypointEdit", false)) b.root.post {
+            waypoints.firstOrNull { it.name == "MAP_TEST" }?.let(::editWaypoint)
+        }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.319,139.469) }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
