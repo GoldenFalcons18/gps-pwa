@@ -68,9 +68,11 @@ sleep 3
 adb emu geo fix 139.467 35.318
 sleep 2
 adb logcat -d -s SailingGpsLogger > screenshots/metric-units.log
+cat screenshots/metric-units.log
 # The unit spinner is inside the collapsed menu; its selection callback only fires
 # after layout. The dashboard reads the persisted value directly on startup.
 adb shell run-as "$APP" cat shared_prefs/display.xml > screenshots/metric-preferences.xml
+cat screenshots/metric-preferences.xml
 python3 - <<'PYPREF'
 import xml.etree.ElementTree as E
 root=E.parse('screenshots/metric-preferences.xml').getroot()
