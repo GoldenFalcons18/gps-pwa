@@ -235,6 +235,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.318,139.467) }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("tapCurrentWaypoint", false)) {
+            b.root.postDelayed({ b.btnCurrentWp.performClick() }, 1000)
+        }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewAppearance", false)) b.root.post {
             WaypointAppearanceDialog.show(this, "灯台", "#12ABCD") { mark, color ->
                 (waypoints.firstOrNull { it.name == "MAP_TEST" } ?: activeWaypoint)?.let { original ->
