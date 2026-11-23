@@ -29,18 +29,24 @@ if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then cat screenshots/runti
 
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
-# Read actual laid-out bounds from the debuggable app: no UI-idle wait or fixed pixel offsets.
-adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
+# Resolve the visible action from the Android accessibility tree rather than
+# app-internal layout logs, which can be stale across activity restarts.
+adb shell uiautomator dump /sdcard/window.xml >/dev/null
+adb shell cat /sdcard/window.xml > screenshots/ui-hierarchy.xml
 COORDS=$(python3 - <<'PY'
-import pathlib,re
-records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records,'No visible layout bounds'
-x1,y1,x2,y2,*_=map(int,records[-1])
-print((x1+x2)//2,y2-5)
+import pathlib,xml.etree.ElementTree as ET,re
+root=ET.parse('screenshots/ui-hierarchy.xml').getroot()
+node=next((n for n in root.iter('node') if n.get('content-desc')=='現在地をウェイポイント保存' and n.get('clickable')=='true'),None)
+assert node is not None,'Current waypoint action missing from accessibility tree'
+bounds=node.get('bounds','')
+nums=list(map(int,re.findall(r'-?\d+',bounds)))
+assert len(nums)==4,f'Invalid current waypoint bounds: {bounds}'
+x1,y1,x2,y2=nums
+assert x2>x1 and y2>y1,(x1,y1,x2,y2)
+print((x1+x2)//2,(y1+y2)//2)
 PY
 )
 echo "Current waypoint button center: $COORDS"
-cat screenshots/ui-bounds.log
 adb emu geo fix 139.467 35.318
 sleep 3
 adb shell input tap $COORDS
