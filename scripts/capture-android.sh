@@ -92,9 +92,9 @@ sleep 2
 adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
 MAP_POINT=$(python3 - <<'PYMAP'
 import pathlib,re
-records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records
-x1,y1,x2,y2=map(int,records[-1][4:])
+records=re.findall(r'MAP_CONTAINER bounds=(\\d+),(\\d+),(\\d+),(\\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
+assert records,'Map container bounds missing'
+x1,y1,x2,y2=map(int,records[-1])
 print(int(x1+(x2-x1)*.25),int(y1+(y2-y1)*.60))
 PYMAP
 )
