@@ -26,3 +26,19 @@ enum InstrumentSettings {
         return formatter.string(from:now.addingTimeInterval(ceil(distance/speed)))
     }
 }
+
+enum SailingSpeedBand {
+    case belowTarget
+    case approximatelyTarget
+    case aboveTarget
+    case unavailable
+
+    static func resolve(current: Double?, target: Double, enabled: Bool) -> SailingSpeedBand {
+        guard enabled else { return .aboveTarget }
+        guard let current, current.isFinite, current >= 0, target.isFinite, target >= 0 else { return .unavailable }
+        let shownCurrent = (current * 10).rounded()
+        let shownTarget = (target * 10).rounded()
+        if shownCurrent == shownTarget { return .approximatelyTarget }
+        return shownCurrent < shownTarget ? .belowTarget : .aboveTarget
+    }
+}
