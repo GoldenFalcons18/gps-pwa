@@ -36,7 +36,7 @@ import pathlib,re
 records=re.findall(r'UI current=(\d+),(\d+),(\d+),(\d+) map=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
 assert records,'No visible layout bounds'
 x1,y1,x2,y2,*_=map(int,records[-1])
-print((x1+x2)//2,(y1+y2)//2)
+print((x1+x2)//2,y2-5)
 PY
 )
 echo "Current waypoint button center: $COORDS"
