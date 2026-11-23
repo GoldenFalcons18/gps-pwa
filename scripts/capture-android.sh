@@ -235,6 +235,7 @@ adb exec-out screencap -p > screenshots/Android-long-press-edit.png
 adb shell input tap "$NAME_X" "$NAME_Y"
 adb shell input keycombination 113 29
 adb shell input text MAP_TEST_EDIT
+sleep 1
 adb shell input keyevent 4
 sleep 1
 adb shell input tap "$SAVE_X" "$SAVE_Y"
