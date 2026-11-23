@@ -1,6 +1,8 @@
 import SwiftUI
 import UserNotifications
 
+private enum MapNumericInput: Hashable { case courseLength, courseInterval }
+
 struct DetailedSettingsView: View {
     @ObservedObject var gps:GPSRecorder
     @AppStorage("largeDecimal") private var largeDecimal=true
@@ -28,6 +30,9 @@ struct DetailedSettingsView: View {
     @AppStorage("zoneMargin") private var zoneMargin=10.0
     @AppStorage("zoneConfirmations") private var zoneConfirmations=3
     @State private var notificationStatus="確認中"
+    @State private var courseLineLengthInput="500"
+    @State private var courseMarkIntervalInput="100"
+    @FocusState private var focusedMapInput:MapNumericInput?
     private var areas:[MapFeature] { gps.library.features.filter{["circle","area"].contains($0.kind)} }
     private var sailingSpeedTarget:Binding<Double> {
         Binding(get:{ sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1) },set:{ value in
@@ -39,6 +44,24 @@ struct DetailedSettingsView: View {
         Binding(get:{zoneSelected.split(separator:",").contains(Substring(id.uuidString))},set:{ enabled in
             var ids=Set(zoneSelected.split(separator:",").map(String.init));if enabled { ids.insert(id.uuidString) } else { ids.remove(id.uuidString) };zoneSelected=ids.sorted().joined(separator:",")
         })
+    }
+    private func finishMapInput() {
+        if let focusedMapInput { commitMapInput(focusedMapInput) }
+        focusedMapInput=nil
+    }
+    private func commitMapInput(_ field:MapNumericInput) {
+        switch field {
+        case .courseLength:
+            let value=Int(courseLineLengthInput.trimmingCharacters(in:.whitespacesAndNewlines)) ?? courseLineLengthMeters
+            courseLineLengthMeters=min(5000,max(100,value))
+            courseMarkIntervalMeters=min(courseMarkIntervalMeters,courseLineLengthMeters)
+            courseLineLengthInput=String(courseLineLengthMeters)
+            courseMarkIntervalInput=String(courseMarkIntervalMeters)
+        case .courseInterval:
+            let value=Int(courseMarkIntervalInput.trimmingCharacters(in:.whitespacesAndNewlines)) ?? courseMarkIntervalMeters
+            courseMarkIntervalMeters=min(courseLineLengthMeters,max(25,value))
+            courseMarkIntervalInput=String(courseMarkIntervalMeters)
+        }
     }
     var body:some View {
         Section("詳細設定") {
@@ -87,13 +110,18 @@ struct DetailedSettingsView: View {
                         Text("Appleマップ").tag("apple")
                         Text("OpenFreeMap（OSM）").tag("openfreemap")
                     }
-                    Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    TextField("進路ラインの長さ（m）",value:$courseLineLengthMeters,format:.number)
-                        .keyboardType(.numberPad)
-                        .onChange(of:courseLineLengthMeters) { _, value in courseLineLengthMeters=min(5000,max(100,value)); courseMarkIntervalMeters=min(courseMarkIntervalMeters,courseLineLengthMeters) }
-                    TextField("距離目盛りの間隔（m）",value:$courseMarkIntervalMeters,format:.number)
-                        .keyboardType(.numberPad)
-                        .onChange(of:courseMarkIntervalMeters) { _, value in courseMarkIntervalMeters=min(courseLineLengthMeters,max(25,value)) }
+                    Section("進路ライン") {
+                        Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
+                        TextField("進路ラインの長さ（m）",text:$courseLineLengthInput)
+                            .keyboardType(.numberPad)
+                            .focused($focusedMapInput,equals:.courseLength)
+                            .submitLabel(.done)
+                        TextField("距離目盛りの間隔（m）",text:$courseMarkIntervalInput)
+                            .keyboardType(.numberPad)
+                            .focused($focusedMapInput,equals:.courseInterval)
+                            .submitLabel(.done)
+                        Text("長さは100〜5,000m、間隔は25m以上で設定できます。値を入力した後、キーボードの「完了」を押してください。").font(.caption)
+                    }
                     Picker("一番下のコンパス表示",selection:$bottomCompassStyle) {
                         Text("方位・座標").tag("coordinates")
                         Text("数値テープ").tag("numericTape")
@@ -101,7 +129,27 @@ struct DetailedSettingsView: View {
                     Text("ラインと目盛りはAppleマップ・OpenFreeMapで同じ長さと間隔を使います。").font(.caption)
                     OfflineMapSettingsAction()
                     Text(mapProvider == "openfreemap" ? "OpenFreeMapを端末に保存すると、通信がない場所でも表示できます。保存範囲は地図画面で別に選びます。" : "オフライン保存にはOpenFreeMapを使用します。").font(.caption)
-                }.navigationTitle("地図")
+                }
+                .navigationTitle("地図")
+                .toolbar {
+                    ToolbarItemGroup(placement:.keyboard) {
+                        Spacer()
+                        Button("完了") { finishMapInput() }
+                    }
+                }
+                .onAppear {
+                    courseLineLengthInput=String(courseLineLengthMeters)
+                    courseMarkIntervalInput=String(courseMarkIntervalMeters)
+                }
+                .onChange(of:focusedMapInput) { oldValue,newValue in
+                    if let oldValue, oldValue != newValue { commitMapInput(oldValue) }
+                }
+                .onChange(of:courseLineLengthMeters) { _,value in
+                    if focusedMapInput != .courseLength { courseLineLengthInput=String(value) }
+                }
+                .onChange(of:courseMarkIntervalMeters) { _,value in
+                    if focusedMapInput != .courseInterval { courseMarkIntervalInput=String(value) }
+                }
             }
             NavigationLink("ゾーンアラート") {
                 Form {
