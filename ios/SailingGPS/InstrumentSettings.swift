@@ -15,6 +15,9 @@ enum InstrumentSettings {
         let degrees=Int(total/3600), minutes=Int(total/60)%60, seconds=total.truncatingRemainder(dividingBy:60)
         return String(format:"%d°%02d′%04.1f″%@",degrees,minutes,seconds,direction)
     }
+    static func sailingSpeedBand(current:Double?,target:Double,enabled:Bool)->SailingSpeedBand {
+        SailingSpeedBand.resolve(current:current,target:target,enabled:enabled)
+    }
     static func speedText(_ speed:Double?,factor:Double,zeroThreshold:Double=0)->String {
         guard let speed,speed.isFinite,speed>=0 else { return "—" }
         return String(format:"%.1f",(speed<zeroThreshold ? 0:speed)*factor)
