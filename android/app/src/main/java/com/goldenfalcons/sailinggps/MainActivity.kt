@@ -267,6 +267,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                         Log.d("SailingUiBounds", bounds)
                     }
                 }
+                val mapLocation = IntArray(2)
+                b.mapContainer.getLocationOnScreen(mapLocation)
+                val mapBounds = "MAP_CONTAINER bounds=${mapLocation[0]},${mapLocation[1]},${mapLocation[0]+b.mapContainer.width},${mapLocation[1]+b.mapContainer.height}"
+                Log.d("SailingUiBounds", mapBounds)
                 val signalButton = android.graphics.Rect()
                 val signalBounds = if (b.btnSignalSettings.getGlobalVisibleRect(signalButton))
                     "SIGNAL_SETTINGS bounds=${signalButton.left},${signalButton.top},${signalButton.right},${signalButton.bottom}" else ""
