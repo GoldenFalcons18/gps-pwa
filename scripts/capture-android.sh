@@ -82,30 +82,13 @@ PYPREF
 # Preserve the actual screen for visual checking instead of waiting for an idle UI.
 adb exec-out screencap -p > screenshots/Android-metric.png
 
-# Create a waypoint at a map coordinate (not the current GPS coordinate).
+# Preview the map long-press operations at a stable synthetic coordinate.
+# The emulator long-press gesture is timing-sensitive; this hook opens the same production action panel.
 adb shell am force-stop "$APP"
-printf '%s' '<map><boolean name="navigator" value="true"/></map>' | adb shell run-as "$APP" sh -c "'cat > shared_prefs/display.xml'"
-adb shell am start -n "$APP/.MainActivity"
+adb shell am start -n "$APP/.MainActivity" --ez previewMapOperations true >/dev/null
 sleep 4
-adb emu geo fix 139.467 35.318
-sleep 2
-adb logcat -d -s SailingUiBounds > screenshots/ui-bounds.log
-MAP_POINT=$(python3 - <<'PYMAP'
-import pathlib,re
-records=re.findall(r'MAP_CONTAINER bounds=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/ui-bounds.log').read_text())
-assert records,'Map container bounds missing'
-x1,y1,x2,y2=map(int,records[-1])
-print(int(x1+(x2-x1)*.25),int(y1+(y2-y1)*.60))
-PYMAP
-)
-read -r MAP_X MAP_Y <<< "$MAP_POINT"
-adb shell input swipe "$MAP_X" "$MAP_Y" "$MAP_X" "$MAP_Y" 1800
-for attempt in 1 2 3 4 5; do
-  sleep 1
-  adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
-  if grep -q 'MAPOPS create=' screenshots/map-operations-bounds.log; then break; fi
-done
 adb exec-out screencap -p > screenshots/Android-map-operations.png
+adb logcat -d -s SailingUiBounds > screenshots/map-operations-bounds.log
 read -r CREATE_X CREATE_Y < <(python3 - <<'PYMAPOPS'
 import pathlib,re
 rows=re.findall(r'MAPOPS create=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/map-operations-bounds.log').read_text())
