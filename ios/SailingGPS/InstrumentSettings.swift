@@ -30,7 +30,7 @@ enum InstrumentSettings {
     }
 }
 
-enum SailingSpeedBand {
+enum SailingSpeedBand: Equatable {
     case belowTarget
     case approximatelyTarget
     case aboveTarget
