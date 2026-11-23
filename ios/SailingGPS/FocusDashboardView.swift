@@ -3,6 +3,7 @@ import SwiftUI
 /// Three large sailing readings with target bearing and range sharing one row.
 struct FocusDashboardView: View {
     let speed: String
+    let speedColor: Color
     let course: Double?
     let isCompass: Bool
     let targetBearing: Double?
@@ -19,7 +20,7 @@ struct FocusDashboardView: View {
     let chooseTarget: () -> Void
     let openMenu: () -> Void
 
-    private func card(_ label: String, _ value: String, _ color: Color, valueScale: CGFloat = 0.24) -> some View {
+    private func card(_ label: String, _ value: String, _ color: Color, valueScale: CGFloat = 0.42) -> some View {
         GeometryReader { bounds in
             VStack(spacing: 4) {
                 Text(label)
@@ -28,9 +29,9 @@ struct FocusDashboardView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 Text(value)
-                    .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.52),
+                    .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.62),
                                   weight: .bold, design: .monospaced))
-                    .minimumScaleFactor(0.45)
+                    .minimumScaleFactor(0.4)
                     .lineLimit(1)
                     .foregroundStyle(color)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,56 +70,66 @@ struct FocusDashboardView: View {
         }.buttonStyle(.plain)
     }
 
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Spacer(minLength: 0)
-                Button { mode = (mode + 1) % 5 } label: {
-                    Text(modeName)
-                        .font(.system(size: 27, weight: .medium))
-                        .minimumScaleFactor(0.55)
-                        .lineLimit(1)
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("モード切替")
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(recording ? Color.green : (recordingPaused ? Color.orange : Color.gray))
-                        .frame(width: 8, height: 8)
-                    Text(recording ? "記録中" : (recordingPaused ? "一時停止" : "停止中"))
-                        .font(.caption2)
-                        .foregroundStyle(recording ? Color.green : (recordingPaused ? Color.orange : Color.secondary))
-                }
-                .accessibilityElement(children: .combine)
-                recordingControls
-                Button(action: openMenu) {
-                    Image(systemName: "line.3.horizontal").foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("メニュー")
+    private var header: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            Button { mode = (mode + 1) % 5 } label: {
+                Text(modeName)
+                    .font(.system(size: 27, weight: .medium))
+                    .minimumScaleFactor(0.55)
+                    .lineLimit(1)
+                    .foregroundStyle(.orange)
             }
-            VStack(spacing: 8) {
-                card("SOG / " + unit, speed, .green)
-                    .frame(height: 88)
+            .buttonStyle(.plain)
+            .accessibilityLabel("モード切替")
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(recording ? Color.green : (recordingPaused ? Color.orange : Color.gray))
+                    .frame(width: 8, height: 8)
+                Text(recording ? "記録中" : (recordingPaused ? "一時停止" : "停止中"))
+                    .font(.caption2)
+                    .foregroundStyle(recording ? Color.green : (recordingPaused ? Color.orange : Color.secondary))
+            }
+            .accessibilityElement(children: .combine)
+            recordingControls
+            Button(action: openMenu) {
+                Image(systemName: "line.3.horizontal").foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("メニュー")
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let contentHeight = max(0, geometry.size.height - 16)
+            let gap = min(8, max(4, contentHeight * 0.01))
+            let headerHeight = min(48, max(36, contentHeight * 0.08))
+            let cardHeight = max(72, (contentHeight - headerHeight - gap * 3) / 3)
+
+            VStack(spacing: gap) {
+                header.frame(height: headerHeight)
+                card("SOG / " + unit, speed, speedColor)
+                    .frame(height: cardHeight)
                 card((isCompass ? "コンパス方位" : "COG") + (magnetic ? "（磁北）" : "（真北）"),
                      course.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
                      .white)
-                    .frame(height: 88)
-            }
-            HStack(spacing: 8) {
-                Button(action: chooseTarget) {
-                    card("目標方位" + (magnetic ? "（磁北）" : "（真北）"),
-                         targetBearing.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
-                         .orange, valueScale: 0.21)
+                    .frame(height: cardHeight)
+                HStack(spacing: 8) {
+                    Button(action: chooseTarget) {
+                        card("目標方位" + (magnetic ? "（磁北）" : "（真北）"),
+                             targetBearing.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
+                             .orange, valueScale: 0.26)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("タップして目標地点を変更")
+                    card("目標距離", targetDistance, .white, valueScale: 0.26)
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("タップして目標地点を変更")
-                card("目標距離", targetDistance, .white, valueScale: 0.21)
+                .frame(height: cardHeight)
             }
-            .frame(height: 92)
+            .padding(8)
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .padding(8)
         .background(.black)
         .preferredColorScheme(.dark)
     }
