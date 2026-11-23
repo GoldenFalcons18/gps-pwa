@@ -23,6 +23,9 @@ class HeadingReferenceTest {
         assertNull(HeadingReference.resolve(true, null, null, -1.0, 3.0))
         assertNull(HeadingReference.resolve(true, null, null, Double.NaN, 3.0))
     }
+    @Test fun magneticModeReportsUnavailableInsteadOfUsingGpsCourse() {
+        assertNull(HeadingReference.resolve(false, null, null, 200.0, 3.0))
+    }
     @Test fun northCrossingUsesTheShortArc() {
         assertEquals(2.0, HeadingReference.relative(1.0, 359.0), 0.0001)
         assertEquals(-2.0, HeadingReference.relative(359.0, 1.0), 0.0001)
