@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var magneticSampleAt=0L
     private var accelSampleAt=0L
     private var compassAccuracy=SensorManager.SENSOR_STATUS_UNRELIABLE
+    private var rotationVectorAvailable=false
 
     private var previewListener: android.location.LocationListener? = null
     private var foregroundActive = false
@@ -306,11 +307,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         uiHandler.removeCallbacks(clockTick)
         uiHandler.post(clockTick)
         mapPanel?.resume()
-        sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-        sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.also {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+        if (rotationVectorAvailable) {
+            sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)?.also {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            }
+        } else {
+            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.also {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            }
+            sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.also {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            }
         }
         debug("Compass sensors registered")
         updateChecker.check()
@@ -1313,11 +1320,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun freshMagneticHeading(): Double? {
+        val age = android.os.SystemClock.elapsedRealtime() - magneticSampleAt
+        if (magneticSampleAt <= 0L || age !in 0L..15_000L || compassAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) return null
+        return magneticHeading
+    }
+
     private fun headingReference(): HeadingReference.Reading? {
         val declination = latestLat?.let { lat -> latestLon?.let { lon ->
             GeomagneticField(lat.toFloat(), lon.toFloat(), 0f, System.currentTimeMillis()).declination.toDouble()
         } }
-        return HeadingReference.resolve(preferGpsHeading, magneticHeading, declination, latestGpsBearing, latestSpeedMps)
+        return HeadingReference.resolve(preferGpsHeading, freshMagneticHeading(), declination, latestGpsBearing, latestSpeedMps)
     }
 
     private fun mapHeading(): Double? = headingReference()?.trueHeading
@@ -1382,8 +1395,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupSensors() {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) == null) {
-            debug("Magnetic sensor not available")
+        rotationVectorAvailable = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null
+        if (!rotationVectorAvailable && (sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) == null ||
+                sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null)) {
+            debug("Magnetic compass sensors not available")
         }
     }
 
@@ -1566,21 +1581,26 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
         val reference = headingReference()
         val heading = reference?.heading
-        val source = if (reference == null) "未取得" else if (reference.magnetic) "磁気コンパス（MAG）" else "GPS対地針路（COG）"
+        val magneticUnavailable = (preferGpsHeading.not() || displayPrefs.getBoolean("instrumentMagnetic", false)) && freshMagneticHeading() == null
+        val source = if (magneticUnavailable) "磁気コンパス利用不可" else if (reference == null) "方位未取得" else if (reference.magnetic) "磁気コンパス（MAG）" else "GPS対地針路（COG）"
         b.tvCog.text = heading?.let { "${NavigationUtils.normalize360(it).roundToInt() % 360}°" } ?: "--°"
-        b.tvHeadingSource.text = "方位ソース：$source"
+        b.tvHeadingSource.text = source
+        b.tvHeadingSource.setTextColor(if(magneticUnavailable) Color.RED else Color.LTGRAY)
 
         val age=(android.os.SystemClock.elapsedRealtime()-latestFixAt)/1000.0
         val fresh=latestFixAt>0 && age in 0.0..15.0
         val preview=BuildConfig.DEBUG && intent.getBooleanExtra("previewFocus",false)
         val useMagnetic=displayPrefs.getBoolean("instrumentMagnetic",false)
-        val compassAge=(android.os.SystemClock.elapsedRealtime()-minOf(magneticSampleAt,accelSampleAt))/1000.0
-        val instrumentCompass=if(preview) 218.0 else magneticHeading?.takeIf{magneticSampleAt>0 && accelSampleAt>0 && compassAge in 0.0..15.0 && compassAccuracy>SensorManager.SENSOR_STATUS_UNRELIABLE}
+        val instrumentCompass=if(preview) 218.0 else freshMagneticHeading()
         val declination=if(preview) -8.0 else if(latestLat!=null && latestLon!=null) GeomagneticField(latestLat!!.toFloat(),latestLon!!.toFloat(),0f,System.currentTimeMillis()).declination.toDouble() else null
         val instrumentCourse=if(preview) 82.0 else InstrumentSettings.course(latestGpsBearing,latestSpeedMps,age)
         val instrumentSpeed=if(preview) 3.0 else if(fresh) latestSpeedMps else null
         val instrumentReading=InstrumentHeading.resolve(instrumentCourse,instrumentSpeed,instrumentCompass,declination,useMagnetic)
         val instrumentHeading=instrumentReading?.value
+        val bottomTape = displayPrefs.getString("bottomCompassStyle","coordinates") == "numericTape"
+        b.bottomPositionReadings.visibility = if(bottomTape) android.view.View.GONE else android.view.View.VISIBLE
+        b.bottomCompassTape.visibility = if(bottomTape) android.view.View.VISIBLE else android.view.View.GONE
+        b.bottomCompassTape.setReading(instrumentHeading, if(useMagnetic && instrumentCompass==null) "磁気コンパス利用不可" else if(useMagnetic) "磁気コンパス" else "GPS進行方位")
         b.instrumentView.mode = if(displayPrefs.getString("compassCenterMode","absolute")=="relative") InstrumentView.Mode.RELATIVE else InstrumentView.Mode.ABSOLUTE
         if(::focusSog.isInitialized) {
             val label=(focusSog.parent as LinearLayout).getChildAt(0) as TextView;label.text="SOG / $unit"
@@ -2360,44 +2380,53 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent) {
+        val timestamp = event.timestamp / 1_000_000L
         when (event.sensor.type) {
+            Sensor.TYPE_ROTATION_VECTOR -> {
+                compassAccuracy = event.accuracy
+                magneticSampleAt = timestamp
+                val matrix = FloatArray(9)
+                SensorManager.getRotationMatrixFromVector(matrix, event.values)
+                updateMagneticHeading(matrix)
+                return
+            }
             Sensor.TYPE_ACCELEROMETER -> {
-                accelSampleAt=event.timestamp/1_000_000
+                accelSampleAt = timestamp
                 accel = event.values.clone()
                 haveAccel = true
             }
             Sensor.TYPE_MAGNETIC_FIELD -> {
-                compassAccuracy=event.accuracy
-                magneticSampleAt=event.timestamp/1_000_000
+                compassAccuracy = event.accuracy
+                magneticSampleAt = timestamp
                 magnetic = event.values.clone()
                 haveMagnetic = true
             }
         }
-        if (!haveAccel || !haveMagnetic) return
-
+        if (rotationVectorAvailable || !haveAccel || !haveMagnetic) return
         val rotation = FloatArray(9)
         val inclination = FloatArray(9)
         if (!SensorManager.getRotationMatrix(rotation, inclination, accel, magnetic)) return
+        updateMagneticHeading(rotation)
+    }
 
+    private fun updateMagneticHeading(rotation: FloatArray) {
         val remapped = FloatArray(9)
         @Suppress("DEPRECATION")
         val displayRotation = windowManager.defaultDisplay.rotation
-        val rotationConstant = when (displayRotation) {
+        val axes = when (displayRotation) {
             Surface.ROTATION_90 -> SensorManager.AXIS_Y to SensorManager.AXIS_MINUS_X
             Surface.ROTATION_180 -> SensorManager.AXIS_MINUS_X to SensorManager.AXIS_MINUS_Y
             Surface.ROTATION_270 -> SensorManager.AXIS_MINUS_Y to SensorManager.AXIS_X
             else -> SensorManager.AXIS_X to SensorManager.AXIS_Y
         }
-        SensorManager.remapCoordinateSystem(rotation, rotationConstant.first, rotationConstant.second, remapped)
+        SensorManager.remapCoordinateSystem(rotation, axes.first, axes.second, remapped)
         val orientation = FloatArray(3)
         SensorManager.getOrientation(remapped, orientation)
         val raw = NavigationUtils.normalize360(Math.toDegrees(orientation[0].toDouble()))
-
-        magneticHeading = magneticHeading?.let { prev ->
-            val delta = NavigationUtils.normalize180(raw - prev)
-            NavigationUtils.normalize360(prev + delta * 0.35)
+        magneticHeading = magneticHeading?.let { previous ->
+            val delta = NavigationUtils.normalize180(raw - previous)
+            NavigationUtils.normalize360(previous + delta * 0.35)
         } ?: raw
-
         updateNavigationUi()
         updateMap()
     }

@@ -13,6 +13,7 @@ struct DetailedSettingsView: View {
     @AppStorage("showCourseLine") private var showCourse=true
     @AppStorage("courseLineLengthMeters") private var courseLineLengthMeters=500
     @AppStorage("courseMarkIntervalMeters") private var courseMarkIntervalMeters=100
+    @AppStorage("bottomCompassStyle") private var bottomCompassStyle="coordinates"
     @AppStorage("mapProvider") private var mapProvider="apple"
     @AppStorage("zoneEnabled") private var zoneEnabled=false
     @AppStorage("zoneSelected") private var zoneSelected=""
@@ -62,11 +63,15 @@ struct DetailedSettingsView: View {
                         Text("OpenFreeMap（OSM）").tag("openfreemap")
                     }
                     Toggle("進路ライン・距離目盛りを表示",isOn:$showCourse)
-                    Picker("進路ラインの長さ",selection:$courseLineLengthMeters) {
-                        Text("250 m").tag(250);Text("500 m").tag(500);Text("1 km").tag(1000);Text("2.5 km").tag(2500);Text("5 km").tag(5000)
-                    }
-                    Picker("距離目盛りの間隔",selection:$courseMarkIntervalMeters) {
-                        Text("25 m").tag(25);Text("50 m").tag(50);Text("100 m").tag(100);Text("250 m").tag(250);Text("500 m").tag(500)
+                    TextField("進路ラインの長さ（m）",value:$courseLineLengthMeters,format:.number)
+                        .keyboardType(.numberPad)
+                        .onChange(of:courseLineLengthMeters) { _, value in courseLineLengthMeters=min(5000,max(100,value)); courseMarkIntervalMeters=min(courseMarkIntervalMeters,courseLineLengthMeters) }
+                    TextField("距離目盛りの間隔（m）",value:$courseMarkIntervalMeters,format:.number)
+                        .keyboardType(.numberPad)
+                        .onChange(of:courseMarkIntervalMeters) { _, value in courseMarkIntervalMeters=min(courseLineLengthMeters,max(25,value)) }
+                    Picker("一番下のコンパス表示",selection:$bottomCompassStyle) {
+                        Text("方位・座標").tag("coordinates")
+                        Text("数値テープ").tag("numericTape")
                     }
                     Text("ラインと目盛りはAppleマップ・OpenFreeMapで同じ長さと間隔を使います。").font(.caption)
                     OfflineMapSettingsAction()

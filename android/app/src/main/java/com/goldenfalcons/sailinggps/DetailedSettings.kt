@@ -162,6 +162,23 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             }
         })
     }
+    private fun numberInput(title:String,key:String,default:Int,min:Int,max:Int,unit:String) {
+        val input=android.widget.EditText(activity).apply {
+            inputType=android.text.InputType.TYPE_CLASS_NUMBER
+            setText(prefs.getInt(key,default).toString())
+            setSelection(text.length)
+        }
+        input.setPadding((20*activity.resources.displayMetrics.density).toInt(),0,(20*activity.resources.displayMetrics.density).toInt(),0)
+        AlertDialog.Builder(activity).setTitle(title)
+            .setMessage("値を数値で入力してください（$min〜$max$unit）")
+            .setView(input)
+            .setNegativeButton("キャンセル",null)
+            .setPositiveButton("保存") { _, _ ->
+                val value=input.text.toString().toIntOrNull()
+                if(value==null) android.widget.Toast.makeText(activity,"数値を入力してください",android.widget.Toast.LENGTH_SHORT).show()
+                else { prefs.edit().putInt(key,value.coerceIn(min,max)).apply();refresh() }
+            }.show()
+    }
     private fun number(title:String,key:String,values:List<Int>,default:Int,unit:String) {
         val selected=prefs.getInt(key,default)
         menu(title,values.map { value ->
@@ -175,7 +192,8 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to { booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km")) },
             "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to { booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路")) },
             "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to { booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北")) },
-            "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to { choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute") }
+            "コンパス中央の表示：${if(prefs.getString("compassCenterMode","absolute")=="relative") "相対方位" else "絶対方位"}" to { choice("コンパス中央の表示","compassCenterMode",listOf("絶対方位","相対方位（左右）"),listOf("absolute","relative"),"absolute") },
+            "下部コンパス表示：${if(prefs.getString("bottomCompassStyle","coordinates")=="numericTape") "数値テープ" else "方位・座標"}" to { choice("下部コンパス表示","bottomCompassStyle",listOf("方位・座標","数値テープ"),listOf("coordinates","numericTape"),"coordinates") }
         ),
         "詳細設定" to listOf(
             "速度・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones
@@ -217,8 +235,8 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             choice("OpenFreeMapの地図配色","mapStyle",listOf("標準","明るい","薄い","暗い"),listOf("liberty","bright","positron","dark"),"liberty")
         },
         "進路ライン・距離目盛り：${if(bool("showCourse")) "ON" else "OFF"}" to {prefs.edit().putBoolean("showCourse",!bool("showCourse")).apply();refresh();map()},
-        "進路ラインの長さ：${prefs.getInt("courseLineLengthMeters",500)}m" to {number("進路ラインの長さ","courseLineLengthMeters",listOf(250,500,1000,2500,5000),500,"m")},
-        "距離目盛りの間隔：${prefs.getInt("courseMarkIntervalMeters",100)}m" to {number("距離目盛りの間隔","courseMarkIntervalMeters",listOf(25,50,100,250,500),100,"m")},
+        "進路ラインの長さ：${prefs.getInt("courseLineLengthMeters",500)}m" to {numberInput("進路ラインの長さ","courseLineLengthMeters",500,100,5000,"m")},
+        "距離目盛りの間隔：${prefs.getInt("courseMarkIntervalMeters",100)}m" to {numberInput("距離目盛りの間隔","courseMarkIntervalMeters",100,25,prefs.getInt("courseLineLengthMeters",500),"m")},
         "オフライン地図を保存・管理" to {openOfflineMap()},
         "オフライン地図について" to {message("オフライン地図について","地図範囲の選択と最大ズームの確認は専用画面で行います。範囲を選んで保存した地図は端末内に保存され、同じ画面から一時停止・再開・削除できます。")},
         "縮尺・地点表示について" to {message("地図について","地図の＋／−で航行中も縮尺を変更できます。地点名とマークは目標地点も同じ大きさです。地図データ：OpenFreeMap（© OpenStreetMap contributors）")}))

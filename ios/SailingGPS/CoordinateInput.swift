@@ -93,6 +93,6 @@ enum CoordinateInput {
         }
         if preferGps, let gps { return HeadingReading(heading: gps, trueHeading: gps, magnetic: false) }
         if let mag { return HeadingReading(heading: mag, trueHeading: trueNorth, magnetic: true) }
-        return gps.map { HeadingReading(heading: $0, trueHeading: $0, magnetic: false) }
+        return preferGps ? gps.map { HeadingReading(heading: $0, trueHeading: $0, magnetic: false) } : nil
     }
 }
