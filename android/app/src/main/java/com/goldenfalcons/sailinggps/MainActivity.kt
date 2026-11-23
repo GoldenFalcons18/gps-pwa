@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var accelSampleAt=0L
     private var compassAccuracy=SensorManager.SENSOR_STATUS_UNRELIABLE
     private var rotationVectorAvailable=false
+    private var magneticHardwareAvailable=false
 
     private var previewListener: android.location.LocationListener? = null
     private var foregroundActive = false
@@ -1322,7 +1323,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun freshMagneticHeading(): Double? {
         val age = android.os.SystemClock.elapsedRealtime() - magneticSampleAt
-        if (magneticSampleAt <= 0L || age !in 0L..15_000L || compassAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) return null
+        if (!magneticHardwareAvailable || magneticSampleAt <= 0L || age !in 0L..15_000L || compassAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) return null
         return magneticHeading
     }
 
@@ -1395,9 +1396,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupSensors() {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        rotationVectorAvailable = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null
-        if (!rotationVectorAvailable && (sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) == null ||
-                sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null)) {
+        magneticHardwareAvailable = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
+        rotationVectorAvailable = magneticHardwareAvailable && sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null
+        if (!magneticHardwareAvailable || (!rotationVectorAvailable && sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null)) {
             debug("Magnetic compass sensors not available")
         }
     }
