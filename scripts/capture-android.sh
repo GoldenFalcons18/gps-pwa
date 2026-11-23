@@ -220,8 +220,9 @@ import xml.etree.ElementTree as E
 root=E.parse('screenshots/tap-waypoints.xml').getroot()
 assert next(n.text for n in root if n.get('name')=='activeId')=='__none__'
 PYTAP
-adb shell input swipe "$WP_X" "$WP_Y" "$WP_X" "$WP_Y" 1200
-sleep 1
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
+sleep 2
 adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
 read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDIT'
 import pathlib,re
