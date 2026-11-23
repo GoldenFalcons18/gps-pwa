@@ -312,7 +312,9 @@ class NavigationMapPanel(
                 PropertyFactory.textColor(Color.WHITE),
                 PropertyFactory.textHaloColor(Color.BLACK),
                 PropertyFactory.textHaloWidth(1f),
-                PropertyFactory.textRotate(Expression.get("bearing"))
+                PropertyFactory.textRotate(Expression.get("bearing")),
+                PropertyFactory.textAllowOverlap(true),
+                PropertyFactory.textIgnorePlacement(true)
             )
         )
         applyVisibility()

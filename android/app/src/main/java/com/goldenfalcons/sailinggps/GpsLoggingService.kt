@@ -166,13 +166,18 @@ class GpsLoggingService : Service(), LocationListener {
         previous = Location(location)
         count++
 
+        val displaySpeedMps = GpsSpeedQuality.acceptedSpeedMps(
+            if (location.hasSpeed()) location.speed.toDouble() else null,
+            if (location.hasAccuracy()) location.accuracy.toDouble() else null,
+            if (location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond.toDouble() else null
+        )
         val intent = Intent(ACTION_LOCATION).setPackage(packageName).apply {
             putExtra(EXTRA_FIX_ELAPSED, location.elapsedRealtimeNanos / 1_000_000L)
             putExtra(EXTRA_LAT, location.latitude)
             putExtra(EXTRA_LON, location.longitude)
             putExtra(EXTRA_ALT, if (location.hasAltitude()) location.altitude else Double.NaN)
             putExtra(EXTRA_ACCURACY, if (location.hasAccuracy()) location.accuracy else Float.NaN)
-            putExtra(EXTRA_SPEED, if (location.hasSpeed()) location.speed else Float.NaN)
+            putExtra(EXTRA_SPEED, displaySpeedMps?.toFloat() ?: Float.NaN)
             putExtra(EXTRA_BEARING, bearing)
             putExtra(EXTRA_HAS_BEARING, bearing.isFinite())
             putExtra(EXTRA_COUNT, count)
@@ -180,8 +185,8 @@ class GpsLoggingService : Service(), LocationListener {
         }
         sendBroadcast(intent)
 
-        val nm = NavigationUtils.MPS_TO_KT * if (location.hasSpeed()) location.speed else 0f
-        val n = notification((if(largestGapSeconds>0) "GPS欠落 ${largestGapSeconds}秒 / " else "")+"SOG %.1f kt / %d 点".format(nm, count))
+        val speedText = displaySpeedMps?.let { "SOG %.1f kt".format(it * NavigationUtils.MPS_TO_KT) } ?: "SOG -- kt"
+        val n = notification((if(largestGapSeconds>0) "GPS欠落 ${largestGapSeconds}秒 / " else "")+"$speedText / $count 点")
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(1001, n)
     }
 
