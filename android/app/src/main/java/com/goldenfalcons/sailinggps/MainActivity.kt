@@ -1272,7 +1272,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         latestFixAt=fixElapsed
         latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
         latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
-        latestSpeedMps=if(location.hasSpeed()) location.speed.toDouble().coerceAtLeast(0.0) else null
+        latestSpeedMps=GpsSpeedQuality.acceptedSpeedMps(
+    if(location.hasSpeed()) location.speed.toDouble() else null,
+    if(location.hasAccuracy()) location.accuracy.toDouble() else null,
+    if(location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond.toDouble() else null
+ )
         latestGpsBearing=if(location.hasBearing()) location.bearing.toDouble() else null
         updateGpsQualityUi()
         updateMap();updateNavigationUi()
