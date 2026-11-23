@@ -1048,7 +1048,7 @@ struct ContentView: View {
             }} ?? "—"
             let currentDisplaySpeed=Double(speedText)
             let targetDisplaySpeed=sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1)
-            let band=InstrumentSettings.sailingSpeedBand(current:currentDisplaySpeed,target:targetDisplaySpeed,enabled:sailingSpeedHighlightEnabled)
+            let band=InstrumentSettings.sailingSpeedBand(current:fresh ? currentDisplaySpeed:nil,target:targetDisplaySpeed,enabled:sailingSpeedHighlightEnabled)
             let speedColor:Color
             switch band {
             case .belowTarget: speedColor = .yellow
