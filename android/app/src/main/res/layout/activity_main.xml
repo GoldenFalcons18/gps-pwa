@@ -99,7 +99,7 @@
             <FrameLayout android:id="@+id/mapContainer" android:layout_width="match_parent" android:layout_height="240dp" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="長押しで地点追加 · © OpenStreetMap contributors" android:textColor="#BBBBBB" android:textSize="10sp" />
         </LinearLayout>
-        <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="120dp" android:minHeight="120dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
+        <LinearLayout android:id="@+id/targetPanel" android:layout_width="match_parent" android:layout_height="154dp" android:minHeight="140dp" android:orientation="horizontal" android:background="@drawable/panel_bg">
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.26" android:orientation="vertical" android:gravity="center_vertical" android:padding="8dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="目標まで" android:textColor="@color/gray_text" android:textSize="14sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="14sp" android:maxLines="1" android:textStyle="bold" />
                 <TextView android:id="@+id/tvDistance" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="-- NM" android:textColor="@color/white" android:textSize="21sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="12sp" android:autoSizeMaxTextSize="21sp" android:maxLines="1" android:textStyle="bold" />
@@ -108,7 +108,7 @@
                 <TextView android:id="@+id/tvClock" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="--時方向" android:textColor="@color/white" android:textSize="16sp" android:autoSizeTextType="uniform" android:autoSizeMinTextSize="10sp" android:autoSizeMaxTextSize="16sp" android:maxLines="2" android:textStyle="bold" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.45" android:orientation="vertical" android:gravity="center">
-                <com.goldenfalcons.sailinggps.InstrumentView android:id="@+id/instrumentView" android:layout_width="match_parent" android:layout_height="100dp" />
+                <com.goldenfalcons.sailinggps.InstrumentView android:id="@+id/instrumentView" android:layout_width="match_parent" android:layout_height="match_parent" />
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.29" android:orientation="vertical" android:gravity="center" android:padding="4dp">
                 <Button android:id="@+id/btnSetTarget" android:layout_width="match_parent" android:layout_height="34dp" android:minHeight="32dp" android:padding="0dp" android:text="設定目標" android:textColor="#FFAA00" android:textSize="13sp" />
