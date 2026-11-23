@@ -1049,13 +1049,14 @@ struct ContentView: View {
             let currentDisplaySpeed=Double(speedText)
             let targetDisplaySpeed=sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1)
             let band=InstrumentSettings.sailingSpeedBand(current:fresh ? currentDisplaySpeed:nil,target:targetDisplaySpeed,enabled:sailingSpeedHighlightEnabled)
-            let speedColor:Color
-            switch band {
-            case .belowTarget: speedColor = .yellow
-            case .approximatelyTarget: speedColor = .white
-            case .aboveTarget: speedColor = .green
-            case .unavailable: speedColor = .white
-            }
+            let speedColor:Color = {
+                switch band {
+                case .belowTarget: return .yellow
+                case .approximatelyTarget: return .white
+                case .aboveTarget: return .green
+                case .unavailable: return .white
+                }
+            }()
             FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
