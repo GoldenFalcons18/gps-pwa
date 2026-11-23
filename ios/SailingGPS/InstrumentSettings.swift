@@ -15,6 +15,9 @@ enum InstrumentSettings {
         let degrees=Int(total/3600), minutes=Int(total/60)%60, seconds=total.truncatingRemainder(dividingBy:60)
         return String(format:"%d°%02d′%04.1f″%@",degrees,minutes,seconds,direction)
     }
+    static func sailingSpeedBand(current:Double?,target:Double,enabled:Bool)->SailingSpeedBand {
+        SailingSpeedBand.resolve(current:current,target:target,enabled:enabled)
+    }
     static func speedText(_ speed:Double?,factor:Double,zeroThreshold:Double=0)->String {
         guard let speed,speed.isFinite,speed>=0 else { return "—" }
         return String(format:"%.1f",(speed<zeroThreshold ? 0:speed)*factor)
@@ -24,5 +27,21 @@ enum InstrumentSettings {
         guard eta, duration != "--:--:--", let speed,speed>0 else { return duration }
         let formatter=DateFormatter();formatter.locale=Locale(identifier:"en_US_POSIX");formatter.dateFormat=twelveHour ? "h:mm:ss a":"HH:mm:ss"
         return formatter.string(from:now.addingTimeInterval(ceil(distance/speed)))
+    }
+}
+
+enum SailingSpeedBand: Equatable {
+    case belowTarget
+    case approximatelyTarget
+    case aboveTarget
+    case unavailable
+
+    static func resolve(current: Double?, target: Double, enabled: Bool) -> SailingSpeedBand {
+        guard enabled else { return .aboveTarget }
+        guard let current, current.isFinite, current >= 0, target.isFinite, target >= 0 else { return .unavailable }
+        let shownCurrent = (current * 10).rounded()
+        let shownTarget = (target * 10).rounded()
+        if shownCurrent == shownTarget { return .approximatelyTarget }
+        return shownCurrent < shownTarget ? .belowTarget : .aboveTarget
     }
 }

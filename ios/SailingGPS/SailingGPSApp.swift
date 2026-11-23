@@ -572,6 +572,8 @@ struct ContentView: View {
     @AppStorage("twelveHourClock") private var twelveHourClock=false
     @AppStorage("keepScreenAwake") private var keepScreenAwake=false
     @AppStorage("zeroSpeedThreshold") private var zeroSpeedThreshold=0.0
+    @AppStorage("sailingSpeedHighlightEnabled") private var sailingSpeedHighlightEnabled=false
+    @AppStorage("sailingSpeedTargetKnots") private var sailingSpeedTargetKnots=5.0
     @AppStorage("arrivalUsesAverage") private var arrivalUsesAverage=false
     @AppStorage("showETA") private var showETA=false
     private var speedText:String {
@@ -1044,7 +1046,18 @@ struct ContentView: View {
                 let meters=point.distance(from:CLLocation(latitude:wp.latitude,longitude:wp.longitude))
                 return metricUnits ? (meters < 1000 ? String(format:"%.0f m",meters) : String(format:"%.2f km",meters/1000)) : String(format:"%.2f nm",meters/1852)
             }} ?? "—"
-            FocusDashboardView(speed:fresh ? speedText:"—",course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+            let currentDisplaySpeed=Double(speedText)
+            let targetDisplaySpeed=sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1)
+            let band=InstrumentSettings.sailingSpeedBand(current:fresh ? currentDisplaySpeed:nil,target:targetDisplaySpeed,enabled:sailingSpeedHighlightEnabled)
+            let speedColor:Color = {
+                switch band {
+                case .belowTarget: return .yellow
+                case .approximatelyTarget: return .white
+                case .aboveTarget: return .green
+                case .unavailable: return .white
+                }
+            }()
+            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
     private var startTimerDashboard: some View {

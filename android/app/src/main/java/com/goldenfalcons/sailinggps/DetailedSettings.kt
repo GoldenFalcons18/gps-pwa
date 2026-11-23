@@ -196,7 +196,7 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
             "下部コンパス表示：${if(prefs.getString("bottomCompassStyle","coordinates")=="numericTape") "数値テープ" else "方位・座標"}" to { choice("下部コンパス表示","bottomCompassStyle",listOf("方位・座標","数値テープ"),listOf("coordinates","numericTape"),"coordinates") }
         ),
         "詳細設定" to listOf(
-            "速度・座標・時刻" to ::display,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones
+            "速度・座標・時刻" to ::display,"セーリング" to ::sailing,"ナビゲーション" to ::navigation,"地図" to ::map,"ゾーンアラート" to ::zones
         ),
         "ウェイポイント" to listOf(
             "デフォルトの保存先：$currentFolder" to { choice("デフォルトの保存先","mainWaypointFolder",folders,folders,currentFolder) }
@@ -212,6 +212,36 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
         "ゼロ速度の表示補正" to {choice("速度表示だけを補正（記録値は保持）","zeroSpeedThreshold",listOf("補正なし","0.5 knot未満をゼロ","1.0 knot未満をゼロ"),listOf("0","0.5","1.0"),"0")},
         "座標の表示形式" to {choice("座標の表示形式","coordinateFormat",listOf("度分（35°19.0000′N）","度（35.316667°N）","度分秒（35°19′00.0″N）"),listOf("dm","dd","dms"),"dm")},
         toggle("12時間表示","twelveHourClock",false),toggle("画面を自動ロックしない","keepScreenAwake",false)))
+    private fun sailingSpeedInput() {
+        val metric=bool("metricUnits",false)
+        val factor=if(metric) 1.852 else 1.0
+        val current=prefs.getFloat("sailingSpeedTargetKnots",5f).toDouble()*factor
+        val unit=if(metric) "km/h" else "knot"
+        val input=android.widget.EditText(activity).apply {
+            inputType=android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText("%.1f".format(java.util.Locale.US,current))
+            setSelection(text.length)
+        }
+        val maxLabel="%.1f".format(java.util.Locale.US,100.0*factor)
+        input.setPadding((20*activity.resources.displayMetrics.density).toInt(),0,(20*activity.resources.displayMetrics.density).toInt(),0)
+        AlertDialog.Builder(activity).setTitle("目標速度")
+            .setMessage("0〜"+maxLabel+" "+unit+" で入力")
+            .setView(input)
+            .setNegativeButton("キャンセル",null)
+            .setPositiveButton("保存") { _, _ ->
+                val value=input.text.toString().replace(',','.').toDoubleOrNull()
+                if(value==null || !value.isFinite() || value<0) android.widget.Toast.makeText(activity,"0以上の数値を入力してください",android.widget.Toast.LENGTH_SHORT).show()
+                else {
+                    val knots=(value/factor).coerceIn(0.0,100.0)
+                    prefs.edit().putFloat("sailingSpeedTargetKnots",knots.toFloat()).apply()
+                    refresh()
+                }
+            }.show()
+    }
+    private fun sailing():Unit=menu("セーリング",listOf(
+        toggle("速度しきい値の色分け","sailingSpeedHighlightEnabled",false),
+        ("目標速度："+ "%.1f".format(java.util.Locale.US,prefs.getFloat("sailingSpeedTargetKnots",5f)*(if(bool("metricUnits",false)) 1.852f else 1f))+" "+if(bool("metricUnits",false)) "km/h" else "knot") to ::sailingSpeedInput,
+        "表示色：遅いと黄色・速いと緑・同じなら白" to { message("速度表示の色","表示値（小数1桁）で比べます。色分けをOFFにすると速度は従来どおり緑です。") }))
     private fun navigation():Unit=menu("ナビゲーション",listOf(
         "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to {
             booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路"))

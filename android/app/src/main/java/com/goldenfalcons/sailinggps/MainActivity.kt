@@ -348,6 +348,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupDisplayModes() {
         setupFocusPanel()
+        b.root.addOnLayoutChangeListener { _,_,_,_,_,_,_,_,_ -> if(currentDisplayMode==2) resizeFocusPanelToViewport() }
         b.btnFocusMode.text="セーリング"
         b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 5) }
         b.tvModeTitle.isClickable = true
@@ -435,6 +436,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setupFocusPanel() {
+        val largeReadingSp=(resources.configuration.screenWidthDp*0.32f).toInt().coerceIn(84,144)
         fun card(label:String,color:Int,valueMaxSp:Int=84):Pair<LinearLayout,TextView> {
             val column=LinearLayout(this).apply {
                 orientation=LinearLayout.VERTICAL; gravity=android.view.Gravity.CENTER; setPadding(6,6,6,6)
@@ -459,10 +461,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             column.addView(value)
             return column to value
         }
-        val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN,84)
+        val (sogCard,sogValue)=card("SOG / "+if(metricUnits) "km/h" else "knot",Color.GREEN,largeReadingSp)
         focusSog=sogValue
         b.focusPanel.addView(sogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
-        val (cogCard,cogValue)=card("COG（真北）",Color.WHITE,84)
+        val (cogCard,cogValue)=card("COG（真北）",Color.WHITE,largeReadingSp)
         focusCog=cogValue
         b.focusPanel.addView(cogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
@@ -1096,6 +1098,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         content.addView(title, insertAt.coerceIn(0, content.childCount))
     }
     private fun setDisplayMode(navigator:Boolean)=setDisplayMode(if(navigator) 1 else 0)
+    private fun resizeFocusPanelToViewport() {
+        b.root.post {
+            val viewportHeight=b.root.height
+            if(viewportHeight<=0 || currentDisplayMode!=2) return@post
+            val density=resources.displayMetrics.density
+            val available=(viewportHeight-b.modeTitleRow.height-(12*density).toInt()).coerceAtLeast((240*density).toInt())
+            val params=b.focusPanel.layoutParams
+            if(params.height!=available) {
+                params.height=available
+                b.focusPanel.layoutParams=params
+            }
+        }
+    }
+
     private fun setDisplayMode(requestedMode:Int) {
         val mode=requestedMode.coerceIn(0,4)
         val immersive=mode>=2
@@ -1136,7 +1152,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.focusPanel.visibility=if(mode==2) android.view.View.VISIBLE else android.view.View.GONE
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
         b.signalPanel.visibility=if(mode==4) android.view.View.VISIBLE else android.view.View.GONE
-        if(mode==2) b.focusPanel.layoutParams=b.focusPanel.layoutParams.apply {height=maxOf((480*resources.displayMetrics.density).toInt(),resources.displayMetrics.heightPixels-(150*resources.displayMetrics.density).toInt())}
+        if(mode==2) resizeFocusPanelToViewport()
         b.btnSpeedMode.isEnabled = mode!=0
         b.btnNavigatorMode.isEnabled = mode!=1
         b.btnFocusMode.isEnabled=mode!=2
@@ -1616,6 +1632,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if(::focusSog.isInitialized) {
             val label=(focusSog.parent as LinearLayout).getChildAt(0) as TextView;label.text="SOG / $unit"
             focusSog.text=if(preview) "12.3" else if(fresh) speed?.let{"%.1f".format(java.util.Locale.US,it)} ?: "—" else "—"
+            val targetDisplaySpeed=displayPrefs.getFloat("sailingSpeedTargetKnots",5f).toDouble()*(if(metricUnits) 1.852 else 1.0)
+            val speedBand=SailingSpeedIndicator.resolve(
+                focusSog.text.toString().toDoubleOrNull(),
+                targetDisplaySpeed,
+                displayPrefs.getBoolean("sailingSpeedHighlightEnabled",false)
+            )
+            focusSog.setTextColor(when(speedBand) {
+                SailingSpeedBand.BELOW_TARGET -> Color.YELLOW
+                SailingSpeedBand.APPROXIMATELY_TARGET -> Color.WHITE
+                SailingSpeedBand.ABOVE_TARGET -> Color.GREEN
+                SailingSpeedBand.UNAVAILABLE -> Color.WHITE
+            })
             b.btnFocusNorth.text=if(useMagnetic) "磁北" else "真北"
             val reading=instrumentReading
             ((focusCog.parent as LinearLayout).getChildAt(0) as TextView).text=(if(reading?.compass==true) "コンパス方位" else "COG")+(if(useMagnetic) "（磁北）" else "（真北）")
