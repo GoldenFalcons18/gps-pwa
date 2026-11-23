@@ -4,6 +4,9 @@ import UserNotifications
 struct DetailedSettingsView: View {
     @ObservedObject var gps:GPSRecorder
     @AppStorage("largeDecimal") private var largeDecimal=true
+    @AppStorage("metricUnits") private var metricUnits=false
+    @AppStorage("sailingSpeedHighlightEnabled") private var sailingSpeedHighlightEnabled=false
+    @AppStorage("sailingSpeedTargetKnots") private var sailingSpeedTargetKnots=5.0
     @AppStorage("coordinateFormat") private var coordinateFormat="dm"
     @AppStorage("twelveHourClock") private var twelveHourClock=false
     @AppStorage("keepScreenAwake") private var keepScreenAwake=false
@@ -26,6 +29,12 @@ struct DetailedSettingsView: View {
     @AppStorage("zoneConfirmations") private var zoneConfirmations=3
     @State private var notificationStatus="確認中"
     private var areas:[MapFeature] { gps.library.features.filter{["circle","area"].contains($0.kind)} }
+    private var sailingSpeedTarget:Binding<Double> {
+        Binding(get:{ sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1) },set:{ value in
+            let knots=value/(metricUnits ? 1.852 : 1)
+            if knots.isFinite { sailingSpeedTargetKnots=min(100,max(0,knots)) }
+        })
+    }
     private func selected(_ id:UUID)->Binding<Bool> {
         Binding(get:{zoneSelected.split(separator:",").contains(Substring(id.uuidString))},set:{ enabled in
             var ids=Set(zoneSelected.split(separator:",").map(String.init));if enabled { ids.insert(id.uuidString) } else { ids.remove(id.uuidString) };zoneSelected=ids.sorted().joined(separator:",")
@@ -48,6 +57,22 @@ struct DetailedSettingsView: View {
                         Toggle("画面を自動ロックしない",isOn:$keepScreenAwake)
                     }
                 }.navigationTitle("速度・座標・時刻")
+            }
+            NavigationLink("セーリング") {
+                Form {
+                    Section("速度の色分け") {
+                        Toggle("速度しきい値の色分け",isOn:$sailingSpeedHighlightEnabled)
+                        HStack {
+                            Text("目標速度")
+                            TextField("速度",value:sailingSpeedTarget,format:.number.precision(.fractionLength(1)))
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .disabled(!sailingSpeedHighlightEnabled)
+                            Text(metricUnits ? "km/h" : "knot")
+                        }
+                        Text("設定速度より遅いと黄色、速いと緑、表示値（小数1桁）が同じ場合は白で表示します。色分けをOFFにすると従来どおり緑で表示します。").font(.caption)
+                    }
+                }.navigationTitle("セーリング")
             }
             NavigationLink("ナビゲーション") {
                 Form {
