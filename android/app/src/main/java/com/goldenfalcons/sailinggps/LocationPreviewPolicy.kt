@@ -11,4 +11,7 @@ object LocationPreviewPolicy {
         val maxAge = if (allowCachedDisplay) CACHED_DISPLAY_MAX_AGE_MS else FRESH_FIX_MAX_AGE_MS
         return ageMs <= maxAge
     }
+
+    fun isPersistedDisplayAge(ageMs: Long): Boolean =
+        ageMs in 0L..PERSISTED_DISPLAY_MAX_AGE_MS
 }
