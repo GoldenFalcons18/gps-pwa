@@ -35,6 +35,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var activeWaypoint: Waypoint? = null
     private var library = MapLibrary()
     private var pendingExport: ByteArray? = null
+    private var pendingMarkCsvText: String? = null
+    private var pendingWindCsvText: String? = null
+    private val exportMarkCsvDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        writeLogCsv(uri, pendingMarkCsvText, "マークCSV")
+        pendingMarkCsvText = null
+    }
+    private val exportWindCsvDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        writeLogCsv(uri, pendingWindCsvText, "風CSV")
+        pendingWindCsvText = null
+    }
 
     private lateinit var sensorManager: SensorManager
     private var accel = FloatArray(3)
@@ -95,6 +105,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var focusSog:TextView
     private lateinit var focusCog:TextView
     private lateinit var focusBearing:TextView
+    private lateinit var focusBearingRelative:TextView
     private lateinit var focusDistance:TextView
     private var mapPanel: NavigationMapPanel? = null
     private val displayPrefs by lazy { getSharedPreferences("display", MODE_PRIVATE) }
@@ -171,6 +182,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestAccuracyM = intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, Float.NaN).toDouble().takeIf { it.isFinite() && it >= 0.0 }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
+                    rememberDisplayPosition()
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
                     gpsGapSeconds = maxOf(gpsGapSeconds,intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS,0L))
                     b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, 0f), intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, 0.0))
@@ -206,8 +218,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         library = waypointStore.loadLibrary()
         waypoints += waypointStore.loadAll()
         val activeId = waypointStore.getActiveId()
-        activeWaypoint = if (activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
-        activeWaypoint?.let { waypointStore.setActiveId(it.id) }
+        activeWaypoint = if (activeId.isNullOrBlank() || activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
+        if (activeWaypoint == null) waypointStore.setActiveId(null) else activeWaypoint?.let { waypointStore.setActiveId(it.id) }
 
         setupDisplayModes()
         updateChecker = GitHubUpdateChecker(this) { debug(it) }
@@ -248,7 +260,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val index = waypoints.indexOfFirst { it.id == original.id }
                     if (index >= 0) waypoints[index] = changed
                     if (activeWaypoint?.id == original.id) activeWaypoint = changed
-                    waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                    waypointStore.saveAll(waypoints, synchronous = true); renderWaypointList(); updateNavigationUi()
                     debug("Appearance fixture saved")
                 }
             }
@@ -350,12 +362,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupFocusPanel()
         b.root.addOnLayoutChangeListener { _,_,_,_,_,_,_,_,_ -> if(currentDisplayMode==2) resizeFocusPanelToViewport() }
         b.btnFocusMode.text="セーリング"
-        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 5) }
+        b.tvModeTitle.setOnClickListener { setDisplayMode(if(currentDisplayMode in 0..2) currentDisplayMode + 1 else 0) }
         b.tvModeTitle.isClickable = true
         b.tvModeTitle.isFocusable = true
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
         b.btnTimerMode.setOnClickListener { setDisplayMode(3) }
-        b.btnSignalMode.setOnClickListener { setDisplayMode(4) }
+        b.btnSignalMode.visibility=android.view.View.GONE
         b.btnFocusMenu.setOnClickListener { showNavigationMenu() }
         b.btnFocusNorth.setOnClickListener { displayPrefs.edit().putBoolean("instrumentMagnetic",!displayPrefs.getBoolean("instrumentMagnetic",false)).apply();updateNavigationUi() }
         b.btnSpeedMode.setOnClickListener { setDisplayMode(0) }
@@ -470,6 +482,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),46)
         focusBearing=targetValue
+        focusBearingRelative=TextView(this).apply {
+            text="—° · —時方向";textSize=14f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
+            setSingleLine();includeFontPadding=false
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,9,16,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+        }
+        targetCard.addView(focusBearingRelative,LinearLayout.LayoutParams(-1,-2))
         targetCard.setOnClickListener { showNavigationOptions() }
         targetCard.contentDescription="目標方位。タップして目標地点を変更"
         targetRow.addView(targetCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
@@ -1113,7 +1131,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setDisplayMode(requestedMode:Int) {
-        val mode=requestedMode.coerceIn(0,4)
+        val mode=requestedMode.coerceIn(0,5)
         val immersive=mode>=2
         val wasImmersive=currentDisplayMode>=2
         val content=b.focusPanel.parent as LinearLayout
@@ -1142,7 +1160,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; 5 -> "風・マーク記録"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
         b.topActionControls.visibility = if(mode<=1) android.view.View.VISIBLE else android.view.View.GONE
         b.tvStatus.visibility = android.view.View.GONE
@@ -1163,8 +1181,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCurrentWp.visibility=if(mode==0 || mode==1) android.view.View.VISIBLE else android.view.View.GONE
         displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
         updateNavigationUi()
-        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
+        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";4->"SIGNAL";else->"WIND_MARK_LOG"})
         if(mode==4) updateSignalUi()
+        if(mode==5) showWindMarkLog()
     }
 
     private fun captureStartLineEndpoint(kind:String) {
@@ -1251,6 +1270,42 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } ?: "スタートラインまで --"
     }
 
+    private fun rememberDisplayPosition() {
+        val lat = latestLat ?: return
+        val lon = latestLon ?: return
+        displayPrefs.edit()
+            .putString("lastDisplayLatitude", lat.toString())
+            .putString("lastDisplayLongitude", lon.toString())
+            .putLong("lastDisplayWallTime", System.currentTimeMillis())
+            .putFloat("lastDisplayAccuracyM", (latestAccuracyM ?: -1.0).toFloat())
+            .putFloat("lastDisplayAltitudeM", (latestAltitudeM ?: Double.NaN).toFloat())
+            .apply()
+    }
+
+    // Keep the last known marker visible briefly while Android reacquires GPS.
+    // A restored point is display-only: stale speed and heading are discarded.
+    private fun restorePersistedDisplayPosition() {
+        if (latestLat != null && latestLon != null) return
+        val savedAt = displayPrefs.getLong("lastDisplayWallTime", 0L)
+        val ageMs = System.currentTimeMillis() - savedAt
+        if (savedAt <= 0L || !LocationPreviewPolicy.isPersistedDisplayAge(ageMs)) return
+        val lat = displayPrefs.getString("lastDisplayLatitude", null)?.toDoubleOrNull() ?: return
+        val lon = displayPrefs.getString("lastDisplayLongitude", null)?.toDoubleOrNull() ?: return
+        if (!lat.isFinite() || lat !in -90.0..90.0 || !lon.isFinite() || lon !in -180.0..180.0) return
+
+        latestLat = lat
+        latestLon = lon
+        latestFixAt = (android.os.SystemClock.elapsedRealtime() - ageMs).coerceAtLeast(1L)
+        latestAccuracyM = displayPrefs.getFloat("lastDisplayAccuracyM", -1f).toDouble().takeIf { it >= 0.0 }
+        latestAltitudeM = displayPrefs.getFloat("lastDisplayAltitudeM", Float.NaN).toDouble().takeIf { it.isFinite() }
+        latestSpeedMps = null
+        latestGpsBearing = null
+        updateGpsQualityUi()
+        updateMap()
+        updateNavigationUi()
+        debug("Restored cached map position ageMs=$ageMs; speed and heading cleared")
+    }
+
     private fun updateMap() {
         val lat = latestLat ?: return
         val lon = latestLon ?: return
@@ -1274,6 +1329,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         latestFixAt=fixElapsed
         latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
         latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
+        rememberDisplayPosition()
         latestSpeedMps=if(cached) null else GpsSpeedQuality.acceptedSpeedMps(
             if(location.hasSpeed()) location.speed.toDouble() else null,
             if(location.hasAccuracy()) location.accuracy.toDouble() else null,
@@ -1306,6 +1362,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             .maxByOrNull { it.elapsedRealtimeNanos }
             ?.let { acceptPreviewLocation(it,allowCachedDisplay=true) }
+        restorePersistedDisplayPosition()
         var requested=false
         providers.forEach { provider ->
             val enabled=runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)
@@ -1661,7 +1718,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val targetBearing=if(preview) 144.0 else if(fresh && target!=null && latestLat!=null && latestLon!=null && NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)>1)
                 NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
             ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
-            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val targetDisplayBearing=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)
+            focusBearing.text=targetDisplayBearing?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val relativeTarget=targetDisplayBearing?.let { absolute -> reading?.value?.let { NavigationUtils.normalize360(absolute-it) } }
+            focusBearingRelative.text=relativeTarget?.let { "${NavigationUtils.relativeText(it)} · ${NavigationUtils.relativeClock(it)}" } ?: "—° · —時方向"
             ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
             focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
                 val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
@@ -1944,13 +2004,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showDisplayModePicker() {
-        val names = listOf("スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル")
+        val names = listOf("スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル", "風・マーク記録")
         val descriptions = listOf(
             "SOG速度を大きく表示",
             "地図・目標方位・距離",
             "SOG・COG・目標方位を大きく表示",
             "スタートまでの時間を計測",
-            "旗の順序と合図音を表示"
+            "旗の順序と合図音を表示",
+            "風向・風速とA/Bマーク位置をCSVに記録"
         )
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val column = LinearLayout(this).apply {
@@ -2123,6 +2184,129 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         Toast.makeText(this, "カウンターをリセットしました（保存した航跡は保持）", Toast.LENGTH_SHORT).show()
     }
 
+    private fun writeLogCsv(uri: android.net.Uri?, content: String?, label: String) {
+        if (uri == null || content == null) return
+        runCatching {
+            contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use { it.write(content) }
+                ?: error("保存先を開けません")
+            Toast.makeText(this, label + "を保存しました", Toast.LENGTH_LONG).show()
+        }.onFailure { Toast.makeText(this, label + "の保存に失敗しました: " + it.message, Toast.LENGTH_LONG).show() }
+    }
+
+    private fun showWindMarkLog() {
+        val store = WindMarkLogStore(this)
+        var markA: Pair<Double, Double>? = null
+        var markB: Pair<Double, Double>? = null
+        fun currentPosition(): Pair<Double, Double>? {
+            val age = (android.os.SystemClock.elapsedRealtime() - latestFixAt) / 1000.0
+            val lat = latestLat; val lon = latestLon
+            return if (lat != null && lon != null && age in 0.0..60.0) lat to lon else null
+        }
+        fun coordinate(value: Pair<Double, Double>?): String =
+            value?.let { "%.6f, %.6f".format(java.util.Locale.US, it.first, it.second) } ?: "GPS受信待ち"
+        fun label(text: String, size: Float = 16f) = TextView(this).apply {
+            this.text = text; textSize = size; setTextColor(Color.WHITE); setPadding(8, 8, 8, 8)
+        }
+        fun action(text: String, click: () -> Unit) = Button(this).apply {
+            this.text = text; isAllCaps = false; setOnClickListener { click() }
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(14, 8, 14, 8); setBackgroundColor(Color.rgb(12, 12, 12))
+        }
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val markPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val windPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val locationLabel = label("")
+        val markALabel = label("A点: 未記録")
+        val markBLabel = label("B点: 未記録")
+        val markCount = label("記録済み: " + store.marks().size + "組")
+        val windCount = label("記録済み: " + store.winds().size + "件")
+        val directionInput = android.widget.EditText(this).apply {
+            hint = "風向（風上の方位） 0〜359°"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
+        }
+        val speedInput = android.widget.EditText(this).apply {
+            hint = "風速 knot"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
+        }
+        fun renderLocation() { locationLabel.text = "GPS位置: " + coordinate(currentPosition()) }
+
+        tabs.addView(action("マーク記録") { markPanel.visibility = View.VISIBLE; windPanel.visibility = View.GONE },
+            LinearLayout.LayoutParams(0, -2, 1f))
+        tabs.addView(action("風記録") { markPanel.visibility = View.GONE; windPanel.visibility = View.VISIBLE; renderLocation() },
+            LinearLayout.LayoutParams(0, -2, 1f))
+
+        markPanel.addView(label("A点とB点を現在のGPS位置から記録します。", 14f))
+        markPanel.addView(locationLabel)
+        markPanel.addView(action("A点を現在地に記録") {
+            markA = currentPosition()
+            if (markA == null) Toast.makeText(this, "新しいGPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            markALabel.text = "A点: " + coordinate(markA)
+        })
+        markPanel.addView(markALabel)
+        markPanel.addView(action("B点を現在地に記録") {
+            markB = currentPosition()
+            if (markB == null) Toast.makeText(this, "新しいGPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            markBLabel.text = "B点: " + coordinate(markB)
+        })
+        markPanel.addView(markBLabel)
+        markPanel.addView(action("このA・B位置を記録") {
+            val a = markA; val bPoint = markB
+            if (a == null || bPoint == null) Toast.makeText(this, "A点とB点を先に記録してください", Toast.LENGTH_LONG).show()
+            else {
+                store.add(MarkLogRow(WindMarkLogStore.timestamp(), a.first, a.second, bPoint.first, bPoint.second))
+                markCount.text = "記録済み: " + store.marks().size + "組"
+                Toast.makeText(this, "マーク位置を記録しました", Toast.LENGTH_SHORT).show()
+            }
+        })
+        markPanel.addView(markCount)
+        markPanel.addView(action("マークCSVを保存") {
+            pendingMarkCsvText = store.markCsv()
+            exportMarkCsvDocument.launch("mark-log.csv")
+        })
+
+        windPanel.addView(label("風向は風が吹いてくる方位、風速はknで入力します。", 14f))
+        windPanel.addView(locationLabel)
+        windPanel.addView(directionInput)
+        windPanel.addView(speedInput)
+        windPanel.addView(action("現在地で風を記録") {
+            val point = currentPosition()
+            val direction = directionInput.text.toString().toDoubleOrNull()
+            val speed = speedInput.text.toString().toDoubleOrNull()
+            if (point == null) Toast.makeText(this, "GPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            else if (direction == null || direction !in 0.0..360.0 || speed == null || speed < 0.0)
+                Toast.makeText(this, "風向は0〜359°、風速は0以上で入力してください", Toast.LENGTH_LONG).show()
+            else {
+                store.add(WindLogRow(WindMarkLogStore.timestamp(), point.first, point.second,
+                    if (direction == 360.0) 0.0 else direction, speed))
+                windCount.text = "記録済み: " + store.winds().size + "件"
+                renderLocation()
+                Toast.makeText(this, "風を記録しました", Toast.LENGTH_SHORT).show()
+            }
+        })
+        windPanel.addView(windCount)
+        windPanel.addView(action("風CSVを保存") {
+            pendingWindCsvText = store.windCsv()
+            exportWindCsvDocument.launch("wind-log.csv")
+        })
+
+        root.addView(tabs)
+        root.addView(markPanel)
+        root.addView(windPanel.apply { visibility = View.GONE })
+        val scroll = android.widget.ScrollView(this).apply { addView(root) }
+        lateinit var dialog: androidx.appcompat.app.AlertDialog
+        val close = action("閉じる") { dialog.dismiss() }
+        root.addView(close)
+        dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("風・マーク記録").setView(scroll).create()
+        dialog.setOnDismissListener { if (currentDisplayMode == 5) setDisplayMode(0) }
+        dialog.show()
+        dialog.window?.setLayout(-1, -1)
+        renderLocation()
+    }
+
     private fun showNavigationMenu() {
         val counterAction = when {
             running -> "カウンターを一時停止"
@@ -2196,6 +2380,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun createMapWaypoint(lat: Double, lon: Double) {
+        // Creating a map waypoint must not silently replace the current navigation target.
+        val previousActiveWaypoint = activeWaypoint
         val input = android.widget.EditText(this).apply { hint = "ウェイポイント名"; setSingleLine(true) }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; addView(input)
@@ -2208,7 +2394,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setPositiveButton("保存") { _, _ ->
                 val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
                 waypoints += wp
+                activeWaypoint = previousActiveWaypoint
                 waypointStore.saveAll(waypoints)
+                waypointStore.setActiveId(previousActiveWaypoint?.id)
                 renderWaypointList(); updateNavigationUi()
                 debug("Map waypoint saved / ${wp.id}")
                 Toast.makeText(this, "${wp.name} を保存しました", Toast.LENGTH_SHORT).show()
@@ -2310,9 +2498,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         listOf(android.content.DialogInterface.BUTTON_NEGATIVE,android.content.DialogInterface.BUTTON_POSITIVE).forEach { which ->
             dialog.getButton(which)?.setTextColor(Color.rgb(255,170,0))
         }
-        if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
-            fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
-            android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+        if (BuildConfig.DEBUG) {
+            val decor = dialog.window?.decorView
+            val boundsLogger = object : Runnable {
+                private var attempts = 0
+                override fun run() {
+                    if (!dialog.isShowing || attempts++ >= 24) return
+                    fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
+                    android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+                    decor?.postDelayed(this, 250)
+                }
+            }
+            decor?.post(boundsLogger)
+            decor?.viewTreeObserver?.addOnGlobalLayoutListener { decor.post(boundsLogger) }
+            if (intent.getBooleanExtra("autoSaveWaypointEdit", false)) {
+                decor?.postDelayed({
+                    intent.getStringExtra("editWaypointName")?.let(name::setText)
+                    dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+                }, 750)
+            }
         }
     }
 

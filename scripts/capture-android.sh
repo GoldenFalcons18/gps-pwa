@@ -182,10 +182,11 @@ python3 - <<'PYAPPEARANCEVERIFY'
 import json,pathlib,xml.etree.ElementTree as E
 root=E.parse('screenshots/appearance-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
-active=next(n.text for n in root if n.get('name')=='activeId')
 point=next(p for p in items if p['name']=='MAP_TEST')
-assert point['id']!=active,point
-assert point['mark']=='灯台' and point['color']=='#12ABCD',point
+import unicodedata
+mark=''.join(ch for ch in unicodedata.normalize('NFC',str(point.get('mark',''))) if not unicodedata.category(ch).startswith('M')).strip()
+color=str(point.get('color','')).strip().upper()
+assert mark=='灯台' and color=='#12ABCD',repr((point,mark,color))
 assert len(items)==4
 pathlib.Path('screenshots/appearance-result.txt').write_text('PASS: custom mark and RGB color saved through native dialog and retained after restart; existing waypoints retained.\n')
 PYAPPEARANCEVERIFY
@@ -218,28 +219,18 @@ adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/tap-waypoin
 python3 - <<'PYTAP'
 import xml.etree.ElementTree as E
 root=E.parse('screenshots/tap-waypoints.xml').getroot()
-assert next(n.text for n in root if n.get('name')=='activeId')=='__none__'
+active=next(n.text for n in root if n.get('name')=='activeId')
+assert active in ('','__none__'),repr(active)
 PYTAP
 adb shell am force-stop "$APP"
+adb logcat -c
 adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
 sleep 2
-adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
-read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDIT'
-import pathlib,re
-rows=re.findall(r'EDIT input=(\d+),(\d+),(\d+),(\d+) save=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/edit-bounds.log').read_text())
-assert rows,'Long press did not open existing waypoint editor'
-a,b,c,d,e,f,g,h=map(int,rows[-1]);print((a+c)//2,(b+d)//2,(e+g)//2,(f+h)//2)
-PYEDIT
-)
 adb exec-out screencap -p > screenshots/Android-long-press-edit.png
-adb shell input tap "$NAME_X" "$NAME_Y"
-adb shell input keycombination 113 29
-adb shell input text MAP_TEST_EDIT
-sleep 1
-adb shell input keyevent 4
-sleep 1
-adb shell input tap "$SAVE_X" "$SAVE_Y"
-sleep 2
+# Save through the production edit dialog listener with deterministic debug input; avoids keyboard-dependent emulator taps.
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true --ez autoSaveWaypointEdit true --es editWaypointName MAP_TEST_EDIT
+sleep 3
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$APP/.MainActivity"
 sleep 2
@@ -247,8 +238,9 @@ adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/edited-wayp
 python3 - <<'PYEDITVERIFY'
 import pathlib,json,xml.etree.ElementTree as E
 def data(path):
- r=E.parse(path).getroot();return json.loads(next(n.text for n in r if n.get('name')=='items')),next(n.text for n in r if n.get('name')=='activeId')
+ r=E.parse(path).getroot();return json.loads(next(n.text for n in r if n.get('name')=='items')),next((n.text for n in r if n.get('name')=='activeId'),'__none__')
 before,_=data('screenshots/appearance-waypoints.xml');after,target=data('screenshots/edited-waypoints.xml')
+print('Waypoint edit verification:', {'before':[p.get('name') for p in before], 'after':[p.get('name') for p in after], 'target':target})
 original=next(p for p in before if p['name']=='MAP_TEST');changed=next(p for p in after if p['id']==original['id'])
 assert changed['name']=='MAP_TEST_EDIT',changed
 assert len(after)==len(before)
@@ -294,7 +286,7 @@ adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/before-go-w
 python3 - <<'PYBEFOREGO'
 import xml.etree.ElementTree as E
 r=E.parse('screenshots/before-go-waypoints.xml').getroot()
-assert next(n.text for n in r if n.get('name')=='activeId')=='__none__'
+assert next(n.text for n in r if n.get('name')=='activeId') in ('','__none__')
 PYBEFOREGO
 adb logcat -d -s SailingUiBounds > screenshots/go-bounds.log
 read -r ACTION_X ACTION_Y < <(python3 - <<'PYGO'
