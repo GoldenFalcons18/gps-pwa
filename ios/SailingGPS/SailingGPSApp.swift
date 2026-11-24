@@ -1057,7 +1057,7 @@ struct ContentView: View {
                 case .unavailable: return .white
                 }
             }()
-            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetRelativeAngle:targetValue.flatMap { bearing in reading?.value.map { CoordinateInput.normalizeHeading(bearing - $0) } },targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetRelativeAngle:targetValue.flatMap { bearing in reading.map { CoordinateInput.normalizeHeading(bearing - $0.value) } },targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
     private var startTimerDashboard: some View {
