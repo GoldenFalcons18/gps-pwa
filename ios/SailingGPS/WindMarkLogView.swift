@@ -30,10 +30,7 @@ struct WindMarkLogView: View {
     @State private var windSpeed = ""
     @State private var markRows: [WindMarkPoint] = []
     @State private var windRows: [WindObservation] = []
-    @State private var shareURL: ShareFile?
     @State private var notice = ""
-
-    private struct ShareFile: Identifiable { let id = UUID(); let url: URL }
 
     var body: some View {
         NavigationStack {
@@ -104,9 +101,6 @@ struct WindMarkLogView: View {
                 }
             }
             .onAppear(perform: loadRows)
-            .sheet(item: $shareURL) { item in
-                WindMarkActivityView(items: [item.url])
-            }
         }
         .preferredColorScheme(.dark)
     }
