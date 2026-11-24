@@ -166,7 +166,7 @@ struct WindMarkLogView: View {
     }
 
     private func exportMarks() -> URL {
-        let rows = load("mark-log.json", as: [WindMarkPoint].self)
+        let rows = load("mark-log.json", as: [WindMarkPoint].self, empty: [WindMarkPoint]())
         let body = (["time,mark_a_latitude,mark_a_longitude,mark_b_latitude,mark_b_longitude"] + rows.map {
             "\($0.time),\(number($0.mark_a_latitude)),\(number($0.mark_a_longitude)),\(number($0.mark_b_latitude)),\(number($0.mark_b_longitude))"
         }).joined(separator: "\n") + "\n"
@@ -174,7 +174,7 @@ struct WindMarkLogView: View {
     }
 
     private func exportWind() -> URL {
-        let rows = load("wind-log.json", as: [WindObservation].self)
+        let rows = load("wind-log.json", as: [WindObservation].self, empty: [WindObservation]())
         let body = (["time,latitude,longitude,wind_from_deg,wind_speed_kn"] + rows.map {
             "\($0.time),\(number($0.latitude)),\(number($0.longitude)),\(number($0.wind_from_deg)),\(number($0.wind_speed_kn))"
         }).joined(separator: "\n") + "\n"
