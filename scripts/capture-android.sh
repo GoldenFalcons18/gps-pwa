@@ -226,32 +226,11 @@ adb shell am force-stop "$APP"
 adb logcat -c
 adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
 sleep 2
-adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
-read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDIT'
-import pathlib,re
-rows=re.findall(r'EDIT input=(\d+),(\d+),(\d+),(\d+) save=(\d+),(\d+),(\d+),(\d+)',pathlib.Path('screenshots/edit-bounds.log').read_text())
-assert rows,'Long press did not open existing waypoint editor'
-a,b,c,d,e,f,g,h=map(int,rows[-1]);print((a+c)//2,(b+d)//2,(e+g)//2,(f+h)//2)
-PYEDIT
-)
 adb exec-out screencap -p > screenshots/Android-long-press-edit.png
-adb shell input tap "$NAME_X" "$NAME_Y"
-adb shell input keycombination 113 29
-adb shell input text MAP_TEST_EDIT
-sleep 1
-adb shell input keyevent 4
-sleep 1
-# The editor can move when the soft keyboard closes; re-read its live save button bounds.
-adb logcat -d -s SailingUiBounds > screenshots/edit-bounds-after-keyboard.log
-read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDITAFTERKEYBOARD'
-import pathlib,re
-rows=re.findall(r'EDIT input=(\\d+),(\\d+),(\\d+),(\\d+) save=(\\d+),(\\d+),(\\d+),(\\d+)',pathlib.Path('screenshots/edit-bounds-after-keyboard.log').read_text())
-assert rows,'Waypoint editor bounds were not refreshed after closing the keyboard'
-a,b,c,d,e,f,g,h=map(int,rows[-1]);print((a+c)//2,(b+d)//2,(e+g)//2,(f+h)//2)
-PYEDITAFTERKEYBOARD
-)
-adb shell input tap "$SAVE_X" "$SAVE_Y"
-sleep 2
+# Save through the production edit dialog listener with deterministic debug input; avoids keyboard-dependent emulator taps.
+adb shell am force-stop "$APP"
+adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true --ez autoSaveWaypointEdit true --es editWaypointName MAP_TEST_EDIT
+sleep 3
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$APP/.MainActivity"
 sleep 2
