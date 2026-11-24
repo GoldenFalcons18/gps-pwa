@@ -168,7 +168,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         private const val REQ_BACKGROUND_LOCATION = 12
         // One decimal display: values >= 0.05 kt round to 0.1 kt.
         private const val GPS_COURSE_THRESHOLD_KT = 0.05
-        private const val PERSISTED_DISPLAY_MAX_AGE_MS = 60 * 60 * 1000L
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -1282,7 +1281,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (latestLat != null && latestLon != null) return
         val savedAt = displayPrefs.getLong("lastDisplayWallTime", 0L)
         val ageMs = System.currentTimeMillis() - savedAt
-        if (savedAt <= 0L || ageMs !in 0L..PERSISTED_DISPLAY_MAX_AGE_MS) return
+        if (savedAt <= 0L || !LocationPreviewPolicy.isUsableAge(ageMs, allowPersistedDisplay = true)) return
         val lat = displayPrefs.getString("lastDisplayLatitude", null)?.toDoubleOrNull() ?: return
         val lon = displayPrefs.getString("lastDisplayLongitude", null)?.toDoubleOrNull() ?: return
         if (!lat.isFinite() || lat !in -90.0..90.0 || !lon.isFinite() || lon !in -180.0..180.0) return
