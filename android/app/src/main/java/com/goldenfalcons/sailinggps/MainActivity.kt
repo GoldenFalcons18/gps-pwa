@@ -1320,9 +1320,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         ZoneAlerts.check(this,location)
         latestLat=location.latitude;latestLon=location.longitude
         latestFixAt=fixElapsed
-        rememberDisplayPosition()
         latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
         latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
+        rememberDisplayPosition()
         latestSpeedMps=if(cached) null else GpsSpeedQuality.acceptedSpeedMps(
             if(location.hasSpeed()) location.speed.toDouble() else null,
             if(location.hasAccuracy()) location.accuracy.toDouble() else null,
