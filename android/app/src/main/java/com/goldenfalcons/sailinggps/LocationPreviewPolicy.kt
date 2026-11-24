@@ -4,6 +4,7 @@ package com.goldenfalcons.sailinggps
 object LocationPreviewPolicy {
     const val FRESH_FIX_MAX_AGE_MS = 30_000L
     const val CACHED_DISPLAY_MAX_AGE_MS = 5 * 60_000L
+    const val PERSISTED_DISPLAY_MAX_AGE_MS = 60 * 60_000L
 
     fun isUsableAge(ageMs: Long, allowCachedDisplay: Boolean = false): Boolean {
         if (ageMs < 0L) return false
