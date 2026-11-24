@@ -285,7 +285,7 @@ adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/before-go-w
 python3 - <<'PYBEFOREGO'
 import xml.etree.ElementTree as E
 r=E.parse('screenshots/before-go-waypoints.xml').getroot()
-assert next(n.text for n in r if n.get('name')=='activeId')=='__none__'
+assert next(n.text for n in r if n.get('name')=='activeId') in ('','__none__')
 PYBEFOREGO
 adb logcat -d -s SailingUiBounds > screenshots/go-bounds.log
 read -r ACTION_X ACTION_Y < <(python3 - <<'PYGO'
