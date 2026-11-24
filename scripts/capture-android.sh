@@ -240,6 +240,7 @@ import pathlib,json,xml.etree.ElementTree as E
 def data(path):
  r=E.parse(path).getroot();return json.loads(next(n.text for n in r if n.get('name')=='items')),next((n.text for n in r if n.get('name')=='activeId'),'__none__')
 before,_=data('screenshots/appearance-waypoints.xml');after,target=data('screenshots/edited-waypoints.xml')
+print('Waypoint edit verification:', {'before':[p.get('name') for p in before], 'after':[p.get('name') for p in after], 'target':target})
 original=next(p for p in before if p['name']=='MAP_TEST');changed=next(p for p in after if p['id']==original['id'])
 assert changed['name']=='MAP_TEST_EDIT',changed
 assert len(after)==len(before)
