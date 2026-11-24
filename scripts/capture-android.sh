@@ -219,7 +219,8 @@ adb shell run-as "$APP" cat shared_prefs/waypoints.xml > screenshots/tap-waypoin
 python3 - <<'PYTAP'
 import xml.etree.ElementTree as E
 root=E.parse('screenshots/tap-waypoints.xml').getroot()
-assert next(n.text for n in root if n.get('name')=='activeId')=='__none__'
+active=next(n.text for n in root if n.get('name')=='activeId')
+assert active=='__none__',active
 PYTAP
 adb shell am force-stop "$APP"
 adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
