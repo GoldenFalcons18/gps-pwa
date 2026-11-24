@@ -51,11 +51,11 @@ struct FocusDashboardView: View {
         guard let angle = targetRelativeAngle else { return "—° · —時方向" }
         let signed = angle > 180 ? angle - 360 : angle
         let degrees = Int(abs(signed).rounded())
-        let relative = degrees == 0 ? "正面 0°" : degrees == 180 ? "後方 180°" : "\\(signed > 0 ? "右" : "左") \\(degrees)°"
+        let relative = degrees == 0 ? "正面 0°" : degrees == 180 ? "後方 180°" : "\(signed > 0 ? "右" : "左") \(degrees)°"
         let halfHourIndex = Int(floor((angle + 7.5) / 15)) % 24
         let hour = (halfHourIndex / 2) % 12
-        let clock = "\\(hour == 0 ? 12 : hour)時\\(halfHourIndex % 2 == 1 ? "半" : "")方向"
-        return "\\(relative) · \\(clock)"
+        let clock = "\(hour == 0 ? 12 : hour)時\(halfHourIndex % 2 == 1 ? "半" : "")方向"
+        return "\(relative) · \(clock)"
     }
 
     private var recordingControls: some View {
