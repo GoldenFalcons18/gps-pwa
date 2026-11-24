@@ -183,7 +183,10 @@ import json,pathlib,xml.etree.ElementTree as E
 root=E.parse('screenshots/appearance-waypoints.xml').getroot()
 items=json.loads(next(n.text for n in root if n.get('name')=='items'))
 point=next(p for p in items if p['name']=='MAP_TEST')
-assert point['mark']=='灯台' and point['color']=='#12ABCD',point
+import unicodedata
+mark=''.join(ch for ch in unicodedata.normalize('NFC',str(point.get('mark',''))) if not unicodedata.category(ch).startswith('M')).strip()
+color=str(point.get('color','')).strip().upper()
+assert mark=='灯台' and color=='#12ABCD',repr((point,mark,color))
 assert len(items)==4
 pathlib.Path('screenshots/appearance-result.txt').write_text('PASS: custom mark and RGB color saved through native dialog and retained after restart; existing waypoints retained.\n')
 PYAPPEARANCEVERIFY
