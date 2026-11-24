@@ -2498,9 +2498,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         listOf(android.content.DialogInterface.BUTTON_NEGATIVE,android.content.DialogInterface.BUTTON_POSITIVE).forEach { which ->
             dialog.getButton(which)?.setTextColor(Color.rgb(255,170,0))
         }
-        if (BuildConfig.DEBUG) dialog.window?.decorView?.viewTreeObserver?.addOnGlobalLayoutListener {
-            fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
-            android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+        if (BuildConfig.DEBUG) {
+            val decor = dialog.window?.decorView
+            val boundsLogger = object : Runnable {
+                private var attempts = 0
+                override fun run() {
+                    if (!dialog.isShowing || attempts++ >= 24) return
+                    fun bounds(view: android.view.View): String { val xy=IntArray(2);view.getLocationOnScreen(xy);return "${xy[0]},${xy[1]},${xy[0]+view.width},${xy[1]+view.height}" }
+                    android.util.Log.d("SailingUiBounds", "EDIT input=${bounds(name)} save=${bounds(dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE))}")
+                    decor?.postDelayed(this, 250)
+                }
+            }
+            decor?.post(boundsLogger)
+            decor?.viewTreeObserver?.addOnGlobalLayoutListener { decor.post(boundsLogger) }
         }
     }
 
