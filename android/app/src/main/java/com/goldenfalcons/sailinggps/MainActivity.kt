@@ -2511,6 +2511,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             decor?.post(boundsLogger)
             decor?.viewTreeObserver?.addOnGlobalLayoutListener { decor.post(boundsLogger) }
+            if (intent.getBooleanExtra("autoSaveWaypointEdit", false)) {
+                decor?.postDelayed({
+                    intent.getStringExtra("editWaypointName")?.let(name::setText)
+                    dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick()
+                }, 750)
+            }
         }
     }
 
