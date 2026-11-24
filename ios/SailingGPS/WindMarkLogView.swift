@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import UIKit
 
 private struct WindMarkPoint: Codable {
     var time: String
@@ -62,7 +63,7 @@ struct WindMarkLogView: View {
                             .disabled(markA == nil || markB == nil)
                     }
                     Section("記録済み: \(markRows.count)組") {
-                        ShareLinkButton(title: "マークCSVを共有", url: exportMarks())
+                        ShareLinkButton(title: "マークCSVを共有", export: exportMarks)
                     }
                 } else {
                     Section("風の記録") {
@@ -86,7 +87,7 @@ struct WindMarkLogView: View {
                             .disabled(gps.location == nil)
                     }
                     Section("記録済み: \(windRows.count)件") {
-                        ShareLinkButton(title: "風CSVを共有", url: exportWind())
+                        ShareLinkButton(title: "風CSVを共有", export: exportWind)
                     }
                 }
                 if !notice.isEmpty {
@@ -196,10 +197,27 @@ struct WindMarkLogView: View {
 
 private struct ShareLinkButton: View {
     let title: String
-    let url: URL
+    let export: () -> URL
+    @State private var file: ShareFile?
+    private struct ShareFile: Identifiable { let id = UUID(); let url: URL }
+
     var body: some View {
-        ShareLink(item: url) {
+        Button {
+            file = ShareFile(url: export())
+        } label: {
             Label(title, systemImage: "square.and.arrow.up")
-        }.foregroundStyle(.orange)
+        }
+        .foregroundStyle(.orange)
+        .sheet(item: $file) { item in
+            WindMarkActivityView(items: [item.url])
+        }
     }
+}
+
+private struct WindMarkActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
