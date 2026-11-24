@@ -218,8 +218,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         library = waypointStore.loadLibrary()
         waypoints += waypointStore.loadAll()
         val activeId = waypointStore.getActiveId()
-        activeWaypoint = if (activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
-        activeWaypoint?.let { waypointStore.setActiveId(it.id) }
+        activeWaypoint = if (activeId.isNullOrBlank() || activeId == "__none__") null else (waypoints.find { it.id == activeId } ?: waypoints.firstOrNull())
+        if (activeWaypoint == null) waypointStore.setActiveId(null) else activeWaypoint?.let { waypointStore.setActiveId(it.id) }
 
         setupDisplayModes()
         updateChecker = GitHubUpdateChecker(this) { debug(it) }
