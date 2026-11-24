@@ -884,8 +884,8 @@ struct ContentView: View {
                         Spacer()
                         Button("キャンセル") { modeSelectorPresented = false }.foregroundStyle(.orange)
                     }
-                    let names = ["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"]
-                    let descriptions = ["SOG速度を大きく表示","地図・目標方位・距離","SOG・COG・目標方位を大きく表示","スタートまでの時間を計測","旗の順序と合図音を表示"]
+                    let names = ["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル","風・マーク記録"]
+                    let descriptions = ["SOG速度を大きく表示","地図・目標方位・距離","SOG・COG・目標方位を大きく表示","スタートまでの時間を計測","旗の順序と合図音を表示","風向・風速とA/Bマーク位置をCSVに記録"]
                     ForEach(0..<names.count, id: \.self) { index in
                         menuTile(names[index], detail: descriptions[index], done: mode == index) {
                             mode = index
@@ -989,7 +989,7 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Button { mode = (mode + 1) % 6 } label: {
+            Button { mode = mode < 3 ? mode + 1 : 0 } label: {
                 Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル","風・マーク記録"][min(max(mode, 0), 5)])
                     .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
             }.buttonStyle(.plain).accessibilityLabel("モード切替")
@@ -1057,7 +1057,7 @@ struct ContentView: View {
                 case .unavailable: return .white
                 }
             }()
-            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetRelativeAngle:targetValue.flatMap { bearing in reading?.value.map { CoordinateInput.normalizeHeading(bearing - $0) } },targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
     private var startTimerDashboard: some View {
