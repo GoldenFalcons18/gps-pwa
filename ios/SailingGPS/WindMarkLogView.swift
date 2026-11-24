@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreLocation
-import UIKit
 
 private struct WindMarkPoint: Codable {
     var time: String
@@ -205,32 +204,8 @@ private struct ShareLinkButton: View {
     let title: String
     let url: URL
     var body: some View {
-        Button(title) { NotificationCenter.default.post(name: .windMarkShareFile, object: url) }
-            .foregroundStyle(.orange)
-            .onReceive(NotificationCenter.default.publisher(for: .windMarkShareFile)) { note in
-                if let file = note.object as? URL { WindMarkSharePresenter.present(file) }
-            }
+        ShareLink(item: url) {
+            Label(title, systemImage: "square.and.arrow.up")
+        }.foregroundStyle(.orange)
     }
-}
-
-private extension Notification.Name {
-    static let windMarkShareFile = Notification.Name("windMarkShareFile")
-}
-
-private enum WindMarkSharePresenter {
-    static func present(_ url: URL) {
-        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
-              let root = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return }
-        var top = root
-        while let presented = top.presentedViewController { top = presented }
-        top.present(UIActivityViewController(activityItems: [url], applicationActivities: nil), animated: true)
-    }
-}
-
-private struct WindMarkActivityView: UIViewControllerRepresentable {
-    let items: [Any]
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
