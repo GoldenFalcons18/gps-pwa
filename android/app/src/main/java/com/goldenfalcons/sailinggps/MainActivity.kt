@@ -260,7 +260,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     val index = waypoints.indexOfFirst { it.id == original.id }
                     if (index >= 0) waypoints[index] = changed
                     if (activeWaypoint?.id == original.id) activeWaypoint = changed
-                    waypointStore.saveAll(waypoints); renderWaypointList(); updateNavigationUi()
+                    waypointStore.saveAll(waypoints, synchronous = true); renderWaypointList(); updateNavigationUi()
                     debug("Appearance fixture saved")
                 }
             }
