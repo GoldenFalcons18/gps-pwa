@@ -168,6 +168,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         private const val REQ_BACKGROUND_LOCATION = 12
         // One decimal display: values >= 0.05 kt round to 0.1 kt.
         private const val GPS_COURSE_THRESHOLD_KT = 0.05
+        private const val PERSISTED_DISPLAY_MAX_AGE_MS = 60 * 60 * 1000L
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -181,6 +182,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     latestAccuracyM = intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, Float.NaN).toDouble().takeIf { it.isFinite() && it >= 0.0 }
                     latestSpeedMps = intent.getFloatExtra(GpsLoggingService.EXTRA_SPEED, Float.NaN).toDouble().takeIf { it.isFinite() }
                     latestGpsBearing = intent.getDoubleExtra(GpsLoggingService.EXTRA_BEARING, Double.NaN).takeIf { it.isFinite() }
+                    rememberDisplayPosition()
                     pointCount = intent.getIntExtra(GpsLoggingService.EXTRA_COUNT, pointCount)
                     gpsGapSeconds = maxOf(gpsGapSeconds,intent.getLongExtra(GpsLoggingService.EXTRA_GAP_SECONDS,0L))
                     b.tvGpsInfo.text = "GPS\n精度 ±%.0f m\n高度 %.0f m".format(intent.getFloatExtra(GpsLoggingService.EXTRA_ACCURACY, 0f), intent.getDoubleExtra(GpsLoggingService.EXTRA_ALT, 0.0))
@@ -1262,6 +1264,42 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         } ?: "スタートラインまで --"
     }
 
+    private fun rememberDisplayPosition() {
+        val lat = latestLat ?: return
+        val lon = latestLon ?: return
+        displayPrefs.edit()
+            .putString("lastDisplayLatitude", lat.toString())
+            .putString("lastDisplayLongitude", lon.toString())
+            .putLong("lastDisplayWallTime", System.currentTimeMillis())
+            .putFloat("lastDisplayAccuracyM", (latestAccuracyM ?: -1.0).toFloat())
+            .putFloat("lastDisplayAltitudeM", (latestAltitudeM ?: Double.NaN).toFloat())
+            .apply()
+    }
+
+    // Keep the last known marker visible briefly while Android reacquires GPS.
+    // A restored point is display-only: stale speed and heading are discarded.
+    private fun restorePersistedDisplayPosition() {
+        if (latestLat != null && latestLon != null) return
+        val savedAt = displayPrefs.getLong("lastDisplayWallTime", 0L)
+        val ageMs = System.currentTimeMillis() - savedAt
+        if (savedAt <= 0L || ageMs !in 0L..PERSISTED_DISPLAY_MAX_AGE_MS) return
+        val lat = displayPrefs.getString("lastDisplayLatitude", null)?.toDoubleOrNull() ?: return
+        val lon = displayPrefs.getString("lastDisplayLongitude", null)?.toDoubleOrNull() ?: return
+        if (!lat.isFinite() || lat !in -90.0..90.0 || !lon.isFinite() || lon !in -180.0..180.0) return
+
+        latestLat = lat
+        latestLon = lon
+        latestFixAt = (android.os.SystemClock.elapsedRealtime() - ageMs).coerceAtLeast(1L)
+        latestAccuracyM = displayPrefs.getFloat("lastDisplayAccuracyM", -1f).toDouble().takeIf { it >= 0.0 }
+        latestAltitudeM = displayPrefs.getFloat("lastDisplayAltitudeM", Float.NaN).toDouble().takeIf { it.isFinite() }
+        latestSpeedMps = null
+        latestGpsBearing = null
+        updateGpsQualityUi()
+        updateMap()
+        updateNavigationUi()
+        debug("Restored cached map position ageMs=$ageMs; speed and heading cleared")
+    }
+
     private fun updateMap() {
         val lat = latestLat ?: return
         val lon = latestLon ?: return
@@ -1283,6 +1321,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         ZoneAlerts.check(this,location)
         latestLat=location.latitude;latestLon=location.longitude
         latestFixAt=fixElapsed
+        rememberDisplayPosition()
         latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
         latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
         latestSpeedMps=if(cached) null else GpsSpeedQuality.acceptedSpeedMps(
@@ -1317,6 +1356,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             .maxByOrNull { it.elapsedRealtimeNanos }
             ?.let { acceptPreviewLocation(it,allowCachedDisplay=true) }
+        restorePersistedDisplayPosition()
         var requested=false
         providers.forEach { provider ->
             val enabled=runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)
