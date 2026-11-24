@@ -240,6 +240,15 @@ adb shell input text MAP_TEST_EDIT
 sleep 1
 adb shell input keyevent 4
 sleep 1
+# The editor can move when the soft keyboard closes; re-read its live save button bounds.
+adb logcat -d -s SailingUiBounds > screenshots/edit-bounds-after-keyboard.log
+read -r NAME_X NAME_Y SAVE_X SAVE_Y < <(python3 - <<'PYEDITAFTERKEYBOARD'
+import pathlib,re
+rows=re.findall(r'EDIT input=(\\d+),(\\d+),(\\d+),(\\d+) save=(\\d+),(\\d+),(\\d+),(\\d+)',pathlib.Path('screenshots/edit-bounds-after-keyboard.log').read_text())
+assert rows,'Waypoint editor bounds were not refreshed after closing the keyboard'
+a,b,c,d,e,f,g,h=map(int,rows[-1]);print((a+c)//2,(b+d)//2,(e+g)//2,(f+h)//2)
+PYEDITAFTERKEYBOARD
+)
 adb shell input tap "$SAVE_X" "$SAVE_Y"
 sleep 2
 adb shell am force-stop "$APP"
