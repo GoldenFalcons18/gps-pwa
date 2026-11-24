@@ -131,6 +131,9 @@ class NavigationMapPanel(
                 if (hit != null) editWaypoint(hit) else createWaypoint(location.latitude, location.longitude)
                 true
             }
+            // A tap on a waypoint is intentionally inert; waypoint editing and creation
+            // are reserved for the long-press gesture below.
+            readyMap.addOnMapClickListener { true }
             readyMap.addOnCameraMoveStartedListener { reason ->
                 if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
                     pendingManualZoom = null
