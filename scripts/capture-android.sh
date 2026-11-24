@@ -223,6 +223,7 @@ active=next(n.text for n in root if n.get('name')=='activeId')
 assert active in ('','__none__'),repr(active)
 PYTAP
 adb shell am force-stop "$APP"
+adb logcat -c
 adb shell am start -W -n "$APP/.MainActivity" --ez previewWaypointEdit true
 sleep 2
 adb logcat -d -s SailingUiBounds > screenshots/edit-bounds.log
