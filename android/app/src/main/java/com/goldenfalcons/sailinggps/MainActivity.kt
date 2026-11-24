@@ -2135,6 +2135,129 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         Toast.makeText(this, "カウンターをリセットしました（保存した航跡は保持）", Toast.LENGTH_SHORT).show()
     }
 
+    private fun writeLogCsv(uri: android.net.Uri?, content: String?, label: String) {
+        if (uri == null || content == null) return
+        runCatching {
+            contentResolver.openOutputStream(uri, "wt")?.bufferedWriter(Charsets.UTF_8)?.use { it.write(content) }
+                ?: error("保存先を開けません")
+            Toast.makeText(this, label + "を保存しました", Toast.LENGTH_LONG).show()
+        }.onFailure { Toast.makeText(this, label + "の保存に失敗しました: " + it.message, Toast.LENGTH_LONG).show() }
+    }
+
+    private fun showWindMarkLog() {
+        val store = WindMarkLogStore(this)
+        var markA: Pair<Double, Double>? = null
+        var markB: Pair<Double, Double>? = null
+        fun currentPosition(): Pair<Double, Double>? {
+            val age = (android.os.SystemClock.elapsedRealtime() - latestFixAt) / 1000.0
+            val lat = latestLat; val lon = latestLon
+            return if (lat != null && lon != null && age in 0.0..60.0) lat to lon else null
+        }
+        fun coordinate(value: Pair<Double, Double>?): String =
+            value?.let { "%.6f, %.6f".format(java.util.Locale.US, it.first, it.second) } ?: "GPS受信待ち"
+        fun label(text: String, size: Float = 16f) = TextView(this).apply {
+            this.text = text; textSize = size; setTextColor(Color.WHITE); setPadding(8, 8, 8, 8)
+        }
+        fun action(text: String, click: () -> Unit) = Button(this).apply {
+            this.text = text; isAllCaps = false; setOnClickListener { click() }
+        }
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; setPadding(14, 8, 14, 8); setBackgroundColor(Color.rgb(12, 12, 12))
+        }
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val markPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val windPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val locationLabel = label("")
+        val markALabel = label("A点: 未記録")
+        val markBLabel = label("B点: 未記録")
+        val markCount = label("記録済み: " + store.marks().size + "組")
+        val windCount = label("記録済み: " + store.winds().size + "件")
+        val directionInput = android.widget.EditText(this).apply {
+            hint = "風向（風上の方位） 0〜359°"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
+        }
+        val speedInput = android.widget.EditText(this).apply {
+            hint = "風速 knot"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
+        }
+        fun renderLocation() { locationLabel.text = "GPS位置: " + coordinate(currentPosition()) }
+
+        tabs.addView(action("マーク記録") { markPanel.visibility = View.VISIBLE; windPanel.visibility = View.GONE },
+            LinearLayout.LayoutParams(0, -2, 1f))
+        tabs.addView(action("風記録") { markPanel.visibility = View.GONE; windPanel.visibility = View.VISIBLE; renderLocation() },
+            LinearLayout.LayoutParams(0, -2, 1f))
+
+        markPanel.addView(label("A点とB点を現在のGPS位置から記録します。", 14f))
+        markPanel.addView(locationLabel)
+        markPanel.addView(action("A点を現在地に記録") {
+            markA = currentPosition()
+            if (markA == null) Toast.makeText(this, "新しいGPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            markALabel.text = "A点: " + coordinate(markA)
+        })
+        markPanel.addView(markALabel)
+        markPanel.addView(action("B点を現在地に記録") {
+            markB = currentPosition()
+            if (markB == null) Toast.makeText(this, "新しいGPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            markBLabel.text = "B点: " + coordinate(markB)
+        })
+        markPanel.addView(markBLabel)
+        markPanel.addView(action("このA・B位置を記録") {
+            val a = markA; val bPoint = markB
+            if (a == null || bPoint == null) Toast.makeText(this, "A点とB点を先に記録してください", Toast.LENGTH_LONG).show()
+            else {
+                store.add(MarkLogRow(WindMarkLogStore.timestamp(), a.first, a.second, bPoint.first, bPoint.second))
+                markCount.text = "記録済み: " + store.marks().size + "組"
+                Toast.makeText(this, "マーク位置を記録しました", Toast.LENGTH_SHORT).show()
+            }
+        })
+        markPanel.addView(markCount)
+        markPanel.addView(action("マークCSVを保存") {
+            pendingMarkCsvText = store.markCsv()
+            exportMarkCsvDocument.launch("mark-log.csv")
+        })
+
+        windPanel.addView(label("風向は風が吹いてくる方位、風速はknで入力します。", 14f))
+        windPanel.addView(locationLabel)
+        windPanel.addView(directionInput)
+        windPanel.addView(speedInput)
+        windPanel.addView(action("現在地で風を記録") {
+            val point = currentPosition()
+            val direction = directionInput.text.toString().toDoubleOrNull()
+            val speed = speedInput.text.toString().toDoubleOrNull()
+            if (point == null) Toast.makeText(this, "GPS位置を受信してから記録してください", Toast.LENGTH_LONG).show()
+            else if (direction == null || direction !in 0.0..360.0 || speed == null || speed < 0.0)
+                Toast.makeText(this, "風向は0〜359°、風速は0以上で入力してください", Toast.LENGTH_LONG).show()
+            else {
+                store.add(WindLogRow(WindMarkLogStore.timestamp(), point.first, point.second,
+                    if (direction == 360.0) 0.0 else direction, speed))
+                windCount.text = "記録済み: " + store.winds().size + "件"
+                renderLocation()
+                Toast.makeText(this, "風を記録しました", Toast.LENGTH_SHORT).show()
+            }
+        })
+        windPanel.addView(windCount)
+        windPanel.addView(action("風CSVを保存") {
+            pendingWindCsvText = store.windCsv()
+            exportWindCsvDocument.launch("wind-log.csv")
+        })
+
+        root.addView(tabs)
+        root.addView(markPanel)
+        root.addView(windPanel.apply { visibility = View.GONE })
+        val scroll = android.widget.ScrollView(this).apply { addView(root) }
+        lateinit var dialog: androidx.appcompat.app.AlertDialog
+        val close = action("閉じる") { dialog.dismiss() }
+        root.addView(close)
+        dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("風・マーク記録").setView(scroll).create()
+        dialog.setOnDismissListener { if (currentDisplayMode == 5) setDisplayMode(0) }
+        dialog.show()
+        dialog.window?.setLayout(-1, -1)
+        renderLocation()
+    }
+
     private fun showNavigationMenu() {
         val counterAction = when {
             running -> "カウンターを一時停止"
