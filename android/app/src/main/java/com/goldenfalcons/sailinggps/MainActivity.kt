@@ -1261,23 +1261,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED
 
-    private fun acceptPreviewLocation(location:Location) {
+    private fun acceptPreviewLocation(location:Location, allowCachedDisplay:Boolean=false) {
         val now=android.os.SystemClock.elapsedRealtime()
         val fixElapsed=location.elapsedRealtimeNanos/1_000_000L
-        if(fixElapsed<=0L || now-fixElapsed !in 0L..30_000L ||
+        val ageMs=now-fixElapsed
+        if(fixElapsed<=0L || !LocationPreviewPolicy.isUsableAge(ageMs,allowCachedDisplay) ||
             !location.latitude.isFinite() || !location.longitude.isFinite()) return
         if(latestFixAt>fixElapsed) return
+        val cached=ageMs>LocationPreviewPolicy.FRESH_FIX_MAX_AGE_MS
         ZoneAlerts.check(this,location)
         latestLat=location.latitude;latestLon=location.longitude
         latestFixAt=fixElapsed
         latestAccuracyM=location.accuracy.toDouble().takeIf { location.hasAccuracy() && it.isFinite() && it>=0.0 }
         latestAltitudeM=location.altitude.takeIf { location.hasAltitude() && it.isFinite() }
-        latestSpeedMps=GpsSpeedQuality.acceptedSpeedMps(
-    if(location.hasSpeed()) location.speed.toDouble() else null,
-    if(location.hasAccuracy()) location.accuracy.toDouble() else null,
-    if(location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond.toDouble() else null
- )
-        latestGpsBearing=if(location.hasBearing()) location.bearing.toDouble() else null
+        latestSpeedMps=if(cached) null else GpsSpeedQuality.acceptedSpeedMps(
+            if(location.hasSpeed()) location.speed.toDouble() else null,
+            if(location.hasAccuracy()) location.accuracy.toDouble() else null,
+            if(location.hasSpeedAccuracy()) location.speedAccuracyMetersPerSecond.toDouble() else null
+        )
+        latestGpsBearing=if(!cached && location.hasBearing()) location.bearing.toDouble() else null
         updateGpsQualityUi()
         updateMap();updateNavigationUi()
     }
@@ -1298,9 +1300,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         val now=android.os.SystemClock.elapsedRealtime()
         providers.mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
-            .filter { it.elapsedRealtimeNanos>0L && now-it.elapsedRealtimeNanos/1_000_000L in 0L..30_000L }
+            .filter {
+                it.elapsedRealtimeNanos>0L &&
+                    LocationPreviewPolicy.isUsableAge(now-it.elapsedRealtimeNanos/1_000_000L,allowCachedDisplay=true)
+            }
             .maxByOrNull { it.elapsedRealtimeNanos }
-            ?.let(::acceptPreviewLocation)
+            ?.let { acceptPreviewLocation(it,allowCachedDisplay=true) }
         var requested=false
         providers.forEach { provider ->
             val enabled=runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)
