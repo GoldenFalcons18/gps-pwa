@@ -2380,6 +2380,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun createMapWaypoint(lat: Double, lon: Double) {
+        // Creating a map waypoint must not silently replace the current navigation target.
+        val previousActiveWaypoint = activeWaypoint
         val input = android.widget.EditText(this).apply { hint = "ウェイポイント名"; setSingleLine(true) }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; addView(input)
@@ -2392,7 +2394,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .setPositiveButton("保存") { _, _ ->
                 val wp = Waypoint(name = input.text.toString().trim().ifEmpty { "地点 ${waypoints.size + 1}" }, lat = lat, lon = lon, mark = draftMark, color = draftColor, group = mainWaypointFolder)
                 waypoints += wp
+                activeWaypoint = previousActiveWaypoint
                 waypointStore.saveAll(waypoints)
+                waypointStore.setActiveId(previousActiveWaypoint?.id)
                 renderWaypointList(); updateNavigationUi()
                 debug("Map waypoint saved / ${wp.id}")
                 Toast.makeText(this, "${wp.name} を保存しました", Toast.LENGTH_SHORT).show()
