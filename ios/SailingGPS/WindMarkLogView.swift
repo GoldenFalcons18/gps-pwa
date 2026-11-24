@@ -44,7 +44,7 @@ struct WindMarkLogView: View {
                 if selectedLog == 0 {
                     Section("マーク位置") {
                         Text("現在地: " + coordinateText(gps.location?.coordinate))
-                            .font(.footnote).foregroundStyle(gps.location == nil ? .orange : .secondary)
+                            .font(.footnote).foregroundColor(gps.location == nil ? Color.orange : Color.secondary)
                         HStack {
                             Text("A").font(.headline).frame(width: 28)
                             Text(coordinateText(markA)).font(.footnote.monospacedDigit())
