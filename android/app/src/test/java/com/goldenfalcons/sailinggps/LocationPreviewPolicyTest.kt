@@ -11,7 +11,14 @@ class LocationPreviewPolicyTest {
         assertFalse(LocationPreviewPolicy.isUsableAge(LocationPreviewPolicy.FRESH_FIX_MAX_AGE_MS + 1L))
     }
 
-    @Test fun cachedPositionOnlyKeepsMapMarkerForFiveMinutes() {
+    @Test fun persistedPositionKeepsMarkerForOneHourButNotLonger() {
+        assertTrue(LocationPreviewPolicy.isPersistedDisplayAge(0L))
+        assertTrue(LocationPreviewPolicy.isPersistedDisplayAge(LocationPreviewPolicy.PERSISTED_DISPLAY_MAX_AGE_MS))
+        assertFalse(LocationPreviewPolicy.isPersistedDisplayAge(LocationPreviewPolicy.PERSISTED_DISPLAY_MAX_AGE_MS + 1L))
+        assertFalse(LocationPreviewPolicy.isPersistedDisplayAge(-1L))
+    }
+
+    @Test fun recentCachedPositionKeepsMapMarkerForFiveMinutes() {
         assertFalse(LocationPreviewPolicy.isUsableAge(60_000L))
         assertTrue(LocationPreviewPolicy.isUsableAge(60_000L, allowCachedDisplay = true))
         assertTrue(LocationPreviewPolicy.isUsableAge(LocationPreviewPolicy.CACHED_DISPLAY_MAX_AGE_MS, allowCachedDisplay = true))
