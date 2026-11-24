@@ -1281,7 +1281,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         if (latestLat != null && latestLon != null) return
         val savedAt = displayPrefs.getLong("lastDisplayWallTime", 0L)
         val ageMs = System.currentTimeMillis() - savedAt
-        if (savedAt <= 0L || !LocationPreviewPolicy.isUsableAge(ageMs, allowPersistedDisplay = true)) return
+        if (savedAt <= 0L || !LocationPreviewPolicy.isPersistedDisplayAge(ageMs)) return
         val lat = displayPrefs.getString("lastDisplayLatitude", null)?.toDoubleOrNull() ?: return
         val lon = displayPrefs.getString("lastDisplayLongitude", null)?.toDoubleOrNull() ?: return
         if (!lat.isFinite() || lat !in -90.0..90.0 || !lon.isFinite() || lon !in -180.0..180.0) return
