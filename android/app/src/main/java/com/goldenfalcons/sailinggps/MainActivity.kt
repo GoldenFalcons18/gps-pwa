@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var focusSog:TextView
     private lateinit var focusCog:TextView
     private lateinit var focusBearing:TextView
+    private lateinit var focusBearingRelative:TextView
     private lateinit var focusDistance:TextView
     private var mapPanel: NavigationMapPanel? = null
     private val displayPrefs by lazy { getSharedPreferences("display", MODE_PRIVATE) }
@@ -361,12 +362,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupFocusPanel()
         b.root.addOnLayoutChangeListener { _,_,_,_,_,_,_,_,_ -> if(currentDisplayMode==2) resizeFocusPanelToViewport() }
         b.btnFocusMode.text="セーリング"
-        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 6) }
+        b.tvModeTitle.setOnClickListener { setDisplayMode(if(currentDisplayMode in 0..2) currentDisplayMode + 1 else 0) }
         b.tvModeTitle.isClickable = true
         b.tvModeTitle.isFocusable = true
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
         b.btnTimerMode.setOnClickListener { setDisplayMode(3) }
-        b.btnSignalMode.setOnClickListener { setDisplayMode(4) }
+        b.btnSignalMode.visibility=android.view.View.GONE
         b.btnFocusMenu.setOnClickListener { showNavigationMenu() }
         b.btnFocusNorth.setOnClickListener { displayPrefs.edit().putBoolean("instrumentMagnetic",!displayPrefs.getBoolean("instrumentMagnetic",false)).apply();updateNavigationUi() }
         b.btnSpeedMode.setOnClickListener { setDisplayMode(0) }
@@ -481,6 +482,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
         val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),46)
         focusBearing=targetValue
+        focusBearingRelative=TextView(this).apply {
+            text="—° · —時方向";textSize=14f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
+            setSingleLine();includeFontPadding=false
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,9,16,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+        }
+        targetCard.addView(focusBearingRelative,LinearLayout.LayoutParams(-1,-2))
         targetCard.setOnClickListener { showNavigationOptions() }
         targetCard.contentDescription="目標方位。タップして目標地点を変更"
         targetRow.addView(targetCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
@@ -1711,7 +1718,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val targetBearing=if(preview) 144.0 else if(fresh && target!=null && latestLat!=null && latestLon!=null && NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)>1)
                 NavigationUtils.bearingDegrees(latestLat!!,latestLon!!,target.lat,target.lon) else null
             ((focusBearing.parent as LinearLayout).getChildAt(0) as TextView).text="目標方位"+(if(useMagnetic) "（磁北）" else "（真北）")
-            focusBearing.text=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val targetDisplayBearing=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)
+            focusBearing.text=targetDisplayBearing?.let{"${it.roundToInt()%360}°"} ?: "—"
+            val relativeTarget=targetDisplayBearing?.let { absolute -> reading?.value?.let { NavigationUtils.normalize360(absolute-it) } }
+            focusBearingRelative.text=relativeTarget?.let { "${NavigationUtils.relativeText(it)} · ${NavigationUtils.relativeClock(it)}" } ?: "—° · —時方向"
             ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
             focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
                 val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
