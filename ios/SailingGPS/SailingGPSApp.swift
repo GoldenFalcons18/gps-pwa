@@ -989,8 +989,8 @@ struct ContentView: View {
     private var modeTitle: some View {
         HStack(spacing: 8) {
             Spacer(minLength: 0)
-            Button { mode = (mode + 1) % 5 } label: {
-                Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル"][min(max(mode, 0), 4)])
+            Button { mode = (mode + 1) % 6 } label: {
+                Text(["スピードメーター","ナビゲーション","セーリング","タイマー","シグナル","風・マーク記録"][min(max(mode, 0), 5)])
                     .font(.system(size: 29, weight: .medium)).minimumScaleFactor(0.6).lineLimit(1).foregroundStyle(.orange)
             }.buttonStyle(.plain).accessibilityLabel("モード切替")
             HStack(spacing: 4) {
@@ -1092,7 +1092,11 @@ struct ContentView: View {
     private var dashboard: some View {
         GeometryReader { geometry in
             let height = max(620, geometry.size.height)
-            if mode == 2 { focusDashboard }
+            if mode == 5 {
+                WindMarkLogView(gps: gps, onClose: { mode = 0 })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            else if mode == 2 { focusDashboard }
             else if mode == 3 { startTimerDashboard }
             else if mode == 4 { signalDashboard }
             else { ScrollView {
