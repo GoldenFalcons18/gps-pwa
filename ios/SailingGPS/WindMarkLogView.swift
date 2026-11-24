@@ -43,7 +43,7 @@ struct WindMarkLogView: View {
 
                 if selectedLog == 0 {
                     Section("マーク位置") {
-                        Text("現在地: " + coordinateText(gps.location?.coordinate))
+                        Text("現在地: " + coordinateText(freshLocation?.coordinate))
                             .font(.footnote).foregroundColor(gps.location == nil ? Color.orange : Color.secondary)
                         HStack {
                             Text("A").font(.headline).frame(width: 28)
@@ -84,7 +84,7 @@ struct WindMarkLogView: View {
                             Text("kn")
                         }
                         Button("現在地で風を記録", systemImage: "wind") { saveWind() }
-                            .disabled(gps.location == nil)
+                            .disabled(freshLocation == nil)
                     }
                     Section("記録済み: \(windRows.count)件") {
                         ShareLinkButton(title: "風CSVを共有", export: exportWind)
@@ -107,7 +107,7 @@ struct WindMarkLogView: View {
     }
 
     private func captureMark(isA: Bool) {
-        guard let coordinate = gps.location?.coordinate else { notice = "GPS位置を取得できません"; return }
+        guard let coordinate = freshLocation?.coordinate else { notice = "GPS位置を取得できません"; return }
         if isA { markA = coordinate } else { markB = coordinate }
         notice = isA ? "A点を記録しました" : "B点を記録しました"
     }
@@ -121,7 +121,7 @@ struct WindMarkLogView: View {
     }
 
     private func saveWind() {
-        guard let location = gps.location else { notice = "GPS位置を取得できません"; return }
+        guard let location = freshLocation else { notice = "GPS位置を取得できません"; return }
         guard let direction = Double(windDirection), (0...360).contains(direction),
               let speed = Double(windSpeed), speed >= 0 else {
             notice = "風向は0〜360°、風速は0以上の数値を入力してください"
@@ -135,13 +135,19 @@ struct WindMarkLogView: View {
     }
 
     private func loadRows() {
-        markRows = load("mark-log.json", as: [WindMarkPoint].self)
-        windRows = load("wind-log.json", as: [WindObservation].self)
+        markRows = load("mark-log.json", as: [WindMarkPoint].self, empty: [WindMarkPoint]())
+        windRows = load("wind-log.json", as: [WindObservation].self, empty: [WindObservation]())
     }
 
-    private func load<T: Decodable>(_ name: String, as type: T.Type) -> T {
+    private var freshLocation: CLLocation? {
+        guard let location = gps.location else { return nil }
+        let age = Date().timeIntervalSince(location.timestamp)
+        return age >= 0 && age <= 60 && location.horizontalAccuracy >= 0 ? location : nil
+    }
+
+    private func load<T: Decodable>(_ name: String, as type: T.Type, empty: T) -> T {
         guard let url = dataDirectory()?.appendingPathComponent(name),
-              let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(type, from: data) else { return [] as! T }
+              let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(type, from: data) else { return empty }
         return value
     }
 
