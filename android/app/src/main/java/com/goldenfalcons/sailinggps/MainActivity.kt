@@ -35,6 +35,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var activeWaypoint: Waypoint? = null
     private var library = MapLibrary()
     private var pendingExport: ByteArray? = null
+    private var pendingMarkCsvText: String? = null
+    private var pendingWindCsvText: String? = null
+    private val exportMarkCsvDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        writeLogCsv(uri, pendingMarkCsvText, "マークCSV")
+        pendingMarkCsvText = null
+    }
+    private val exportWindCsvDocument = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+        writeLogCsv(uri, pendingWindCsvText, "風CSV")
+        pendingWindCsvText = null
+    }
 
     private lateinit var sensorManager: SensorManager
     private var accel = FloatArray(3)
@@ -350,7 +360,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setupFocusPanel()
         b.root.addOnLayoutChangeListener { _,_,_,_,_,_,_,_,_ -> if(currentDisplayMode==2) resizeFocusPanelToViewport() }
         b.btnFocusMode.text="セーリング"
-        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 5) }
+        b.tvModeTitle.setOnClickListener { setDisplayMode((currentDisplayMode + 1) % 6) }
         b.tvModeTitle.isClickable = true
         b.tvModeTitle.isFocusable = true
         b.btnFocusMode.setOnClickListener { setDisplayMode(2) }
@@ -1113,7 +1123,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun setDisplayMode(requestedMode:Int) {
-        val mode=requestedMode.coerceIn(0,4)
+        val mode=requestedMode.coerceIn(0,5)
         val immersive=mode>=2
         val wasImmersive=currentDisplayMode>=2
         val content=b.focusPanel.parent as LinearLayout
@@ -1142,7 +1152,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         b.speedPanel.visibility = if (navigator || immersive) android.view.View.GONE else android.view.View.VISIBLE
         b.navigatorPanel.visibility = if (navigator) android.view.View.VISIBLE else android.view.View.GONE
-        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; else -> "スピードメーター" }
+        b.tvModeTitle.text = when(mode) { 1 -> "ナビゲーション"; 2 -> "セーリング"; 3 -> "タイマー"; 4 -> "シグナル"; 5 -> "風・マーク記録"; else -> "スピードメーター" }
         b.modeTitleRow.visibility = android.view.View.VISIBLE
         b.topActionControls.visibility = if(mode<=1) android.view.View.VISIBLE else android.view.View.GONE
         b.tvStatus.visibility = android.view.View.GONE
@@ -1163,8 +1173,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnCurrentWp.visibility=if(mode==0 || mode==1) android.view.View.VISIBLE else android.view.View.GONE
         displayPrefs.edit().putBoolean("navigator", navigator).putInt("displayMode",mode).apply()
         updateNavigationUi()
-        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";else->"SIGNAL"})
+        debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";4->"SIGNAL";else->"WIND_MARK_LOG"})
         if(mode==4) updateSignalUi()
+        if(mode==5) showWindMarkLog()
     }
 
     private fun captureStartLineEndpoint(kind:String) {
@@ -1944,13 +1955,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showDisplayModePicker() {
-        val names = listOf("スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル")
+        val names = listOf("スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル", "風・マーク記録")
         val descriptions = listOf(
             "SOG速度を大きく表示",
             "地図・目標方位・距離",
             "SOG・COG・目標方位を大きく表示",
             "スタートまでの時間を計測",
-            "旗の順序と合図音を表示"
+            "旗の順序と合図音を表示",
+            "風向・風速とA/Bマーク位置をCSVに記録"
         )
         val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val column = LinearLayout(this).apply {
