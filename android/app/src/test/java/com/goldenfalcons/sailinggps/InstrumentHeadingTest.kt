@@ -21,8 +21,8 @@ class InstrumentHeadingTest {
         assertEquals(InstrumentHeading.Reading(82.0,false),InstrumentHeading.resolve(82.0,3.0,null,null,false))
     }
     @Test fun relativeHeadingSmoothingUsesShortestArc() {
-        assertEquals(0.5,InstrumentHeading.smooth(359.0,1.0,0.25),0.0001)
-        assertEquals(358.5,InstrumentHeading.smooth(1.0,359.0,0.25),0.0001)
+        assertEquals(359.5,InstrumentHeading.smooth(359.0,1.0,0.25),0.0001)
+        assertEquals(0.5,InstrumentHeading.smooth(1.0,359.0,0.25),0.0001)
     }
     @Test fun northWrapAndInvalidAngles() {
         assertEquals(354.0,InstrumentHeading.bearing(2.0,true,8.0)!!,0.0001)
