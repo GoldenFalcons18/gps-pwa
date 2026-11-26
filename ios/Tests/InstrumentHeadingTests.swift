@@ -25,8 +25,8 @@ final class InstrumentHeadingTests:XCTestCase {
         XCTAssertEqual(InstrumentHeading.resolve(course:82,speed:3,magneticHeading:nil,trueHeading:nil,magnetic:false),.init(value:82,compass:false))
     }
     func testRelativeHeadingSmoothingUsesShortestArc() {
-        XCTAssertEqual(InstrumentHeading.smooth(previous:359,target:1,weight:0.25),0.5,accuracy:0.0001)
-        XCTAssertEqual(InstrumentHeading.smooth(previous:1,target:359,weight:0.25),358.5,accuracy:0.0001)
+        XCTAssertEqual(InstrumentHeading.smooth(previous:359,target:1,weight:0.25),359.5,accuracy:0.0001)
+        XCTAssertEqual(InstrumentHeading.smooth(previous:1,target:359,weight:0.25),0.5,accuracy:0.0001)
     }
     func testNorthWrapAndInvalidAngles() {
         XCTAssertEqual(InstrumentHeading.bearing(2,magnetic:true,declination:8)!,354,accuracy:0.0001)
