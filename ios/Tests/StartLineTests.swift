@@ -20,5 +20,7 @@ final class StartLineTests: XCTestCase {
         XCTAssertNil(StartLineMath.distanceMeters(from: boat, outerMark: boat, signalBoat: StartLineCoordinate(latitude: 91, longitude: 0)))
         XCTAssertEqual(StartLineMath.countdown(300), "05:00")
         XCTAssertEqual(StartLineMath.countdown(0.1), "00:01")
+        XCTAssertEqual(StartLineMath.alignDeadlineToNearestMinute(121, now: 100), 120)
+        XCTAssertEqual(StartLineMath.alignDeadlineToNearestMinute(121, now: 150), 180)
     }
 }

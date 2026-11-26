@@ -28,6 +28,11 @@ object StartLineMath {
         return hypot(a.first + fraction * dx, a.second + fraction * dy)
     }
 
+    fun alignDeadlineToNearestMinute(deadlineMillis: Long, nowMillis: Long): Long {
+        val nearest = ((deadlineMillis + 30_000L) / 60_000L) * 60_000L
+        return if (nearest > nowMillis) nearest else (nowMillis / 60_000L + 1) * 60_000L
+    }
+
     fun countdown(seconds: Double): String {
         val value = ceil(seconds.coerceAtLeast(0.0)).toInt()
         return "%02d:%02d".format(value / 60, value % 60)
