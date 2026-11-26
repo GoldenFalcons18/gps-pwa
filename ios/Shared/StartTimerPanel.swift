@@ -41,7 +41,8 @@ struct StartTimerPanel: View {
     }
     private func alignToMinute(at now: Date) {
         guard deadline > now.timeIntervalSince1970 else { return }
-        deadline = StartLineMath.alignDeadlineToNearestMinute(deadline, now: now.timeIntervalSince1970)
+        let remaining = deadline - now.timeIntervalSince1970
+        deadline = now.timeIntervalSince1970 + StartLineMath.alignRemainingToNearestMinute(remaining)
     }
     private func distanceText() -> String {
         guard let currentLocation, let distance = StartLineMath.distanceMeters(from: currentLocation, outerMark: outer, signalBoat: signal) else { return "—" }
