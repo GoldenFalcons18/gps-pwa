@@ -20,7 +20,10 @@ class StartLineMathTest {
         assertNull(StartLineMath.distanceMeters(boat, boat, StartLineCoordinate(91.0, 0.0)))
         assertEquals("05:00", StartLineMath.countdown(300.0))
         assertEquals("00:01", StartLineMath.countdown(0.1))
-        assertEquals(120_000L, StartLineMath.alignDeadlineToNearestMinute(121_000L, 100_000L))
-        assertEquals(180_000L, StartLineMath.alignDeadlineToNearestMinute(121_000L, 150_000L))
+        assertEquals(120L, StartLineMath.alignRemainingToNearestMinute(121.0))
+        assertEquals(120L, StartLineMath.alignRemainingToNearestMinute(149.0))
+        assertEquals(180L, StartLineMath.alignRemainingToNearestMinute(151.0))
+        assertEquals(0L, StartLineMath.alignRemainingToNearestMinute(29.0))
+        assertEquals(60L, StartLineMath.alignRemainingToNearestMinute(31.0))
     }
 }
