@@ -11,7 +11,8 @@ import androidx.core.app.NotificationManagerCompat
 
 /** Each change persists immediately, and the instrument screen reads the same preferences. */
 class DetailedSettings(private val activity:Activity,private val library:MapLibrary,private val folders:List<String>,
-    private val currentFolder:String,private val gpsStatus:String,private val openOfflineMap:()->Unit = {},private val refresh:()->Unit) {
+    private val currentFolder:String,private val gpsStatus:String,private val openOfflineMap:()->Unit = {},
+    private val onModeSelected:(Int)->Unit = {},private val refresh:()->Unit) {
     private val prefs=activity.getSharedPreferences("display",Context.MODE_PRIVATE)
     private fun menu(title:String,items:List<Pair<String,()->Unit>>) = menuSections(title,listOf("" to items))
     private fun menuSections(title:String,sections:List<Pair<String,List<Pair<String,()->Unit>>>>) {
@@ -189,6 +190,12 @@ class DetailedSettings(private val activity:Activity,private val library:MapLibr
     }
     fun show():Unit=menuSections("設定",listOf(
         "表示" to listOf(
+            "モード：${listOf("スピードメーター","ナビゲーション","セーリング","タイマー","シグナル","風・マーク記録").getOrElse(prefs.getInt("displayMode",0)) { "スピードメーター" }} " to {
+                val labels=listOf("スピードメーター","ナビゲーション","セーリング","タイマー","シグナル","風・マーク記録")
+                menu("モード選択",labels.mapIndexed { index,label ->
+                    (if(prefs.getInt("displayMode",0)==index) "✓  " else "    ")+label to { onModeSelected(index);refresh() }
+                })
+            },
             "単位：${if(bool("metricUnits",false)) "km/h・m/km" else "knot・nm"}" to { booleanChoice("単位","metricUnits",listOf("knot・nm","km/h・m/km")) },
             "地図の追従方位：${if(bool("preferGpsHeading",false)) "GPS進路" else "磁気コンパス"}" to { booleanChoice("地図の追従方位","preferGpsHeading",listOf("磁気コンパス","GPS進路")) },
             "計器の北基準：${if(bool("instrumentMagnetic",false)) "磁北" else "真北"}" to { booleanChoice("計器の北基準","instrumentMagnetic",listOf("真北","磁北")) },

@@ -158,6 +158,7 @@ final class GPSRecorder: NSObject, ObservableObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
+        manager.headingOrientation = .portrait
         WatchNavigationBridge.shared.recordingCommandHandler = { [weak self] command in
             guard let self else { return false }
             switch command {

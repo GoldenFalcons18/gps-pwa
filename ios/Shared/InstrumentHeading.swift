@@ -4,6 +4,12 @@ import Foundation
 enum InstrumentHeading {
     struct Reading:Equatable { var value:Double;var compass:Bool }
     static func normalize(_ value:Double)->Double {(value.truncatingRemainder(dividingBy:360)+360).truncatingRemainder(dividingBy:360)}
+    static func smooth(previous:Double?,target:Double,weight:Double=0.35)->Double {
+        let next=normalize(target)
+        guard let previous,previous.isFinite else { return next }
+        let delta=normalize(next-previous+180)-180
+        return normalize(previous+delta*min(1,max(0,weight)))
+    }
     private static func valid(_ value:Double?)->Double? {value.flatMap{$0.isFinite && $0>=0 && $0<360 ? $0:nil}}
     static func declination(magnetic:Double?,trueHeading:Double?)->Double? {
         guard let magnetic=valid(magnetic),let trueHeading=valid(trueHeading) else {return nil}

@@ -20,15 +20,18 @@ struct FocusDashboardView: View {
     let stopRecording: () -> Void
     let chooseTarget: () -> Void
     let openMenu: () -> Void
+    @State private var smoothedRelativeAngle: Double?
 
     private func card(_ label: String, _ value: String, _ color: Color, valueScale: CGFloat = 0.42) -> some View {
         GeometryReader { bounds in
             VStack(spacing: 4) {
-                Text(label)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.gray)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                if !label.isEmpty {
+                    Text(label)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
                 Text(value)
                     .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.62),
                                   weight: .bold, design: .monospaced))
@@ -47,8 +50,8 @@ struct FocusDashboardView: View {
         ["スピードメーター", "ナビゲーション", "セーリング", "タイマー", "シグナル", "風・マーク記録"][min(max(mode, 0), 5)]
     }
 
-    private var relativeTargetLabel: String {
-        guard let angle = targetRelativeAngle else { return "—° · —時方向" }
+    private func relativeTargetLabel(for angle: Double?) -> String {
+        guard let angle else { return "—° · —時方向" }
         let signed = angle > 180 ? angle - 360 : angle
         let degrees = Int(abs(signed).rounded())
         let relative = degrees == 0 ? "正面 0°" : degrees == 180 ? "後方 180°" : "\(signed > 0 ? "右" : "左") \(degrees)°"
@@ -121,11 +124,11 @@ struct FocusDashboardView: View {
 
             VStack(spacing: gap) {
                 header.frame(height: headerHeight)
-                card("SOG / " + unit, speed, speedColor)
+                card("SOG / " + unit, speed, speedColor, valueScale: 0.54)
                     .frame(height: cardHeight)
                 card((isCompass ? "コンパス方位" : "COG") + (magnetic ? "（磁北）" : "（真北）"),
                      course.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—",
-                     .white)
+                     .white, valueScale: 0.54)
                     .frame(height: cardHeight)
                 HStack(spacing: 8) {
                     Button(action: chooseTarget) {
@@ -133,10 +136,10 @@ struct FocusDashboardView: View {
                             Text("目標方位" + (magnetic ? "（磁北）" : "（真北）"))
                                 .font(.system(size: 15, weight: .medium)).foregroundStyle(.gray).lineLimit(1).minimumScaleFactor(0.7)
                             Text(targetBearing.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—")
-                                .font(.system(size: 30, weight: .bold, design: .monospaced)).foregroundStyle(.orange)
-                                .lineLimit(1).minimumScaleFactor(0.45)
-                            Text(relativeTargetLabel)
-                                .font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+                                .font(.system(size: 46, weight: .bold, design: .monospaced)).foregroundStyle(.orange)
+                                .lineLimit(1).minimumScaleFactor(0.55)
+                            Text(relativeTargetLabel(for: smoothedRelativeAngle))
+                                .font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
                                 .lineLimit(1).minimumScaleFactor(0.55)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -145,7 +148,7 @@ struct FocusDashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("タップして目標地点を変更")
-                    card("目標距離", targetDistance, .white, valueScale: 0.26)
+                    card("", targetDistance, .white, valueScale: 0.34)
                 }
                 .frame(height: cardHeight)
             }
@@ -154,5 +157,11 @@ struct FocusDashboardView: View {
         }
         .background(.black)
         .preferredColorScheme(.dark)
+        .onAppear { smoothedRelativeAngle = targetRelativeAngle }
+        .onChange(of: targetRelativeAngle) { _, value in
+            guard let value else { smoothedRelativeAngle = nil; return }
+            smoothedRelativeAngle = InstrumentHeading.smooth(previous: smoothedRelativeAngle, target: value, weight: 0.45)
+        }
+        .animation(.easeOut(duration: 0.2), value: smoothedRelativeAngle)
     }
 }
