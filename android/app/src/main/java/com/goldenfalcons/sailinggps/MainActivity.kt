@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var accelSampleAt=0L
     private var compassAccuracy=SensorManager.SENSOR_STATUS_UNRELIABLE
     private var rotationVectorAvailable=false
+    private var rotationSensorType:Int?=null
     private var magneticHardwareAvailable=false
 
     private var previewListener: android.location.LocationListener? = null
@@ -107,6 +108,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var focusBearing:TextView
     private lateinit var focusBearingRelative:TextView
     private lateinit var focusDistance:TextView
+    private var smoothedFocusRelativeAngle:Double?=null
+    private var windMarkDialog:androidx.appcompat.app.AlertDialog?=null
     private var mapPanel: NavigationMapPanel? = null
     private val displayPrefs by lazy { getSharedPreferences("display", MODE_PRIVATE) }
 
@@ -249,6 +252,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewMapOperations", false)) b.root.post { showMapOperations(35.319,139.469) }
         if (BuildConfig.DEBUG && intent.getBooleanExtra("previewNavigationOptions", false)) b.root.post { showNavigationOptions() }
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("previewWindMarkLog", false)) b.root.postDelayed({ setDisplayMode(5) }, 350)
         if (BuildConfig.DEBUG && intent.getBooleanExtra("clearTarget", false)) clearTarget()
         if (BuildConfig.DEBUG && intent.getBooleanExtra("tapCurrentWaypoint", false)) {
             b.root.postDelayed({ b.btnCurrentWp.performClick() }, 1000)
@@ -331,7 +335,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         uiHandler.post(clockTick)
         mapPanel?.resume()
         if (rotationVectorAvailable) {
-            sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)?.also {
+            rotationSensorType?.let(sensorManager::getDefaultSensor)?.also {
                 sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
             }
         } else {
@@ -455,7 +459,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 background=android.graphics.drawable.GradientDrawable().apply { setColor(Color.BLACK); setStroke(2,Color.GRAY); cornerRadius=10f }
             }
             val title=TextView(this).apply {
-                text=label; textSize=16f; setTextColor(Color.LTGRAY)
+                text=label; textSize=if(label.contains("目標方位")) 18f else 16f; setTextColor(Color.LTGRAY)
+                if(label.isBlank()) visibility=android.view.View.GONE
                 gravity=android.view.Gravity.CENTER; setSingleLine()
                 androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,10,18,1,android.util.TypedValue.COMPLEX_UNIT_SP)
             }
@@ -480,10 +485,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         focusCog=cogValue
         b.focusPanel.addView(cogCard,LinearLayout.LayoutParams(-1,0,1f).apply { setMargins(0,4,0,4) })
         val targetRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-        val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),46)
+        val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),64)
         focusBearing=targetValue
         focusBearingRelative=TextView(this).apply {
-            text="—° · —時方向";textSize=14f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
+            text="—° · —時方向";textSize=16f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
             setSingleLine();includeFontPadding=false
             androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,9,16,1,android.util.TypedValue.COMPLEX_UNIT_SP)
         }
@@ -491,7 +496,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         targetCard.setOnClickListener { showNavigationOptions() }
         targetCard.contentDescription="目標方位。タップして目標地点を変更"
         targetRow.addView(targetCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(0,4,4,4) })
-        val (distanceCard,distanceValue)=card("目標距離",Color.WHITE,46)
+        val (distanceCard,distanceValue)=card("",Color.WHITE,52)
         focusDistance=distanceValue
         targetRow.addView(distanceCard,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(4,4,0,4) })
         b.focusPanel.addView(targetRow,LinearLayout.LayoutParams(-1,0,1f))
@@ -1183,7 +1188,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         updateNavigationUi()
         debug("Display mode=" + when(mode){0->"SPEEDOMETER";1->"NAVIGATOR";2->"FOCUS";3->"START_TIMER";4->"SIGNAL";else->"WIND_MARK_LOG"})
         if(mode==4) updateSignalUi()
-        if(mode==5) showWindMarkLog()
+        if(mode==5) b.root.post {
+            if(currentDisplayMode==5 && !isFinishing && !isDestroyed) showWindMarkLog()
+        }
     }
 
     private fun captureStartLineEndpoint(kind:String) {
@@ -1429,6 +1436,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun mapHeading(): Double? = headingReference()?.trueHeading
 
     override fun onDestroy() {
+        windMarkDialog?.setOnDismissListener(null)
+        windMarkDialog?.dismiss()
+        windMarkDialog = null
         if (::updateChecker.isInitialized) updateChecker.close()
         mapPanel?.destroy()
         super.onDestroy()
@@ -1489,7 +1499,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private fun setupSensors() {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         magneticHardwareAvailable = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
-        rotationVectorAvailable = magneticHardwareAvailable && sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) != null
+        val geomagneticRotation = sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
+        val fusedRotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        rotationSensorType = (geomagneticRotation ?: fusedRotation)?.type
+        rotationVectorAvailable = magneticHardwareAvailable && rotationSensorType != null
         if (!magneticHardwareAvailable || (!rotationVectorAvailable && sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) == null)) {
             debug("Magnetic compass sensors not available")
         }
@@ -1721,7 +1734,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val targetDisplayBearing=InstrumentHeading.bearing(targetBearing,useMagnetic,declination)
             focusBearing.text=targetDisplayBearing?.let{"${it.roundToInt()%360}°"} ?: "—"
             val relativeTarget=targetDisplayBearing?.let { absolute -> reading?.value?.let { NavigationUtils.normalize360(absolute-it) } }
-            focusBearingRelative.text=relativeTarget?.let { "${NavigationUtils.relativeText(it)} · ${NavigationUtils.relativeClock(it)}" } ?: "—° · —時方向"
+            smoothedFocusRelativeAngle=relativeTarget?.let { InstrumentHeading.smooth(smoothedFocusRelativeAngle,it) }
+            val displayedRelativeTarget=smoothedFocusRelativeAngle
+            focusBearingRelative.text=displayedRelativeTarget?.let { "${NavigationUtils.relativeText(it)} · ${NavigationUtils.relativeClock(it)}" } ?: "—° · —時方向"
             ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
             focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
                 val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
@@ -1900,7 +1915,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         DetailedSettings(this,library,waypointFolders,mainWaypointFolder,b.tvGpsInfo.text.toString(), {
             if (mapPanel == null) setDisplayMode(1)
             mapPanel?.openOfflineMapSettings()
-        }) {
+        }, { mode -> setDisplayMode(mode) }) {
             if(displayPrefs.getBoolean("keepScreenAwake",false)) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             mapPanel?.setDisplayOptions(displayPrefs.getBoolean("showWaypoints",true),displayPrefs.getBoolean("showCourse",true))
@@ -2194,6 +2209,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun showWindMarkLog() {
+        if (isFinishing || isDestroyed || windMarkDialog?.isShowing == true) return
+        try {
+            createWindMarkLogDialog()
+        } catch (error: RuntimeException) {
+            windMarkDialog = null
+            debug("Wind/mark log screen failed: ${error.javaClass.simpleName}: ${error.message}")
+            Toast.makeText(this, "記録画面を開けませんでした。アプリを更新して再度お試しください", Toast.LENGTH_LONG).show()
+            if (currentDisplayMode == 5) setDisplayMode(0)
+        }
+    }
+
+    private fun createWindMarkLogDialog() {
         val store = WindMarkLogStore(this)
         var markA: Pair<Double, Double>? = null
         var markB: Pair<Double, Double>? = null
@@ -2301,7 +2328,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val close = action("閉じる") { dialog.dismiss() }
         root.addView(close)
         dialog = androidx.appcompat.app.AlertDialog.Builder(this).setTitle("風・マーク記録").setView(scroll).create()
-        dialog.setOnDismissListener { if (currentDisplayMode == 5) setDisplayMode(0) }
+        dialog.setOnDismissListener {
+            if(windMarkDialog === dialog) windMarkDialog=null
+            if (currentDisplayMode == 5) setDisplayMode(0)
+        }
+        windMarkDialog=dialog
         dialog.show()
         dialog.window?.setLayout(-1, -1)
         renderLocation()
@@ -2634,7 +2665,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent) {
         val timestamp = event.timestamp / 1_000_000L
         when (event.sensor.type) {
-            Sensor.TYPE_ROTATION_VECTOR -> {
+            Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR -> {
                 compassAccuracy = event.accuracy
                 magneticSampleAt = timestamp
                 val matrix = FloatArray(9)
