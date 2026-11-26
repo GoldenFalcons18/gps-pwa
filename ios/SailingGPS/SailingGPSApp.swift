@@ -1374,10 +1374,10 @@ private struct NumericCompassTape: View {
                             .stroke(Color.white.opacity(major ? 0.95 : (medium ? 0.72 : 0.43)),
                                     style: StrokeStyle(lineWidth: major ? 1.6 : 1, lineCap: .round))
 
-                            if major {
+                            if medium {
                                 Text(String(format: "%03d°", degree))
-                                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.white)
+                                    .font(.system(size: major ? 9 : 7.5, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(major ? 0.95 : 0.82))
                                     .position(x: x, y: height * 0.90)
                             }
                         }
