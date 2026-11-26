@@ -379,10 +379,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.btnMenu.setOnClickListener { showNavigationMenu() }
         b.btnSetTarget.setOnClickListener { showNavigationOptions() }
         b.startTimerPreset.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("1分","3分","5分","10分"))
-        b.startTimerPreset.setSelection(2)
+        b.startTimerPreset.setSelection(displayPrefs.getInt("startTimerPreset",2).coerceIn(0,3))
+        b.startTimerPreset.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                displayPrefs.edit().putInt("startTimerPreset", position).apply()
+                updateStartTimerUi()
+            }
+        }
         b.btnCaptureOuterMark.setOnClickListener { captureStartLineEndpoint("outer") }
         b.btnCaptureSignalBoat.setOnClickListener { captureStartLineEndpoint("signal") }
         b.btnStartTimer.setOnClickListener { toggleStartTimer() }
+        b.btnAlignStartTimer.setOnClickListener { alignStartTimerToNearestMinute() }
         b.btnResetTimer.setOnClickListener { displayPrefs.edit().remove("startTimerEndAt").remove("startTimerPausedSeconds").apply(); updateStartTimerUi() }
         val standardProfileIndex=SignalSequence.profiles.indexOfFirst { it.id=="standard-start" }.coerceAtLeast(0)
         if (displayPrefs.getInt("signalProfileSchemaVersion", 0) < 3) {
@@ -1251,15 +1259,25 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         updateStartTimerUi()
     }
 
+    private fun alignStartTimerToNearestMinute() {
+        val now=System.currentTimeMillis()
+        val end=displayPrefs.getLong("startTimerEndAt",0L)
+        if(end<=now) return
+        displayPrefs.edit().putLong("startTimerEndAt",StartLineMath.alignDeadlineToNearestMinute(end,now)).apply()
+        updateStartTimerUi()
+    }
+
     private fun updateStartTimerUi() {
         if(!::b.isInitialized) return
         val now=System.currentTimeMillis()
         val end=displayPrefs.getLong("startTimerEndAt",0L)
         val paused=displayPrefs.getLong("startTimerPausedSeconds",0L)
-        val remaining=if(end>now) (end-now)/1000.0 else paused.toDouble()
         val running=end>now
+        val presetSeconds=listOf(1,3,5,10).getOrElse(displayPrefs.getInt("startTimerPreset",2)){5}*60.0
+        val remaining=if(running) (end-now)/1000.0 else if(paused>0L) paused.toDouble() else presetSeconds
         val finished=end>0L && !running && paused<=0L
         b.tvStartCountdown.text=if(finished) "START" else StartLineMath.countdown(remaining)
+        b.btnAlignStartTimer.isEnabled=running
         b.tvStartCountdown.setTextColor(if(finished) Color.rgb(255,170,0) else Color.GREEN)
         b.btnStartTimer.text=if(running) "一時停止" else if(paused>0) "再開" else "開始"
         fun endpoint(prefix:String):StartLineCoordinate? {

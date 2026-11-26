@@ -39,6 +39,10 @@ struct StartTimerPanel: View {
             deadline = timestamp + remaining; pausedSeconds = 0
         }
     }
+    private func alignToMinute(at now: Date) {
+        guard deadline > now.timeIntervalSince1970 else { return }
+        deadline = StartLineMath.alignDeadlineToNearestMinute(deadline, now: now.timeIntervalSince1970)
+    }
     private func distanceText() -> String {
         guard let currentLocation, let distance = StartLineMath.distanceMeters(from: currentLocation, outerMark: outer, signalBoat: signal) else { return "—" }
         return metric ? (distance < 1000 ? String(format: "%.0f m", distance) : String(format: "%.2f km", distance / 1000)) : String(format: "%.2f nm  ·  %.0f m", distance / 1852, distance)
@@ -54,7 +58,7 @@ struct StartTimerPanel: View {
             let running = deadline > now.timeIntervalSince1970
             let paused = !running && pausedSeconds > 0
             let finished = deadline > 0 && !running && !paused
-            let remain = running ? deadline - now.timeIntervalSince1970 : pausedSeconds
+            let remain = running ? deadline - now.timeIntervalSince1970 : (paused ? pausedSeconds : Double(selectedMinutes * 60))
             VStack(spacing: compact ? 5 : 10) {
                 Text("スタートタイマー")
                     .font(compact ? .headline : .largeTitle)
@@ -88,6 +92,8 @@ struct StartTimerPanel: View {
                 HStack {
                     Button(running ? "一時停止" : paused ? "再開" : "開始") { toggle(at: now) }
                         .buttonStyle(.borderedProminent).tint(.green)
+                    Button("0秒合わせ") { alignToMinute(at: now) }
+                        .disabled(!running).buttonStyle(.bordered).tint(.orange)
                     Button("リセット") { deadline = 0; pausedSeconds = 0 }
                         .buttonStyle(.bordered).tint(.orange)
                 }

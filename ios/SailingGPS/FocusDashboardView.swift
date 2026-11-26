@@ -33,7 +33,7 @@ struct FocusDashboardView: View {
                         .minimumScaleFactor(0.7)
                 }
                 Text(value)
-                    .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.62),
+                    .font(.system(size: min((bounds.size.width - 16) * valueScale, bounds.size.height * 0.74),
                                   weight: .bold, design: .monospaced))
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
@@ -136,7 +136,7 @@ struct FocusDashboardView: View {
                             Text("目標方位" + (magnetic ? "（磁北）" : "（真北）"))
                                 .font(.system(size: 15, weight: .medium)).foregroundStyle(.gray).lineLimit(1).minimumScaleFactor(0.7)
                             Text(targetBearing.map { String(format: "%.0f°", $0.rounded().truncatingRemainder(dividingBy: 360)) } ?? "—")
-                                .font(.system(size: 46, weight: .bold, design: .monospaced)).foregroundStyle(.orange)
+                                .font(.system(size: max(48, min(geometry.size.width * 0.075, 72)), weight: .bold, design: .monospaced)).foregroundStyle(.orange)
                                 .lineLimit(1).minimumScaleFactor(0.55)
                             Text(relativeTargetLabel(for: smoothedRelativeAngle))
                                 .font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
@@ -148,7 +148,7 @@ struct FocusDashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("タップして目標地点を変更")
-                    card("", targetDistance, .white, valueScale: 0.34)
+                    card("目標距離", targetDistance, .white, valueScale: 0.42)
                 }
                 .frame(height: cardHeight)
             }

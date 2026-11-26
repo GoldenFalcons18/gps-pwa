@@ -231,18 +231,10 @@ struct WatchNavigationView: View {
                     }.buttonStyle(.plain).font(.caption2).padding(.vertical, 3)
                     Button(receiver.target?.name ?? "目標を選ぶ") { targetPicker = true }.buttonStyle(.plain).font(.caption2).foregroundStyle(.orange).lineLimit(1)
                     HStack(spacing: 3) {
+                        Circle().fill(receiver.recording ? Color.green : (receiver.recordingPaused ? Color.orange : Color.gray)).frame(width: 5, height: 5)
                         Text(receiver.recording ? "記録中" : (receiver.recordingPaused ? "一時停止" : "停止中"))
                             .font(.system(size: 8)).foregroundStyle(receiver.recording ? .green : (receiver.recordingPaused ? .orange : .secondary))
-                        Spacer(minLength: 2)
-                        if receiver.recording {
-                            recordButton("一時停止", symbol: "pause.fill", command: "pause")
-                            recordButton("停止", symbol: "stop.fill", command: "stop")
-                        } else if receiver.recordingPaused {
-                            recordButton("再開", symbol: "play.fill", command: "resume")
-                            recordButton("停止", symbol: "stop.fill", command: "stop")
-                        } else {
-                            recordButton("記録開始", symbol: "record.circle", command: "start")
-                        }
+                        Spacer()
                     }
                     let fix = sensors.fix(at: Date())
                     let compass = sensors.compass(at: Date())
@@ -254,6 +246,17 @@ struct WatchNavigationView: View {
                     if fix == nil { Text(sensors.status).font(.caption2).foregroundStyle(.orange) }
                     if receiver.selectionPending { Text("目標：iPhoneへ同期待ち").font(.caption2).foregroundStyle(.orange) }
                     if !receiver.message.isEmpty { Text(receiver.message).font(.caption2).foregroundStyle(.orange) }
+                    HStack(spacing: 4) {
+                        if receiver.recording {
+                            recordButton("一時停止", symbol: "pause.fill", command: "pause")
+                            recordButton("停止", symbol: "stop.fill", command: "stop")
+                        } else if receiver.recordingPaused {
+                            recordButton("再開", symbol: "play.fill", command: "resume")
+                            recordButton("停止", symbol: "stop.fill", command: "stop")
+                        } else {
+                            recordButton("記録開始", symbol: "record.circle", command: "start")
+                        }
+                    }.padding(.top, 3)
                 }.padding(.horizontal, 3)
             }
         }

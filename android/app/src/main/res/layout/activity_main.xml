@@ -33,6 +33,7 @@
             <Button android:id="@+id/btnCaptureSignalBoat" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="現在地をシグナルボートに登録" />
             <Spinner android:id="@+id/startTimerPreset" android:layout_width="match_parent" android:layout_height="48dp" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/btnAlignStartTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="0秒合わせ" android:enabled="false" />
                 <Button android:id="@+id/btnStartTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="開始／一時停止" />
                 <Button android:id="@+id/btnResetTimer" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="リセット" />
             </LinearLayout>

@@ -1,8 +1,9 @@
 package com.goldenfalcons.sailinggps
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
+import android.app.DownloadManager
+import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.os.Build
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -69,9 +70,7 @@ class GitHubUpdateChecker(private val activity: AppCompatActivity, private val l
                             .setTitle("新しいバージョン ${update.versionName} があります")
                             .setMessage("現在：${BuildConfig.VERSION_NAME}\n記録中の場合は停止・GPX保存後に更新してください。\n\n${update.notes}")
                             .setPositiveButton("ダウンロード") { _, _ ->
-                                try {
-                                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl)))
-                                } catch (_: ActivityNotFoundException) { message("更新", "リンクを開けるブラウザがありません。") }
+                                enqueueUpdateDownload(update)
                             }
                             .setNegativeButton("あとで", null)
                             .setNeutralButton("この版をスキップ") { _, _ -> preferences.edit().putInt("skippedCode", update.versionCode).apply() }
@@ -124,4 +123,22 @@ class GitHubUpdateChecker(private val activity: AppCompatActivity, private val l
         dialog?.dismiss()
         worker.shutdownNow()
     }
+    private fun enqueueUpdateDownload(update: Update) {
+        runCatching {
+            val request = DownloadManager.Request(Uri.parse(update.downloadUrl))
+                .setTitle("Sailing GPS Logger ${update.versionName}")
+                .setDescription("アップデートをダウンロードしています")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, "SailingGpsLogger-${update.versionName}.apk")
+                .setAllowedOverMetered(true)
+                .setAllowedOverRoaming(true)
+            val manager = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            manager.enqueue(request)
+            message("ダウンロード開始", "通知欄で進行状況を確認できます。完了後にAPKを開いて更新してください。")
+        }.onFailure { error ->
+            log("Update download failed / ${error.message}")
+            message("ダウンロード失敗", error.message ?: "後でもう一度お試しください。")
+        }
+    }
+
 }
