@@ -2,7 +2,7 @@
 
 - 「0秒合わせ」は実時間ではなく、カウントダウンの残り時間を最も近い「分:00」に合わせます。
 - 下部コンパステープに中間目盛り（10度ごと）の数値を追加。
-- Android versionCode 131、iPhone／Watch build 143。
+- Android versionCode 131、iPhone／Watch build 144。
 
 # 1.9.5
 
