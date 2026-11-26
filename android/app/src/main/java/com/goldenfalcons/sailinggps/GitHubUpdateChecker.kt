@@ -14,8 +14,6 @@ import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
-private data class AppUpdate(val versionCode: Int, val versionName: String, val downloadUrl: String, val notes: String)
-
 class GitHubUpdateChecker(private val activity: AppCompatActivity, private val log: (String) -> Unit) {
     private val preferences = activity.getSharedPreferences("updates", 0)
     private val worker = Executors.newSingleThreadExecutor()
@@ -125,7 +123,7 @@ class GitHubUpdateChecker(private val activity: AppCompatActivity, private val l
         dialog?.dismiss()
         worker.shutdownNow()
     }
-    private fun enqueueUpdateDownload(update: Update) {
+    private fun enqueueUpdateDownload(update: AppUpdate) {
         runCatching {
             val request = DownloadManager.Request(Uri.parse(update.downloadUrl))
                 .setTitle("Sailing GPS Logger ${update.versionName}")
