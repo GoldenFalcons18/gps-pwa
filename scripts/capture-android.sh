@@ -28,6 +28,17 @@ adb exec-out screencap -p > screenshots/Android-map.png
 adb logcat -d -s AndroidRuntime > screenshots/runtime.log
 if grep -q 'FATAL EXCEPTION' screenshots/runtime.log; then cat screenshots/runtime.log; exit 1; fi
 
+# Open the wind/mark recording mode and verify the activity remains alive with its screen visible.
+adb shell am force-stop "$APP"
+adb logcat -c
+adb shell am start -n "$APP/.MainActivity" --ez previewWindMarkLog true
+sleep 4
+adb exec-out screencap -p > screenshots/Android-wind-mark-log.png
+adb logcat -d -s AndroidRuntime SailingGpsLogger > screenshots/wind-mark-log-runtime.log
+if grep -q 'FATAL EXCEPTION' screenshots/wind-mark-log-runtime.log; then cat screenshots/wind-mark-log-runtime.log; exit 1; fi
+if ! grep -q 'Display mode=WIND_MARK_LOG' screenshots/wind-mark-log-runtime.log; then cat screenshots/wind-mark-log-runtime.log; exit 1; fi
+if grep -q 'Wind/mark log screen failed' screenshots/wind-mark-log-runtime.log; then cat screenshots/wind-mark-log-runtime.log; exit 1; fi
+
 # Exercise the current-location action with recording stopped; verify persisted data.
 adb shell am force-stop com.android.launcher3
 # The debug-only launch hook invokes the visible button's real click listener.
