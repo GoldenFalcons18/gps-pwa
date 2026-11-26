@@ -286,7 +286,8 @@ class NavigationMapPanel(
                 PropertyFactory.textHaloColor(Color.BLACK),
                 PropertyFactory.textHaloWidth(1.5f),
                 PropertyFactory.textOffset(arrayOf(0f, 1.4f)),
-                PropertyFactory.textAllowOverlap(false)
+                PropertyFactory.textAllowOverlap(true),
+                PropertyFactory.textIgnorePlacement(true)
             )
         )
         if (style.getLayer("waypoint-marks") == null) style.addLayer(
@@ -429,6 +430,7 @@ class NavigationMapPanel(
 
     fun setFeatures(features: List<MapFeature>, waypoints: List<Waypoint>) {
         this.features = features.toList()
+        this.waypoints = waypoints.filter { it.lat.isFinite() && it.lon.isFinite() && it.lat in -90.0..90.0 && it.lon in -180.0..180.0 }
         refreshAll()
     }
 
