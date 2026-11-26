@@ -2245,6 +2245,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val markPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val windPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val locationLabel = label("")
+        val windLocationLabel = label("")
         val markALabel = label("A点: 未記録")
         val markBLabel = label("B点: 未記録")
         val markCount = label("記録済み: " + store.marks().size + "組")
@@ -2259,7 +2260,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
         }
-        fun renderLocation() { locationLabel.text = "GPS位置: " + coordinate(currentPosition()) }
+        fun renderLocation() {
+            val text = "GPS位置: " + coordinate(currentPosition())
+            locationLabel.text = text
+            windLocationLabel.text = text
+        }
 
         tabs.addView(action("マーク記録") { markPanel.visibility = View.VISIBLE; windPanel.visibility = View.GONE },
             LinearLayout.LayoutParams(0, -2, 1f))
@@ -2296,7 +2301,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         })
 
         windPanel.addView(label("風向は風が吹いてくる方位、風速はknで入力します。", 14f))
-        windPanel.addView(locationLabel)
+        windPanel.addView(windLocationLabel)
         windPanel.addView(directionInput)
         windPanel.addView(speedInput)
         windPanel.addView(action("現在地で風を記録") {
