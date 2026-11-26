@@ -1276,6 +1276,33 @@ struct ContentView: View {
             Text("画面を消した後も航跡記録を続けるには、位置情報の許可を「常に」に変更してください。")
         }
     }
+
+    private func checkForAppUpdate() {
+        guard updateNoticeCheckedVersion.isEmpty else { return }
+        guard let url = URL(string: "https://api.github.com/repos/GoldenFalcons18/gps-pwa/releases?per_page=100") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data,
+                  let releases = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+                  let release = releases.first(where: { (($0["tag_name"] as? String) ?? "").hasPrefix("android-v") }),
+                  let tag = release["tag_name"] as? String,
+                  let body = release["body"] as? String else { return }
+            let latestVersion = String(tag.dropFirst("android-v".count))
+            guard let marker = body.range(of: "iPhone／Watch build "),
+                  let latestBuild = Int(body[marker.upperBound...].prefix(while: \.isNumber)) else { return }
+            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+            let currentBuild = Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0") ?? 0
+            guard latestVersion.compare(currentVersion, options: .numeric) == .orderedDescending || (latestVersion == currentVersion && latestBuild > currentBuild) else { return }
+            DispatchQueue.main.async {
+                let key = "\(latestVersion)-\(latestBuild)"
+                guard updateNoticeCheckedVersion != key else { return }
+                updateNoticeCheckedVersion = key
+                updateNoticeMessage = "最新バージョン：\(latestVersion)（ビルド \(latestBuild)）\nTestFlightを開いて更新してください。"
+                showUpdateNotice = true
+            }
+        }.resume()
+    }
+
+
 }
 struct ShareView: UIViewControllerRepresentable {
     let url: URL
@@ -1390,32 +1417,6 @@ private struct NumericCompassTape: View {
                 tapeHeading += delta
             }
         }
-    }
-    private func checkForAppUpdate() {
-        guard updateNoticeCheckedVersion.isEmpty else { return }
-        guard let url = URL(string: "https://api.github.com/repos/GoldenFalcons18/gps-pwa/releases?per_page=100") else { return }
-        URLSession.shared.dataTask(with: url) { data, _, _ in
-            guard let data,
-                  let releases = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
-                  let release = releases.first(where: { (($0["tag_name"] as? String) ?? "").hasPrefix("android-v") }),
-                  let tag = release["tag_name"] as? String,
-                  let body = release["body"] as? String else { return }
-            let latestVersion = String(tag.dropFirst("android-v".count))
-            let buildPattern = #"iPhone／Watch build (\d+)"#
-            guard let range = body.range(of: buildPattern, options: .regularExpression),
-                  let buildRange = body[range].range(of: #"\d+"#, options: .regularExpression),
-                  let latestBuild = Int(body[buildRange]) else { return }
-            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-            let currentBuild = Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0") ?? 0
-            guard latestVersion.compare(currentVersion, options: .numeric) == .orderedDescending || (latestVersion == currentVersion && latestBuild > currentBuild) else { return }
-            DispatchQueue.main.async {
-                let key = "\(latestVersion)-\(latestBuild)"
-                guard updateNoticeCheckedVersion != key else { return }
-                updateNoticeCheckedVersion = key
-                updateNoticeMessage = "最新バージョン：\(latestVersion)（ビルド \(latestBuild)）\nTestFlightを開いて更新してください。"
-                showUpdateNotice = true
-            }
-        }.resume()
     }
 
 }
