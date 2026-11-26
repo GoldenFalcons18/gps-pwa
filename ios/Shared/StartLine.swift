@@ -31,9 +31,8 @@ enum StartLineMath {
         return hypot(a.x + fraction * dx, a.y + fraction * dy)
     }
 
-    static func alignDeadlineToNearestMinute(_ deadline: TimeInterval, now: TimeInterval) -> TimeInterval {
-        let nearest = floor((deadline + 30) / 60) * 60
-        return nearest > now ? nearest : (floor(now / 60) + 1) * 60
+    static func alignRemainingToNearestMinute(_ remainingSeconds: TimeInterval) -> TimeInterval {
+        (max(0, remainingSeconds) / 60).rounded() * 60
     }
 
     static func countdown(_ seconds: TimeInterval) -> String {

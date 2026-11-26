@@ -126,10 +126,10 @@ class NumericCompassTapeView @JvmOverloads constructor(
             rulerPaint.alpha = if (major) 245 else if (medium) 190 else 125
             canvas.drawLine(x, baseline - tickHeight, x, baseline, rulerPaint)
 
-            if (major) {
+            if (medium) {
                 textPaint.typeface = android.graphics.Typeface.create("monospace", android.graphics.Typeface.NORMAL)
-                textPaint.textSize = min(9f * scale, h * 0.14f)
-                textPaint.alpha = 245
+                textPaint.textSize = min((if (major) 9f else 7.5f) * scale, h * 0.14f)
+                textPaint.alpha = if (major) 245 else 210
                 canvas.drawText(String.format(Locale.ROOT, "%03d°", normalized), x, h - 6f * scale, textPaint)
             }
         }

@@ -126,6 +126,21 @@ loop do
   sleep 60
 end
 
+# Do not submit the new build while an older build is still waiting for Beta App Review.
+# App Store Connect has no supported API to withdraw a Beta App Review submission;
+# an operator must use the App Store Connect UI, then rerun this job.
+previous_pending = builds.select do |candidate|
+  candidate.dig("attributes", "processingState") == "VALID" && candidate.dig("attributes", "version") != build_number
+end.filter_map do |candidate|
+  path = "/builds/#{URI.encode_www_form_component(candidate.fetch("id"))}/betaAppReviewSubmission?#{query("fields[betaAppReviewSubmissions]" => "betaReviewState")}"
+  previous_submission = request("GET", path, nil, allow_not_found: true)
+  state = previous_submission&.dig("data", "attributes", "betaReviewState")
+  [candidate.dig("attributes", "version"), state] if %w[WAITING_FOR_REVIEW IN_REVIEW].include?(state)
+end
+unless previous_pending.empty?
+  details = previous_pending.map { |version, state| "#{version} (#{state})" }.join(", ")
+  abort("Older build(s) still in Beta App Review: #{details}. Remove the old build from review in App Store Connect, then rerun this workflow to submit build #{build_number}.")
+end
 
 localizations_query = query("limit" => "200", "fields[betaBuildLocalizations]" => "locale,whatsNew")
 localizations = request(

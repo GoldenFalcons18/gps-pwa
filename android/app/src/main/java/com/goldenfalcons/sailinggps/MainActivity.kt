@@ -1263,7 +1263,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val now=System.currentTimeMillis()
         val end=displayPrefs.getLong("startTimerEndAt",0L)
         if(end<=now) return
-        displayPrefs.edit().putLong("startTimerEndAt",StartLineMath.alignDeadlineToNearestMinute(end,now)).apply()
+        val remainingSeconds=(end-now)/1000.0
+        val alignedSeconds=StartLineMath.alignRemainingToNearestMinute(remainingSeconds)
+        displayPrefs.edit().putLong("startTimerEndAt",now+alignedSeconds*1000L).apply()
         updateStartTimerUi()
     }
 
