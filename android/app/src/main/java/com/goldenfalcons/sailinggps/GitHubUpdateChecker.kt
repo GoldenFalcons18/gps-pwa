@@ -14,6 +14,8 @@ import java.net.URL
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
+private data class AppUpdate(val versionCode: Int, val versionName: String, val downloadUrl: String, val notes: String)
+
 class GitHubUpdateChecker(private val activity: AppCompatActivity, private val log: (String) -> Unit) {
     private val preferences = activity.getSharedPreferences("updates", 0)
     private val worker = Executors.newSingleThreadExecutor()
