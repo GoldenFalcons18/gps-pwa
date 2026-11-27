@@ -1,3 +1,8 @@
+# 1.9.7
+
+- Android navigation values now shrink to fit narrow screens instead of wrapping or clipping. Current coordinates remain visible in two lines, matching iPhone.
+- Android versionCode 132.
+
 # 1.9.6
 
 - 「0秒合わせ」は実時間ではなく、カウントダウンの残り時間を最も近い「分:00」に合わせます。
