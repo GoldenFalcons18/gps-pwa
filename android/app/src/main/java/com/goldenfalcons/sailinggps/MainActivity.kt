@@ -1795,13 +1795,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             } else "—"
         }
         val wp = activeWaypoint
-        setEteDisplay("ETE", "--:--:--")
+        setEteDisplay("目標, ETE", "--:--:--")
         val lat = latestLat
         val lon = latestLon
         if (wp == null || lat == null || lon == null) {
             b.tvDistance.text = if (metricUnits) "-- m/km" else "-- nm"
             b.tvDistanceSub.text = "-- m"
-            b.tvClock.text = "--時方向"
+            b.tvClock.text = "—時方向"
             b.tvWpName.text = wp?.name ?: "未設定"
             b.tvWpCoords.text = wp?.let { "${displayCoordinate(it.lat,true)}\n${displayCoordinate(it.lon,false)}" } ?: "--"
             b.instrumentView.update(null, null, instrumentHeading, useMagnetic)
@@ -1812,7 +1812,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val bearing = NavigationUtils.bearingDegrees(lat, lon, wp.lat, wp.lon)
         val estimateSpeed=if(displayPrefs.getBoolean("arrivalUsesAverage",false)) tripAverageSpeed() else latestSpeedMps
         val eta=displayPrefs.getBoolean("showETA",false)
-        setEteDisplay(if(eta) "ETA" else "ETE", InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false)))
+        setEteDisplay(if(eta) "目標, ETA" else "目標, ETE", InstrumentSettings.arrival(distanceM,estimateSpeed,System.currentTimeMillis(),eta,displayPrefs.getBoolean("twelveHourClock",false)))
         b.tvDistance.text = DisplayNavigation.distance(distanceM, metricUnits)
         b.tvDistanceSub.text = ""
         b.tvWpName.text = wp.name
