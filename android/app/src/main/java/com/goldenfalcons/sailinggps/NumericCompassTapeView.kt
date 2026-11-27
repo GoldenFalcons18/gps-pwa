@@ -92,7 +92,8 @@ class NumericCompassTapeView @JvmOverloads constructor(
 
         textPaint.typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
         textPaint.textSize = min(36f * scale, h * 0.53f)
-        val largeValue = value?.let { String.format(Locale.ROOT, "%.0f°", it) } ?: "---"
+        val animatedValue = animatedHeading?.let { ((it % 360f) + 360f) % 360f }
+        val largeValue = if (value == null) "---" else String.format(Locale.ROOT, "%.0f°", animatedValue ?: value!!.toFloat())
         canvas.drawText(largeValue, separator / 2f, h * 0.73f, textPaint)
 
         val left = separator + 8f * scale

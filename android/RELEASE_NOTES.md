@@ -1,8 +1,8 @@
-# 1.9.8
+# 1.9.9
 
-- Sailing target distance shows a number only; the heading identifies nm or km.
-- Increased the relative target bearing text size on Android and iPhone.
-- Android versionCode 133; iPhone / Watch build 145.
+- Android and iPhone navigation panels now match in responsive sizing and in ETA, pace, target bearing, SOG, and time presentation.
+- Keep compass tape heading numbers synchronized with the animated marks while the device turns.
+- Android versionCode 134; iPhone / Watch build 146.
 
 # 1.9.7
 
