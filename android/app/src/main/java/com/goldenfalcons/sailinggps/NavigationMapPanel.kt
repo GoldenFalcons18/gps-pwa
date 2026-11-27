@@ -229,7 +229,7 @@ class NavigationMapPanel(
 
     private fun installLayers(style: Style) {
         val empty = FeatureCollection.fromFeatures(emptyArray()).toJson()
-        listOf("trail", "course", "target", "course-dots", "boat", "waypoints", "features").forEach { id ->
+        listOf("trail", "course", "target", "course-dots", "gps-current-position", "waypoints", "features").forEach { id ->
             if (style.getSource(id) == null) style.addSource(GeoJsonSource(id, empty))
         }
         if (style.getLayer("features-fill") == null) style.addLayer(
@@ -301,16 +301,16 @@ class NavigationMapPanel(
                 PropertyFactory.textAllowOverlap(false)
             )
         )
-        if (style.getLayer("boat-dot") == null) style.addLayer(
-            CircleLayer("boat-dot", "boat").withProperties(
+        if (style.getLayer("gps-current-position-dot") == null) style.addLayer(
+            CircleLayer("gps-current-position-dot", "gps-current-position").withProperties(
                 PropertyFactory.circleRadius(8f),
                 PropertyFactory.circleColor(Color.rgb(10, 25, 45)),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
                 PropertyFactory.circleStrokeWidth(2f)
             )
         )
-        if (style.getLayer("boat-heading") == null) style.addLayer(
-            SymbolLayer("boat-heading", "boat").withProperties(
+        if (style.getLayer("gps-current-position-heading") == null) style.addLayer(
+            SymbolLayer("gps-current-position-heading", "gps-current-position").withProperties(
                 PropertyFactory.textField("▲"),
                 PropertyFactory.textSize(16f),
                 PropertyFactory.textColor(Color.WHITE),
@@ -399,7 +399,7 @@ class NavigationMapPanel(
         val boatFeatures = current?.let {
             listOf(pointFeature(it.latitude, it.longitude, JSONObject().put("bearing", lastHeading ?: 0.0)))
         } ?: emptyList()
-        setSource("boat", boatFeatures)
+        setSource("gps-current-position", boatFeatures)
         applyVisibility()
     }
 
