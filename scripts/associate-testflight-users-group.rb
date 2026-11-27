@@ -103,6 +103,7 @@ build_number = ENV.fetch("BUILD_NUMBER")
 build_query = query("limit" => "200", "fields[builds]" => "version,processingState")
 deadline = Time.now + 30 * 60
 build = nil
+builds = []
 loop do
   builds = request("GET", "/apps/#{URI.encode_www_form_component(app_id)}/builds?#{build_query}")["data"] || []
   matches = builds.select { |item| item.dig("attributes", "version") == build_number }
