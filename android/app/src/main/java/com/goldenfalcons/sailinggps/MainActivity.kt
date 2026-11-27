@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var quickLocationListener: android.location.LocationListener? = null
     private val clockTick = object : Runnable {
         override fun run() {
-            b.tvTime.text = "時間\n" + java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            b.tvTime.text = java.text.SimpleDateFormat(if(displayPrefs.getBoolean("twelveHourClock",false)) "h:mm:ss a" else "HH:mm:ss", java.util.Locale.US).format(java.util.Date())
             if(currentDisplayMode>=2) updateNavigationUi()
             updateRecordingDashboard()
             if(currentDisplayMode==4) updateSignalUi()
@@ -1143,6 +1143,35 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun resizeNavigationDashboardToViewport() {
+        b.root.post {
+            if (currentDisplayMode !in 0..1) return@post
+            val density = resources.displayMetrics.density
+            val viewport = b.root.height - b.root.paddingTop - b.root.paddingBottom
+            if (viewport <= 0) return@post
+            val fixed = b.topActionControls.height + b.modeTitleRow.height + (24 * density).toInt()
+            val available = (viewport - fixed).coerceAtLeast((420 * density).toInt())
+            val factor = available / 0.91f
+            val mapSection = (factor * 0.39f).toInt()
+            val targetHeight = (factor * 0.205f).toInt()
+            val bottomHeight = (factor * 0.11f).toInt()
+            val attributionHeight = b.navigatorPanel.getChildAt(1)?.measuredHeight
+                ?.takeIf { it > 0 } ?: (14 * density).toInt()
+            fun setHeight(view: android.view.View, height: Int) {
+                val params = view.layoutParams
+                if (params.height != height) {
+                    params.height = height
+                    view.layoutParams = params
+                }
+            }
+            setHeight(b.speedPanel, mapSection)
+            setHeight(b.mapContainer, (mapSection - attributionHeight).coerceAtLeast((100 * density).toInt()))
+            setHeight(b.targetPanel, targetHeight)
+            setHeight(b.instrumentDashboard, targetHeight)
+            setHeight(b.bottomReadingsContainer, bottomHeight)
+        }
+    }
+
     private fun setDisplayMode(requestedMode:Int) {
         val mode=requestedMode.coerceIn(0,5)
         val immersive=mode>=2
@@ -1184,6 +1213,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.timerPanel.visibility=if(mode==3) android.view.View.VISIBLE else android.view.View.GONE
         b.signalPanel.visibility=if(mode==4) android.view.View.VISIBLE else android.view.View.GONE
         if(mode==2) resizeFocusPanelToViewport()
+        if(mode<=1) resizeNavigationDashboardToViewport()
         b.btnSpeedMode.isEnabled = mode!=0
         b.btnNavigatorMode.isEnabled = mode!=1
         b.btnFocusMode.isEnabled=mode!=2
@@ -1677,10 +1707,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         updateGpsQualityUi()
         b.tvAltitude.text = latestAltitudeM?.let { "%.0f".format(java.util.Locale.US, it) } ?: "--"
         val speed = latestSpeedMps?.takeIf { it.isFinite() && it > 0.25 }
+        b.tvPaceUnit.text = if (metricUnits) "ペース / km" else "ペース / 海里"
         b.tvPace.text = speed?.let {
             val paceSeconds = ((if (metricUnits) 1000.0 else 1852.0) / it).toLong().coerceAtLeast(0)
             "%02d:%02d:%02d".format(java.util.Locale.ROOT, paceSeconds / 3600, paceSeconds / 60 % 60, paceSeconds % 60)
-        } ?: "--:--:--"
+        } ?: "--"
     }
 
     private fun setEteDisplay(label: String, value: String) {
@@ -1697,7 +1728,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val unit = if (metricUnits) "km/h" else "knot"
         b.tvSpeedUnit.text = "SOG · $unit"
         b.tvSpeedPanelUnit.text = "SOG · $unit"
-        b.tvSog.text = speed?.let { "%.1f %s".format(it, unit) } ?: "-- $unit"
+        b.tvSog.text = speed?.let { "%.1f".format(java.util.Locale.US, it) } ?: "--"
         b.tvLargeSpeed.largeDecimal=displayPrefs.getBoolean("largeDecimal",true)
         b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getStringExtra("previewSpeed")?.toDoubleOrNull() else speed
         b.tvLargeSpeed.contentDescription = "対地速度 ${b.tvSog.text}"
@@ -1799,7 +1830,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             b.tvClock.text = NavigationUtils.relativeClock(relative)
             b.instrumentView.update(relative, displayBearing, instrumentHeading, useMagnetic)
         } else {
-            b.tvClock.text = "方位待ち"
+            b.tvClock.text = "—時方向"
             b.instrumentView.update(null, null, instrumentHeading, useMagnetic)
         }
     }
