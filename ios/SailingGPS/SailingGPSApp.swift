@@ -1048,7 +1048,7 @@ struct ContentView: View {
             let targetValue=InstrumentHeading.bearing(fresh ? focusTargetBearing:nil,magnetic:instrumentMagnetic,declination:InstrumentHeading.declination(magnetic:compassFresh ? gps.magneticHeading:nil,trueHeading:compassFresh ? gps.trueHeading:nil))
             let distance=gps.location.flatMap { point in target.map { wp in
                 let meters=point.distance(from:CLLocation(latitude:wp.latitude,longitude:wp.longitude))
-                return metricUnits ? (meters < 1000 ? String(format:"%.0f m",meters) : String(format:"%.2f km",meters/1000)) : String(format:"%.2f nm",meters/1852)
+                return String(format:"%.2f",meters/(metricUnits ? 1000 : 1852))
             }} ?? "—"
             let currentDisplaySpeed=Double(speedText)
             let targetDisplaySpeed=sailingSpeedTargetKnots * (metricUnits ? 1.852 : 1)
@@ -1061,7 +1061,7 @@ struct ContentView: View {
                 case .unavailable: return .white
                 }
             }()
-            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetRelativeAngle:targetValue.flatMap { bearing in reading.map { CoordinateInput.normalizeHeading(bearing - $0.value) } },targetDistance:distance,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
+            FocusDashboardView(speed:fresh ? speedText:"—",speedColor:speedColor,course:reading?.value,isCompass:reading?.compass ?? false,targetBearing:targetValue,targetRelativeAngle:targetValue.flatMap { bearing in reading.map { CoordinateInput.normalizeHeading(bearing - $0.value) } },targetDistance:distance,metricUnits:metricUnits,unit:speedUnit,mode:$mode,magnetic:$instrumentMagnetic,recording:gps.recording,recordingPaused:gps.recordingPaused,startRecording:{gps.start(newTrack:true)},pauseRecording:{gps.pause()},resumeRecording:{gps.start()},stopRecording:{gps.stop()},chooseTarget:{navigationOptionsPresented=true},openMenu:{menuPresented=true})
         }
     }
     private var startTimerDashboard: some View {
