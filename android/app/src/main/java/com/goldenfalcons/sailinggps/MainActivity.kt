@@ -1702,7 +1702,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         b.tvLargeSpeed.speedValue = if(BuildConfig.DEBUG && intent.hasExtra("previewSpeed")) intent.getStringExtra("previewSpeed")?.toDoubleOrNull() else speed
         b.tvLargeSpeed.contentDescription = "対地速度 ${b.tvSog.text}"
         b.tvPosition.text = if (latestLat != null && latestLon != null)
-            "${displayCoordinate(latestLat!!, true)}   ${displayCoordinate(latestLon!!, false)}"
+            "${displayCoordinate(latestLat!!, true)}\n${displayCoordinate(latestLon!!, false)}"
             else "現在地：GPS受信待ち"
         b.tvPosition.setTextColor(if(latestLat!=null && latestLon!=null) Color.WHITE else Color.LTGRAY)
         val reference = headingReference()
