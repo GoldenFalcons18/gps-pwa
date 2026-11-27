@@ -983,7 +983,7 @@ struct ContentView: View {
                 HStack(alignment: .bottom, spacing: 4) {
                     instrument(gps.location.map { String(format: "%.0f", $0.altitude) } ?? "--", label: "高度 m")
                     instrument(pace, label: metricUnits ? "ペース / km" : "ペース / 海里", size: 19)
-                    instrument(speedText, label: speedUnit)
+                    instrument(speedText, label: "SOG · " + speedUnit)
                     instrument(clock(context.date), label: "時間", size: 23)
                 }
             }.padding(8).frame(maxHeight: .infinity)
@@ -1320,6 +1320,8 @@ private struct NumericCompassTape: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let displayedHeading = ((tapeHeading.truncatingRemainder(dividingBy: 360) + 360)
+                .truncatingRemainder(dividingBy: 360))
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
@@ -1327,7 +1329,7 @@ private struct NumericCompassTape: View {
                         .foregroundStyle(label == "磁気コンパス利用不可" ? .red : .gray)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
-                    Text(heading.map { String(format: "%.0f°", $0) } ?? "---")
+                    Text(heading == nil ? "---" : String(format: "%.0f°", displayedHeading))
                         .font(.system(size: 39, weight: .medium, design: .monospaced))
                         .minimumScaleFactor(0.55)
                         .lineLimit(1)
