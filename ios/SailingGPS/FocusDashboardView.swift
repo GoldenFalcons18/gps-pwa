@@ -9,6 +9,7 @@ struct FocusDashboardView: View {
     let targetBearing: Double?
     let targetRelativeAngle: Double?
     let targetDistance: String
+    let metricUnits: Bool
     let unit: String
     @Binding var mode: Int
     @Binding var magnetic: Bool
@@ -139,8 +140,8 @@ struct FocusDashboardView: View {
                                 .font(.system(size: max(48, min(geometry.size.width * 0.075, 72)), weight: .bold, design: .monospaced)).foregroundStyle(.orange)
                                 .lineLimit(1).minimumScaleFactor(0.55)
                             Text(relativeTargetLabel(for: smoothedRelativeAngle))
-                                .font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
-                                .lineLimit(1).minimumScaleFactor(0.55)
+                                .font(.system(size: max(18, min(geometry.size.width * 0.03, 22)), weight: .semibold)).foregroundStyle(.white)
+                                .lineLimit(1).minimumScaleFactor(0.7)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(6)
@@ -148,7 +149,7 @@ struct FocusDashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("タップして目標地点を変更")
-                    card("目標距離", targetDistance, .white, valueScale: 0.42)
+                    card("目標距離（\(metricUnits ? "km" : "nm")）", targetDistance, .white, valueScale: 0.42)
                 }
                 .frame(height: cardHeight)
             }

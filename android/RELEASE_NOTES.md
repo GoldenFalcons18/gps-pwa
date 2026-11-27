@@ -1,3 +1,9 @@
+# 1.9.8
+
+- Sailing target distance shows a number only; the heading identifies nm or km.
+- Increased the relative target bearing text size on Android and iPhone.
+- Android versionCode 133; iPhone / Watch build 145.
+
 # 1.9.7
 
 - Android navigation values now shrink to fit narrow screens instead of wrapping or clipping. Current coordinates remain visible in two lines, matching iPhone.

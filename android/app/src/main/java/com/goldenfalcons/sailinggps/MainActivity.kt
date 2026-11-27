@@ -496,9 +496,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val (targetCard,targetValue)=card("目標方位（真北）",Color.rgb(255,170,0),64)
         focusBearing=targetValue
         focusBearingRelative=TextView(this).apply {
-            text="—° · —時方向";textSize=16f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
+            text="—° · —時方向";textSize=20f;setTextColor(Color.WHITE);gravity=android.view.Gravity.CENTER
             setSingleLine();includeFontPadding=false
-            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,9,16,1,android.util.TypedValue.COMPLEX_UNIT_SP)
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this,13,20,1,android.util.TypedValue.COMPLEX_UNIT_SP)
         }
         targetCard.addView(focusBearingRelative,LinearLayout.LayoutParams(-1,-2))
         targetCard.setOnClickListener { showNavigationOptions() }
@@ -1757,11 +1757,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             smoothedFocusRelativeAngle=relativeTarget?.let { InstrumentHeading.smooth(smoothedFocusRelativeAngle,it) }
             val displayedRelativeTarget=smoothedFocusRelativeAngle
             focusBearingRelative.text=displayedRelativeTarget?.let { "${NavigationUtils.relativeText(it)} · ${NavigationUtils.relativeClock(it)}" } ?: "—° · —時方向"
-            ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離"
-            focusDistance.text=if(preview) "1.42 nm" else if(target!=null && latestLat!=null && latestLon!=null) {
+            ((focusDistance.parent as LinearLayout).getChildAt(0) as TextView).text="目標距離（${if(metricUnits) "km" else "nm"}）"
+            focusDistance.text=if(preview) "1.42" else if(target!=null && latestLat!=null && latestLon!=null) {
                 val meters=NavigationUtils.distanceMeters(latestLat!!,latestLon!!,target.lat,target.lon)
-                if(metricUnits) if(meters<1000) "%.0f m".format(meters) else "%.2f km".format(meters/1000.0)
-                else "%.2f nm".format(meters/1852.0)
+                if(metricUnits) "%.2f".format(meters/1000.0) else "%.2f".format(meters/1852.0)
             } else "—"
         }
         val wp = activeWaypoint
